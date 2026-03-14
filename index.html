@@ -67,8 +67,9 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 #content::-webkit-scrollbar-thumb{background:var(--gray4);border-radius:3px}
 
 /* ── PAGES ── */
-.page{display:none}
-.page.active{display:block}
+.page{display:none!important}
+.page.active{display:block!important}
+#p-financeiro.active{display:flex!important;flex-direction:column;height:calc(100vh - 52px - 28px)}
 
 /* ── HOME PAGE ── */
 .home-wrap{padding:60px 40px;max-width:1000px;margin:0 auto}
@@ -647,7 +648,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     </div>
 
     <!-- FINANCEIRO COMPLETO -->
-    <div class="page" id="p-financeiro" style="display:flex;flex-direction:column;height:calc(100vh - 52px - 28px)">
+    <div class="page" id="p-financeiro">
       <div style="background:var(--white);border-bottom:1px solid var(--border);padding:0 20px;overflow-x:auto;flex-shrink:0">
         <div class="fin-htabs" id="fin-htabs">
           <div class="fin-htab active" onclick="finTab('geral',this)">Geral</div>
