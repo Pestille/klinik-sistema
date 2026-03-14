@@ -1,23 +1,23 @@
 {
   "version": 2,
-  "outputDirectory": "public",
-  "functions": {
-    "api/clinicorp.js": {
-      "runtime": "edge"
+  "builds": [
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "api/clinicorp.js",
+      "use": "@vercel/node"
     }
-  },
+  ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "src": "/api/clinicorp",
+      "dest": "/api/clinicorp.js"
     },
     {
       "src": "/(.*)",
       "dest": "/public/$1"
     }
-  ],
-  "env": {
-    "CLINICORP_USUARIO": "klinik",
-    "CLINICORP_BUSINESS_ID": "5073030694043648"
-  }
+  ]
 }
