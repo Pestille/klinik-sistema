@@ -1,26 +1,3 @@
 {
-  "version": 2,
-  "name": "klinik-sistema",
-  "builds": [
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
-      ]
-    }
-  ]
+  "outputDirectory": "public"
 }
