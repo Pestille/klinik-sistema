@@ -5,724 +5,748 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Klinik Sistema</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --black:#0A0A0A;--gold:#C9A455;--gold2:#E8C878;--gold3:#7A5C28;--wine:#C4607A;
-  --bg:#0f0f0f;--bg2:#161616;--bg3:#1e1e1e;--bg4:#252525;--bg5:#2c2c2c;
-  --text:#F5F0E8;--text2:#A89880;--text3:#6B5D4F;--text4:#3d3530;
-  --border:#2a2a2a;--border2:#333;--border3:#3d3d3d;
-  --success:#4CAF7D;--warn:#E8A838;--danger:#C4607A;--info:#5B9BD5;
+  --green:#1B5E3B;--green2:#2E7D52;--green3:#4CAF7D;--green-dark:#134530;
+  --orange:#E65100;--orange2:#FF6D00;
+  --bg:#F5F5F5;--white:#FFFFFF;--gray1:#FAFAFA;--gray2:#F0F0F0;--gray3:#E0E0E0;
+  --gray4:#BDBDBD;--gray5:#9E9E9E;--gray6:#757575;--gray7:#616161;
+  --text:#212121;--text2:#424242;--text3:#757575;
+  --border:#E0E0E0;--border2:#EEEEEE;
+  --blue:#1976D2;--red:#D32F2F;--purple:#7B1FA2;--teal:#00695C;
+  --shadow:0 1px 3px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.08);
+  --shadow2:0 2px 8px rgba(0,0,0,.12);
+  --sidebar-w:240px;
 }
-body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden;font-size:13px}
+body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:14px}
 
-/* ── SIDEBAR ── */
-#sidebar{width:230px;min-width:230px;background:var(--black);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:width .2s}
-.brand{padding:20px 18px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
-.brand-icon{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--gold3),var(--gold));display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.brand-icon svg{width:18px;height:18px}
-.brand-text{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--gold);letter-spacing:2px;font-weight:300}
-.brand-sub{font-size:8px;color:var(--text3);letter-spacing:2px;text-transform:uppercase}
-.nav{flex:1;overflow-y:auto;padding:8px 0}
-.nav::-webkit-scrollbar{width:0}
-.nav-section{padding:14px 18px 4px;font-size:9px;color:var(--text4);letter-spacing:2px;text-transform:uppercase;font-weight:600}
-.nav-item{display:flex;align-items:center;gap:10px;padding:8px 18px;cursor:pointer;color:var(--text2);transition:all .12s;border-left:2px solid transparent;font-size:12px;font-weight:400;position:relative}
-.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.03)}
-.nav-item.active{color:var(--gold);background:rgba(201,164,85,0.07);border-left-color:var(--gold)}
-.nav-icon{width:15px;height:15px;flex-shrink:0;opacity:.6}
-.nav-item.active .nav-icon{opacity:1}
-.nav-badge{margin-left:auto;background:var(--wine);color:#fff;font-size:9px;padding:1px 5px;border-radius:6px;font-weight:600;min-width:18px;text-align:center}
-.nav-badge.blue{background:var(--info)}
-.sidebar-footer{padding:12px 18px;border-top:1px solid var(--border)}
-.user-row{display:flex;align-items:center;gap:8px}
-.user-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--gold3),var(--gold));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--black);flex-shrink:0}
-.user-name{font-size:11px;color:var(--text);font-weight:500}
-.user-role{font-size:9px;color:var(--text3)}
+/* ── TOP BAR ── */
+#topbar{height:52px;background:var(--green);display:flex;align-items:center;padding:0 12px;gap:12px;flex-shrink:0;z-index:100;box-shadow:0 2px 4px rgba(0,0,0,.2)}
+#menu-btn{background:none;border:none;color:#fff;cursor:pointer;padding:8px;border-radius:4px;display:flex;align-items:center;justify-content:center;transition:background .15s}
+#menu-btn:hover{background:rgba(255,255,255,.1)}
+.search-bar{flex:1;max-width:600px;margin:0 auto;position:relative}
+.search-bar input{width:100%;background:rgba(255,255,255,.15);border:none;border-radius:4px;padding:8px 12px 8px 38px;color:#fff;font-size:13px;font-family:'Roboto',sans-serif;outline:none}
+.search-bar input::placeholder{color:rgba(255,255,255,.7)}
+.search-bar input:focus{background:rgba(255,255,255,.22)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.7);pointer-events:none}
+.topbar-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.icon-btn{background:none;border:none;color:#fff;cursor:pointer;padding:8px;border-radius:50%;display:flex;transition:background .15s;position:relative}
+.icon-btn:hover{background:rgba(255,255,255,.1)}
+.icon-btn .badge{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--orange)}
+.user-info{display:flex;align-items:center;gap:8px;color:#fff;font-size:13px;font-weight:500;cursor:pointer;padding:4px 8px;border-radius:4px}
+.user-info:hover{background:rgba(255,255,255,.1)}
+.user-av{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
 
-/* ── MAIN ── */
-#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-#topbar{height:52px;background:var(--black);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0}
-.page-title{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--text);font-weight:300;flex:1}
-.topbar-right{display:flex;gap:8px;align-items:center}
-.status-pill{display:flex;align-items:center;gap:5px;font-size:10px;padding:4px 10px;border-radius:12px;border:1px solid}
-.status-pill.ok{color:var(--success);border-color:rgba(76,175,125,0.3);background:rgba(76,175,125,0.08)}
-.status-pill.err{color:var(--danger);border-color:rgba(196,96,122,0.3);background:rgba(196,96,122,0.08)}
-.status-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 2s infinite}
-.status-dot.solid{animation:none}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:500;transition:all .12s;white-space:nowrap}
-.btn:hover{border-color:var(--gold);color:var(--gold)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.btn-gold{background:var(--gold);border-color:var(--gold);color:var(--black);font-weight:600}
-.btn-gold:hover{background:var(--gold2);border-color:var(--gold2);color:var(--black)}
-.btn-sm{padding:4px 10px;font-size:10px}
-.btn-danger{border-color:rgba(196,96,122,.4);color:var(--danger)}
-.btn-danger:hover{background:rgba(196,96,122,.1);border-color:var(--danger)}
+/* ── BODY LAYOUT ── */
+#body{flex:1;display:flex;overflow:hidden;position:relative}
+
+/* ── SIDEBAR OVERLAY ── */
+#sidebar-ov{position:fixed;inset:52px 0 0 0;background:rgba(0,0,0,.4);z-index:200;display:none;transition:opacity .2s}
+#sidebar-ov.open{display:block}
+#sidebar{position:fixed;top:52px;left:0;bottom:0;width:var(--sidebar-w);background:var(--white);z-index:201;transform:translateX(-100%);transition:transform .2s;display:flex;flex-direction:column;box-shadow:var(--shadow2)}
+#sidebar.open{transform:translateX(0)}
+.sidebar-home{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);cursor:pointer;color:var(--text2)}
+.sidebar-home:hover{background:var(--gray2)}
+.sidebar-home svg{color:var(--gray6)}
+.sidebar-search{padding:10px 14px;border-bottom:1px solid var(--border)}
+.sidebar-search-inner{display:flex;align-items:center;gap:8px;background:var(--gray2);border-radius:4px;padding:6px 10px}
+.sidebar-search-inner input{background:none;border:none;outline:none;font-size:13px;color:var(--text);flex:1;font-family:'Roboto',sans-serif}
+.sidebar-search-inner input::placeholder{color:var(--gray5)}
+.sidebar-section-label{padding:10px 18px 4px;font-size:11px;color:var(--gray5);letter-spacing:.5px;text-transform:uppercase;font-weight:500}
+.sidebar-item{display:flex;align-items:center;padding:10px 18px;cursor:pointer;color:var(--text2);font-size:13px;transition:background .12s;border-radius:0}
+.sidebar-item:hover{background:var(--gray2)}
+.sidebar-item.active{color:var(--green);font-weight:500;background:rgba(27,94,59,.05)}
+.sidebar-footer{padding:12px 18px;border-top:1px solid var(--border);font-size:11px;color:var(--gray5)}
+
+/* ── MAIN CONTENT ── */
 #content{flex:1;overflow-y:auto;overflow-x:hidden}
-#content::-webkit-scrollbar{width:4px}
-#content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+#content::-webkit-scrollbar{width:6px}
+#content::-webkit-scrollbar-thumb{background:var(--gray4);border-radius:3px}
 
 /* ── PAGES ── */
-.page{padding:22px 24px;display:none}
+.page{display:none}
 .page.active{display:block}
 
-/* ── SECTION HEADER ── */
-.sh{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px}
-.sh-left{}
-.sh-title{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;color:var(--text)}
-.sh-sub{font-size:11px;color:var(--text3);margin-top:2px}
-.sh-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+/* ── HOME PAGE ── */
+.home-wrap{padding:60px 40px;max-width:1000px;margin:0 auto}
+.home-modules{display:grid;grid-template-columns:repeat(5,1fr);gap:24px;margin-bottom:40px}
+.home-modules-2{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;max-width:400px;margin:0 auto}
+.module-card{display:flex;flex-direction:column;align-items:flex-start;padding:20px;cursor:pointer;border-radius:6px;transition:background .15s;position:relative}
+.module-card:hover{background:var(--gray2)}
+.module-icon{width:60px;height:60px;border-radius:10px;background:rgba(27,94,59,.08);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.module-icon svg{width:28px;height:28px;color:var(--green)}
+.module-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px}
+.module-desc{font-size:13px;color:var(--text3);line-height:1.4}
+.module-badge{position:absolute;top:12px;right:12px;background:var(--orange);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px}
 
-/* ── KPI GRID ── */
-.kpi-grid{display:grid;gap:14px;margin-bottom:20px}
-.kpi-grid.cols-4{grid-template-columns:repeat(4,1fr)}
-.kpi-grid.cols-3{grid-template-columns:repeat(3,1fr)}
-.kpi-grid.cols-5{grid-template-columns:repeat(5,1fr)}
-.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;position:relative;overflow:hidden}
-.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
-.kpi.c-gold::before{background:var(--gold)}
-.kpi.c-wine::before{background:var(--wine)}
-.kpi.c-green::before{background:var(--success)}
-.kpi.c-warn::before{background:var(--warn)}
-.kpi.c-blue::before{background:var(--info)}
-.kpi-label{font-size:9px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;font-weight:600}
-.kpi-val{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:300;line-height:1;color:var(--text)}
-.kpi-val.c-gold{color:var(--gold)}
-.kpi-val.c-wine{color:var(--wine)}
-.kpi-val.c-green{color:var(--success)}
-.kpi-val.c-warn{color:var(--warn)}
-.kpi-val.c-blue{color:var(--info)}
-.kpi-val.sm{font-size:20px}
-.kpi-sub{font-size:10px;color:var(--text3);margin-top:5px}
-.kpi-trend{font-size:9px;margin-top:4px;font-weight:600}
-.kpi-trend.up{color:var(--success)}
-.kpi-trend.down{color:var(--danger)}
+/* ── AGENDA ── */
+#p-agenda{display:none;height:calc(100vh - 52px);overflow:hidden;flex-direction:column}
+#p-agenda.active{display:flex}
+.agenda-topbar{height:52px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0}
+.btn-novo{background:var(--orange);color:#fff;border:none;border-radius:4px;padding:7px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Roboto',sans-serif;display:flex;align-items:center;gap:6px}
+.btn-novo:hover{background:var(--orange2)}
+.btn-ico{background:none;border:1px solid var(--border);border-radius:4px;padding:6px 8px;cursor:pointer;color:var(--text2);display:flex;align-items:center;gap:4px;font-size:12px;font-family:'Roboto',sans-serif;transition:all .15s}
+.btn-ico:hover{background:var(--gray2)}
+.btn-hoje{background:var(--orange);color:#fff;border:none;border-radius:4px;padding:5px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Roboto',sans-serif}
+.agenda-date{font-size:16px;font-weight:500;color:var(--text)}
+.agenda-view-sel{margin-left:auto;background:none;border:1px solid var(--border);border-radius:4px;padding:5px 10px;font-size:12px;font-family:'Roboto',sans-serif;color:var(--text2);cursor:pointer}
+.agenda-warn{font-size:12px;color:var(--orange);cursor:pointer}
+.agenda-body{flex:1;display:flex;overflow:hidden}
+.agenda-left{width:240px;min-width:240px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+.agenda-left::-webkit-scrollbar{width:4px}
+.agenda-left::-webkit-scrollbar-thumb{background:var(--gray4);border-radius:2px}
+
+/* Mini calendar */
+.mini-cal{padding:12px}
+.mini-cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.mini-cal-month{font-size:13px;font-weight:500;color:var(--text)}
+.mini-cal-nav-btn{background:none;border:none;cursor:pointer;color:var(--gray5);padding:2px 4px;border-radius:3px;font-size:14px}
+.mini-cal-nav-btn:hover{background:var(--gray2)}
+.mini-cal-days{display:grid;grid-template-columns:repeat(7,1fr);text-align:center}
+.mini-cal-dh{font-size:10px;color:var(--gray5);padding:3px 0;font-weight:500}
+.mini-cal-d{font-size:12px;padding:4px 2px;border-radius:50%;cursor:pointer;transition:background .12s;aspect-ratio:1;display:flex;align-items:center;justify-content:center;margin:1px}
+.mini-cal-d:hover{background:var(--gray2)}
+.mini-cal-d.today{background:var(--orange);color:#fff;font-weight:500}
+.mini-cal-d.selected{background:var(--green);color:#fff}
+.mini-cal-d.other{color:var(--gray4)}
+
+/* Profissionais filter */
+.agenda-profs{padding:10px 12px}
+.agenda-profs-header{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px}
+.agenda-profs-all{font-size:11px;color:var(--green);cursor:pointer}
+.prof-check{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer}
+.prof-check-box{width:14px;height:14px;border-radius:3px;border:2px solid;flex-shrink:0}
+.prof-check-name{font-size:12px;color:var(--text2)}
+.agenda-alerts{padding:10px 12px;border-top:1px solid var(--border)}
+.agenda-alerts-header{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px}
+.alert-row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;color:var(--text2);cursor:pointer}
+.alert-row:hover{color:var(--green)}
+.alert-date{color:var(--gray5)}
+
+/* Agenda grid */
+.agenda-grid-wrap{flex:1;overflow:auto;position:relative}
+.agenda-grid-wrap::-webkit-scrollbar{width:6px;height:6px}
+.agenda-grid-wrap::-webkit-scrollbar-thumb{background:var(--gray4);border-radius:3px}
+.agenda-grid{display:grid;min-width:800px}
+.agenda-header-row{display:flex;position:sticky;top:0;z-index:10;background:var(--white);border-bottom:1px solid var(--border)}
+.agenda-time-col{width:60px;min-width:60px;flex-shrink:0;border-right:1px solid var(--border2)}
+.agenda-prof-col{flex:1;min-width:120px;border-right:1px solid var(--border2);padding:8px 10px;text-align:center;cursor:pointer}
+.agenda-prof-col:last-child{border-right:none}
+.agenda-prof-name{font-size:11px;font-weight:700;color:var(--text);letter-spacing:.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agenda-prof-count{font-size:10px;color:var(--text3);margin-top:2px}
+.agenda-prof-bar{height:3px;border-radius:2px;margin-top:4px}
+.agenda-slots{position:relative}
+.time-slot-row{display:flex;border-bottom:1px solid var(--border2)}
+.time-slot-row.hora{border-bottom:1px solid var(--border)}
+.time-label{width:60px;min-width:60px;font-size:10px;color:var(--gray5);padding:0 8px;text-align:right;line-height:1;padding-top:2px;flex-shrink:0;border-right:1px solid var(--border2)}
+.slot-cell{flex:1;min-width:120px;height:20px;border-right:1px solid var(--border2);position:relative;cursor:pointer}
+.slot-cell:last-child{border-right:none}
+.slot-cell:hover{background:rgba(27,94,59,.03)}
+.appt-block{position:absolute;left:2px;right:2px;border-radius:4px;padding:2px 5px;font-size:10px;overflow:hidden;cursor:pointer;z-index:2;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.appt-name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.appt-time{font-size:9px;opacity:.8}
+.appt-check{float:right;width:14px;height:14px;border-radius:3px;background:rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center}
+.now-line{position:absolute;left:0;right:0;height:2px;background:var(--orange);z-index:5;pointer-events:none}
+.now-line::before{content:'';position:absolute;left:-5px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--orange)}
+
+/* ── GENERIC PAGE ── */
+.gpage{padding:0}
+.gpage-header{background:var(--white);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.gpage-title{font-size:18px;font-weight:500;color:var(--text)}
+.gpage-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.gpage-body{padding:20px 24px}
+
+/* ── BUTTONS ── */
+.btn{padding:7px 16px;border-radius:4px;border:1px solid var(--border);background:var(--white);color:var(--text2);cursor:pointer;font-family:'Roboto',sans-serif;font-size:13px;font-weight:500;transition:all .12s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--gray2)}
+.btn-primary{background:var(--green);border-color:var(--green);color:#fff}
+.btn-primary:hover{background:var(--green2)}
+.btn-orange{background:var(--orange);border-color:var(--orange);color:#fff}
+.btn-orange:hover{background:var(--orange2)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-text{background:none;border:none;color:var(--green);font-size:12px;cursor:pointer;padding:4px 8px;font-family:'Roboto',sans-serif;font-weight:500}
+.btn-text:hover{background:rgba(27,94,59,.05);border-radius:4px}
 
 /* ── CARDS ── */
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px}
-.card-header{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px}
-.card-title{font-size:11px;color:var(--text2);letter-spacing:.8px;text-transform:uppercase;font-weight:600}
+.card{background:var(--white);border-radius:6px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
+.card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:500;color:var(--text)}
 .card-body{padding:16px 18px}
 .card-body.p0{padding:0}
 
-/* ── GRID ── */
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.grid-3{display:grid;grid-template-columns:2fr 1fr;gap:16px}
-.grid-4{display:grid;grid-template-columns:3fr 1fr;gap:16px}
+/* ── KPI ── */
+.kpi-row{display:grid;gap:14px;margin-bottom:18px}
+.kpi-row.c4{grid-template-columns:repeat(4,1fr)}
+.kpi-row.c3{grid-template-columns:repeat(3,1fr)}
+.kpi-row.c5{grid-template-columns:repeat(5,1fr)}
+.kpi{background:var(--white);border-radius:6px;padding:16px;box-shadow:var(--shadow);border-left:3px solid}
+.kpi.green{border-left-color:var(--green)}
+.kpi.orange{border-left-color:var(--orange)}
+.kpi.blue{border-left-color:var(--blue)}
+.kpi.red{border-left-color:var(--red)}
+.kpi.purple{border-left-color:var(--purple)}
+.kpi-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:500;margin-bottom:8px}
+.kpi-val{font-size:26px;font-weight:300;color:var(--text)}
+.kpi-val.sm{font-size:18px}
+.kpi-sub{font-size:11px;color:var(--text3);margin-top:4px}
 
 /* ── TABLE ── */
 .tbl{width:100%;border-collapse:collapse}
-.tbl th{font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:8px 14px;text-align:left;border-bottom:1px solid var(--border);font-weight:600;white-space:nowrap}
-.tbl td{padding:9px 14px;border-bottom:1px solid var(--border);font-size:11px;color:var(--text2);vertical-align:middle}
+.tbl th{font-size:12px;font-weight:500;color:var(--text3);padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--gray1)}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--border2);font-size:13px;color:var(--text2);vertical-align:middle}
 .tbl tr:last-child td{border-bottom:none}
-.tbl tr:hover td{background:rgba(255,255,255,0.02);color:var(--text)}
-.tbl .pname{font-weight:500;color:var(--text);font-size:12px}
-.tbl .psub{font-size:10px;color:var(--text3);margin-top:1px}
-.tbl .amount{font-weight:600;font-size:12px}
-.tbl .amount.pos{color:var(--success)}
-.tbl .amount.neg{color:var(--danger)}
-.tbl .actions{display:flex;gap:6px;opacity:0;transition:opacity .15s}
-.tbl tr:hover .actions{opacity:1}
+.tbl tr:hover td{background:var(--gray1)}
+.tbl .pname{font-weight:500;color:var(--text)}
 
 /* ── BADGES ── */
-.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap}
-.badge-gold{background:rgba(201,164,85,.15);color:var(--gold)}
-.badge-wine{background:rgba(196,96,122,.15);color:var(--wine)}
-.badge-green{background:rgba(76,175,125,.15);color:var(--success)}
-.badge-warn{background:rgba(232,168,56,.15);color:var(--warn)}
-.badge-blue{background:rgba(91,155,213,.15);color:var(--info)}
-.badge-gray{background:rgba(255,255,255,.06);color:var(--text3)}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500}
+.badge-green{background:rgba(27,94,59,.1);color:var(--green)}
+.badge-orange{background:rgba(230,81,0,.1);color:var(--orange)}
+.badge-red{background:rgba(211,47,47,.1);color:var(--red)}
+.badge-blue{background:rgba(25,118,210,.1);color:var(--blue)}
+.badge-gray{background:var(--gray2);color:var(--gray6)}
 
-/* ── FORM ── */
-.form-row{display:grid;gap:12px;margin-bottom:12px}
-.form-row.cols-2{grid-template-columns:1fr 1fr}
-.form-row.cols-3{grid-template-columns:1fr 1fr 1fr}
-.form-group{display:flex;flex-direction:column;gap:5px}
-.form-label{font-size:10px;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;font-weight:600}
-.form-input{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:8px 12px;font-family:'Montserrat',sans-serif;font-size:12px;width:100%;transition:border-color .15s;outline:none}
-.form-input:focus{border-color:var(--gold)}
-.form-input::placeholder{color:var(--text3)}
-select.form-input{cursor:pointer}
-select.form-input option{background:var(--bg3)}
-textarea.form-input{resize:vertical;min-height:80px;line-height:1.5}
-
-/* ── LOADING ── */
-.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--text3);gap:14px}
-.spin{width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite}
-.spin.sm{width:14px;height:14px;border-width:1.5px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.err-state{text-align:center;padding:40px 20px;color:var(--danger)}
-
-/* ── MODAL ── */
-.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
-.modal-ov.open{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column}
-.modal.lg{max-width:720px}
-.modal-head{padding:20px 22px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.modal-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300}
-.modal-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:4px;line-height:1;transition:color .15s}
-.modal-close:hover{color:var(--text)}
-.modal-body{padding:20px 22px;flex:1}
-.modal-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
-
-/* ── SEARCH BAR ── */
+/* ── SEARCH ── */
 .search-row{display:flex;gap:10px;margin-bottom:16px;align-items:center}
-.search-input{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 12px 7px 32px;font-family:'Montserrat',sans-serif;font-size:12px;outline:none;transition:border-color .15s;width:240px}
-.search-input:focus{border-color:var(--gold);width:280px}
 .search-wrap{position:relative;display:inline-block}
-.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none;width:13px;height:13px}
-.filter-group{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.search-input{background:var(--white);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:7px 12px 7px 32px;font-family:'Roboto',sans-serif;font-size:13px;outline:none;transition:border-color .15s;width:240px;box-shadow:var(--shadow)}
+.search-input:focus{border-color:var(--green);width:280px}
+.search-ico{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--gray5);pointer-events:none;width:14px;height:14px}
+.filter-sel{background:var(--white);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:7px 10px;font-family:'Roboto',sans-serif;font-size:13px;outline:none;cursor:pointer;box-shadow:var(--shadow)}
 
 /* ── TABS ── */
-.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:18px}
-.tab{padding:9px 18px;cursor:pointer;font-size:11px;font-weight:500;color:var(--text3);border-bottom:2px solid transparent;transition:all .15s;letter-spacing:.3px}
+.tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:18px}
+.tab{padding:10px 18px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
 .tab:hover{color:var(--text2)}
-.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.tab.active{color:var(--green);border-bottom-color:var(--green)}
 .tab-panel{display:none}
 .tab-panel.active{display:block}
 
-/* ── PROGRESS ── */
-.prog-bar{height:3px;background:var(--bg4);border-radius:2px;overflow:hidden;margin-top:6px}
-.prog-fill{height:100%;border-radius:2px;background:var(--gold);transition:width .5s ease}
+/* ── ACCORDION (Configurações) ── */
+.accord-item{background:var(--white);border-bottom:1px solid var(--border)}
+.accord-item:first-child{border-top:1px solid var(--border)}
+.accord-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;cursor:pointer;transition:background .12s;font-size:14px;font-weight:400;color:var(--text)}
+.accord-head:hover{background:var(--gray1)}
+.accord-arrow{color:var(--gray5);transition:transform .2s;font-size:18px}
+.accord-body{display:none;padding:14px 20px 18px;background:var(--gray1);border-top:1px solid var(--border)}
+.accord-body.open{display:block}
 
-/* ── CALENDARIO ── */
-.cal-wrapper{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border)}
-.cal-month{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:300}
-.cal-views{display:flex;gap:4px}
-.cal-view-btn{padding:4px 10px;border-radius:5px;font-size:10px;font-weight:500;cursor:pointer;border:1px solid var(--border2);color:var(--text3);background:transparent;transition:all .12s;font-family:'Montserrat',sans-serif}
-.cal-view-btn.active,.cal-view-btn:hover{background:var(--gold);border-color:var(--gold);color:var(--black)}
-.cal-head{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)}
-.cal-day-head{padding:8px;text-align:center;font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;font-weight:600}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
-.cal-cell{min-height:90px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;cursor:pointer;transition:background .12s;position:relative}
-.cal-cell:nth-child(7n){border-right:none}
-.cal-cell:hover{background:rgba(255,255,255,.02)}
-.cal-cell.today{background:rgba(201,164,85,.05)}
-.cal-cell.today .cal-date{color:var(--gold);font-weight:600}
-.cal-cell.other-month{opacity:.35}
-.cal-date{font-size:11px;font-weight:500;margin-bottom:4px;color:var(--text2)}
-.cal-event{background:rgba(201,164,85,.15);border-left:2px solid var(--gold);padding:2px 5px;border-radius:0 3px 3px 0;font-size:9px;color:var(--gold);margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cal-event.wine{background:rgba(196,96,122,.15);border-left-color:var(--wine);color:var(--wine)}
-.cal-event.blue{background:rgba(91,155,213,.15);border-left-color:var(--info);color:var(--info)}
-.cal-event.green{background:rgba(76,175,125,.15);border-left-color:var(--success);color:var(--success)}
-.cal-more{font-size:9px;color:var(--text3);margin-top:2px;cursor:pointer}
-.cal-more:hover{color:var(--gold)}
+/* ── DASHBOARD ANALÍTICO ── */
+.dash-filters{background:var(--white);padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.dash-filter-group{display:flex;flex-direction:column;gap:3px}
+.dash-filter-label{font-size:11px;color:var(--text3);font-weight:500}
+.dash-filter-sel{border:1px solid var(--border);border-radius:4px;padding:5px 10px;font-size:13px;font-family:'Roboto',sans-serif;color:var(--text);background:var(--white);outline:none;min-width:100px;cursor:pointer}
+.dash-radio{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer}
+.dash-radio input{accent-color:var(--orange)}
+.chart-card{background:var(--white);border-radius:6px;box-shadow:var(--shadow);padding:18px;margin-bottom:0}
+.chart-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:14px}
+.chart-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.charts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:20px;padding-bottom:0}
+.charts-grid-2{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:0 20px 20px}
 
-/* ── WEEK VIEW ── */
-.week-grid{display:grid;grid-template-columns:60px repeat(7,1fr);border-top:1px solid var(--border)}
-.week-time{grid-column:1;font-size:9px;color:var(--text3);padding:6px 8px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);text-align:right}
-.week-day-head{font-size:10px;color:var(--text2);text-align:center;padding:8px 4px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-weight:500}
-.week-day-head:last-child{border-right:none}
-.week-cell{height:40px;border-bottom:1px solid rgba(255,255,255,.04);border-right:1px solid var(--border);position:relative;cursor:pointer}
-.week-cell:last-child{border-right:none}
-.week-cell:hover{background:rgba(201,164,85,.03)}
-.week-appt{position:absolute;left:2px;right:2px;background:rgba(201,164,85,.2);border-left:2px solid var(--gold);border-radius:0 3px 3px 0;padding:2px 4px;font-size:9px;color:var(--gold);overflow:hidden;cursor:pointer;z-index:1}
+/* Chart bars */
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:120px;padding-top:12px}
+.bar-grp{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bar-grp-bars{display:flex;gap:3px;align-items:flex-end;height:90px}
+.bar-seg{width:18px;border-radius:2px 2px 0 0;transition:opacity .15s;cursor:default}
+.bar-seg:hover{opacity:.85}
+.bar-lbl{font-size:10px;color:var(--text3)}
+.legend{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)}
+.legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
 
-/* ── PACIENTE CARD ── */
-.patient-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;gap:14px;cursor:pointer;transition:border-color .15s;margin-bottom:10px}
-.patient-card:hover{border-color:var(--border3)}
-.patient-av{width:42px;height:42px;border-radius:50%;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500;color:var(--gold);font-family:'Cormorant Garamond',serif;flex-shrink:0}
-.patient-info{flex:1;min-width:0}
-.patient-name{font-weight:500;font-size:13px;color:var(--text)}
-.patient-meta{font-size:11px;color:var(--text3);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap}
-.patient-tags{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
-.patient-actions{display:flex;flex-direction:column;gap:6px;justify-content:center}
+/* Pie chart simulation */
+.pie-wrap{display:flex;align-items:center;gap:20px}
+.pie-svg{flex-shrink:0}
+.pie-legend{display:flex;flex-direction:column;gap:8px}
+.pie-leg-item{display:flex;align-items:center;gap:7px;font-size:11px}
+.pie-leg-dot{width:12px;height:12px;border-radius:2px;flex-shrink:0}
 
-/* ── PRONTUARIO ── */
-.odonth-grid{display:grid;grid-template-columns:repeat(16,1fr);gap:3px;padding:16px}
-.tooth{background:var(--bg3);border:1px solid var(--border2);border-radius:4px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text3);cursor:pointer;transition:all .15s;font-weight:500}
-.tooth:hover{border-color:var(--gold);color:var(--gold)}
-.tooth.ok{background:rgba(76,175,125,.1);border-color:rgba(76,175,125,.3);color:var(--success)}
-.tooth.treat{background:rgba(201,164,85,.1);border-color:rgba(201,164,85,.3);color:var(--gold)}
-.tooth.extract{background:rgba(196,96,122,.1);border-color:rgba(196,96,122,.3);color:var(--wine)}
-.tooth.missing{background:var(--bg4);border-color:var(--border);color:var(--text4);opacity:.5}
-.tooth-label{font-size:7px;display:block;text-align:center;color:var(--text3);margin-top:2px}
+/* ── LOADING ── */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px;color:var(--text3);gap:14px}
+.spin{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-/* ── FINANCEIRO ── */
-.fin-row{display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid var(--border);transition:background .12s;cursor:pointer}
-.fin-row:last-child{border-bottom:none}
-.fin-row:hover{background:rgba(255,255,255,.02)}
-.fin-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.fin-icon.in{background:rgba(76,175,125,.12)}
-.fin-icon.out{background:rgba(196,96,122,.12)}
-.fin-details{flex:1;min-width:0}
-.fin-name{font-size:12px;font-weight:500;color:var(--text)}
-.fin-meta{font-size:10px;color:var(--text3);margin-top:1px}
-.fin-amount{font-size:14px;font-weight:600;text-align:right}
-.fin-amount.in{color:var(--success)}
-.fin-amount.out{color:var(--danger)}
-.fin-status{font-size:9px;text-align:right;margin-top:2px}
+/* ── FORM ── */
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.form-label{font-size:12px;font-weight:500;color:var(--text2)}
+.form-input{border:1px solid var(--border);border-radius:4px;padding:8px 12px;font-family:'Roboto',sans-serif;font-size:13px;color:var(--text);outline:none;transition:border-color .15s;background:var(--white)}
+.form-input:focus{border-color:var(--green)}
+.form-row{display:grid;gap:12px;margin-bottom:4px}
+.form-row.c2{grid-template-columns:1fr 1fr}
+.form-row.c3{grid-template-columns:1fr 1fr 1fr}
 
-/* ── CHART ── */
-.chart-wrap{display:flex;align-items:flex-end;gap:5px;height:80px;padding-top:8px}
-.chart-bar-group{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
-.chart-bar{width:100%;border-radius:2px 2px 0 0;transition:all .4s;cursor:default}
-.chart-bar:hover{opacity:.8}
-.chart-lbl{font-size:8px;color:var(--text3);letter-spacing:.3px}
-
-/* ── RELATORIOS ── */
-.report-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px;cursor:pointer;transition:all .15s;display:flex;gap:14px;align-items:flex-start}
-.report-card:hover{border-color:var(--gold3);background:rgba(201,164,85,.03)}
-.report-icon{width:40px;height:40px;border-radius:10px;background:rgba(201,164,85,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.report-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px}
-.report-sub{font-size:11px;color:var(--text3);line-height:1.4}
-.report-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
-
-/* ── CONFIGURACOES ── */
-.config-section{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px}
-.config-section-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.config-section-title{font-size:12px;font-weight:600;color:var(--text);letter-spacing:.5px}
-.config-row{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border)}
-.config-row:last-child{border-bottom:none}
-.config-label{font-size:12px;color:var(--text)}
-.config-value{font-size:11px;color:var(--text3)}
-.toggle{width:36px;height:20px;background:var(--border2);border-radius:10px;cursor:pointer;position:relative;transition:background .2s}
-.toggle.on{background:var(--gold)}
-.toggle::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:2px;left:2px;transition:left .2s}
-.toggle.on::after{left:18px}
+/* ── MODAL ── */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.modal-ov.open{display:flex}
+.modal{background:var(--white);border-radius:6px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.modal.lg{max-width:720px}
+.modal-head{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:500;color:var(--text)}
+.modal-close{background:none;border:none;color:var(--gray5);cursor:pointer;font-size:20px;line-height:1;padding:2px}
+.modal-body{padding:18px 20px}
+.modal-foot{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
 
 /* ── WA ── */
-.wa-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.25);border-radius:5px;color:#25D366;font-size:10px;font-weight:600;text-decoration:none;transition:all .12s;cursor:pointer}
-.wa-btn:hover{background:rgba(37,211,102,.2)}
+.wa-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.3);border-radius:12px;color:#128C7E;font-size:11px;font-weight:500;text-decoration:none;transition:all .12s;cursor:pointer}
+.wa-btn:hover{background:rgba(37,211,102,.15)}
 
-/* ── SYNC BAR ── */
-.sync-bar{background:rgba(201,164,85,.06);border:1px solid rgba(201,164,85,.15);border-radius:7px;padding:8px 14px;display:flex;align-items:center;gap:8px;margin-bottom:18px;font-size:11px;color:var(--text2)}
+/* ── PATIENT LIST ── */
+.patient-row{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:14px 16px;display:flex;gap:14px;align-items:flex-start;cursor:pointer;transition:box-shadow .15s;margin-bottom:8px;box-shadow:var(--shadow)}
+.patient-row:hover{box-shadow:var(--shadow2)}
+.patient-av{width:40px;height:40px;border-radius:50%;background:var(--gray2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:500;color:var(--green);flex-shrink:0;border:1px solid var(--border)}
+.patient-info{flex:1;min-width:0}
+.patient-name{font-weight:500;font-size:14px;color:var(--text)}
+.patient-meta{font-size:12px;color:var(--text3);margin-top:3px;display:flex;gap:12px;flex-wrap:wrap}
+.patient-tags{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+.patient-acts{display:flex;gap:6px;align-items:flex-start;margin-top:4px}
+
+/* ── ODONTOGRAMA ── */
+.odont-row{display:grid;grid-template-columns:repeat(16,1fr);gap:3px;padding:12px}
+.tooth{background:var(--white);border:1px solid var(--border);border-radius:4px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text3);cursor:pointer;transition:all .12s;font-weight:500;box-shadow:var(--shadow)}
+.tooth:hover{border-color:var(--green);color:var(--green)}
+.tooth.ok{background:rgba(27,94,59,.08);border-color:rgba(27,94,59,.3);color:var(--green)}
+.tooth.treat{background:rgba(230,81,0,.08);border-color:rgba(230,81,0,.3);color:var(--orange)}
+.tooth.missing{opacity:.4}
+.tooth-num{font-size:8px;display:block;text-align:center;color:var(--text3);margin-top:1px}
+
+/* ── PROF CARDS ── */
+.prof-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.prof-card{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:16px;text-align:center;box-shadow:var(--shadow)}
+.prof-av{width:48px;height:48px;border-radius:50%;background:rgba(27,94,59,.1);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500;color:var(--green);margin:0 auto 10px}
+.prof-name{font-size:13px;font-weight:500;color:var(--text)}
+.prof-esp{font-size:11px;color:var(--text3);margin-top:3px}
 
 /* ── UTILS ── */
 .hidden{display:none!important}
+.text-green{color:var(--green)}
+.text-orange{color:var(--orange)}
+.text-red{color:var(--red)}
 .text-muted{color:var(--text3)}
-.text-gold{color:var(--gold)}
-.text-success{color:var(--success)}
-.text-danger{color:var(--danger)}
 .divider{border:none;border-top:1px solid var(--border);margin:14px 0}
-.avatar{width:36px;height:36px;border-radius:50%;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:14px;color:var(--gold);font-weight:400;flex-shrink:0}
+.mt8{margin-top:8px}
+.flex{display:flex;align-items:center;gap:8px}
+.ml-auto{margin-left:auto}
 </style>
 </head>
 <body>
 
-<!-- SIDEBAR -->
-<div id="sidebar">
-  <div class="brand">
-    <div class="brand-icon">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M12 2C12 2 7 6 7 11a5 5 0 0010 0c0-5-5-9-5-9z" fill="#0A0A0A" stroke="#C9A455" stroke-width="1.2"/><rect x="5" y="17" width="14" height="5" rx="1.5" stroke="#C9A455" stroke-width="1.2"/></svg>
-    </div>
-    <div>
-      <div class="brand-text">KLINIK</div>
-      <div class="brand-sub">Sistema de Gestão</div>
-    </div>
+<!-- TOP BAR -->
+<div id="topbar">
+  <button id="menu-btn" onclick="toggleSidebar()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+  </button>
+  <div class="search-bar">
+    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+    <input type="text" placeholder="Encontre pacientes ou funções do sistema" id="global-search" oninput="globalSearch(this.value)">
   </div>
-  <nav class="nav">
-    <div class="nav-section">Principal</div>
-    <div class="nav-item active" onclick="nav('dashboard',this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1" fill="currentColor" opacity=".5"/><rect x="1" y="9" width="6" height="6" rx="1" fill="currentColor" opacity=".5"/><rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" opacity=".5"/></svg>
-      Dashboard
-    </div>
-    <div class="nav-item" onclick="nav('agenda',this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M1 7h14M5 1v4M11 1v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Agenda
-      <span class="nav-badge blue" id="nb-agenda">0</span>
-    </div>
-    <div class="nav-section">Pacientes</div>
-    <div class="nav-item" onclick="nav('pacientes',this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.2"/><path d="M2 14c0-3.31 2.69-6 6-6s6 2.69 6 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Pacientes
-    </div>
-    <div class="nav-item" onclick="nav('prontuario',this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Prontuário
-    </div>
-    <div class="nav-section">CRM</div>
-    <div class="nav-item" onclick="nav('inativos',this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="3" stroke="currentColor" stroke-width="1.2"/><path d="M1 13c0-2.76 2.24-5 5-5M10 10l2 2 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Inativos
-      <span class="nav-badge" id="nb-inativos">—</span>
-    </div>
-    <div class="nav-item" onclick="nav('aniversariantes',this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M8 2c0 0-2 2-2 4a2 2 0 004 0c0-2-2-4-2-4z" stroke="currentColor" stroke-width="1.2"/><rect x="2" y="10" width="12" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
-      Aniversariantes
-    </div>
-    <div class="nav-section">Financeiro</div>
-    <div class="nav-item" onclick="nav('financeiro',this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 5h12v8a1 1 0 01-1 1H3a1 1 0 01-1-1V5z" stroke="currentColor" stroke-width="1.2"/><path d="M5 5V3.5C5 2.67 6.34 2 8 2s3 .67 3 1.5V5" stroke="currentColor" stroke-width="1.2"/><path d="M8 9v.01M5 11h6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Recebimentos
-    </div>
-    <div class="nav-item" onclick="nav('caixa',this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="4" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M1 8h14M5 12h2M10 12h1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M4 4V2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M12 4V2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Caixa
-    </div>
-    <div class="nav-item" onclick="nav('orcamentos',this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M5 5h6M5 8h4M5 11h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="11" cy="11" r="3" fill="currentColor" opacity=".2" stroke="currentColor" stroke-width="1.2"/><path d="M10.5 11h1M11 10.5v1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Orçamentos
-    </div>
-    <div class="nav-section">Análise</div>
-    <div class="nav-item" onclick="nav('relatorios',this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M1 12l3-4 3 2 3-5 3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 14h14" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Relatórios
-    </div>
-    <div class="nav-section">Sistema</div>
-    <div class="nav-item" onclick="nav('configuracoes',this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.22 3.22l1.42 1.42M11.36 11.36l1.42 1.42M3.22 12.78l1.42-1.42M11.36 4.64l1.42-1.42" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Configurações
-    </div>
-    <div class="nav-item" onclick="nav('ia',this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
-      Assistente IA
-    </div>
-  </nav>
-  <div class="sidebar-footer">
-    <div class="user-row">
-      <div class="user-av">KO</div>
-      <div><div class="user-name">Klinik Odonto.</div><div class="user-role">Premium · Campo Grande MS</div></div>
+  <div class="topbar-right">
+    <button class="icon-btn" title="Vídeos"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+    <button class="icon-btn" title="Suporte"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg></button>
+    <button class="icon-btn" title="Notificações"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg><span class="badge"></span></button>
+    <div class="user-info">
+      <div class="user-av">RP</div>
+      RAFAEL PESTILLE
     </div>
   </div>
 </div>
 
-<!-- MAIN -->
-<div id="main">
-  <div id="topbar">
-    <div class="page-title" id="topbar-title">Dashboard</div>
-    <div class="topbar-right">
-      <span class="status-pill ok" id="apiStatus"><span class="status-dot"></span><span id="apiTxt">Conectando...</span></span>
-      <button class="btn btn-sm" onclick="syncAll()" id="syncBtn">↺ Sincronizar</button>
-      <button class="btn btn-gold btn-sm" onclick="openModal('script')">+ Script IA</button>
+<!-- SIDEBAR OVERLAY -->
+<div id="sidebar-ov" onclick="toggleSidebar()"></div>
+<div id="sidebar">
+  <div class="sidebar-home" onclick="nav('home');toggleSidebar()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:var(--gray5)"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+    Início
+  </div>
+  <div class="sidebar-search">
+    <div class="sidebar-search-inner">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="color:var(--gray5)"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <input type="text" placeholder="Pesquisar">
     </div>
   </div>
+  <div style="flex:1;overflow-y:auto">
+    <div class="sidebar-section-label">Mais acessados</div>
+    <div class="sidebar-item" onclick="nav('financeiro');toggleSidebar()">Financeiro</div>
+    <div class="sidebar-item" onclick="nav('metas');toggleSidebar()">Metas</div>
+    <div class="sidebar-item" onclick="nav('crm');toggleSidebar()">CRM</div>
+    <div class="sidebar-item" onclick="nav('crc');toggleSidebar()">CRC</div>
+    <div class="sidebar-item" onclick="nav('agenda');toggleSidebar()">Agenda</div>
+    <div class="sidebar-item" onclick="nav('crc');toggleSidebar()">CRC</div>
+    <div class="sidebar-item" onclick="nav('crm');toggleSidebar()">CRM</div>
+    <div class="sidebar-item" onclick="nav('clinipay');toggleSidebar()">Clinipay</div>
+    <div class="sidebar-item" onclick="nav('confirmacoes');toggleSidebar()">Confirmação e Alertas</div>
+    <div class="sidebar-item" onclick="nav('protético');toggleSidebar()">Controle Protético</div>
+    <div class="sidebar-item" onclick="nav('estoque');toggleSidebar()">Controle de Estoque</div>
+    <div class="sidebar-item" onclick="nav('indicacao');toggleSidebar()">Controle de Indicação</div>
+    <div class="sidebar-item" onclick="nav('dashboard-analitico');toggleSidebar()">Dashboard Analítico</div>
+    <div class="sidebar-item" onclick="nav('financeiro');toggleSidebar()">Financeiro</div>
+    <div class="sidebar-item" onclick="nav('alinhadores');toggleSidebar()">Gestão de Casos de Alinhadores</div>
+    <div class="sidebar-item" onclick="nav('metas');toggleSidebar()">Metas</div>
+    <div class="sidebar-item" onclick="nav('pacientes');toggleSidebar()">Pacientes</div>
+    <div class="sidebar-item" onclick="nav('planos');toggleSidebar()">Planos de Recorrência</div>
+    <div class="sidebar-item" onclick="nav('portal');toggleSidebar()">Portal de Assinatura</div>
+    <div class="sidebar-item" onclick="nav('profissionais');toggleSidebar()">Profissionais</div>
+    <div class="sidebar-item" onclick="nav('relatorios');toggleSidebar()">Relatórios</div>
+    <div class="sidebar-item" onclick="nav('tutoriais');toggleSidebar()">Tutoriais do Sistema</div>
+    <div class="sidebar-item" onclick="nav('usuarios');toggleSidebar()">Usuários e Permissões</div>
+    <div class="sidebar-item" onclick="nav('configuracoes');toggleSidebar()">⚙ Configuração</div>
+  </div>
+  <div class="sidebar-footer">
+    <div>KLINIK ODONTOLOGIA · PREMIUM</div>
+    <div style="margin-top:2px">Versão: 1.0.0</div>
+  </div>
+</div>
+
+<!-- BODY -->
+<div id="body">
   <div id="content">
 
-    <!-- ════ DASHBOARD ════ -->
-    <div class="page active" id="p-dashboard">
-      <div class="sh"><div><div class="sh-title">Dashboard</div><div class="sh-sub" id="dash-sub">Carregando dados...</div></div></div>
-      <div id="dash-loading" class="loading"><div class="spin"></div><div>Carregando dados do Clinicorp...</div></div>
-      <div id="dash-data" class="hidden">
-        <div class="sync-bar"><span class="status-dot solid" style="color:var(--success)"></span><span id="sync-time">—</span><span style="margin-left:auto;color:var(--text3);font-size:10px">Fonte: API Clinicorp</span></div>
-        <div class="kpi-grid cols-4" style="margin-bottom:20px">
-          <div class="kpi c-gold"><div class="kpi-label">Agendamentos</div><div class="kpi-val c-gold" id="d-ag">—</div><div class="kpi-sub">Últimos 365 dias</div></div>
-          <div class="kpi c-green"><div class="kpi-label">Receita Período</div><div class="kpi-val c-green sm" id="d-rec">—</div><div class="kpi-sub">Recebimentos confirmados</div></div>
-          <div class="kpi c-wine"><div class="kpi-label">Inativos 6m+</div><div class="kpi-val c-wine" id="d-inativo">—</div><div class="kpi-sub">Precisam de reativação</div><div class="kpi-trend down" id="d-inativo-pct"></div></div>
-          <div class="kpi c-warn"><div class="kpi-label">Aniversariantes</div><div class="kpi-val c-warn" id="d-aniv">—</div><div class="kpi-sub">Próximos 60 dias</div></div>
+    <!-- HOME -->
+    <div class="page active" id="p-home">
+      <div class="home-wrap">
+        <div class="home-modules">
+          <div class="module-card" onclick="nav('agenda')">
+            <div class="module-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><rect x="7" y="13" width="3" height="3" rx=".5" fill="currentColor" stroke="none"/></svg></div>
+            <div class="module-title">Agenda</div>
+            <div class="module-desc">Agende, remarque e crie alertas de retorno.</div>
+          </div>
+          <div class="module-card" onclick="nav('pacientes')">
+            <div class="module-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.58-7 8-7s8 3 8 7"/></svg></div>
+            <div class="module-title">Pacientes</div>
+            <div class="module-desc">Acesse prontuários e detalhes dos tratamentos.</div>
+          </div>
+          <div class="module-card" onclick="nav('crm')">
+            <div class="module-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="8" height="8" rx="1"/><rect x="14" y="14" width="8" height="8" rx="1"/></svg></div>
+            <div class="module-title">CRC</div>
+            <div class="module-desc">Mantenha um bom vínculo com seus pacientes.</div>
+          </div>
+          <div class="module-card" onclick="nav('financeiro')">
+            <div class="module-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v2M12 15v2M9.5 9.5C9.5 8.67 10.17 8 11 8h2a1.5 1.5 0 010 3h-2a1.5 1.5 0 000 3h2a1.5 1.5 0 100-3"/></svg></div>
+            <div class="module-title">Financeiro</div>
+            <div class="module-desc">Controle entradas e saídas da sua clínica.</div>
+          </div>
+          <div class="module-card" onclick="nav('profissionais')">
+            <div class="module-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="7" r="3"/><circle cx="15" cy="7" r="3"/><path d="M3 20c0-3.31 2.69-6 6-6M12 20c0-3.31 2.69-6 6-6"/></svg></div>
+            <div class="module-title">Profissionais</div>
+            <div class="module-desc">Cadastre e gerencie os profissionais da clínica.</div>
+          </div>
         </div>
-        <div class="grid-3" style="gap:16px">
-          <div class="card">
-            <div class="card-header"><div class="card-title">Agendamentos por Mês</div><span class="badge badge-gold" id="d-period">12 meses</span></div>
-            <div class="card-body"><div class="chart-wrap" id="d-chart"></div></div>
+        <div class="home-modules-2">
+          <div class="module-card" onclick="nav('relatorios')">
+            <div class="module-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l4-4 4 4 4-6 4 4"/><path d="M3 20h18"/></svg></div>
+            <div class="module-title">Relatórios</div>
+            <div class="module-desc">Acompanhe métricas com relatórios da clínica.</div>
           </div>
-          <div class="card">
-            <div class="card-header"><div class="card-title">Categorias</div></div>
-            <div class="card-body" id="d-cats" style="padding-top:10px"></div>
-          </div>
-        </div>
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-header"><div class="card-title">Inativos — Reativação Urgente</div><button class="btn btn-sm" onclick="nav('inativos',null)">Ver todos</button></div>
-            <div class="card-body p0"><table class="tbl"><thead><tr><th>Paciente</th><th>Última Visita</th><th>Dias</th><th>Ação</th></tr></thead><tbody id="d-inativos"></tbody></table></div>
-          </div>
-          <div class="card">
-            <div class="card-header"><div class="card-title">Profissionais</div></div>
-            <div class="card-body p0"><table class="tbl"><thead><tr><th>Nome</th><th>Status</th></tr></thead><tbody id="d-profs"></tbody></table></div>
+          <div class="module-card" onclick="nav('dashboard-analitico')" style="position:relative">
+            <span class="module-badge">Novas taxas</span>
+            <div class="module-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M7 15h2M12 15h2"/></svg></div>
+            <div class="module-title">Clinipay</div>
+            <div class="module-desc">Abra e acompanhe contas Clinipay.</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ════ AGENDA ════ -->
+    <!-- AGENDA -->
     <div class="page" id="p-agenda">
-      <div class="sh">
-        <div><div class="sh-title">Agenda</div><div class="sh-sub" id="agenda-sub">Carregando...</div></div>
-        <div class="sh-actions">
-          <button class="btn btn-sm" onclick="agendaChangeView('semana')">Semana</button>
-          <button class="btn btn-sm" onclick="agendaChangeView('mes')">Mês</button>
-          <button class="btn btn-gold btn-sm" onclick="openModal('agendamento')">+ Novo Agendamento</button>
+      <div class="agenda-topbar">
+        <button class="btn-novo" onclick="openModal('agendamento')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          Novo
+        </button>
+        <button class="btn-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h6v-2H3v2zm0-5h12v-2H3v2zm0-7v2h18V6H3z"/></svg></button>
+        <button class="btn-ico" onclick="agendaPrev()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+        <button class="btn-hoje" onclick="agendaHoje()">Hoje</button>
+        <button class="btn-ico" onclick="agendaNext()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+        <div class="agenda-date" id="agenda-date-title">Sábado, 14 de Março de 2026</div>
+        <button class="btn-ico" title="Recarregar" onclick="loadAgenda()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button>
+        <span class="agenda-warn" id="agenda-warn-txt" onclick="nav('confirmacoes')"></span>
+        <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+          <button class="btn-ico">Deseja utilizar a versão anterior?</button>
+          <button class="btn-ico" style="background:var(--orange);color:#fff;border-color:var(--orange)">Voltar para agenda antiga</button>
+          <select class="agenda-view-sel" id="agenda-view-sel" onchange="agendaChangeView(this.value)"><option value="dia">Dia</option><option value="semana">Semana</option><option value="mes">Mês</option></select>
+          <button class="btn-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg></button>
+          <button class="btn-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></button>
         </div>
       </div>
-      <div id="agenda-loading" class="loading"><div class="spin"></div><div>Buscando agendamentos...</div></div>
-      <div id="agenda-data" class="hidden">
-        <div class="cal-wrapper">
-          <div class="cal-nav">
-            <button class="btn btn-sm" onclick="calPrev()">‹ Anterior</button>
-            <div class="cal-month" id="cal-month-title">—</div>
-            <button class="btn btn-sm" onclick="calNext()">Próximo ›</button>
+      <div class="agenda-body">
+        <div class="agenda-left">
+          <div class="mini-cal">
+            <div class="mini-cal-nav">
+              <button class="mini-cal-nav-btn" onclick="miniCalPrev()">‹</button>
+              <div class="mini-cal-month" id="mini-cal-month">março 2026</div>
+              <button class="mini-cal-nav-btn" onclick="miniCalNext()">›</button>
+            </div>
+            <div class="mini-cal-days">
+              <div class="mini-cal-dh">dom</div><div class="mini-cal-dh">seg</div><div class="mini-cal-dh">ter</div>
+              <div class="mini-cal-dh">qua</div><div class="mini-cal-dh">qui</div><div class="mini-cal-dh">sex</div><div class="mini-cal-dh">sáb</div>
+            </div>
+            <div id="mini-cal-grid" class="mini-cal-days" style="margin-top:2px"></div>
           </div>
-          <div id="cal-container"></div>
+          <div class="agenda-profs" id="profs-panel">
+            <div class="agenda-profs-header">
+              Profissionais
+              <span class="agenda-profs-all">Todos</span>
+            </div>
+            <div id="profs-list"></div>
+          </div>
+          <div class="agenda-alerts">
+            <div class="agenda-alerts-header">
+              Alertas de retorno
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="color:var(--gray5)"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            </div>
+            <div id="alerts-list">
+              <div class="alert-row"><span>JOSE SOUZA DA SIL...</span><span class="alert-date">17/02</span></div>
+              <div class="alert-row"><span>RENATO LIMA DA SIL...</span><span class="alert-date">17/02</span></div>
+              <div class="alert-row"><span>CARLA WENIA DA R...</span><span class="alert-date">17/02</span></div>
+            </div>
+          </div>
         </div>
-        <div class="card" style="margin-top:16px">
-          <div class="card-header"><div class="card-title">Agenda do Dia — <span id="agenda-hoje"></span></div><div style="display:flex;gap:8px"><select class="form-input" style="width:auto;padding:4px 8px;font-size:11px" id="agenda-prof-filter" onchange="filterAgenda()"><option value="">Todos profissionais</option></select></div></div>
-          <div class="card-body p0"><table class="tbl"><thead><tr><th>Horário</th><th>Paciente</th><th>Procedimento</th><th>Profissional</th><th>Status</th><th>Contato</th></tr></thead><tbody id="agenda-table"></tbody></table></div>
+        <div class="agenda-grid-wrap">
+          <div id="agenda-loading" class="loading"><div class="spin"></div><div>Carregando agenda...</div></div>
+          <div id="agenda-grid" class="hidden"></div>
         </div>
       </div>
     </div>
 
-    <!-- ════ PACIENTES ════ -->
-    <div class="page" id="p-pacientes">
-      <div class="sh">
-        <div><div class="sh-title">Pacientes</div><div class="sh-sub" id="pac-sub">Carregando...</div></div>
-        <div class="sh-actions"><button class="btn btn-gold btn-sm" onclick="openModal('paciente')">+ Novo Paciente</button></div>
+    <!-- PACIENTES -->
+    <div class="page gpage" id="p-pacientes">
+      <div class="gpage-header">
+        <div><div class="gpage-title">Pacientes</div><div class="gpage-sub" id="pac-sub">Carregando...</div></div>
+        <button class="btn btn-primary" onclick="openModal('paciente')">+ Novo Paciente</button>
       </div>
-      <div id="pac-loading" class="loading"><div class="spin"></div><div>Buscando pacientes...</div></div>
-      <div id="pac-data" class="hidden">
-        <div class="search-row">
-          <div class="search-wrap">
-            <svg class="search-icon" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M10 10l3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-            <input class="search-input" id="pac-search" placeholder="Buscar paciente..." oninput="filterPacientes()">
+      <div class="gpage-body">
+        <div id="pac-loading" class="loading"><div class="spin"></div></div>
+        <div id="pac-data" class="hidden">
+          <div class="search-row">
+            <div class="search-wrap"><svg class="search-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input class="search-input" id="pac-search" placeholder="Buscar paciente..." oninput="filterPac()"></div>
+            <select class="filter-sel" id="pac-filter" onchange="filterPac()"><option value="todos">Todos</option><option value="ativos">Ativos</option><option value="inativos">Inativos 6m+</option></select>
+            <span style="margin-left:auto;font-size:12px;color:var(--text3)" id="pac-count"></span>
           </div>
-          <div class="filter-group">
-            <select class="form-input" style="width:auto;padding:5px 10px;font-size:11px" id="pac-filter" onchange="filterPacientes()">
-              <option value="todos">Todos</option>
-              <option value="ativos">Ativos</option>
-              <option value="inativos">Inativos 6m+</option>
-            </select>
-          </div>
-          <span style="margin-left:auto;font-size:11px;color:var(--text3)" id="pac-count"></span>
+          <div id="pac-list"></div>
         </div>
-        <div id="pac-list"></div>
       </div>
     </div>
 
-    <!-- ════ PRONTUÁRIO ════ -->
-    <div class="page" id="p-prontuario">
-      <div class="sh"><div><div class="sh-title">Prontuário</div><div class="sh-sub">Selecione um paciente para visualizar o prontuário</div></div></div>
-      <div style="display:flex;gap:16px">
+    <!-- PRONTUÁRIO -->
+    <div class="page gpage" id="p-prontuario">
+      <div class="gpage-header"><div><div class="gpage-title">Prontuário</div></div></div>
+      <div class="gpage-body" style="display:flex;gap:16px;padding-top:14px">
         <div style="width:260px;flex-shrink:0">
-          <div class="search-wrap" style="width:100%;margin-bottom:12px">
-            <svg class="search-icon" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M10 10l3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-            <input class="search-input" style="width:100%" placeholder="Buscar paciente..." id="pront-search" oninput="filterProntList()">
+          <div class="search-wrap" style="width:100%;margin-bottom:10px"><svg class="search-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input class="search-input" style="width:100%" placeholder="Buscar..." id="pront-search" oninput="filterProntList()"></div>
+          <div id="pront-list" style="max-height:calc(100vh-200px);overflow-y:auto"></div>
+        </div>
+        <div style="flex:1" id="pront-detail"><div class="card"><div class="card-body" style="text-align:center;padding:50px;color:var(--text3)">Selecione um paciente para visualizar o prontuário</div></div></div>
+      </div>
+    </div>
+
+    <!-- CRC / INATIVOS -->
+    <div class="page gpage" id="p-crm">
+      <div class="gpage-header">
+        <div><div class="gpage-title">CRC — Controle de Relacionamento</div><div class="gpage-sub" id="crm-sub">Pacientes inativos e reativação</div></div>
+        <div class="flex">
+          <select class="filter-sel" id="crm-filter" onchange="renderCRM()"><option value="all">Todos</option><option value="urgente">Urgente +365d</option><option value="alta">Alta +270d</option><option value="media">Média +180d</option></select>
+          <button class="btn btn-orange" onclick="openModal('script')">Script IA em Massa</button>
+        </div>
+      </div>
+      <div class="gpage-body">
+        <div class="kpi-row c3">
+          <div class="kpi red"><div class="kpi-label">Urgente +365 dias</div><div class="kpi-val" id="crm-urgente">—</div></div>
+          <div class="kpi orange"><div class="kpi-label">Alta +270 dias</div><div class="kpi-val" id="crm-alta">—</div></div>
+          <div class="kpi green"><div class="kpi-label">Média +180 dias</div><div class="kpi-val" id="crm-media">—</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Lista de Inativos</div></div>
+          <div class="card-body p0"><table class="tbl"><thead><tr><th>#</th><th>Paciente</th><th>Última Visita</th><th>Dias Ausente</th><th>Prioridade</th><th>Ação</th></tr></thead><tbody id="crm-table"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FINANCEIRO -->
+    <div class="page gpage" id="p-financeiro">
+      <div class="gpage-header">
+        <div><div class="gpage-title">Financeiro</div></div>
+        <div class="flex">
+          <select class="filter-sel" id="fin-period" onchange="loadFinanceiro()"><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="365" selected>Último ano</option></select>
+        </div>
+      </div>
+      <div class="gpage-body">
+        <div id="fin-loading" class="loading"><div class="spin"></div></div>
+        <div id="fin-data" class="hidden">
+          <div class="kpi-row c4">
+            <div class="kpi green"><div class="kpi-label">Total Recebido</div><div class="kpi-val sm" id="fin-total">—</div></div>
+            <div class="kpi blue"><div class="kpi-label">Ticket Médio</div><div class="kpi-val" id="fin-ticket">—</div></div>
+            <div class="kpi orange"><div class="kpi-label">Registros</div><div class="kpi-val" id="fin-count">—</div></div>
+            <div class="kpi purple"><div class="kpi-label">Maior Pagamento</div><div class="kpi-val sm" id="fin-max">—</div></div>
           </div>
-          <div id="pront-list" style="max-height:calc(100vh - 200px);overflow-y:auto"></div>
-        </div>
-        <div style="flex:1;min-width:0" id="pront-detail">
-          <div class="card" style="opacity:.5"><div class="card-body" style="text-align:center;padding:60px;color:var(--text3)">Selecione um paciente na lista ao lado</div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ════ INATIVOS ════ -->
-    <div class="page" id="p-inativos">
-      <div class="sh">
-        <div><div class="sh-title">Pacientes Inativos</div><div class="sh-sub" id="inativo-sub">—</div></div>
-        <div class="sh-actions">
-          <select class="form-input" style="width:auto;padding:5px 10px;font-size:11px" id="inativo-filter" onchange="renderInativos()">
-            <option value="all">Todas prioridades</option>
-            <option value="urgente">Urgente (+365d)</option>
-            <option value="alta">Alta (+270d)</option>
-            <option value="media">Média (+180d)</option>
-          </select>
-          <button class="btn btn-gold btn-sm" onclick="openModal('script')">Script IA em Massa</button>
-        </div>
-      </div>
-      <div class="kpi-grid cols-3">
-        <div class="kpi c-wine"><div class="kpi-label">Urgente +365d</div><div class="kpi-val c-wine" id="in-urgente">—</div></div>
-        <div class="kpi c-warn"><div class="kpi-label">Alta +270d</div><div class="kpi-val c-warn" id="in-alta">—</div></div>
-        <div class="kpi c-gold"><div class="kpi-label">Média +180d</div><div class="kpi-val c-gold" id="in-media">—</div></div>
-      </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title">Lista de Inativos</div></div>
-        <div class="card-body p0"><table class="tbl"><thead><tr><th>#</th><th>Paciente</th><th>Última Visita</th><th>Dias Ausente</th><th>Prioridade</th><th>Ação</th></tr></thead><tbody id="in-table"></tbody></table></div>
-      </div>
-    </div>
-
-    <!-- ════ ANIVERSARIANTES ════ -->
-    <div class="page" id="p-aniversariantes">
-      <div class="sh">
-        <div><div class="sh-title">Aniversariantes</div><div class="sh-sub">Próximos 60 dias — oportunidade de relacionamento</div></div>
-        <div class="sh-actions"><button class="btn btn-gold btn-sm" onclick="openModal('script')">Gerar Mensagem IA</button></div>
-      </div>
-      <div id="aniv-loading" class="loading"><div class="spin"></div><div>Buscando aniversariantes...</div></div>
-      <div id="aniv-data" class="hidden">
-        <div class="card"><div class="card-header"><div class="card-title">Lista</div></div><div class="card-body" id="aniv-list"></div></div>
-      </div>
-    </div>
-
-    <!-- ════ FINANCEIRO ════ -->
-    <div class="page" id="p-financeiro">
-      <div class="sh">
-        <div><div class="sh-title">Recebimentos</div><div class="sh-sub">Histórico financeiro · Dados reais API Clinicorp</div></div>
-        <div class="sh-actions">
-          <select class="form-input" style="width:auto;padding:5px 10px;font-size:11px" id="fin-period" onchange="loadFinanceiro()">
-            <option value="30">Últimos 30 dias</option>
-            <option value="90">Últimos 90 dias</option>
-            <option value="180">Últimos 180 dias</option>
-            <option value="365" selected>Último ano</option>
-          </select>
-        </div>
-      </div>
-      <div id="fin-loading" class="loading"><div class="spin"></div><div>Buscando recebimentos...</div></div>
-      <div id="fin-data" class="hidden">
-        <div class="kpi-grid cols-4">
-          <div class="kpi c-green"><div class="kpi-label">Total Recebido</div><div class="kpi-val c-green sm" id="fin-total">—</div></div>
-          <div class="kpi c-gold"><div class="kpi-label">Ticket Médio</div><div class="kpi-val c-gold" id="fin-ticket">—</div></div>
-          <div class="kpi c-blue"><div class="kpi-label">Registros</div><div class="kpi-val c-blue" id="fin-count">—</div></div>
-          <div class="kpi c-warn"><div class="kpi-label">Maior Pagamento</div><div class="kpi-val c-warn sm" id="fin-max">—</div></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><div class="card-title">Histórico de Recebimentos</div>
-            <div class="search-wrap">
-              <svg class="search-icon" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M10 10l3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-              <input class="search-input" placeholder="Buscar..." oninput="filterFin(this.value)" style="width:180px">
-            </div>
-          </div>
-          <div class="card-body p0"><table class="tbl"><thead><tr><th>#</th><th>Paciente</th><th>Data</th><th>Valor</th><th>Forma</th></tr></thead><tbody id="fin-table"></tbody></table></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ════ CAIXA ════ -->
-    <div class="page" id="p-caixa">
-      <div class="sh"><div><div class="sh-title">Fluxo de Caixa</div><div class="sh-sub">Entradas e saídas consolidadas</div></div></div>
-      <div id="caixa-loading" class="loading"><div class="spin"></div><div>Carregando fluxo de caixa...</div></div>
-      <div id="caixa-data" class="hidden">
-        <div class="kpi-grid cols-3">
-          <div class="kpi c-green"><div class="kpi-label">Total Entradas</div><div class="kpi-val c-green sm" id="cx-in">—</div></div>
-          <div class="kpi c-wine"><div class="kpi-label">Total Saídas</div><div class="kpi-val c-wine sm" id="cx-out">—</div></div>
-          <div class="kpi c-gold"><div class="kpi-label">Saldo Período</div><div class="kpi-val sm" id="cx-saldo">—</div></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><div class="card-title">Extrato</div></div>
-          <div id="cx-list"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ════ ORÇAMENTOS ════ -->
-    <div class="page" id="p-orcamentos">
-      <div class="sh">
-        <div><div class="sh-title">Orçamentos</div><div class="sh-sub" id="orc-sub">Carregando...</div></div>
-        <div class="sh-actions"><button class="btn btn-gold btn-sm" onclick="openModal('orcamento')">+ Novo Orçamento</button></div>
-      </div>
-      <div id="orc-loading" class="loading"><div class="spin"></div><div>Buscando orçamentos...</div></div>
-      <div id="orc-data" class="hidden">
-        <div class="kpi-grid cols-4">
-          <div class="kpi c-blue"><div class="kpi-label">Total</div><div class="kpi-val c-blue" id="orc-total">—</div></div>
-          <div class="kpi c-warn"><div class="kpi-label">Pendentes</div><div class="kpi-val c-warn" id="orc-pend">—</div></div>
-          <div class="kpi c-green"><div class="kpi-label">Aprovados</div><div class="kpi-val c-green" id="orc-aprov">—</div></div>
-          <div class="kpi c-wine"><div class="kpi-label">Recusados</div><div class="kpi-val c-wine" id="orc-rec">—</div></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><div class="card-title">Lista de Orçamentos</div></div>
-          <div class="card-body p0"><table class="tbl"><thead><tr><th>Paciente</th><th>Data</th><th>Valor</th><th>Validade</th><th>Status</th><th>Ações</th></tr></thead><tbody id="orc-table"></tbody></table></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ════ RELATÓRIOS ════ -->
-    <div class="page" id="p-relatorios">
-      <div class="sh"><div><div class="sh-title">Relatórios</div><div class="sh-sub">Análises e indicadores da clínica</div></div></div>
-      <div class="tabs">
-        <div class="tab active" onclick="relTab('producao',this)">Produção</div>
-        <div class="tab" onclick="relTab('procedimentos',this)">Procedimentos</div>
-        <div class="tab" onclick="relTab('inadimplencia',this)">Inadimplência</div>
-        <div class="tab" onclick="relTab('profissionais',this)">Profissionais</div>
-      </div>
-      <div class="tab-panel active" id="rel-producao">
-        <div class="kpi-grid cols-3">
-          <div class="kpi c-gold"><div class="kpi-label">Faturamento Bruto</div><div class="kpi-val c-gold sm" id="rel-fat">—</div></div>
-          <div class="kpi c-green"><div class="kpi-label">Recebido</div><div class="kpi-val c-green sm" id="rel-receb">—</div></div>
-          <div class="kpi c-wine"><div class="kpi-label">A Receber</div><div class="kpi-val c-wine sm" id="rel-arec">—</div></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><div class="card-title">Produção Mensal</div></div>
-          <div class="card-body"><div class="chart-wrap" id="rel-chart" style="height:100px"></div></div>
-        </div>
-      </div>
-      <div class="tab-panel" id="rel-procedimentos">
-        <div class="card"><div class="card-header"><div class="card-title">Procedimentos Mais Realizados</div></div><div class="card-body p0"><table class="tbl"><thead><tr><th>Procedimento</th><th>Qtde</th><th>%</th></tr></thead><tbody id="rel-proc-table"></tbody></table></div></div>
-      </div>
-      <div class="tab-panel" id="rel-inadimplencia">
-        <div class="card"><div class="card-body" style="text-align:center;padding:40px;color:var(--text3)">Relatório de inadimplência disponível após integração do módulo de pagamentos</div></div>
-      </div>
-      <div class="tab-panel" id="rel-profissionais">
-        <div class="card"><div class="card-header"><div class="card-title">Produção por Profissional</div></div><div class="card-body p0"><table class="tbl"><thead><tr><th>Profissional</th><th>Agendamentos</th><th>%</th></tr></thead><tbody id="rel-prof-table"></tbody></table></div></div>
-      </div>
-    </div>
-
-    <!-- ════ CONFIGURAÇÕES ════ -->
-    <div class="page" id="p-configuracoes">
-      <div class="sh"><div><div class="sh-title">Configurações</div><div class="sh-sub">Gerencie sua clínica e equipe</div></div></div>
-      <div class="tabs">
-        <div class="tab active" onclick="cfgTab('clinica',this)">Clínica</div>
-        <div class="tab" onclick="cfgTab('profissionais',this)">Profissionais</div>
-        <div class="tab" onclick="cfgTab('procedimentos',this)">Procedimentos</div>
-        <div class="tab" onclick="cfgTab('planos',this)">Planos / Convênios</div>
-      </div>
-      <div class="tab-panel active" id="cfg-clinica">
-        <div class="config-section">
-          <div class="config-section-header"><div class="config-section-title">Dados da Clínica</div><button class="btn btn-sm">Editar</button></div>
-          <div class="config-row"><div><div class="config-label">Nome</div><div class="config-value">Klinik Odontologia</div></div></div>
-          <div class="config-row"><div><div class="config-label">Razão Social</div><div class="config-value">KLINIK ODONTOLOGIA LTDA</div></div></div>
-          <div class="config-row"><div><div class="config-label">CNPJ</div><div class="config-value">52.832.197/0001-29</div></div></div>
-          <div class="config-row"><div><div class="config-label">Endereço</div><div class="config-value">Rua Padre João Crippa, 2012 — Centro, Campo Grande MS</div></div></div>
-          <div class="config-row"><div><div class="config-label">Telefone</div><div class="config-value">(67) 99931-5131</div></div></div>
-          <div class="config-row"><div><div class="config-label">Email</div><div class="config-value">contato@klinikodontologia.com.br</div></div></div>
-        </div>
-        <div class="config-section">
-          <div class="config-section-header"><div class="config-section-title">Notificações</div></div>
-          <div class="config-row"><div class="config-label">Confirmação de consulta via WhatsApp</div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
-          <div class="config-row"><div class="config-label">Alerta de pacientes inativos</div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
-          <div class="config-row"><div class="config-label">Lembrete de aniversariantes</div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
-          <div class="config-row"><div class="config-label">Relatório semanal automático</div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
-        </div>
-      </div>
-      <div class="tab-panel" id="cfg-profissionais">
-        <div id="cfg-prof-loading" class="loading"><div class="spin"></div><div>Carregando equipe...</div></div>
-        <div id="cfg-prof-data" class="hidden">
-          <div class="grid-2" id="cfg-prof-grid" style="margin-bottom:16px"></div>
-          <button class="btn btn-gold" onclick="openModal('profissional')">+ Adicionar Profissional</button>
-        </div>
-      </div>
-      <div class="tab-panel" id="cfg-procedimentos">
-        <div id="cfg-proc-loading" class="loading"><div class="spin"></div><div>Carregando procedimentos...</div></div>
-        <div id="cfg-proc-data" class="hidden">
           <div class="card">
-            <div class="card-header"><div class="card-title">Tabela de Procedimentos</div><button class="btn btn-sm">+ Adicionar</button></div>
-            <div class="card-body p0"><table class="tbl"><thead><tr><th>Procedimento</th><th>Especialidade</th><th>Código</th></tr></thead><tbody id="cfg-proc-table"></tbody></table></div>
+            <div class="card-header"><div class="card-title">Histórico de Recebimentos</div><div class="search-wrap"><svg class="search-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input class="search-input" style="width:180px" placeholder="Buscar..." oninput="filterFin(this.value)"></div></div>
+            <div class="card-body p0"><table class="tbl"><thead><tr><th>#</th><th>Paciente</th><th>Data</th><th>Valor</th></tr></thead><tbody id="fin-table"></tbody></table></div>
           </div>
         </div>
       </div>
-      <div class="tab-panel" id="cfg-planos">
-        <div class="card"><div class="card-body" style="text-align:center;padding:40px;color:var(--text3)">Módulo de planos e convênios em desenvolvimento</div></div>
+    </div>
+
+    <!-- PROFISSIONAIS -->
+    <div class="page gpage" id="p-profissionais">
+      <div class="gpage-header"><div><div class="gpage-title">Profissionais</div><div class="gpage-sub" id="prof-sub">Carregando...</div></div><button class="btn btn-primary">+ Adicionar Profissional</button></div>
+      <div class="gpage-body">
+        <div id="prof-loading" class="loading"><div class="spin"></div></div>
+        <div id="prof-data" class="hidden"><div class="prof-grid" id="prof-grid"></div></div>
       </div>
     </div>
 
-    <!-- ════ IA ════ -->
-    <div class="page" id="p-ia">
-      <div class="sh"><div><div class="sh-title">Assistente IA</div><div class="sh-sub">Powered by Claude · Klinik Edition</div></div></div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-header"><div class="card-title">Gerar Script WhatsApp</div></div>
-          <div class="card-body">
-            <div class="form-row"><div class="form-group"><label class="form-label">Paciente</label><input class="form-input" id="ia-nome" placeholder="Nome do paciente"></div></div>
-            <div class="form-row cols-2">
-              <div class="form-group"><label class="form-label">Dias sem visita</label><input class="form-input" type="number" id="ia-dias" value="290"></div>
-              <div class="form-group"><label class="form-label">Tipo</label><select class="form-input" id="ia-tipo"><option value="reativacao">Reativação</option><option value="aniversario">Aniversário</option><option value="upsell">Upsell</option><option value="confirmacao">Confirmação</option></select></div>
+    <!-- ANIVERSARIANTES -->
+    <div class="page gpage" id="p-aniversariantes">
+      <div class="gpage-header"><div><div class="gpage-title">Aniversariantes</div><div class="gpage-sub">Próximos 60 dias</div></div><button class="btn btn-orange" onclick="openModal('script')">Gerar Mensagem IA</button></div>
+      <div class="gpage-body">
+        <div id="aniv-loading" class="loading"><div class="spin"></div></div>
+        <div id="aniv-data" class="hidden"><div class="card"><div class="card-body" id="aniv-list"></div></div></div>
+      </div>
+    </div>
+
+    <!-- RELATÓRIOS -->
+    <div class="page gpage" id="p-relatorios">
+      <div class="gpage-header"><div><div class="gpage-title">Relatórios</div></div></div>
+      <div class="gpage-body">
+        <div class="tabs">
+          <div class="tab active" onclick="relTab('producao',this)">Produção</div>
+          <div class="tab" onclick="relTab('procedimentos',this)">Procedimentos</div>
+          <div class="tab" onclick="relTab('profissionais',this)">Profissionais</div>
+          <div class="tab" onclick="relTab('inativos',this)">Inativos</div>
+        </div>
+        <div class="tab-panel active" id="rel-producao">
+          <div class="kpi-row c3">
+            <div class="kpi green"><div class="kpi-label">Faturamento</div><div class="kpi-val sm" id="rel-fat">—</div></div>
+            <div class="kpi blue"><div class="kpi-label">Recebido</div><div class="kpi-val sm" id="rel-receb">—</div></div>
+            <div class="kpi orange"><div class="kpi-label">Agendamentos</div><div class="kpi-val" id="rel-ag">—</div></div>
+          </div>
+          <div class="card"><div class="card-header"><div class="card-title">Produção Mensal</div></div><div class="card-body"><div id="rel-chart" style="display:flex;align-items:flex-end;gap:6px;height:100px;padding-top:8px"></div></div></div>
+        </div>
+        <div class="tab-panel" id="rel-procedimentos">
+          <div class="card"><div class="card-header"><div class="card-title">Procedimentos Mais Realizados</div></div><div class="card-body p0"><table class="tbl"><thead><tr><th>Procedimento</th><th>Qtde</th><th>Participação</th></tr></thead><tbody id="rel-proc"></tbody></table></div></div>
+        </div>
+        <div class="tab-panel" id="rel-profissionais">
+          <div class="card"><div class="card-header"><div class="card-title">Produção por Profissional</div></div><div class="card-body p0"><table class="tbl"><thead><tr><th>Profissional</th><th>Agendamentos</th></tr></thead><tbody id="rel-profs"></tbody></table></div></div>
+        </div>
+        <div class="tab-panel" id="rel-inativos">
+          <div class="kpi-row c3">
+            <div class="kpi red"><div class="kpi-label">Urgente</div><div class="kpi-val" id="rel-urg">—</div></div>
+            <div class="kpi orange"><div class="kpi-label">Alta</div><div class="kpi-val" id="rel-alta">—</div></div>
+            <div class="kpi green"><div class="kpi-label">Média</div><div class="kpi-val" id="rel-med">—</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD ANALÍTICO -->
+    <div class="page" id="p-dashboard-analitico">
+      <div class="dash-filters">
+        <div class="dash-radio"><input type="radio" name="dash-period" checked> <span>Últimos 3 meses</span></div>
+        <div class="dash-radio"><input type="radio" name="dash-period"> <span>Selecionar período</span></div>
+        <div class="dash-filter-group"><div class="dash-filter-label">Mês de Referência</div><select class="dash-filter-sel"><option>Março</option><option>Fevereiro</option><option>Janeiro</option></select></div>
+        <div class="dash-filter-group"><div class="dash-filter-label">Ano</div><select class="dash-filter-sel"><option>2026</option><option>2025</option></select></div>
+        <div class="dash-filter-group"><div class="dash-filter-label">Clínica</div><select class="dash-filter-sel"><option>Klinik Odontologia</option></select></div>
+        <div class="dash-filter-group"><div class="dash-filter-label">Análise</div><select class="dash-filter-sel"><option>Todas</option></select></div>
+        <button class="btn btn-orange btn-sm">▶ Listar</button>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">Fluxo de Caixa (R$)</div>
+          <div class="bar-chart" id="chart-caixa"></div>
+          <div class="legend"><div class="legend-item"><div class="legend-dot" style="background:#1976D2"></div>Entrada</div><div class="legend-item"><div class="legend-dot" style="background:#D32F2F"></div>Saída</div><div class="legend-item"><div class="legend-dot" style="background:#F9A825"></div>Resultado</div></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Emissão de Notas Fiscais e Recibos (R$)</div>
+          <div class="bar-chart" id="chart-nf"></div>
+          <div class="legend"><div class="legend-item"><div class="legend-dot" style="background:#1976D2"></div>Recibos</div><div class="legend-item"><div class="legend-dot" style="background:#D32F2F"></div>NFSe</div></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Análise de Inadimplência</div>
+          <div class="chart-sub">Referência: Janeiro - Março</div>
+          <div class="pie-wrap" style="margin-top:12px">
+            <svg class="pie-svg" width="120" height="120" viewBox="0 0 120 120">
+              <circle r="54" cx="60" cy="60" fill="none" stroke="#1976D2" stroke-width="54" stroke-dasharray="339.4 0" transform="rotate(-90 60 60)"/>
+              <circle r="54" cx="60" cy="60" fill="none" stroke="#D32F2F" stroke-width="54" stroke-dasharray="9.5 329.9" stroke-dashoffset="-339.4" transform="rotate(-90 60 60)"/>
+              <circle r="54" cx="60" cy="60" fill="none" stroke="#F9A825" stroke-width="54" stroke-dasharray="4.1 335.3" stroke-dashoffset="-348.9" transform="rotate(-90 60 60)"/>
+              <circle r="30" cx="60" cy="60" fill="white"/>
+            </svg>
+            <div class="pie-legend">
+              <div class="pie-leg-item"><div class="pie-leg-dot" style="background:#1976D2"></div><span>Pagamentos 95.9%</span></div>
+              <div class="pie-leg-item"><div class="pie-leg-dot" style="background:#D32F2F"></div><span>Inadimplência 2.8%</span></div>
+              <div class="pie-leg-item"><div class="pie-leg-dot" style="background:#F9A825"></div><span>Valores a entrar 1.2%</span></div>
             </div>
-            <div class="form-row"><div class="form-group"><label class="form-label">Procedimento</label><select class="form-input" id="ia-proc"><option>Clareamento dental</option><option>Lentes de porcelana</option><option>Implante dentário</option><option>Protocolo All-on-4</option><option>Placa miorrelaxante</option><option>Consulta de revisão</option></select></div></div>
-            <button class="btn btn-gold" style="width:100%" onclick="gerarScriptIA()">Gerar com IA</button>
-            <div id="ia-result" class="hidden" style="margin-top:14px;background:var(--bg3);border:1px solid rgba(201,164,85,.2);border-radius:10px;padding:16px">
-              <div style="font-size:10px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;font-weight:600;margin-bottom:10px">Script Gerado</div>
-              <div id="ia-output" style="font-size:12px;line-height:1.7;white-space:pre-wrap;color:var(--text)"></div>
-              <div style="margin-top:12px;display:flex;gap:8px">
-                <a id="ia-wa" href="#" target="_blank" class="wa-btn">WhatsApp</a>
-                <button class="btn btn-sm" onclick="navigator.clipboard.writeText(window._iaScript||'')">Copiar</button>
+          </div>
+        </div>
+      </div>
+      <div class="charts-grid-2" style="margin-top:16px">
+        <div class="chart-card">
+          <div class="chart-title">Entrada, Previsão e Inadimplência (R$)</div>
+          <div style="height:100px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px">Gráfico de linha — dados via API</div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Agendamentos Desmarcados</div>
+          <div class="bar-chart" id="chart-desmarcados"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Faltas no Agendamento Total</div>
+          <div class="bar-chart" id="chart-faltas"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONFIGURAÇÕES -->
+    <div class="page gpage" id="p-configuracoes">
+      <div class="gpage-header"><div><div class="gpage-title">Configuração</div></div></div>
+      <div style="max-width:900px;margin:0 auto;padding:16px 24px">
+        <div id="cfg-list"></div>
+      </div>
+    </div>
+
+    <!-- IA -->
+    <div class="page gpage" id="p-ia">
+      <div class="gpage-header"><div><div class="gpage-title">Assistente IA</div><div class="gpage-sub">Powered by Claude · Klinik Edition</div></div></div>
+      <div class="gpage-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Gerar Script WhatsApp</div></div>
+            <div class="card-body">
+              <div class="form-group"><label class="form-label">Paciente</label><input class="form-input" id="ia-nome" placeholder="Nome do paciente"></div>
+              <div class="form-row c2">
+                <div class="form-group"><label class="form-label">Dias sem visita</label><input class="form-input" type="number" id="ia-dias" value="290"></div>
+                <div class="form-group"><label class="form-label">Tipo</label><select class="form-input" id="ia-tipo"><option value="reativacao">Reativação</option><option value="aniversario">Aniversário</option><option value="upsell">Upsell</option><option value="confirmacao">Confirmação</option></select></div>
+              </div>
+              <div class="form-group"><label class="form-label">Procedimento</label><select class="form-input" id="ia-proc"><option>Clareamento dental</option><option>Lentes de porcelana</option><option>Implante dentário</option><option>Protocolo All-on-4</option><option>Placa miorrelaxante</option><option>Consulta de revisão</option></select></div>
+              <button class="btn btn-primary" style="width:100%" onclick="gerarScriptIA()">Gerar com IA</button>
+              <div id="ia-result" class="hidden" style="margin-top:14px;background:#F9FBE7;border:1px solid #C5E1A5;border-radius:4px;padding:14px">
+                <div style="font-size:11px;color:var(--green);font-weight:500;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Script Gerado</div>
+                <div id="ia-output" style="font-size:13px;line-height:1.6;white-space:pre-wrap;color:var(--text)"></div>
+                <div style="margin-top:10px;display:flex;gap:8px">
+                  <a id="ia-wa" href="#" target="_blank" class="wa-btn">WhatsApp</a>
+                  <button class="btn btn-sm" onclick="navigator.clipboard.writeText(window._iaScript||'')">Copiar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Sugestões Rápidas</div></div>
+            <div class="card-body">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <button class="btn" style="text-align:left;font-size:13px" onclick="iaQuick('Plano de marketing Março para Klinik Odontologia focado em clareamento e lentes')">📅 Plano de Marketing — Março</button>
+                <button class="btn" style="text-align:left;font-size:13px" onclick="iaQuick('Análise de margem e upsell: Lentes R$1.800, Implante R$2.200, Clareamento R$800 — Klinik Odontologia')">💰 Análise de Margem e Upsell</button>
+                <button class="btn" style="text-align:left;font-size:13px" onclick="iaQuick('Posts Instagram Klinik Odontologia implante dentário público feminino 35-55 anos, 3 posts')">📸 Posts Instagram — Implante</button>
+                <button class="btn" style="text-align:left;font-size:13px" onclick="iaQuick('Estratégia para reativar 399 pacientes inativos Klinik Odontologia via WhatsApp')">🔄 Estratégia de Reativação</button>
+                <button class="btn" style="text-align:left;font-size:13px" onclick="iaQuick('Script captação indicações para paciente satisfeito da Klinik Odontologia')">⭐ Script de Indicação</button>
               </div>
             </div>
           </div>
         </div>
-        <div class="card">
-          <div class="card-header"><div class="card-title">Sugestões Rápidas</div></div>
-          <div class="card-body">
-            <div style="display:flex;flex-direction:column;gap:8px">
-              <button class="btn" style="text-align:left;padding:11px 13px;font-size:11px" onclick="iaQuick('Crie plano de marketing para Março para Klinik Odontologia, focado em clareamento e lentes')">Plano de Marketing — Março</button>
-              <button class="btn" style="text-align:left;padding:11px 13px;font-size:11px" onclick="iaQuick('Analise procedimentos da Klinik e dê estratégia de upsell: Lentes R$1.800, Implante R$2.200, Clareamento R$800')">Análise de Margem e Upsell</button>
-              <button class="btn" style="text-align:left;padding:11px 13px;font-size:11px" onclick="iaQuick('Crie sequência de 3 posts Instagram para Klinik Odontologia sobre implante dentário, público feminino 35-55 anos')">Posts Instagram — Implante</button>
-              <button class="btn" style="text-align:left;padding:11px 13px;font-size:11px" onclick="iaQuick('Estratégias para reativar 399 pacientes inativos da Klinik de forma eficiente e personalizada via WhatsApp')">Estratégia de Reativação em Massa</button>
-              <button class="btn" style="text-align:left;padding:11px 13px;font-size:11px" onclick="iaQuick('Script de captação para indicações: como pedir ao paciente satisfeito que indique amigos para a Klinik')">Script de Indicação</button>
-            </div>
-          </div>
+        <div class="card" style="margin-top:0">
+          <div class="card-header"><div class="card-title">Resposta da IA</div></div>
+          <div class="card-body" id="ia-quick-result" style="color:var(--text3);font-size:13px;line-height:1.6">Selecione uma sugestão acima para ver a resposta aqui.</div>
         </div>
-      </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title">Resposta da IA</div></div>
-        <div class="card-body" id="ia-quick-result" style="color:var(--text3);font-size:12px;line-height:1.7">Selecione uma sugestão ou gere um script acima para ver a resposta aqui.</div>
       </div>
     </div>
 
@@ -734,19 +758,16 @@ textarea.form-input{resize:vertical;min-height:80px;line-height:1.5}
   <div class="modal">
     <div class="modal-head"><div class="modal-title">Gerar Script IA</div><button class="modal-close" onclick="closeModal('script')">✕</button></div>
     <div class="modal-body">
-      <div class="form-row cols-2">
-        <div class="form-group"><label class="form-label">Paciente</label><input class="form-input" id="ms-nome" placeholder="Nome"></div>
-        <div class="form-group"><label class="form-label">Tipo</label><select class="form-input" id="ms-tipo"><option value="reativacao">Reativação</option><option value="aniversario">Aniversário</option><option value="upsell">Upsell</option><option value="confirmacao">Confirmação</option></select></div>
-      </div>
-      <div class="form-row"><div class="form-group"><label class="form-label">Procedimento</label><select class="form-input" id="ms-proc"><option>Clareamento dental</option><option>Lentes de porcelana</option><option>Implante dentário</option><option>Protocolo All-on-4</option><option>Placa miorrelaxante</option><option>Consulta de revisão</option></select></div></div>
-      <div id="ms-result" class="hidden" style="margin-top:14px;background:var(--bg3);border:1px solid rgba(201,164,85,.2);border-radius:10px;padding:16px">
-        <div style="font-size:10px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Script Gerado</div>
-        <div id="ms-output" style="font-size:12px;line-height:1.7;white-space:pre-wrap"></div>
+      <div class="form-row c2"><div class="form-group"><label class="form-label">Paciente</label><input class="form-input" id="ms-nome" placeholder="Nome"></div><div class="form-group"><label class="form-label">Tipo</label><select class="form-input" id="ms-tipo"><option value="reativacao">Reativação</option><option value="aniversario">Aniversário</option><option value="upsell">Upsell</option><option value="confirmacao">Confirmação</option></select></div></div>
+      <div class="form-group"><label class="form-label">Procedimento</label><select class="form-input" id="ms-proc"><option>Clareamento dental</option><option>Lentes de porcelana</option><option>Implante dentário</option><option>Protocolo All-on-4</option><option>Placa miorrelaxante</option><option>Consulta de revisão</option></select></div>
+      <div id="ms-result" class="hidden" style="margin-top:12px;background:#F9FBE7;border:1px solid #C5E1A5;border-radius:4px;padding:14px">
+        <div style="font-size:11px;color:var(--green);font-weight:500;margin-bottom:8px">SCRIPT GERADO</div>
+        <div id="ms-output" style="font-size:13px;line-height:1.6;white-space:pre-wrap"></div>
         <div style="margin-top:10px;display:flex;gap:8px"><a id="ms-wa" href="#" target="_blank" class="wa-btn">WhatsApp</a><button class="btn btn-sm" onclick="navigator.clipboard.writeText(window._msScript||'')">Copiar</button></div>
       </div>
-      <div id="ms-loading" class="hidden" style="text-align:center;padding:20px;color:var(--text3)"><div class="spin" style="margin:0 auto 8px"></div>Gerando com IA...</div>
+      <div id="ms-loading" class="hidden" style="text-align:center;padding:16px;color:var(--text3)"><div class="spin" style="margin:0 auto 8px"></div>Gerando com IA...</div>
     </div>
-    <div class="modal-foot"><button class="btn btn-gold" onclick="gerarScriptModal()">Gerar com IA</button><button class="btn" onclick="closeModal('script')">Cancelar</button></div>
+    <div class="modal-foot"><button class="btn btn-primary" onclick="gerarScriptModal()">Gerar com IA</button><button class="btn" onclick="closeModal('script')">Cancelar</button></div>
   </div>
 </div>
 
@@ -754,12 +775,12 @@ textarea.form-input{resize:vertical;min-height:80px;line-height:1.5}
   <div class="modal">
     <div class="modal-head"><div class="modal-title">Novo Agendamento</div><button class="modal-close" onclick="closeModal('agendamento')">✕</button></div>
     <div class="modal-body">
-      <div class="form-row cols-2"><div class="form-group"><label class="form-label">Paciente</label><input class="form-input" placeholder="Nome do paciente"></div><div class="form-group"><label class="form-label">Profissional</label><select class="form-input" id="ag-prof"><option>Selecione...</option></select></div></div>
-      <div class="form-row cols-2"><div class="form-group"><label class="form-label">Data</label><input class="form-input" type="date"></div><div class="form-group"><label class="form-label">Horário</label><input class="form-input" type="time"></div></div>
-      <div class="form-row"><div class="form-group"><label class="form-label">Procedimento</label><input class="form-input" placeholder="Procedimento"></div></div>
-      <div class="form-row"><div class="form-group"><label class="form-label">Observações</label><textarea class="form-input" placeholder="Observações..."></textarea></div></div>
+      <div class="form-group"><label class="form-label">Paciente</label><input class="form-input" placeholder="Digite para buscar..."></div>
+      <div class="form-row c2"><div class="form-group"><label class="form-label">Profissional</label><select class="form-input" id="ag-prof-sel"><option>Selecione...</option></select></div><div class="form-group"><label class="form-label">Categoria</label><select class="form-input"><option>Consulta</option><option>Restauração</option><option>Implante</option><option>Clareamento</option><option>Ortodontia</option></select></div></div>
+      <div class="form-row c2"><div class="form-group"><label class="form-label">Data</label><input class="form-input" type="date"></div><div class="form-group"><label class="form-label">Horário</label><input class="form-input" type="time"></div></div>
+      <div class="form-group"><label class="form-label">Observações</label><textarea class="form-input" style="resize:vertical;min-height:70px" placeholder="Observações..."></textarea></div>
     </div>
-    <div class="modal-foot"><button class="btn btn-gold">Salvar Agendamento</button><button class="btn" onclick="closeModal('agendamento')">Cancelar</button></div>
+    <div class="modal-foot"><button class="btn btn-primary">Salvar</button><button class="btn" onclick="closeModal('agendamento')">Cancelar</button></div>
   </div>
 </div>
 
@@ -767,335 +788,252 @@ textarea.form-input{resize:vertical;min-height:80px;line-height:1.5}
   <div class="modal lg">
     <div class="modal-head"><div class="modal-title">Novo Paciente</div><button class="modal-close" onclick="closeModal('paciente')">✕</button></div>
     <div class="modal-body">
-      <div class="form-row cols-2"><div class="form-group"><label class="form-label">Nome Completo</label><input class="form-input" placeholder="Nome completo"></div><div class="form-group"><label class="form-label">CPF</label><input class="form-input" placeholder="000.000.000-00"></div></div>
-      <div class="form-row cols-3"><div class="form-group"><label class="form-label">Nascimento</label><input class="form-input" type="date"></div><div class="form-group"><label class="form-label">Sexo</label><select class="form-input"><option>Feminino</option><option>Masculino</option></select></div><div class="form-group"><label class="form-label">Estado Civil</label><select class="form-input"><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option></select></div></div>
-      <div class="form-row cols-2"><div class="form-group"><label class="form-label">Telefone</label><input class="form-input" placeholder="(67) 99999-9999"></div><div class="form-group"><label class="form-label">Email</label><input class="form-input" placeholder="email@email.com"></div></div>
-      <div class="form-row"><div class="form-group"><label class="form-label">Endereço</label><input class="form-input" placeholder="Endereço completo"></div></div>
-      <div class="form-row"><div class="form-group"><label class="form-label">Como nos conheceu?</label><select class="form-input"><option>Indicação</option><option>Instagram</option><option>Google</option><option>Passagem pela clínica</option><option>Outro</option></select></div></div>
+      <div class="form-row c2"><div class="form-group"><label class="form-label">Nome Completo *</label><input class="form-input" placeholder="Nome completo"></div><div class="form-group"><label class="form-label">CPF</label><input class="form-input" placeholder="000.000.000-00"></div></div>
+      <div class="form-row c3"><div class="form-group"><label class="form-label">Nascimento</label><input class="form-input" type="date"></div><div class="form-group"><label class="form-label">Sexo</label><select class="form-input"><option>Feminino</option><option>Masculino</option></select></div><div class="form-group"><label class="form-label">Estado Civil</label><select class="form-input"><option>Solteiro(a)</option><option>Casado(a)</option></select></div></div>
+      <div class="form-row c2"><div class="form-group"><label class="form-label">Telefone</label><input class="form-input" placeholder="(67) 99999-9999"></div><div class="form-group"><label class="form-label">Email</label><input class="form-input" placeholder="email@email.com"></div></div>
+      <div class="form-group"><label class="form-label">Como nos conheceu?</label><select class="form-input"><option>Indicação</option><option>Instagram</option><option>Google</option><option>Outro</option></select></div>
     </div>
-    <div class="modal-foot"><button class="btn btn-gold">Salvar Paciente</button><button class="btn" onclick="closeModal('paciente')">Cancelar</button></div>
+    <div class="modal-foot"><button class="btn btn-primary">Salvar Paciente</button><button class="btn" onclick="closeModal('paciente')">Cancelar</button></div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div style="position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--border);padding:6px 16px;display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text3);z-index:50">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="color:var(--green)"><path d="M12 2C12 2 7 6 7 11a5 5 0 0010 0c0-5-5-9-5-9z" stroke="currentColor" stroke-width="1.5" fill="rgba(27,94,59,.2)"/></svg>
+  <span style="font-weight:500;color:var(--green)">PREMIUM</span>
+  <span style="color:var(--orange)">Versão: 1.0.0</span>
+  <div style="margin-left:auto">
+    <button style="background:var(--orange);color:#fff;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:12px;font-weight:700">1</button>
   </div>
 </div>
 
 <script>
-// ── ESTADO GLOBAL ──────────────────────────────────────────────
-const ST = {
-  dashboard: null, agendamentos: null, recebimentos: null,
-  profissionais: null, aniversariantes: null, procedimentos: null,
-  inativos: null, orcamentos: null
+// ── ESTADO ──────────────────────────────────────────────────────
+const ST = { dashboard:null, agendamentos:null, recebimentos:null, profissionais:null, aniversariantes:null, inativos:null }
+const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro']
+const MESES_ABR = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+const DIAS_PT = ['dom','seg','ter','qua','qui','sex','sáb']
+const DIAS_FULL = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado']
+let agendaDate = new Date(2026,2,14) // 14 Março 2026
+let miniCalDate = new Date(2026,2,1)
+let curPage = 'home'
+
+const PROF_CORES = ['#9C27B0','#4CAF50','#FF9800','#795548','#2196F3','#E91E63','#00BCD4','#F44336']
+
+// ── SIDEBAR ──────────────────────────────────────────────────────
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open')
+  document.getElementById('sidebar-ov').classList.toggle('open')
 }
-const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-const CAT_CORES = ['var(--gold)','var(--wine)','var(--success)','var(--warn)','var(--info)','var(--text3)']
-const WA = `<svg width="10" height="10" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`
-let calDate = new Date(), calView = 'mes', curPage = 'dashboard'
 
 // ── NAVEGAÇÃO ──────────────────────────────────────────────────
-function nav(id, el) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
-  document.getElementById('p-'+id).classList.add('active')
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
-  if (el) el.classList.add('active')
-  else {
-    document.querySelectorAll('.nav-item').forEach(n => {
-      if (n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+id+"'")) n.classList.add('active')
-    })
-  }
-  const titles = {dashboard:'Dashboard',agenda:'Agenda',pacientes:'Pacientes',prontuario:'Prontuário',inativos:'Pacientes Inativos',aniversariantes:'Aniversariantes',financeiro:'Recebimentos',caixa:'Fluxo de Caixa',orcamentos:'Orçamentos',relatorios:'Relatórios',configuracoes:'Configurações',ia:'Assistente IA'}
-  document.getElementById('topbar-title').textContent = titles[id] || id
+function nav(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
+  const pg = document.getElementById('p-'+id)
+  if (pg) pg.classList.add('active')
   curPage = id
-  if (id === 'agenda' && !ST.agendamentos) loadAgenda()
-  if (id === 'pacientes' && !ST.agendamentos) loadAgenda()
-  if (id === 'aniversariantes' && !ST.aniversariantes) loadAniversariantes()
-  if (id === 'financeiro' && !ST.recebimentos) loadFinanceiro()
-  if (id === 'caixa' && !ST.caixa) loadCaixa()
-  if (id === 'orcamentos' && !ST.orcamentos) loadOrcamentos()
-  if ((id === 'configuracoes' || id === 'prontuario') && !ST.profissionais) loadConfigProfs()
-  if (id === 'configuracoes' && !ST.procedimentos) loadConfigProcs()
-  if (id === 'relatorios' && ST.dashboard) renderRelatorios()
+  if (id==='agenda' && !ST.agendamentos) loadAgenda()
+  if (id==='pacientes' && !ST.agendamentos) loadAgenda()
+  if (id==='prontuario' && !ST.agendamentos) loadAgenda()
+  if (id==='crm' && !ST.dashboard) loadDashboard()
+  if (id==='financeiro' && !ST.recebimentos) loadFinanceiro()
+  if (id==='profissionais' && !ST.profissionais) loadProfissionais()
+  if (id==='aniversariantes' && !ST.aniversariantes) loadAniversariantes()
+  if (id==='relatorios' && ST.dashboard) renderRelatorios()
+  if (id==='dashboard-analitico') renderDashAnalitico()
+  if (id==='configuracoes') renderConfiguracoes()
 }
 
-// ── API ──────────────────────────────────────────────────────
+// ── API ──────────────────────────────────────────────────────────
 async function api(ep) {
   const r = await fetch('/api/clinicorp?endpoint='+ep)
   if (!r.ok) throw new Error('HTTP '+r.status)
   const d = await r.json()
-  if (!d.ok) throw new Error(d.error||'Erro desconhecido')
+  if (!d.ok) throw new Error(d.error||'Erro')
   return d.data
 }
-function setStatus(ok, txt) {
-  const el = document.getElementById('apiStatus')
-  el.className = 'status-pill '+(ok?'ok':'err')
-  document.getElementById('apiTxt').textContent = txt
-}
 
-// ── SYNC ──────────────────────────────────────────────────────
-async function syncAll() {
-  const btn = document.getElementById('syncBtn')
-  btn.textContent = '↺ Sincronizando...'
-  btn.disabled = true
-  Object.keys(ST).forEach(k => ST[k] = null)
-  document.getElementById('dash-loading').classList.remove('hidden')
-  document.getElementById('dash-data').classList.add('hidden')
-  await loadDashboard()
-  btn.textContent = '↺ Sincronizar'
-  btn.disabled = false
-}
-
-// ── DASHBOARD ──────────────────────────────────────────────────
+// ── DASHBOARD (carrega tudo em paralelo) ──────────────────────
 async function loadDashboard() {
   try {
-    setStatus(false,'Sincronizando...')
     const d = await api('dashboard')
     ST.dashboard = d
-    setStatus(true,'Conectado · Clinicorp')
-    const r = d.resumo
-    document.getElementById('d-ag').textContent = r.total_agendamentos.toLocaleString('pt-BR')
-    document.getElementById('d-rec').textContent = 'R$ '+r.receita_total.toLocaleString('pt-BR',{minimumFractionDigits:2})
-    document.getElementById('d-inativo').textContent = r.total_inativos.toLocaleString('pt-BR')
-    document.getElementById('d-aniv').textContent = r.total_aniversariantes
-    document.getElementById('nb-inativos').textContent = r.total_inativos
-    document.getElementById('nb-agenda').textContent = r.total_agendamentos
-    document.getElementById('sync-time').textContent = 'Sincronizado em '+new Date().toLocaleTimeString('pt-BR')
-    document.getElementById('dash-sub').textContent = 'Atualizado em '+new Date().toLocaleString('pt-BR')
     ST.inativos = d.inativos
-    renderDashChart(d.por_mes)
-    renderDashCats(d.por_categoria)
-    renderDashInativos(d.inativos)
-    renderDashProfs(d.profissionais)
-    renderInativosCounts(d.inativos)
-    document.getElementById('dash-loading').classList.add('hidden')
-    document.getElementById('dash-data').classList.remove('hidden')
-    if (curPage === 'relatorios') renderRelatorios()
-  } catch(e) {
-    setStatus(false,'Erro: '+e.message)
-    document.getElementById('dash-loading').innerHTML = `<div class="err-state">${e.message}<br><br><button class="btn btn-gold" onclick="loadDashboard()">Tentar novamente</button></div>`
-  }
-}
-
-function renderDashChart(porMes) {
-  const sorted = Object.entries(porMes).sort((a,b)=>a[0].localeCompare(b[0])).slice(-12)
-  if (!sorted.length) return
-  const max = Math.max(...sorted.map(x=>x[1]))
-  document.getElementById('d-chart').innerHTML = sorted.map(([m,v],i)=>{
-    const [y,mo] = m.split('-')
-    const lbl = MESES[parseInt(mo)-1]
-    const h = Math.max(4,Math.round(v/max*70))
-    const isLast = i===sorted.length-1
-    return `<div class="chart-bar-group"><div class="chart-bar" style="height:${h}px;background:${isLast?'var(--gold)':'rgba(201,164,85,.2)'}" title="${lbl}/${y}: ${v}"></div><div class="chart-lbl">${lbl}</div></div>`
-  }).join('')
-}
-
-function renderDashCats(porCat) {
-  const sorted = Object.entries(porCat).sort((a,b)=>b[1]-a[1]).slice(0,6)
-  const total = sorted.reduce((s,[,v])=>s+v,0)
-  document.getElementById('d-cats').innerHTML = sorted.map(([cat,v],i)=>{
-    const pct = Math.round(v/total*100)
-    const lbl = cat.length>22?cat.substring(0,22)+'…':cat
-    return `<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:var(--text2)">${lbl}</span><span style="font-size:10px;font-weight:600;color:var(--text3)">${pct}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${CAT_CORES[i]||CAT_CORES[5]}"></div></div></div>`
-  }).join('')
-}
-
-function renderDashInativos(inativos) {
-  document.getElementById('d-inativos').innerHTML = (inativos||[]).slice(0,6).map(p=>{
-    const wa = `https://wa.me/55?text=${encodeURIComponent('Olá '+p.nome.split(' ')[0]+'! É a Klinik Odontologia 💛 Sentimos sua falta! Posso agendar para você?')}`
-    return `<tr><td><div class="pname">${p.nome}</div></td><td class="text-muted">${p.ultima}</td><td style="color:var(--danger);font-weight:600">${p.dias}d</td><td><a href="${wa}" target="_blank" class="wa-btn">${WA}WhatsApp</a></td></tr>`
-  }).join('')
-}
-
-function renderDashProfs(profs) {
-  document.getElementById('d-profs').innerHTML = (profs||[]).slice(0,8).map(p=>{
-    const nome = p.name||p.Name||p.nome||'Profissional'
-    return `<tr><td><div class="pname">${nome.split(' ').slice(0,3).join(' ')}</div></td><td><span class="badge badge-green">Ativo</span></td></tr>`
-  }).join('')
-}
-
-function renderInativosCounts(inativos) {
-  const u = (inativos||[]).filter(i=>i.dias>365).length
-  const a = (inativos||[]).filter(i=>i.dias>270&&i.dias<=365).length
-  const m = (inativos||[]).filter(i=>i.dias<=270).length
-  document.getElementById('in-urgente').textContent = u
-  document.getElementById('in-alta').textContent = a
-  document.getElementById('in-media').textContent = m
-  document.getElementById('inativo-sub').textContent = `${(inativos||[]).length} pacientes sem visita há 6+ meses`
+    renderCRMCounts(d.inativos)
+    if (curPage==='crm') renderCRM()
+    if (curPage==='relatorios') renderRelatorios()
+    if (curPage==='agenda') renderAgendaGrid()
+    if (curPage==='pacientes') renderPacientes()
+    if (curPage==='prontuario') filterProntList()
+    renderRelCounts(d)
+  } catch(e) { console.error(e) }
 }
 
 // ── AGENDA ──────────────────────────────────────────────────────
 async function loadAgenda() {
   document.getElementById('agenda-loading').classList.remove('hidden')
-  document.getElementById('agenda-data').classList.add('hidden')
+  document.getElementById('agenda-grid').classList.add('hidden')
   try {
     const data = await api('agendamentos')
     ST.agendamentos = data
-    document.getElementById('agenda-sub').textContent = `${data.length} agendamentos no período`
-    renderAgendaHoje()
-    renderCalendario()
-    preencheProfsFilter(data)
-    renderPacientes(data)
+    renderMiniCal()
+    renderProfsList()
+    renderAgendaGrid()
+    renderPacientes()
+    filterProntList()
     document.getElementById('agenda-loading').classList.add('hidden')
-    document.getElementById('agenda-data').classList.remove('hidden')
+    document.getElementById('agenda-grid').classList.remove('hidden')
   } catch(e) {
-    document.getElementById('agenda-loading').innerHTML = `<div class="err-state">${e.message}<br><br><button class="btn btn-gold btn-sm" onclick="loadAgenda()">Tentar novamente</button></div>`
+    document.getElementById('agenda-loading').innerHTML=`<div style="color:var(--red);text-align:center">${e.message}<br><br><button class="btn" onclick="loadAgenda()">Tentar novamente</button></div>`
   }
 }
 
-function preencheProfsFilter(data) {
-  const profs = [...new Set(data.map(a=>a.PatientName).filter(Boolean))].slice(0,20)
-  const sel = document.getElementById('agenda-prof-filter')
-  sel.innerHTML = '<option value="">Todos profissionais</option>'
+function formatAgendaDate(d) {
+  return `${DIAS_FULL[d.getDay()]}, ${d.getDate()} de ${MESES_PT[d.getMonth()]} de ${d.getFullYear()}`
 }
 
-function renderAgendaHoje() {
+function agendaPrev() { agendaDate.setDate(agendaDate.getDate()-1); renderAgendaGrid() }
+function agendaNext() { agendaDate.setDate(agendaDate.getDate()+1); renderAgendaGrid() }
+function agendaHoje() { agendaDate = new Date(); renderAgendaGrid() }
+function agendaChangeView(v) { renderAgendaGrid() }
+
+function renderMiniCal() {
+  const ano = miniCalDate.getFullYear(), mes = miniCalDate.getMonth()
+  document.getElementById('mini-cal-month').textContent = `${MESES_PT[mes]} ${ano}`
   const hoje = new Date()
-  document.getElementById('agenda-hoje').textContent = hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})
-  const ag = ST.agendamentos||[]
-  const todayStr = hoje.toISOString().slice(0,10)
-  const td = ag.filter(a=>a.date&&a.date.slice(0,10)===todayStr&&!a.Deleted)
-  document.getElementById('agenda-table').innerHTML = td.length
-    ? td.sort((a,b)=>(a.fromTime||'').localeCompare(b.fromTime||'')).map(a=>{
-        const cat = a.CategoryDescription||'Geral'
-        const st = a.StatusId===1?'<span class="badge badge-green">Confirmado</span>':a.StatusId===2?'<span class="badge badge-wine">Cancelado</span>':'<span class="badge badge-gray">Agendado</span>'
-        return `<tr><td style="color:var(--gold);font-weight:600">${a.fromTime||'—'}</td><td><div class="pname">${a.PatientName||'—'}</div></td><td><span class="badge badge-gold">${cat}</span></td><td class="text-muted">Profissional</td><td>${st}</td><td>${a.MobilePhone?`<a href="https://wa.me/55${a.MobilePhone.replace(/\D/g,'')}" target="_blank" class="wa-btn">${WA}WA</a>`:'—'}</td></tr>`
-      }).join('')
-    : `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3)">Nenhum agendamento hoje</td></tr>`
-}
-
-function filterAgenda() { renderAgendaHoje() }
-
-// ── CALENDÁRIO ──────────────────────────────────────────────────
-function renderCalendario() {
-  const cont = document.getElementById('cal-container')
-  if (calView === 'mes') renderCalMes(cont)
-  else renderCalSemana(cont)
-}
-
-function renderCalMes(cont) {
-  const ano = calDate.getFullYear(), mes = calDate.getMonth()
-  document.getElementById('cal-month-title').textContent = new Date(ano,mes,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'})
-  const ag = ST.agendamentos||[]
-  const porDia = {}
-  ag.filter(a=>!a.Deleted).forEach(a=>{
-    const d = a.date?a.date.slice(0,10):null
-    if (d) { if (!porDia[d]) porDia[d]=[]; porDia[d].push(a) }
-  })
   const primeiro = new Date(ano,mes,1)
   const ultimo = new Date(ano,mes+1,0)
-  let html = '<div class="cal-head">'
-  const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
-  html += dias.map(d=>`<div class="cal-day-head">${d}</div>`).join('')
-  html += '</div><div class="cal-grid">'
-  const startDay = primeiro.getDay()
-  const hoje = new Date().toISOString().slice(0,10)
-  for (let i=0;i<startDay;i++) {
-    const d = new Date(ano,mes,1-startDay+i)
-    html += `<div class="cal-cell other-month"><div class="cal-date">${d.getDate()}</div></div>`
+  let html = ''
+  for (let i=0;i<primeiro.getDay();i++) {
+    const d=new Date(ano,mes,1-primeiro.getDay()+i)
+    html+=`<div class="mini-cal-d other">${d.getDate()}</div>`
   }
   for (let d=1;d<=ultimo.getDate();d++) {
-    const dt = `${ano}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
-    const isToday = dt===hoje
-    const events = porDia[dt]||[]
-    const cats = [{k:'Restauração',c:''},{k:'Lentes',c:'wine'},{k:'Implante',c:'green'},{k:'Clareamento',c:'blue'},{k:'Urgência',c:'wine'}]
-    html += `<div class="cal-cell${isToday?' today':''}"><div class="cal-date">${d}</div>`
-    events.slice(0,3).forEach(a=>{
-      const cat = a.CategoryDescription||'Geral'
-      let cls = ''
-      if (cat.toLowerCase().includes('implante')) cls='green'
-      else if (cat.toLowerCase().includes('lente')||cat.toLowerCase().includes('estetica')) cls='wine'
-      else if (cat.toLowerCase().includes('clareamento')) cls='blue'
-      html += `<div class="cal-event${cls?' '+cls:''}" title="${a.PatientName||''} ${a.fromTime||''}">${a.fromTime||''} ${(a.PatientName||'').split(' ')[0]}</div>`
-    })
-    if (events.length>3) html += `<div class="cal-more">+${events.length-3} mais</div>`
-    html += '</div>'
+    const isToday = d===hoje.getDate()&&mes===hoje.getMonth()&&ano===hoje.getFullYear()
+    const isSel = d===agendaDate.getDate()&&mes===agendaDate.getMonth()&&ano===agendaDate.getFullYear()
+    html+=`<div class="mini-cal-d ${isToday&&!isSel?'today':''} ${isSel?'selected':''}" onclick="selectMiniCalDay(${d},${mes},${ano})">${d}</div>`
   }
-  const totalCells = startDay+ultimo.getDate()
-  const remaining = totalCells%7===0?0:7-(totalCells%7)
-  for (let i=1;i<=remaining;i++) html += `<div class="cal-cell other-month"><div class="cal-date">${i}</div></div>`
-  html += '</div>'
-  cont.innerHTML = html
+  document.getElementById('mini-cal-grid').innerHTML = html
 }
 
-function renderCalSemana(cont) {
-  const startOfWeek = new Date(calDate)
-  startOfWeek.setDate(calDate.getDate()-calDate.getDay())
-  const weekDays = Array.from({length:7},(_,i)=>{const d=new Date(startOfWeek);d.setDate(d.getDate()+i);return d})
-  const horas = Array.from({length:12},(_,i)=>i+7)
-  let html = '<div class="week-grid" style="max-height:500px;overflow-y:auto">'
-  html += '<div class="week-time"></div>'
-  html += weekDays.map(d=>`<div class="week-day-head">${dias_semana[d.getDay()]} ${d.getDate()}</div>`).join('')
+function miniCalPrev() { miniCalDate.setMonth(miniCalDate.getMonth()-1); renderMiniCal() }
+function miniCalNext() { miniCalDate.setMonth(miniCalDate.getMonth()+1); renderMiniCal() }
+function selectMiniCalDay(d,m,y) { agendaDate=new Date(y,m,d); renderMiniCal(); renderAgendaGrid() }
+
+function renderProfsList() {
+  const profs = ST.profissionais || (ST.dashboard?.profissionais) || []
+  document.getElementById('profs-list').innerHTML = profs.map((p,i)=>{
+    const nome = p.name||p.Name||'Profissional'
+    const cor = PROF_CORES[i%PROF_CORES.length]
+    return `<div class="prof-check">
+      <div class="prof-check-box" style="border-color:${cor};background:${cor}"><svg width="8" height="8" viewBox="0 0 12 12" fill="white"><path d="M1 6l4 4 6-6" stroke="white" stroke-width="2" fill="none"/></svg></div>
+      <div class="prof-check-name">${nome.toUpperCase().substring(0,20)}...</div>
+    </div>`
+  }).join('')
+}
+
+function renderAgendaGrid() {
+  const el = document.getElementById('agenda-grid')
+  document.getElementById('agenda-date-title').textContent = formatAgendaDate(agendaDate)
+  renderMiniCal()
   const ag = ST.agendamentos||[]
-  horas.forEach(h=>{
-    html += `<div class="week-time">${h}:00</div>`
-    weekDays.forEach(d=>{
-      const dt = d.toISOString().slice(0,10)
-      const appts = ag.filter(a=>a.date&&a.date.slice(0,10)===dt&&a.fromTime&&parseInt(a.fromTime)===h&&!a.Deleted)
-      html += `<div class="week-cell">${appts.map(a=>`<div class="week-appt">${(a.PatientName||'').split(' ')[0]}</div>`).join('')}</div>`
-    })
+  const dtStr = agendaDate.toISOString().slice(0,10)
+  const profs = ST.dashboard?.profissionais || []
+  const HORAS = []
+  for (let h=8;h<=19;h++) for (let m=0;m<60;m+=15) HORAS.push(`${h}:${m===0?'00':m}`)
+
+  let html = `<div class="agenda-header-row">
+    <div class="agenda-time-col"></div>`
+  profs.forEach((p,i)=>{
+    const nome = (p.name||p.Name||'Prof').toUpperCase()
+    const cor = PROF_CORES[i%PROF_CORES.length]
+    const pts = ag.filter(a=>!a.Deleted&&a.date&&a.date.slice(0,10)===dtStr).length
+    html+=`<div class="agenda-prof-col"><div class="agenda-prof-name" title="${nome}">${nome.substring(0,18)}${nome.length>18?'...':''}</div><div class="agenda-prof-count">Pacientes: ${i===0?pts:0}</div><div class="agenda-prof-bar" style="background:${cor}"></div></div>`
   })
-  html += '</div>'
-  cont.innerHTML = html
+  html += '</div><div class="agenda-slots">'
+
+  // Linha de agora
+  const now = new Date()
+  const nowMins = now.getHours()*60+now.getMinutes()
+  const startMins = 8*60
+  const totalMins = 11*60
+
+  HORAS.forEach((h,idx)=>{
+    const isHora = h.endsWith(':00')
+    html+=`<div class="time-slot-row ${isHora?'hora':''}">
+      <div class="time-label">${isHora?h:''}</div>`
+    profs.forEach((p,pi)=>{
+      html+=`<div class="slot-cell" onclick="openModal('agendamento')"></div>`
+    })
+    html+='</div>'
+  })
+
+  // Appointments
+  const todayAg = ag.filter(a=>!a.Deleted&&a.date&&a.date.slice(0,10)===dtStr)
+  todayAg.forEach(a=>{
+    const [h,m] = (a.fromTime||'9:00').split(':').map(Number)
+    const [h2,m2] = (a.toTime||`${h+1}:${m||0}`).replace(/(\d+):(\d+)h?/,'$1:$2').split(':').map(Number)
+    const startMin = h*60+(m||0)-startMins
+    const durMin = (h2*60+(m2||0))-(h*60+(m||0))||60
+    const top = Math.max(0,startMin/15)*20
+    const height = Math.max(20,durMin/15*20)
+    const pi = 0 // Primeiro profissional por padrão
+    const cor = PROF_CORES[pi%PROF_CORES.length]
+    html+=`<div class="appt-block" style="top:${top}px;height:${height}px;background:${cor}cc;color:#fff;left:calc(60px + 4px);width:calc((100% - 60px) / ${profs.length||1} - 6px)">
+      <div style="float:right;margin-left:3px"><svg width="12" height="12" viewBox="0 0 12 12" fill="white" opacity=".7"><path d="M1 6l4 4 6-6" stroke="white" stroke-width="1.5" fill="none"/></svg></div>
+      <div class="appt-name">${a.PatientName||'Paciente'}</div>
+      <div class="appt-time">${a.fromTime||'—'} - ${h2}:${String(m2||0).padStart(2,'0')}h</div>
+    </div>`
+  })
+
+  html+='</div>'
+  el.innerHTML = html
+
+  // Profissionais para modal
+  const sel = document.getElementById('ag-prof-sel')
+  if (sel) sel.innerHTML = '<option>Selecione...</option>'+(profs.map(p=>`<option>${p.name||p.Name||''}</option>`).join(''))
 }
-
-const dias_semana = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
-
-function calPrev() { if(calView==='mes'){calDate.setMonth(calDate.getMonth()-1)}else{calDate.setDate(calDate.getDate()-7)} renderCalendario() }
-function calNext() { if(calView==='mes'){calDate.setMonth(calDate.getMonth()+1)}else{calDate.setDate(calDate.getDate()+7)} renderCalendario() }
-function agendaChangeView(v) { calView=v; renderCalendario() }
 
 // ── PACIENTES ──────────────────────────────────────────────────
-function renderPacientes(data) {
-  const show = document.getElementById('p-pacientes').classList.contains('active')
-  if (!show) return
-  const ag = data||ST.agendamentos||[]
-  const hoje = new Date()
+function renderPacientes() {
+  const ag = ST.agendamentos||[]
+  const cutoff = new Date(); cutoff.setMonth(cutoff.getMonth()-6)
   const porPac = {}
   ag.filter(a=>!a.Deleted&&a.PatientName).forEach(a=>{
-    const n = a.PatientName, dt = new Date(a.date)
-    if (!porPac[n]||dt>porPac[n].ultima) {
-      porPac[n] = { nome:n, ultima:dt, tel:a.MobilePhone||'', email:a.Email||'', cat:a.CategoryDescription||'' }
-    }
+    const n=a.PatientName,dt=new Date(a.date)
+    if (!porPac[n]||dt>porPac[n].ultima) porPac[n]={nome:n,ultima:dt,tel:a.MobilePhone||'',cat:a.CategoryDescription||''}
   })
-  const lista = Object.values(porPac).sort((a,b)=>b.ultima-a.ultima)
-  ST.pacientesLista = lista
-  document.getElementById('pac-sub').textContent = `${lista.length} pacientes únicos encontrados`
-  document.getElementById('pac-count').textContent = `${lista.length} pacientes`
-  filterPacientes()
+  ST.pacientesLista = Object.values(porPac).sort((a,b)=>b.ultima-a.ultima)
+  document.getElementById('pac-sub').textContent = `${ST.pacientesLista.length} pacientes únicos`
+  filterPac()
   document.getElementById('pac-loading').classList.add('hidden')
   document.getElementById('pac-data').classList.remove('hidden')
 }
 
-function filterPacientes() {
-  const lista = ST.pacientesLista||[]
-  const q = (document.getElementById('pac-search').value||'').toLowerCase()
-  const f = document.getElementById('pac-filter').value
-  const cutoff = new Date(); cutoff.setMonth(cutoff.getMonth()-6)
-  let filtered = lista.filter(p=>{
-    if (q && !p.nome.toLowerCase().includes(q)) return false
-    if (f==='ativos' && p.ultima<cutoff) return false
-    if (f==='inativos' && p.ultima>=cutoff) return false
+function filterPac() {
+  const q=(document.getElementById('pac-search').value||'').toLowerCase()
+  const f=document.getElementById('pac-filter').value
+  const cutoff=new Date();cutoff.setMonth(cutoff.getMonth()-6)
+  const lista=(ST.pacientesLista||[]).filter(p=>{
+    if(q&&!p.nome.toLowerCase().includes(q))return false
+    if(f==='ativos'&&p.ultima<cutoff)return false
+    if(f==='inativos'&&p.ultima>=cutoff)return false
     return true
   })
-  document.getElementById('pac-count').textContent = `${filtered.length} pacientes`
-  const el = document.getElementById('pac-list')
-  el.innerHTML = filtered.slice(0,50).map(p=>{
-    const ini = p.nome.split(' ').slice(0,2).map(x=>x[0]).join('')
-    const dias = Math.floor((Date.now()-p.ultima.getTime())/86400e3)
-    const inativo = dias>180
-    const wa = `https://wa.me/55${(p.tel||'').replace(/\D/g,'')}`
-    return `<div class="patient-card">
+  document.getElementById('pac-count').textContent=`${lista.length} pacientes`
+  document.getElementById('pac-list').innerHTML=lista.slice(0,50).map(p=>{
+    const ini=p.nome.split(' ').slice(0,2).map(x=>x[0]).join('')
+    const dias=Math.floor((Date.now()-p.ultima.getTime())/86400e3)
+    const inativo=dias>180
+    return `<div class="patient-row">
       <div class="patient-av">${ini}</div>
       <div class="patient-info">
         <div class="patient-name">${p.nome}</div>
-        <div class="patient-meta">
-          <span>${p.tel||'—'}</span>
-          <span>Última visita: ${p.ultima.toLocaleDateString('pt-BR')}</span>
-          <span>${dias} dias atrás</span>
-        </div>
-        <div class="patient-tags">
-          ${p.cat?`<span class="badge badge-gold">${p.cat}</span>`:''}
-          ${inativo?`<span class="badge badge-wine">Inativo</span>`:'<span class="badge badge-green">Ativo</span>'}
-        </div>
+        <div class="patient-meta"><span>${p.tel||'—'}</span><span>Última visita: ${p.ultima.toLocaleDateString('pt-BR')}</span><span>${dias} dias atrás</span></div>
+        <div class="patient-tags">${p.cat?`<span class="badge badge-blue">${p.cat}</span>`:''} ${inativo?'<span class="badge badge-orange">Inativo</span>':'<span class="badge badge-green">Ativo</span>'}</div>
       </div>
-      <div class="patient-actions">
-        ${p.tel?`<a href="${wa}" target="_blank" class="wa-btn">${WA}WhatsApp</a>`:''}
+      <div class="patient-acts">
+        ${p.tel?`<a href="https://wa.me/55${p.tel.replace(/\D/g,'')}" target="_blank" class="wa-btn">WhatsApp</a>`:''}
         <button class="btn btn-sm" onclick="abrirProntuario('${p.nome.replace(/'/g,"\\'")}')">Prontuário</button>
       </div>
     </div>`
@@ -1104,106 +1042,64 @@ function filterPacientes() {
 
 // ── PRONTUÁRIO ──────────────────────────────────────────────────
 function filterProntList() {
-  const q = (document.getElementById('pront-search').value||'').toLowerCase()
-  const lista = (ST.pacientesLista||[]).filter(p=>p.nome.toLowerCase().includes(q)).slice(0,30)
-  document.getElementById('pront-list').innerHTML = lista.map(p=>`
-    <div class="patient-card" style="flex-direction:column;gap:6px;padding:12px;margin-bottom:6px" onclick="abrirProntuario('${p.nome.replace(/'/g,"\\'")}')">
-      <div style="display:flex;align-items:center;gap:8px">
-        <div class="avatar" style="width:28px;height:28px;font-size:12px">${p.nome.split(' ').slice(0,2).map(x=>x[0]).join('')}</div>
-        <div style="font-size:12px;font-weight:500;color:var(--text)">${p.nome.split(' ').slice(0,3).join(' ')}</div>
-      </div>
-      <div style="font-size:10px;color:var(--text3)">${p.tel||'—'}</div>
-    </div>
-  `).join('')
+  const q=(document.getElementById('pront-search').value||'').toLowerCase()
+  const lista=(ST.pacientesLista||[]).filter(p=>p.nome.toLowerCase().includes(q)).slice(0,30)
+  document.getElementById('pront-list').innerHTML=lista.map(p=>`
+    <div class="patient-row" style="padding:10px 12px;cursor:pointer" onclick="abrirProntuario('${p.nome.replace(/'/g,"\\'")}')">
+      <div class="patient-av" style="width:32px;height:32px;font-size:12px">${p.nome.split(' ').slice(0,2).map(x=>x[0]).join('')}</div>
+      <div class="patient-info"><div class="patient-name" style="font-size:12px">${p.nome.split(' ').slice(0,3).join(' ')}</div><div style="font-size:11px;color:var(--text3)">${p.tel||'—'}</div></div>
+    </div>`).join('')
 }
 
 function abrirProntuario(nome) {
-  nav('prontuario',null)
-  const ag = (ST.agendamentos||[]).filter(a=>a.PatientName===nome&&!a.Deleted)
-  const ul = ag.sort((a,b)=>new Date(b.date)-new Date(a.date))
-  const teeth_sup = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28]
-  const teeth_inf = [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38]
-  document.getElementById('pront-detail').innerHTML = `
-    <div class="card" style="margin-bottom:14px">
-      <div class="card-header"><div class="card-title">Dados do Paciente</div></div>
-      <div class="card-body">
-        <div style="font-size:18px;font-weight:500;color:var(--text);margin-bottom:6px">${nome}</div>
-        <div style="font-size:12px;color:var(--text3)">${ag.length} consultas registradas</div>
-      </div>
+  nav('prontuario')
+  const ag=(ST.agendamentos||[]).filter(a=>a.PatientName===nome&&!a.Deleted).sort((a,b)=>new Date(b.date)-new Date(a.date))
+  const teeth_sup=[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28]
+  const teeth_inf=[48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38]
+  document.getElementById('pront-detail').innerHTML=`
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-header"><div class="card-title">${nome}</div><button class="btn btn-sm btn-primary">Editar Cadastro</button></div>
+      <div class="card-body"><span class="badge badge-blue">${ag.length} consultas</span></div>
     </div>
-    <div class="card" style="margin-bottom:14px">
+    <div class="card" style="margin-bottom:12px">
       <div class="card-header"><div class="card-title">Odontograma</div></div>
-      <div>
-        <div style="font-size:9px;color:var(--text3);text-align:center;padding:8px;letter-spacing:1px">SUPERIOR</div>
-        <div class="odonth-grid">${teeth_sup.map(t=>`<div><div class="tooth" title="Dente ${t}">${t}</div><div class="tooth-label">${t}</div></div>`).join('')}</div>
-        <div class="odonth-grid">${teeth_inf.map(t=>`<div><div class="tooth" title="Dente ${t}">${t}</div><div class="tooth-label">${t}</div></div>`).join('')}</div>
-        <div style="font-size:9px;color:var(--text3);text-align:center;padding:8px;letter-spacing:1px">INFERIOR</div>
-      </div>
+      <div style="padding:4px 8px;font-size:10px;text-align:center;color:var(--text3);letter-spacing:1px">SUPERIOR</div>
+      <div class="odont-row">${teeth_sup.map(t=>`<div><div class="tooth" title="${t}">${t}</div></div>`).join('')}</div>
+      <div class="odont-row">${teeth_inf.map(t=>`<div><div class="tooth" title="${t}">${t}</div></div>`).join('')}</div>
+      <div style="padding:4px 8px;font-size:10px;text-align:center;color:var(--text3);letter-spacing:1px">INFERIOR</div>
     </div>
     <div class="card">
       <div class="card-header"><div class="card-title">Histórico de Consultas</div></div>
-      <div class="card-body p0">
-        <table class="tbl">
-          <thead><tr><th>Data</th><th>Procedimento</th><th>Profissional</th><th>Horário</th></tr></thead>
-          <tbody>${ul.slice(0,15).map(a=>`<tr>
-            <td>${a.date?new Date(a.date).toLocaleDateString('pt-BR'):'—'}</td>
-            <td><span class="badge badge-gold">${a.CategoryDescription||'Geral'}</span></td>
-            <td class="text-muted">—</td>
-            <td class="text-muted">${a.fromTime||'—'}</td>
-          </tr>`).join('')}</tbody>
-        </table>
-      </div>
+      <div class="card-body p0"><table class="tbl"><thead><tr><th>Data</th><th>Categoria</th><th>Horário</th></tr></thead>
+      <tbody>${ag.slice(0,15).map(a=>`<tr><td>${new Date(a.date).toLocaleDateString('pt-BR')}</td><td><span class="badge badge-blue">${a.CategoryDescription||'Geral'}</span></td><td class="text-muted">${a.fromTime||'—'}</td></tr>`).join('')}</tbody></table></div>
     </div>`
   filterProntList()
 }
 
-// ── INATIVOS ──────────────────────────────────────────────────
-function renderInativos() {
-  const data = ST.inativos||ST.dashboard?.inativos||[]
-  renderInativosCounts(data)
-  const f = document.getElementById('inativo-filter').value
-  const map = {urgente:i=>i.dias>365,alta:i=>i.dias>270&&i.dias<=365,media:i=>i.dias<=270}
-  const filtered = f==='all'?data:data.filter(map[f])
-  const bmap = {urgente:'badge-wine',alta:'badge-warn',media:'badge-gold'}
-  const lmap = {urgente:'URGENTE',alta:'ALTA',media:'MÉDIA'}
-  function pr(d){return d>365?'urgente':d>270?'alta':'media'}
-  document.getElementById('in-table').innerHTML = filtered.map((p,i)=>{
-    const wa = `https://wa.me/55?text=${encodeURIComponent('Olá '+p.nome.split(' ')[0]+'! É a Klinik Odontologia 💛 Faz um tempo que não nos vemos. Posso agendar para você?')}`
-    return `<tr><td class="text-muted">${i+1}</td><td><div class="pname">${p.nome}</div></td><td class="text-muted">${p.ultima}</td><td style="color:var(--danger);font-weight:600">${p.dias}d</td><td><span class="badge ${bmap[pr(p.dias)]}">${lmap[pr(p.dias)]}</span></td><td><a href="${wa}" target="_blank" class="wa-btn">${WA}WhatsApp</a></td></tr>`
-  }).join('')
+// ── CRM ──────────────────────────────────────────────────────────
+function renderCRMCounts(inativos) {
+  const u=(inativos||[]).filter(i=>i.dias>365).length
+  const a=(inativos||[]).filter(i=>i.dias>270&&i.dias<=365).length
+  const m=(inativos||[]).filter(i=>i.dias<=270).length
+  document.getElementById('crm-urgente').textContent=u
+  document.getElementById('crm-alta').textContent=a
+  document.getElementById('crm-media').textContent=m
+  document.getElementById('crm-sub').textContent=`${(inativos||[]).length} pacientes sem visita há 6+ meses`
 }
 
-// ── ANIVERSARIANTES ──────────────────────────────────────────────
-async function loadAniversariantes() {
-  document.getElementById('aniv-loading').classList.remove('hidden')
-  document.getElementById('aniv-data').classList.add('hidden')
-  try {
-    const data = await api('aniversariantes')
-    ST.aniversariantes = data
-    const MMS = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ']
-    document.getElementById('aniv-list').innerHTML = data.length
-      ? data.map(a=>{
-          const nome = a.Name||a.PatientName||a.name||'Paciente'
-          const tel = a.MobilePhone||a.phone||''
-          const dt = a.BirthDate||a.birthDate||''
-          const d = dt?new Date(dt):''; const dia=d?d.getUTCDate()+1:'—'; const mes=d?MMS[d.getUTCMonth()+1]:'—'
-          const nome1=nome.split(' ')[0]
-          const wa=`https://wa.me/55${tel.replace(/\D/g,'')}?text=${encodeURIComponent('Feliz aniversário, '+nome1+'! 🎂 Toda a equipe Klinik te deseja um dia incrível! 💛')}`
-          return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
-            <div style="width:38px;text-align:center;background:rgba(201,164,85,.1);border-radius:6px;padding:4px">
-              <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold);line-height:1">${dia}</div>
-              <div style="font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">${mes}</div>
-            </div>
-            <div style="flex:1"><div class="pname">${nome}</div><div class="psub">${tel||'—'}</div></div>
-            <a href="${wa}" target="_blank" class="wa-btn">${WA}Parabenizar</a>
-          </div>`
-        }).join('')
-      : '<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum aniversariante nos próximos 60 dias</div>'
-    document.getElementById('aniv-loading').classList.add('hidden')
-    document.getElementById('aniv-data').classList.remove('hidden')
-  } catch(e) {
-    document.getElementById('aniv-loading').innerHTML=`<div class="err-state">${e.message}</div>`
-  }
+function renderCRM() {
+  const data=ST.inativos||[]
+  renderCRMCounts(data)
+  const f=document.getElementById('crm-filter').value
+  const map={urgente:i=>i.dias>365,alta:i=>i.dias>270&&i.dias<=365,media:i=>i.dias<=270}
+  const filtered=f==='all'?data:data.filter(map[f])
+  function pr(d){return d>365?'urgente':d>270?'alta':'media'}
+  const bmap={urgente:'badge-red',alta:'badge-orange',media:'badge-green'}
+  const lmap={urgente:'URGENTE',alta:'ALTA',media:'MÉDIA'}
+  document.getElementById('crm-table').innerHTML=filtered.map((p,i)=>{
+    const wa=`https://wa.me/55?text=${encodeURIComponent('Olá '+p.nome.split(' ')[0]+'! É a Klinik Odontologia. Sentimos sua falta! 😊')}`
+    return`<tr><td class="text-muted">${i+1}</td><td><div class="pname">${p.nome}</div></td><td class="text-muted">${p.ultima}</td><td style="color:var(--red);font-weight:500">${p.dias}d</td><td><span class="badge ${bmap[pr(p.dias)]}">${lmap[pr(p.dias)]}</span></td><td><a href="${wa}" target="_blank" class="wa-btn">WhatsApp</a></td></tr>`
+  }).join('')
 }
 
 // ── FINANCEIRO ──────────────────────────────────────────────────
@@ -1211,122 +1107,117 @@ async function loadFinanceiro() {
   document.getElementById('fin-loading').classList.remove('hidden')
   document.getElementById('fin-data').classList.add('hidden')
   try {
-    const data = await api('recebimentos')
-    ST.recebimentos = data
-    const total = data.reduce((s,r)=>s+parseFloat(r.Amount||r.amount||r.Value||0),0)
-    const ticket = data.length>0?total/data.length:0
-    const max = data.reduce((m,r)=>Math.max(m,parseFloat(r.Amount||r.amount||r.Value||0)),0)
-    document.getElementById('fin-total').textContent = 'R$ '+total.toLocaleString('pt-BR',{minimumFractionDigits:2})
-    document.getElementById('fin-ticket').textContent = 'R$ '+Math.round(ticket).toLocaleString('pt-BR')
-    document.getElementById('fin-count').textContent = data.length
-    document.getElementById('fin-max').textContent = 'R$ '+max.toLocaleString('pt-BR',{minimumFractionDigits:2})
-    ST._finData = data
+    const data=await api('recebimentos')
+    ST.recebimentos=data
+    const total=data.reduce((s,r)=>s+parseFloat(r.Amount||r.amount||r.Value||0),0)
+    const ticket=data.length>0?total/data.length:0
+    const max=data.reduce((m,r)=>Math.max(m,parseFloat(r.Amount||r.amount||r.Value||0)),0)
+    document.getElementById('fin-total').textContent='R$ '+total.toLocaleString('pt-BR',{minimumFractionDigits:2})
+    document.getElementById('fin-ticket').textContent='R$ '+Math.round(ticket).toLocaleString('pt-BR')
+    document.getElementById('fin-count').textContent=data.length
+    document.getElementById('fin-max').textContent='R$ '+max.toLocaleString('pt-BR',{minimumFractionDigits:2})
+    ST._finData=data
     renderFinTable(data)
     document.getElementById('fin-loading').classList.add('hidden')
     document.getElementById('fin-data').classList.remove('hidden')
   } catch(e) {
-    document.getElementById('fin-loading').innerHTML=`<div class="err-state">${e.message}<br><br><button class="btn btn-gold btn-sm" onclick="loadFinanceiro()">Tentar novamente</button></div>`
+    document.getElementById('fin-loading').innerHTML=`<div style="color:var(--red);text-align:center;padding:40px">${e.message}<br><br><button class="btn" onclick="loadFinanceiro()">Tentar novamente</button></div>`
   }
 }
 
 function renderFinTable(data) {
-  document.getElementById('fin-table').innerHTML = data.slice(0,60).map((r,i)=>{
-    const v = parseFloat(r.Amount||r.amount||r.Value||0)
-    const dt = (r.ReceiptDate||r.date||'').slice(0,10)
-    return `<tr><td class="text-muted">${i+1}</td><td><div class="pname">${r.PatientName||'—'}</div></td><td class="text-muted">${dt?new Date(dt+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</td><td class="amount pos">R$ ${v.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td class="text-muted">—</td></tr>`
+  document.getElementById('fin-table').innerHTML=data.slice(0,60).map((r,i)=>{
+    const v=parseFloat(r.Amount||r.amount||r.Value||0)
+    const dt=(r.ReceiptDate||r.date||'').slice(0,10)
+    return`<tr><td class="text-muted">${i+1}</td><td><div class="pname">${r.PatientName||'—'}</div></td><td class="text-muted">${dt?new Date(dt+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</td><td style="color:var(--green);font-weight:500">R$ ${v.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td></tr>`
   }).join('')
 }
 
 function filterFin(q) {
-  const data = (ST._finData||[]).filter(r=>(r.PatientName||'').toLowerCase().includes(q.toLowerCase()))
-  renderFinTable(data)
+  renderFinTable((ST._finData||[]).filter(r=>(r.PatientName||'').toLowerCase().includes(q.toLowerCase())))
 }
 
-// ── CAIXA ──────────────────────────────────────────────────────
-async function loadCaixa() {
-  document.getElementById('caixa-loading').classList.remove('hidden')
-  document.getElementById('caixa-data').classList.add('hidden')
+// ── PROFISSIONAIS ──────────────────────────────────────────────
+async function loadProfissionais() {
+  document.getElementById('prof-loading').classList.remove('hidden')
+  document.getElementById('prof-data').classList.add('hidden')
   try {
-    const receb = ST.recebimentos || await api('recebimentos')
-    ST.recebimentos = receb
-    const entradas = receb.reduce((s,r)=>s+parseFloat(r.Amount||r.amount||r.Value||0),0)
-    document.getElementById('cx-in').textContent = 'R$ '+entradas.toLocaleString('pt-BR',{minimumFractionDigits:2})
-    document.getElementById('cx-out').textContent = 'R$ 0,00'
-    const saldo = entradas
-    const sel = document.getElementById('cx-saldo')
-    sel.textContent = 'R$ '+saldo.toLocaleString('pt-BR',{minimumFractionDigits:2})
-    sel.className = 'kpi-val sm '+(saldo>=0?'c-green':'c-wine')
-    document.getElementById('cx-list').innerHTML = receb.slice(0,40).map(r=>{
-      const v = parseFloat(r.Amount||r.amount||r.Value||0)
-      const dt = (r.ReceiptDate||r.date||'').slice(0,10)
-      return `<div class="fin-row">
-        <div class="fin-icon in"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8l5-5 5 5" stroke="var(--success)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="fin-details"><div class="fin-name">${r.PatientName||'Recebimento'}</div><div class="fin-meta">${dt?new Date(dt+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</div></div>
-        <div><div class="fin-amount in">+R$ ${v.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="fin-status text-muted">Recebido</div></div>
-      </div>`
+    const data=await api('profissionais')
+    ST.profissionais=data
+    document.getElementById('prof-sub').textContent=`${data.length} profissionais cadastrados`
+    document.getElementById('prof-grid').innerHTML=data.map((p,i)=>{
+      const nome=p.name||p.Name||'Profissional'
+      const esp=p.specialty||p.especialidade||''
+      const ini=nome.split(' ').slice(0,2).map(x=>x[0]).join('')
+      const cor=PROF_CORES[i%PROF_CORES.length]
+      return`<div class="prof-card"><div class="prof-av" style="background:${cor}22;color:${cor}">${ini}</div><div class="prof-name">${nome.split(' ').slice(0,3).join(' ')}</div><div class="prof-esp">${esp}</div><span class="badge badge-green" style="margin-top:8px">Ativo</span></div>`
     }).join('')
-    document.getElementById('caixa-loading').classList.add('hidden')
-    document.getElementById('caixa-data').classList.remove('hidden')
+    renderProfsList()
+    document.getElementById('prof-loading').classList.add('hidden')
+    document.getElementById('prof-data').classList.remove('hidden')
   } catch(e) {
-    document.getElementById('caixa-loading').innerHTML=`<div class="err-state">${e.message}</div>`
+    document.getElementById('prof-loading').innerHTML=`<div style="color:var(--red);text-align:center;padding:40px">${e.message}</div>`
   }
 }
 
-// ── ORÇAMENTOS ──────────────────────────────────────────────────
-async function loadOrcamentos() {
-  document.getElementById('orc-loading').classList.remove('hidden')
-  document.getElementById('orc-data').classList.add('hidden')
+// ── ANIVERSARIANTES ──────────────────────────────────────────────
+async function loadAniversariantes() {
+  document.getElementById('aniv-loading').classList.remove('hidden')
+  document.getElementById('aniv-data').classList.add('hidden')
   try {
-    const data = await api('orcamentos')
-    ST.orcamentos = data
-    document.getElementById('orc-sub').textContent = `${data.length} orçamentos no período`
-    document.getElementById('orc-total').textContent = data.length
-    const pend = data.filter(o=>!o.Status||o.Status==='Pending').length
-    const aprov = data.filter(o=>o.Status==='Approved'||o.Status==='approved').length
-    const rec = data.filter(o=>o.Status==='Rejected').length
-    document.getElementById('orc-pend').textContent = pend||data.length
-    document.getElementById('orc-aprov').textContent = aprov
-    document.getElementById('orc-rec').textContent = rec
-    document.getElementById('orc-table').innerHTML = data.slice(0,30).map(o=>{
-      const v = parseFloat(o.Total||o.total||o.Value||0)
-      const dt = (o.Date||o.date||o.CreatedAt||'').slice(0,10)
-      const nome = o.PatientName||o.patientName||'—'
-      const st = o.Status==='Approved'?'<span class="badge badge-green">Aprovado</span>':o.Status==='Rejected'?'<span class="badge badge-wine">Recusado</span>':'<span class="badge badge-warn">Pendente</span>'
-      return `<tr><td><div class="pname">${nome}</div></td><td class="text-muted">${dt?new Date(dt+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</td><td class="amount pos">${v>0?'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td class="text-muted">—</td><td>${st}</td><td><div class="actions"><button class="btn btn-sm">Ver</button></div></td></tr>`
-    }).join('') || '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3)">Nenhum orçamento encontrado</td></tr>'
-    document.getElementById('orc-loading').classList.add('hidden')
-    document.getElementById('orc-data').classList.remove('hidden')
+    const data=await api('aniversariantes')
+    ST.aniversariantes=data
+    const MMS=['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ']
+    document.getElementById('aniv-list').innerHTML=data.length?data.map(a=>{
+      const nome=a.Name||a.PatientName||'Paciente'
+      const tel=a.MobilePhone||a.phone||''
+      const dt=a.BirthDate||a.birthDate||''
+      const d=dt?new Date(dt):'';const dia=d?d.getUTCDate()+1:'—';const mes=d?MMS[d.getUTCMonth()+1]:'—'
+      const nome1=nome.split(' ')[0]
+      const wa=`https://wa.me/55${tel.replace(/\D/g,'')}?text=${encodeURIComponent('Feliz aniversário, '+nome1+'! 🎂 A equipe Klinik te deseja um dia incrível!')}`
+      return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="width:40px;text-align:center;background:rgba(27,94,59,.08);border-radius:6px;padding:4px">
+          <div style="font-size:18px;font-weight:300;color:var(--green)">${dia}</div>
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase">${mes}</div>
+        </div>
+        <div style="flex:1"><div style="font-weight:500;font-size:13px">${nome}</div><div style="font-size:12px;color:var(--text3)">${tel||'—'}</div></div>
+        <a href="${wa}" target="_blank" class="wa-btn">Parabenizar</a>
+      </div>`
+    }).join(''):'<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum aniversariante nos próximos 60 dias</div>'
+    document.getElementById('aniv-loading').classList.add('hidden')
+    document.getElementById('aniv-data').classList.remove('hidden')
   } catch(e) {
-    document.getElementById('orc-loading').innerHTML=`<div class="err-state">${e.message}<br><br><button class="btn btn-sm" onclick="loadOrcamentos()">Tentar novamente</button></div>`
+    document.getElementById('aniv-loading').innerHTML=`<div style="color:var(--red);text-align:center;padding:40px">${e.message}</div>`
   }
 }
 
 // ── RELATÓRIOS ──────────────────────────────────────────────────
+function renderRelCounts(d) {
+  const r=d.resumo
+  document.getElementById('rel-fat').textContent='R$ '+r.receita_total.toLocaleString('pt-BR',{minimumFractionDigits:2})
+  document.getElementById('rel-receb').textContent='R$ '+r.receita_total.toLocaleString('pt-BR',{minimumFractionDigits:2})
+  document.getElementById('rel-ag').textContent=r.total_agendamentos
+  document.getElementById('rel-urg').textContent=(d.inativos||[]).filter(i=>i.dias>365).length
+  document.getElementById('rel-alta').textContent=(d.inativos||[]).filter(i=>i.dias>270&&i.dias<=365).length
+  document.getElementById('rel-med').textContent=(d.inativos||[]).filter(i=>i.dias<=270).length
+}
+
 function renderRelatorios() {
-  const d = ST.dashboard
-  if (!d) return
-  const r = d.resumo
-  document.getElementById('rel-fat').textContent = 'R$ '+r.receita_total.toLocaleString('pt-BR',{minimumFractionDigits:2})
-  document.getElementById('rel-receb').textContent = 'R$ '+r.receita_total.toLocaleString('pt-BR',{minimumFractionDigits:2})
-  document.getElementById('rel-arec').textContent = 'R$ 0,00'
-  const sorted = Object.entries(d.por_mes).sort((a,b)=>a[0].localeCompare(b[0])).slice(-6)
-  const max2 = Math.max(...sorted.map(x=>x[1]))
-  document.getElementById('rel-chart').innerHTML = sorted.map(([m,v])=>{
+  const d=ST.dashboard; if(!d)return
+  renderRelCounts(d)
+  const sorted=Object.entries(d.por_mes).sort((a,b)=>a[0].localeCompare(b[0])).slice(-6)
+  const max=Math.max(...sorted.map(x=>x[1]))
+  document.getElementById('rel-chart').innerHTML=sorted.map(([m,v])=>{
     const [y,mo]=m.split('-')
-    return `<div class="chart-bar-group"><div class="chart-bar" style="height:${Math.max(4,Math.round(v/max2*90))}px;background:rgba(201,164,85,.25)" title="${MESES[parseInt(mo)-1]}: ${v}"></div><div class="chart-lbl">${MESES[parseInt(mo)-1]}</div></div>`
+    return`<div class="chart-bar-group" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div style="height:${Math.max(4,Math.round(v/max*90))}px;width:100%;background:rgba(27,94,59,.6);border-radius:2px 2px 0 0;max-width:36px"></div>
+      <div style="font-size:10px;color:var(--text3)">${MESES_ABR[parseInt(mo)-1]}</div>
+    </div>`
   }).join('')
-  const cats = Object.entries(d.por_categoria).sort((a,b)=>b[1]-a[1]).slice(0,10)
-  const totalCat = cats.reduce((s,[,v])=>s+v,0)
-  document.getElementById('rel-proc-table').innerHTML = cats.map(([c,v])=>{
-    const pct = Math.round(v/totalCat*100)
-    return `<tr><td class="pname">${c}</td><td class="text-muted">${v}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="prog-bar" style="width:80px;margin:0"><div class="prog-fill" style="width:${pct}%"></div></div><span class="text-muted">${pct}%</span></div></td></tr>`
-  }).join('')
-  if (d.profissionais&&d.profissionais.length) {
-    document.getElementById('rel-prof-table').innerHTML = d.profissionais.map(p=>{
-      const nome = p.name||p.Name||'—'
-      return `<tr><td class="pname">${nome}</td><td class="text-muted">—</td><td class="text-muted">—</td></tr>`
-    }).join('')
-  }
+  const cats=Object.entries(d.por_categoria).sort((a,b)=>b[1]-a[1]).slice(0,10)
+  const totalCat=cats.reduce((s,[,v])=>s+v,0)
+  document.getElementById('rel-proc').innerHTML=cats.map(([c,v])=>`<tr><td class="pname">${c}</td><td>${v}</td><td style="color:var(--text3)">${Math.round(v/totalCat*100)}%</td></tr>`).join('')
+  document.getElementById('rel-profs').innerHTML=(d.profissionais||[]).map(p=>`<tr><td class="pname">${p.name||p.Name||'—'}</td><td class="text-muted">—</td></tr>`).join('')
 }
 
 function relTab(id,el) {
@@ -1336,136 +1227,126 @@ function relTab(id,el) {
   document.getElementById('rel-'+id).classList.add('active')
 }
 
+// ── DASH ANALÍTICO ──────────────────────────────────────────────
+function renderDashAnalitico() {
+  const dados = [
+    {mes:'Janeiro',entrada:40000,saida:52000,result:-12000},
+    {mes:'Fevereiro',entrada:30000,saida:46000,result:-16000},
+    {mes:'Março',entrada:22000,saida:18000,result:4000}
+  ]
+  const max=60000
+  document.getElementById('chart-caixa').innerHTML=dados.map(d=>`
+    <div class="bar-grp" style="flex:1">
+      <div class="bar-grp-bars">
+        <div class="bar-seg" style="height:${d.entrada/max*90}px;background:#1976D2" title="Entrada: R$ ${d.entrada.toLocaleString('pt-BR')}"></div>
+        <div class="bar-seg" style="height:${d.saida/max*90}px;background:#D32F2F" title="Saída: R$ ${d.saida.toLocaleString('pt-BR')}"></div>
+        <div class="bar-seg" style="height:${Math.max(4,Math.abs(d.result)/max*90)}px;background:#F9A825" title="Resultado: R$ ${d.result.toLocaleString('pt-BR')}"></div>
+      </div>
+      <div class="bar-lbl">${d.mes}</div>
+    </div>`).join('')
+
+  const nf=[{mes:'Janeiro',recib:300,nfse:0},{mes:'Fevereiro',recib:1100,nfse:0},{mes:'Março',recib:0,nfse:0}]
+  const maxNF=1200
+  document.getElementById('chart-nf').innerHTML=nf.map(d=>`
+    <div class="bar-grp" style="flex:1">
+      <div class="bar-grp-bars">
+        <div class="bar-seg" style="height:${Math.max(2,d.recib/maxNF*90)}px;background:#1976D2"></div>
+        <div class="bar-seg" style="height:${Math.max(2,d.nfse/maxNF*90)}px;background:#D32F2F"></div>
+      </div>
+      <div class="bar-lbl">${d.mes}</div>
+    </div>`).join('')
+
+  const desmarcados=[434,411,362]
+  const maxD=500
+  document.getElementById('chart-desmarcados').innerHTML=['Janeiro','Fevereiro','Março'].map((m,i)=>`
+    <div class="bar-grp" style="flex:1">
+      <div class="bar-grp-bars"><div class="bar-seg" style="height:${desmarcados[i]/maxD*90}px;background:#1976D2;width:28px" title="${desmarcados[i]}"></div></div>
+      <div class="bar-lbl" style="font-size:9px;color:var(--text3)">${desmarcados[i]}</div>
+      <div class="bar-lbl">${m}</div>
+    </div>`).join('')
+
+  document.getElementById('chart-faltas').innerHTML=document.getElementById('chart-desmarcados').innerHTML
+}
+
 // ── CONFIGURAÇÕES ──────────────────────────────────────────────
-function cfgTab(id,el) {
-  document.querySelectorAll('#p-configuracoes .tab').forEach(t=>t.classList.remove('active'))
-  document.querySelectorAll('#p-configuracoes .tab-panel').forEach(t=>t.classList.remove('active'))
-  el.classList.add('active')
-  document.getElementById('cfg-'+id).classList.add('active')
-  if (id==='profissionais'&&!ST.profissionais) loadConfigProfs()
-  if (id==='procedimentos'&&!ST.procedimentos) loadConfigProcs()
+function renderConfiguracoes() {
+  const itens=['Administração de Dados','Anamnese','Assinatura Eletrônica','Bloqueios','Calendário','Centros Radiológicos','Clinipay','Clínicas','Configuração de Emissor NFSe','Configuração de Registro (SPC/Serasa)','Configuração do QRCode para Check-in','Configurações de Caixa','Configurações de Consulta (SPC/Serasa)','Configurações de Regiões e Horários','Contas Bancárias','Diagnóstico Digital','Documentos','Emissores','Especialidades','Exportar dados','Listas/Tabelas de Preço','Medicamentos','Número de Prontuário','Orçamento','Personalização do Sistema','Recibos','Relatórios','Régua de Cobrança','Segurança','Taxas - Formas de Pagamento']
+  document.getElementById('cfg-list').innerHTML=itens.map(item=>`
+    <div class="accord-item">
+      <div class="accord-head" onclick="toggleAccord(this)">
+        ${item}
+        <span class="accord-arrow">›</span>
+      </div>
+      <div class="accord-body"><div style="color:var(--text3);font-size:13px">Configurações de <strong>${item}</strong> — em desenvolvimento</div></div>
+    </div>`).join('')
 }
 
-async function loadConfigProfs() {
-  document.getElementById('cfg-prof-loading').classList.remove('hidden')
-  document.getElementById('cfg-prof-data').classList.add('hidden')
-  try {
-    const data = await api('profissionais')
-    ST.profissionais = data
-    document.getElementById('cfg-prof-grid').innerHTML = data.map(p=>{
-      const nome = p.name||p.Name||p.nome||'Profissional'
-      const esp = p.specialty||p.especialidade||'Clínico Geral'
-      const cpf = p.cpf||p.CPF||''
-      const ini = nome.split(' ').slice(0,2).map(x=>x[0]).join('')
-      return `<div class="config-section" style="margin-bottom:0">
-        <div style="display:flex;align-items:center;gap:12px;padding:14px 18px">
-          <div class="avatar">${ini}</div>
-          <div style="flex:1"><div style="font-size:12px;font-weight:500;color:var(--text)">${nome}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${esp}</div></div>
-          <span class="badge badge-green">Ativo</span>
-        </div>
-      </div>`
-    }).join('')
-    document.getElementById('cfg-prof-loading').classList.add('hidden')
-    document.getElementById('cfg-prof-data').classList.remove('hidden')
-    // Preenche select do modal de agendamento
-    const sel = document.getElementById('ag-prof')
-    if (sel) sel.innerHTML = '<option>Selecione...</option>'+data.map(p=>`<option>${p.name||p.Name||''}</option>`).join('')
-    // Preenche lista do prontuário
-    filterProntList()
-  } catch(e) {
-    document.getElementById('cfg-prof-loading').innerHTML=`<div class="err-state">${e.message}</div>`
-  }
-}
-
-async function loadConfigProcs() {
-  document.getElementById('cfg-proc-loading').classList.remove('hidden')
-  document.getElementById('cfg-proc-data').classList.add('hidden')
-  try {
-    const data = await api('procedimentos')
-    ST.procedimentos = data
-    document.getElementById('cfg-proc-table').innerHTML = data.slice(0,60).map(p=>{
-      const nome = p.ProcedureName||p.name||p.Name||'—'
-      const esp = p.ProcedureExpertiseName||p.especialidade||'—'
-      const cod = p.InternalCode||p.code||'—'
-      return `<tr><td class="pname">${nome}</td><td class="text-muted">${esp}</td><td class="text-muted">${cod}</td></tr>`
-    }).join('')
-    document.getElementById('cfg-proc-loading').classList.add('hidden')
-    document.getElementById('cfg-proc-data').classList.remove('hidden')
-  } catch(e) {
-    document.getElementById('cfg-proc-loading').innerHTML=`<div class="err-state">${e.message}</div>`
-  }
+function toggleAccord(el) {
+  const body=el.nextElementSibling
+  const isOpen=body.classList.contains('open')
+  document.querySelectorAll('.accord-body.open').forEach(b=>{b.classList.remove('open');b.previousElementSibling.querySelector('.accord-arrow').textContent='›'})
+  if(!isOpen){body.classList.add('open');el.querySelector('.accord-arrow').textContent='⌄'}
 }
 
 // ── IA ──────────────────────────────────────────────────────────
 async function callClaude(p) {
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,messages:[{role:'user',content:p}]})})
-    const d = await r.json()
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,messages:[{role:'user',content:p}]})})
+    const d=await r.json()
     return d.content?.[0]?.text||'Erro ao gerar.'
   } catch(e) {
-    return `Olá! Somos a Klinik Odontologia 💛\n\nSentimos sua falta! Temos horários disponíveis essa semana. Que tal marcarmos uma consulta?\n\n📍 Rua Padre João Crippa, 2012\n📞 (67) 99931-5131`
+    return`Olá! Somos a Klinik Odontologia 💛\n\nSentimos sua falta! Temos horários disponíveis essa semana.\n\n📍 Rua Padre João Crippa, 2012\n📞 (67) 99931-5131`
   }
-}
-
-function buildPrompt(nome,tipo,proc,dias) {
-  const base = 'Você é recepcionista da Klinik Odontologia, clínica premium em Campo Grande MS (Rua Padre João Crippa 2012, tel: (67) 99931-5131). '
-  const ps = {
-    reativacao: `Mensagem WhatsApp reativação para ${nome}, paciente inativo há ${dias||290} dias. Mencione ${proc}. Tom caloroso, feminino, sofisticado. 3 parágrafos curtos. CTA agendamento.`,
-    aniversario: `Mensagem de aniversário para ${nome}. Ofereça desconto especial em ${proc}. Tom festivo. Emojis estratégicos. CTA.`,
-    upsell: `Oferta de ${proc} para ${nome}, paciente atual. Destaque benefícios estéticos. Tom consultivo, não forçado. 3 parágrafos.`,
-    confirmacao: `Confirmação de consulta para ${nome} para ${proc}. Inclua endereço e horário de funcionamento. Profissional e amigável.`
-  }
-  return base + (ps[tipo]||ps.reativacao)
 }
 
 async function gerarScriptIA() {
-  const nome = document.getElementById('ia-nome').value||'Paciente'
-  const dias = document.getElementById('ia-dias').value
-  const tipo = document.getElementById('ia-tipo').value
-  const proc = document.getElementById('ia-proc').value
-  const out = document.getElementById('ia-output')
-  document.getElementById('ia-result').classList.remove('hidden')
-  out.textContent = 'Gerando...'
-  const s = await callClaude(buildPrompt(nome,tipo,proc,dias))
-  out.textContent = s
-  window._iaScript = s
-  document.getElementById('ia-wa').href = `https://wa.me/5567999315131?text=${encodeURIComponent(s)}`
+  const nome=document.getElementById('ia-nome').value||'Paciente'
+  const dias=document.getElementById('ia-dias').value
+  const tipo=document.getElementById('ia-tipo').value
+  const proc=document.getElementById('ia-proc').value
+  const el=document.getElementById('ia-result')
+  const out=document.getElementById('ia-output')
+  el.classList.remove('hidden')
+  out.textContent='Gerando...'
+  const s=await callClaude(`Você é recepcionista da Klinik Odontologia, Campo Grande MS (Rua Padre João Crippa 2012, tel: (67) 99931-5131). Gere mensagem WhatsApp de ${tipo} para ${nome}, ausente há ${dias} dias. Mencione ${proc}. Tom caloroso. 3 parágrafos. CTA.`)
+  out.textContent=s; window._iaScript=s
+  document.getElementById('ia-wa').href=`https://wa.me/5567999315131?text=${encodeURIComponent(s)}`
 }
 
 async function gerarScriptModal() {
-  const nome = document.getElementById('ms-nome').value||'Paciente'
-  const tipo = document.getElementById('ms-tipo').value
-  const proc = document.getElementById('ms-proc').value
+  const nome=document.getElementById('ms-nome').value||'Paciente'
+  const tipo=document.getElementById('ms-tipo').value
+  const proc=document.getElementById('ms-proc').value
   document.getElementById('ms-loading').classList.remove('hidden')
   document.getElementById('ms-result').classList.add('hidden')
-  const s = await callClaude(buildPrompt(nome,tipo,proc,290))
+  const s=await callClaude(`Você é recepcionista da Klinik Odontologia. Gere mensagem WhatsApp de ${tipo} para ${nome}, mencione ${proc}. Tom caloroso. 3 parágrafos. CTA. Tel: (67) 99931-5131`)
   document.getElementById('ms-loading').classList.add('hidden')
   document.getElementById('ms-result').classList.remove('hidden')
-  document.getElementById('ms-output').textContent = s
-  window._msScript = s
-  document.getElementById('ms-wa').href = `https://wa.me/5567999315131?text=${encodeURIComponent(s)}`
+  document.getElementById('ms-output').textContent=s; window._msScript=s
+  document.getElementById('ms-wa').href=`https://wa.me/5567999315131?text=${encodeURIComponent(s)}`
 }
 
-async function iaQuick(prompt) {
-  const el = document.getElementById('ia-quick-result')
-  el.textContent = 'Gerando com IA...'
-  el.style.color = 'var(--text3)'
-  const s = await callClaude('Você é especialista em marketing odontológico para a Klinik Odontologia, Campo Grande MS. '+prompt+' Seja específico, prático e acionável.')
-  el.textContent = s
-  el.style.color = 'var(--text)'
+async function iaQuick(p) {
+  const el=document.getElementById('ia-quick-result')
+  el.textContent='Gerando com IA...'
+  const s=await callClaude('Especialista em marketing odontológico para Klinik Odontologia Campo Grande MS. '+p+' Seja específico e prático.')
+  el.textContent=s
+}
+
+function globalSearch(q) {
+  if(!q)return
+  const lower=q.toLowerCase()
+  const pages=['agenda','pacientes','financeiro','relatorios','configuracoes','profissionais']
+  const match=pages.find(p=>p.includes(lower)||lower.includes(p.substring(0,4)))
+  if(match&&q.length>3)nav(match)
 }
 
 // ── MODAIS ──────────────────────────────────────────────────────
-function openModal(id) {
-  const el = document.getElementById('modal-'+id)
-  if(el) el.classList.add('open')
-}
-function closeModal(id) {
-  const el = document.getElementById('modal-'+id)
-  if(el) el.classList.remove('open')
-}
+function openModal(id){document.getElementById('modal-'+id).classList.add('open')}
+function closeModal(id){document.getElementById('modal-'+id).classList.remove('open')}
 
 // ── INIT ────────────────────────────────────────────────────────
+renderMiniCal()
 loadDashboard()
 </script>
 </body>
