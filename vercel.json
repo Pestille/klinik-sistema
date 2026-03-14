@@ -1,3 +1,23 @@
 {
-  "outputDirectory": "public"
+  "version": 2,
+  "outputDirectory": "public",
+  "functions": {
+    "api/clinicorp.js": {
+      "runtime": "edge"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1"
+    }
+  ],
+  "env": {
+    "CLINICORP_USUARIO": "klinik",
+    "CLINICORP_BUSINESS_ID": "5073030694043648"
+  }
 }
