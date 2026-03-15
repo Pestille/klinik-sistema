@@ -1,4 +1,4 @@
-// api/sync-profissionais.js — Sync profissionais Clinicorp → Turso
+// api/sync-profissionais.js — com debug de erro
 var https = require('https')
 var { getClient } = require('./db')
 
@@ -41,13 +41,17 @@ module.exports = async function handler(req, res) {
     res.setHeader('Content-Type', 'application/json')
     if (req.method === 'OPTIONS') { res.status(200).end(); return }
 
-    var startTime = Date.now()
-
     try {
         var client = getClient()
         var profs = await fetchProfs()
         var salvos = 0
-        var erros = 0
+        var errosDetalhes = []
+
+        // Primeiro: mostrar as colunas da tabela
+        var schema = await client.execute("PRAGMA table_info(profissionais)")
+
+        // Mostrar o primeiro profissional para ver os campos
+        var amostra = profs.length > 0 ? Object.keys(profs[0]) : []
 
         for (var i = 0; i < profs.length; i++) {
             var p = profs[i]
@@ -55,37 +59,30 @@ module.exports = async function handler(req, res) {
                 var id = String(p.id || p.Id || p.PersonId || p.professionalId || i)
                 var nome = p.name || p.Name || p.professionalName || ''
                 var especialidade = p.specialty || p.Specialty || p.especialidade || ''
-                var cro = p.cro || p.CRO || p.Cro || ''
-                var telefone = p.phone || p.Phone || p.MobilePhone || ''
-                var email = p.email || p.Email || ''
 
                 if (!nome) continue
 
                 await client.execute({
-                    sql: "INSERT INTO profissionais (clinicorp_id, nome, cro, especialidade, telefone, email, sincronizado_em) VALUES (?, ?, ?, ?, ?, ?, datetime('now')) ON CONFLICT(clinicorp_id) DO UPDATE SET nome=excluded.nome, cro=excluded.cro, especialidade=excluded.especialidade, telefone=excluded.telefone, email=excluded.email, atualizado_em=datetime('now'), sincronizado_em=datetime('now')",
-                    args: [id, nome, cro, especialidade, telefone, email]
+                    sql: "INSERT INTO profissionais (clinicorp_id, nome, especialidade) VALUES (?, ?, ?) ON CONFLICT(clinicorp_id) DO UPDATE SET nome=excluded.nome, especialidade=excluded.especialidade",
+                    args: [id, nome, especialidade]
                 })
                 salvos++
-            } catch(e) { erros++ }
+            } catch(e) {
+                errosDetalhes.push({ prof: (p.name || p.Name || '?'), erro: e.message })
+            }
         }
-
-        var duracao = Date.now() - startTime
-        try {
-            await client.execute({
-                sql: "INSERT INTO sync_log (tabela, operacao, registros_processados, registros_erros, detalhes, finalizado_em) VALUES ('profissionais', 'sync_clinicorp', ?, ?, ?, datetime('now'))",
-                args: [salvos, erros, JSON.stringify({ total_api: profs.length, ms: duracao })]
-            })
-        } catch(e) {}
 
         var countResult = await client.execute('SELECT COUNT(*) as total FROM profissionais')
 
         res.status(200).json({
             success: true,
             profissionais_api: profs.length,
+            campos_api: amostra,
+            colunas_tabela: schema.rows.map(function(r) { return r.name }),
             salvos: salvos,
-            erros: erros,
+            erros: errosDetalhes,
             total_no_banco: countResult.rows[0].total,
-            ms: duracao
+            primeiro_prof: profs.length > 0 ? profs[0] : null
         })
     } catch(error) {
         res.status(500).json({ success: false, error: error.message })
