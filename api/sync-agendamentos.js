@@ -1,210 +1,129 @@
-// api/sync-agendamentos.js — Sincronizar agendamentos da API Clinicorp → Turso
-// Klinik Sistema — Campo Grande, MS
-// USO: GET /api/sync-agendamentos?startDate=2026-03-01&endDate=2026-03-31
+// api/sync-agendamentos.js — Sync agendamentos Clinicorp → Turso
+// USO: /api/sync-agendamentos?page=1 (pagina por pagina para nao estourar timeout)
+var https = require('https')
+var { getClient } = require('./db')
 
-const { getClient } = require('./db');
+var USUARIO = 'klinik'
+var TOKEN   = '23b73dd0-f3a9-4aef-97ff-9db567d283b5'
+var SUB     = 'klinik'
+var BID     = '5073030694043648'
 
-const CLINICORP_BASE = 'https://report-api.clinicorp.com';
-const CLINICORP_AUTH = 'Basic a2xpbmlrOjIzYjczZGQwLWYzYTktNGFlZi05N2ZmLTlkYjU2N2QyODNiNQ==';
-const BUSINESS_ID = '5073030694043648';
+function auth() {
+    return 'Basic ' + Buffer.from(USUARIO + ':' + TOKEN).toString('base64')
+}
 
-async function fetchAgendamentosClinicorp(startDate, endDate, page = 1, pageSize = 100) {
-    const url = `${CLINICORP_BASE}/reports/schedules` +
-        `?businessId=${BUSINESS_ID}` +
-        `&startDate=${startDate}` +
-        `&endDate=${endDate}` +
-        `&page=${page}` +
-        `&pageSize=${pageSize}`;
-
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': CLINICORP_AUTH,
-            'Content-Type': 'application/json'
+function fetchOnePage(page, dias) {
+    return new Promise(function(resolve) {
+        var d = new Date()
+        var from = new Date(); from.setDate(from.getDate() - (dias || 365))
+        var qs = '?subscriber_id=' + SUB +
+            '&businessId=' + BID +
+            '&from=' + from.toISOString().slice(0,10) +
+            '&to=' + d.toISOString().slice(0,10) +
+            '&limit=100&page=' + page
+        var opts = {
+            hostname: 'api.clinicorp.com',
+            path: '/rest/v1/appointment/list' + qs,
+            method: 'GET',
+            headers: { 'Authorization': auth(), 'accept': 'application/json' }
         }
-    });
-
-    if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Clinicorp API erro ${response.status}: ${text}`);
-    }
-
-    return response.json();
+        var req = https.request(opts, function(res) {
+            var body = ''
+            res.on('data', function(c) { body += c })
+            res.on('end', function() {
+                try {
+                    var d = JSON.parse(body)
+                    var items = Array.isArray(d) ? d : []
+                    resolve(items)
+                } catch(e) { resolve([]) }
+            })
+        })
+        req.on('error', function() { resolve([]) })
+        req.setTimeout(15000, function() { req.destroy(); resolve([]) })
+        req.end()
+    })
 }
 
 module.exports = async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Content-Type', 'application/json')
+    if (req.method === 'OPTIONS') { res.status(200).end(); return }
 
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-
-    // Datas padrão: mês atual
-    const now = new Date();
-    const defaultStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-    const defaultEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
-
-    const startDate = req.query?.startDate || defaultStart;
-    const endDate = req.query?.endDate || defaultEnd;
-
-    const startTime = Date.now();
-    let totalProcessados = 0;
-    let totalErros = 0;
-    let page = 1;
-    let hasMore = true;
+    var startTime = Date.now()
+    var pg = parseInt(req.query.page) || 1
+    var dias = parseInt(req.query.dias) || 365
 
     try {
-        const client = getClient();
+        var client = getClient()
+        var items = await fetchOnePage(pg, dias)
+        var salvos = 0
+        var erros = 0
 
-        while (hasMore) {
-            const data = await fetchAgendamentosClinicorp(startDate, endDate, page);
+        for (var i = 0; i < items.length; i++) {
+            var a = items[i]
+            try {
+                var clinicorpId = String(a.id || a.AppointmentId || a.Id || (pg + '-' + i))
+                var data = a.date || ''
+                if (data) data = data.slice(0, 10)
+                var horaInicio = a.fromTime || ''
+                var horaFim = a.toTime || ''
+                var dataHora = data + ' ' + horaInicio
+                var categoria = a.CategoryDescription || ''
+                var deleted = a.Deleted ? 1 : 0
+                var status = deleted ? 'cancelado' : 'agendado'
+                var pacienteNome = a.PatientName || ''
+                var pacienteId = String(a.Patient_PersonId || '')
+                var profissionalId = String(a.Dentist_PersonId || '')
+                var notas = a.Notes || ''
+                var primeira = a.FirstAppointment === 'X' ? 1 : 0
 
-            // Extrair lista de agendamentos
-            let agendamentos = [];
-            if (Array.isArray(data)) {
-                agendamentos = data;
-            } else if (data.data && Array.isArray(data.data)) {
-                agendamentos = data.data;
-            } else if (data.schedules && Array.isArray(data.schedules)) {
-                agendamentos = data.schedules;
-            } else if (data.content && Array.isArray(data.content)) {
-                agendamentos = data.content;
-            } else if (data.results && Array.isArray(data.results)) {
-                agendamentos = data.results;
-            }
+                // Buscar IDs locais
+                var pacLocalId = null
+                var profLocalId = null
 
-            if (agendamentos.length === 0) {
-                hasMore = false;
-                break;
-            }
-
-            for (const a of agendamentos) {
-                try {
-                    const clinicorpId = String(a.id || a.scheduleId || a.schedule_id || '');
-                    const dataHora = a.date || a.dateTime || a.scheduleDate || a.start || '';
-                    const duracao = a.duration || a.durationMinutes || a.duration_minutes || 30;
-                    const tipo = a.type || a.scheduleType || a.appointmentType || '';
-                    const status = a.status || a.scheduleStatus || 'agendado';
-                    const procedimento = a.procedure || a.procedureName || a.treatment || a.description || '';
-                    const valor = a.value || a.price || a.amount || 0;
-                    const observacoes = a.notes || a.observation || a.obs || '';
-
-                    // IDs do paciente e profissional na Clinicorp
-                    const pacienteClinicorpId = String(a.customerId || a.customer_id || a.patientId || a.patient_id || '');
-                    const profissionalClinicorpId = String(a.professionalId || a.professional_id || a.dentistId || a.doctorId || '');
-
-                    if (!clinicorpId || !dataHora) {
-                        totalErros++;
-                        continue;
-                    }
-
-                    // Buscar IDs locais do paciente e profissional
-                    let pacienteId = null;
-                    let profissionalId = null;
-
-                    if (pacienteClinicorpId) {
-                        const pResult = await client.execute({
-                            sql: 'SELECT id FROM pacientes WHERE clinicorp_id = ?',
-                            args: [pacienteClinicorpId]
-                        });
-                        if (pResult.rows.length > 0) {
-                            pacienteId = pResult.rows[0].id;
-                        }
-                    }
-
-                    if (profissionalClinicorpId) {
-                        const prResult = await client.execute({
-                            sql: 'SELECT id FROM profissionais WHERE clinicorp_id = ?',
-                            args: [profissionalClinicorpId]
-                        });
-                        if (prResult.rows.length > 0) {
-                            profissionalId = prResult.rows[0].id;
-                        }
-                    }
-
-                    // UPSERT
-                    await client.execute({
-                        sql: `INSERT INTO agendamentos (clinicorp_id, paciente_id, profissional_id, data_hora, duracao_minutos, tipo, status, procedimento, valor, observacoes, sincronizado_em)
-                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-                              ON CONFLICT(clinicorp_id) DO UPDATE SET
-                                paciente_id = excluded.paciente_id,
-                                profissional_id = excluded.profissional_id,
-                                data_hora = excluded.data_hora,
-                                duracao_minutos = excluded.duracao_minutos,
-                                tipo = excluded.tipo,
-                                status = excluded.status,
-                                procedimento = excluded.procedimento,
-                                valor = excluded.valor,
-                                observacoes = excluded.observacoes,
-                                atualizado_em = datetime('now'),
-                                sincronizado_em = datetime('now')`,
-                        args: [clinicorpId, pacienteId, profissionalId, dataHora, duracao, tipo, status, procedimento, valor, observacoes]
-                    });
-
-                    totalProcessados++;
-                } catch (err) {
-                    totalErros++;
-                    console.error(`Erro agendamento ${a.id || 'unknown'}:`, err.message);
+                if (pacienteId) {
+                    try {
+                        var pr = await client.execute({ sql: 'SELECT id FROM pacientes WHERE clinicorp_id = ?', args: [pacienteId] })
+                        if (pr.rows.length > 0) pacLocalId = pr.rows[0].id
+                    } catch(e) {}
                 }
-            }
+                if (profissionalId) {
+                    try {
+                        var pp = await client.execute({ sql: 'SELECT id FROM profissionais WHERE clinicorp_id = ?', args: [profissionalId] })
+                        if (pp.rows.length > 0) profLocalId = pp.rows[0].id
+                    } catch(e) {}
+                }
 
-            // Paginação
-            const totalPages = data.totalPages || data.total_pages || data.pages || 0;
-            if (page >= totalPages || agendamentos.length < 100) {
-                hasMore = false;
-            } else {
-                page++;
-            }
+                await client.execute({
+                    sql: "INSERT INTO agendamentos (clinicorp_id, paciente_id, profissional_id, data_hora, tipo, status, procedimento, observacoes, sincronizado_em) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now')) ON CONFLICT(clinicorp_id) DO UPDATE SET paciente_id=excluded.paciente_id, profissional_id=excluded.profissional_id, data_hora=excluded.data_hora, tipo=excluded.tipo, status=excluded.status, procedimento=excluded.procedimento, observacoes=excluded.observacoes, atualizado_em=datetime('now'), sincronizado_em=datetime('now')",
+                    args: [clinicorpId, pacLocalId, profLocalId, dataHora, categoria, status, pacienteNome, notas]
+                })
+                salvos++
+            } catch(e) { erros++ }
         }
 
-        // Registrar no sync_log
-        const duracao = Date.now() - startTime;
-        await client.execute({
-            sql: `INSERT INTO sync_log (tabela, operacao, registros_processados, registros_erros, detalhes, finalizado_em)
-                  VALUES ('agendamentos', 'sync_clinicorp', ?, ?, ?, datetime('now'))`,
-            args: [
-                totalProcessados,
-                totalErros,
-                JSON.stringify({
-                    periodo: `${startDate} a ${endDate}`,
-                    paginas: page,
-                    duracao_ms: duracao
-                })
-            ]
-        });
-
-        // Contagem
-        const countResult = await client.execute('SELECT COUNT(*) as total FROM agendamentos');
-        const totalNoBanco = countResult.rows[0].total;
-
-        return res.status(200).json({
-            success: true,
-            message: `Sincronização concluída em ${duracao}ms`,
-            periodo: { startDate, endDate },
-            registros_processados: totalProcessados,
-            erros: totalErros,
-            paginas: page,
-            total_agendamentos_no_banco: totalNoBanco,
-            timestamp: new Date().toISOString()
-        });
-
-    } catch (error) {
+        var duracao = Date.now() - startTime
         try {
-            const client = getClient();
             await client.execute({
-                sql: `INSERT INTO sync_log (tabela, operacao, registros_erros, detalhes, finalizado_em)
-                      VALUES ('agendamentos', 'sync_clinicorp_erro', 1, ?, datetime('now'))`,
-                args: [JSON.stringify({ error: error.message })]
-            });
-        } catch { }
+                sql: "INSERT INTO sync_log (tabela, operacao, registros_processados, registros_erros, detalhes, finalizado_em) VALUES ('agendamentos', 'sync_clinicorp', ?, ?, ?, datetime('now'))",
+                args: [salvos, erros, JSON.stringify({ pagina: pg, ms: duracao })]
+            })
+        } catch(e) {}
 
-        return res.status(500).json({
-            success: false,
-            error: error.message,
-            registros_processados: totalProcessados,
-            erros: totalErros,
-            timestamp: new Date().toISOString()
-        });
+        var countResult = await client.execute('SELECT COUNT(*) as total FROM agendamentos')
+
+        res.status(200).json({
+            success: true,
+            pagina: pg,
+            agendamentos_na_pagina: items.length,
+            salvos: salvos,
+            erros: erros,
+            total_no_banco: countResult.rows[0].total,
+            proxima_pagina: items.length >= 100 ? '/api/sync-agendamentos?page=' + (pg + 1) : null,
+            ms: duracao
+        })
+
+    } catch(error) {
+        res.status(500).json({ success: false, error: error.message })
     }
-};
+}
