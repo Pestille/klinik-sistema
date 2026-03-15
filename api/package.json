@@ -1,0 +1,12 @@
+{
+    "name": "klinik-sistema",
+    "version": "1.0.0",
+    "description": "Sistema de gestão - Klinik Odontologia - Campo Grande, MS",
+    "private": true,
+    "dependencies": {
+        "@libsql/client": "^0.14.0"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}
