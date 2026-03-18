@@ -238,23 +238,18 @@ module.exports = async function handler(req, res) {
       }
 
       // ── DB STATUS ────────────────────────────────────────────────────────
-      case "db-status": {
-        const [pac, agend, prof, rec] = await Promise.all([
-          db.execute("SELECT COUNT(*) as total FROM pacientes"),
-          db.execute("SELECT COUNT(*) as total FROM agendamentos"),
-          db.execute("SELECT COUNT(*) as total FROM profissionais"),
-          db.execute("SELECT COUNT(*) as total,COALESCE(SUM(valor),0) as soma FROM recebimentos"),
-        ]);
-        return res.json({
-          status: "ok",
-          db: process.env.TURSO_DATABASE_URL,
-          tabelas: {
-            pacientes: pac.rows[0].total,
-            agendamentos: agend.rows[0].total,
-            profissionais: prof.rows[0].total,
-            recebimentos: { total: rec.rows[0].total, valorTotal: rec.rows[0].soma },
-          },
-          timestamp: new Date().toISOString(),
+     case "db-status": {
+  const tables = await db.execute(
+    `SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name`
+  );
+  return res.json({
+    status: "ok",
+    tables: tables.rows.map(t => ({
+      name: t.name,
+      columns: (t.sql || "").match(/^\s+(\w+)\s/gm)?.map(c => c.trim()) || []
+    }))
+  });
+}
         });
       }
 
