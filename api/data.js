@@ -5,8 +5,8 @@ const { createClient } = require("@libsql/client");
 
 function getDb() {
   return createClient({
-    url: process.env.TURSO_URL,
-    authToken: process.env.TURSO_TOKEN,
+    url: process.env.TURSO_DATABASE_URL,
+    authToken: process.env.TURSO_AUTH_TOKEN,
   });
 }
 
@@ -247,7 +247,7 @@ module.exports = async function handler(req, res) {
         ]);
         return res.json({
           status: "ok",
-          db: process.env.TURSO_URL,
+          db: process.env.TURSO_DATABASE_URL,
           tabelas: {
             pacientes: pac.rows[0].total,
             agendamentos: agend.rows[0].total,
