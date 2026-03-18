@@ -8,7 +8,7 @@ const CLINICORP_AUTH = `Basic ${process.env.CLINICORP_TOKEN || "a2xpbmlrOjIzYjcz
 const BUSINESS_ID = process.env.CLINICORP_BUSINESS_ID || "5073030694043648";
 
 function getDb() {
-  return createClient({ url: process.env.TURSO_URL, authToken: process.env.TURSO_TOKEN });
+  return createClient({ url: process.env.TURSO_DATABASE_URL, authToken: process.env.TURSO_AUTH_TOKEN });
 }
 
 async function clinicorpFetch(path, params = {}) {
