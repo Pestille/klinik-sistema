@@ -1,50 +1,241 @@
-// KLINIK SISTEMA — Turso Data Layer v2
-// Conecta TODAS as telas do frontend às APIs do Turso
-(function(){'use strict'
-function apiGet(ep,params){var qs=params?'?'+Object.entries(params).filter(function(kv){return kv[1]!==undefined&&kv[1]!==null&&kv[1]!==''}).map(function(kv){return encodeURIComponent(kv[0])+'='+encodeURIComponent(kv[1])}).join('&'):'';return fetch('/api/'+ep+qs).then(function(r){return r.json()}).then(function(d){return d.success!==false?d:null}).catch(function(e){console.error('API:',ep,e);return null})}
-function fmtBrl(v){return'R$ '+(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+// api/data.js — Router de dados (consolida todas as consultas)
+// USO: /api/data?r=dashboard
+//      /api/data?r=pacientes&busca=silva&status=ativos
+//      /api/data?r=agendamentos&data=2026-03-14
+//      /api/data?r=agenda-view&modo=dia&data=2026-03-14
+//      /api/data?r=profissionais
+//      /api/data?r=financeiro&de=2026-03-01&ate=2026-03-15
+//      /api/data?r=crc&prioridade=urgente
+//      /api/data?r=relatorios&tipo=producao
+//      /api/data?r=busca&q=carlos
+//      /api/data?r=aniversariantes
+//      /api/data?r=conta-corrente&de=X&ate=X
+//      /api/data?r=fluxo-caixa&mes=3&ano=2026
+//      /api/data?r=metas&mes=3&ano=2026
+//      /api/data?r=db-status
 
-// 1. DASHBOARD
-window.loadDashboard=async function(){var d=await apiGet('dashboard');if(!d)return;ST.dashboard={resumo:d.resumo,por_mes:{},por_categoria:{},profissionais:d.profissionais||[],inativos:(d.inativos||[]).map(function(p){return{nome:p.nome,ultima:p.ultima_visita?p.ultima_visita.slice(0,10):'—',dias:p.dias_ausente||999,telefone:p.telefone}})};(d.agendamentos_por_mes||[]).forEach(function(m){ST.dashboard.por_mes[m.mes]=m.total});(d.agendamentos_por_categoria||[]).forEach(function(c){ST.dashboard.por_categoria[c.categoria]=c.total});ST.inativos=ST.dashboard.inativos;ST.profissionais=d.profissionais;if(typeof renderCRMCounts==='function')renderCRMCounts(ST.inativos);if(curPage==='crm')renderCRM();if(curPage==='relatorios')renderRelatorios();if(typeof renderRelCounts==='function')renderRelCounts(ST.dashboard);if(typeof renderProfsList==='function')renderProfsList();var r=d.resumo,el;el=document.getElementById('rel-fat');if(el)el.textContent=fmtBrl(r.receita_total);el=document.getElementById('rel-receb');if(el)el.textContent=fmtBrl(r.receita_total);el=document.getElementById('rel-ag');if(el)el.textContent=r.total_agendamentos||0;console.log('[Turso] Dashboard:',r.total_pacientes,'pac,',r.total_agendamentos,'ag')}
+var { getClient } = require('./db')
 
-// 2. AGENDA
-window.loadAgenda=async function(){var le=document.getElementById('agenda-loading'),ge=document.getElementById('agenda-grid');if(le)le.classList.remove('hidden');if(ge)ge.classList.add('hidden');try{var modo=(document.getElementById('agenda-view-sel')||{}).value||'dia';var dtStr=agendaDate.toISOString().slice(0,10);var mesStr=agendaDate.getFullYear()+'-'+String(agendaDate.getMonth()+1).padStart(2,'0');var params={};if(modo==='dia')params={modo:'dia',data:dtStr};else if(modo==='semana')params={modo:'semana',data:dtStr};else if(modo==='mes')params={modo:'mes',mes:mesStr};var d=await apiGet('agenda-view',params);if(d&&d.agendamentos){ST.agendamentos=d.agendamentos.map(function(a){var parts=(a.data_hora||'').split(' ');var hora=parts[1]||'';var h=parseInt((hora.split(':')[0]))||9;var m=parseInt((hora.split(':')[1]))||0;var mF=m+30,hF=h;if(mF>=60){hF++;mF-=60}return{date:parts[0]||'',fromTime:hora,toTime:hF+':'+String(mF).padStart(2,'0'),PatientName:a.paciente_nome||'',CategoryDescription:a.categoria||'',ProfessionalName:a.profissional_nome||'',Deleted:a.status==='cancelado',Status:a.status,_profId:a.profissional_id,MobilePhone:''}});if(d.profissionais){ST.profissionais=d.profissionais;ST.dashboard=ST.dashboard||{};ST.dashboard.profissionais=d.profissionais}if(typeof renderMiniCal==='function')renderMiniCal();if(typeof renderProfsList==='function')renderProfsList();if(typeof renderAgendaGrid==='function')renderAgendaGrid();var we=document.getElementById('agenda-warn-txt');if(we&&d.resumo){var sc=d.resumo.agendados||0;we.textContent=sc>0?sc+' sem confirmação':''}}if(!ST.pacientesLista||ST.pacientesLista.length===0)loadPacTurso();if(le)le.classList.add('hidden');if(ge)ge.classList.remove('hidden')}catch(e){console.error('[Turso] Agenda:',e)}}
-window.agendaChangeView=function(){loadAgenda()}
+module.exports = async function handler(req, res) {
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Content-Type', 'application/json')
+    if (req.method === 'OPTIONS') { res.status(200).end(); return }
 
-// 3. PACIENTES
-async function loadPacTurso(busca,status){var params={limit:100};if(busca)params.busca=busca;if(status)params.status=status;var d=await apiGet('pacientes',params);if(!d)return;ST.pacientesLista=(d.data||[]).map(function(p){return{nome:p.nome,tel:p.telefone||'',email:p.email||'',ultima:p.ultima_visita?new Date(p.ultima_visita):new Date(2020,0,1),id:p.id,dias_ausente:p.dias_ausente}});if(d.resumo){var se=document.getElementById('pac-sub');if(se)se.textContent=d.resumo.total_pacientes+' pacientes ('+d.resumo.total_ativos+' ativos, '+d.resumo.total_inativos+' inativos)'}var le=document.getElementById('pac-loading'),de=document.getElementById('pac-data');if(le)le.classList.add('hidden');if(de)de.classList.remove('hidden');var ce=document.getElementById('pac-count');if(ce)ce.textContent=(d.paginacao?d.paginacao.total:ST.pacientesLista.length)+' pacientes';var li=document.getElementById('pac-list');if(li){li.innerHTML=ST.pacientesLista.slice(0,50).map(function(p){var ini=p.nome.split(' ').slice(0,2).map(function(x){return x[0]||''}).join('');var dias=p.dias_ausente||Math.floor((Date.now()-p.ultima.getTime())/864e5);var inativo=dias>180;var tel=(p.tel||'').replace(/\D/g,'');return'<div class="patient-row"><div class="patient-av">'+ini+'</div><div class="patient-info"><div class="patient-name">'+p.nome+'</div><div class="patient-meta"><span>'+(p.tel||'—')+'</span><span>Última visita: '+p.ultima.toLocaleDateString('pt-BR')+'</span><span>'+dias+' dias</span></div><div class="patient-tags">'+(inativo?'<span class="badge badge-orange">Inativo</span>':'<span class="badge badge-green">Ativo</span>')+'</div></div><div class="patient-acts">'+(tel?'<a href="https://wa.me/55'+tel+'" target="_blank" class="wa-btn">WhatsApp</a>':'')+'<button class="btn btn-sm" onclick="abrirProntuario(\''+p.nome.replace(/'/g,"\\'")+'\')">Prontuário</button></div></div>'}).join('')}if(typeof filterProntList==='function')filterProntList()}
-window.renderPacientes=function(){loadPacTurso()}
-var _ft=null;window.filterPac=function(){clearTimeout(_ft);_ft=setTimeout(function(){var q=(document.getElementById('pac-search').value||'').trim();var f=document.getElementById('pac-filter').value;var st=f==='inativos'?'inativos':f==='ativos'?'ativos':'';loadPacTurso(q.length>=2?q:'',st)},350)}
+    var q = req.query || {}
+    var route = q.r || ''
 
-// 4. CRC
-window.renderCRM=async function(){var f=document.getElementById('crm-filter').value;var d=await apiGet('crc',{prioridade:f==='all'?'':f});if(!d)return;var el;el=document.getElementById('crm-urgente');if(el)el.textContent=d.contagens.urgente;el=document.getElementById('crm-alta');if(el)el.textContent=d.contagens.alta;el=document.getElementById('crm-media');if(el)el.textContent=d.contagens.media;el=document.getElementById('crm-sub');if(el)el.textContent=d.contagens.total+' pacientes sem visita há 6+ meses';var bm={urgente:'badge-red',alta:'badge-orange',media:'badge-green'},lm={urgente:'URGENTE',alta:'ALTA',media:'MÉDIA'};var te=document.getElementById('crm-table');if(te)te.innerHTML=(d.data||[]).map(function(p,i){var tel=(p.telefone||'').replace(/\D/g,'');var n1=(p.nome||'').split(' ')[0];var wa='https://wa.me/55'+tel+'?text='+encodeURIComponent('Olá '+n1+'! É a Klinik Odontologia. Sentimos sua falta!');return'<tr><td class="text-muted">'+(i+1)+'</td><td><div class="pname">'+p.nome+'</div></td><td class="text-muted">'+(p.ultima_visita||'—')+'</td><td style="color:var(--red);font-weight:500">'+(p.dias_ausente||'?')+'d</td><td><span class="badge '+(bm[p.prioridade]||'')+'">'+(lm[p.prioridade]||'')+'</span></td><td>'+(tel?'<a href="'+wa+'" target="_blank" class="wa-btn">WhatsApp</a>':'—')+'</td></tr>'}).join('')}
+    try {
+        var client = getClient()
 
-// 5. CONTA CORRENTE
-window.renderCC=async function(){var deV=document.getElementById('dp-de-val'),ateV=document.getElementById('dp-ate-val');var de='',ate='';if(deV){var p=(deV.textContent||'').split('/');if(p.length===3)de=p[2]+'-'+p[1]+'-'+p[0]}if(ateV){var p2=(ateV.textContent||'').split('/');if(p2.length===3)ate=p2[2]+'-'+p2[1]+'-'+p2[0]}if(!de||!ate){var now=new Date();var fr=new Date();fr.setDate(fr.getDate()-7);de=fr.toISOString().slice(0,10);ate=now.toISOString().slice(0,10)}var d=await apiGet('conta-corrente',{de:de,ate:ate});if(!d)return;var el;el=document.getElementById('cc-tot-vendas');if(el)el.textContent=fmtBrl(d.totais.vendas);el=document.getElementById('cc-tot-entrada');if(el)el.textContent=fmtBrl(d.totais.entradas);el=document.getElementById('cc-tot-saida');if(el)el.textContent=fmtBrl(d.totais.saidas);var BM={boleto:'<span class="cc-tx-badge badge-boleto">BOLETO</span>',credito:'<span class="cc-tx-badge badge-credito">CRÉDITO</span>',debito:'<span class="cc-tx-badge badge-debito">DÉBITO</span>',pix:'<span class="cc-tx-badge badge-pix">PIX</span>',transf:'<span class="cc-tx-badge badge-transf">TRANSF.</span>',dinheiro:'<span class="cc-tx-badge badge-dinheiro">DINHEIRO</span>'};var li=document.getElementById('cc-list');if(li)li.innerHTML=(d.dias||[]).map(function(dia,idx){return'<div class="cc-day-expand"><div class="cc-day-header" onclick="ccToggle('+idx+')"><div class="cc-day-badge"><div class="cc-day-num">'+dia.dia_num+'</div><div class="cc-day-mon">'+dia.mes_abr+'</div></div><div class="cc-day-chevron" id="cc-chev-'+idx+'">›</div><div class="cc-day-name">'+dia.dia_semana+'</div><div class="cc-day-vals">'+(dia.entradas>0?'<div class="cc-val-item"><span class="cc-val-lbl">Entrada</span><span style="color:var(--green)">'+fmtBrl(dia.entradas)+'</span></div>':'')+'<div class="cc-val-item"><span class="cc-val-lbl">Saída</span><span style="color:'+(dia.saidas>0?'var(--red)':'var(--text3)')+'">'+fmtBrl(dia.saidas)+'</span></div></div></div><div class="cc-transactions" id="cc-tx-'+idx+'">'+dia.transacoes.map(function(t){return'<div class="cc-tx-row" style="grid-template-columns:80px 90px 1fr 110px"><span class="cc-tx-tipo '+(t.positivo?'entrada':'saida')+'">'+t.tipo+'</span><span>'+(BM[t.badge]||'')+'</span><span class="cc-tx-desc">'+t.descricao+'</span><span class="cc-tx-val '+(t.positivo?'pos':'neg')+'">'+(t.positivo?'+':'-')+fmtBrl(t.valor)+'</span></div>'}).join('')+'</div></div>'}).join('')}
+        // ═══ DB-STATUS ═══
+        if (route === 'db-status') {
+            var start = Date.now()
+            await client.execute('SELECT 1')
+            var lat = Date.now() - start
+            var tabs = await client.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+            var counts = {}
+            for (var i = 0; i < tabs.rows.length; i++) {
+                try { var cr = await client.execute('SELECT COUNT(*) as total FROM ' + tabs.rows[i].name); counts[tabs.rows[i].name] = cr.rows[0].total } catch(e) { counts[tabs.rows[i].name] = 'erro' }
+            }
+            var ls = null; try { var sr = await client.execute('SELECT tabela, operacao, registros_processados, finalizado_em FROM sync_log ORDER BY id DESC LIMIT 1'); if (sr.rows.length > 0) ls = sr.rows[0] } catch(e) {}
+            return res.status(200).json({ status: 'online', banco: 'Turso (libSQL)', latencia_ms: lat, tabelas: counts, total_tabelas: tabs.rows.length, ultimo_sync: ls, timestamp: new Date().toISOString() })
+        }
 
-// 6. FLUXO DE CAIXA
-window.renderFDC=async function(){var mesEl=document.getElementById('fdc-mes');var MS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];var mn=mesEl?(MS.indexOf(mesEl.value)+1||3):3;var d=await apiGet('fluxo-caixa',{mes:mn,ano:2026});if(!d)return;var canvas=document.getElementById('fdc-canvas');if(!canvas)return;if(window.fdcChart){window.fdcChart.destroy();window.fdcChart=null}var filtered=d.por_dia.filter(function(x){return x.entradas>0||x.saidas>0});var labels=filtered.map(function(x){return String(x.dia).padStart(2,'0')+'/'+String(mn).padStart(2,'0')});var ent=filtered.map(function(x){return x.entradas});var sai=filtered.map(function(x){return-x.saidas});var sacum=filtered.map(function(x){return x.acumulado});if(typeof Chart!=='undefined'){window.fdcChart=new Chart(canvas,{data:{labels:labels,datasets:[{type:'bar',label:'Entrada',data:ent,backgroundColor:'#4CAF50',yAxisID:'y'},{type:'bar',label:'Saída',data:sai,backgroundColor:'#F44336',yAxisID:'y'},{type:'line',label:'Acumulado',data:sacum,borderColor:'#1565C0',backgroundColor:'transparent',pointRadius:3,tension:.3,yAxisID:'y'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxRotation:0,font:{size:9}}},y:{ticks:{font:{size:9},callback:function(v){return Math.abs(v)>=1000?v/1000+'k':v}}}},animation:{duration:400}}})}var el;el=document.getElementById('fdc-sum-mes');if(el)el.textContent=MS[mn-1]||'';el=document.getElementById('fdc-sum-ent');if(el)el.textContent=fmtBrl(d.totais.entradas);el=document.getElementById('fdc-sum-sai');if(el)el.textContent=fmtBrl(d.totais.saidas);el=document.getElementById('fdc-sum-sal');if(el)el.textContent=fmtBrl(d.totais.saldo);var rc=document.querySelector('.fdc-resumo-cards');if(rc&&d.resumo_entradas)rc.innerHTML=(d.resumo_entradas||[]).map(function(r){return'<div class="fdc-resumo-card"><div class="fdc-resumo-card-title">'+(r.forma_pagamento||'Outros')+'</div><div class="fdc-resumo-card-val">'+fmtBrl(r.total)+'</div></div>'}).join('')}
+        // ═══ DASHBOARD ═══
+        if (route === 'dashboard') {
+            var pc = await client.execute('SELECT COUNT(*) as total FROM pacientes')
+            var prc = await client.execute('SELECT COUNT(*) as total FROM profissionais')
+            var ac = await client.execute('SELECT COUNT(*) as total FROM agendamentos')
+            var fc = await client.execute('SELECT COUNT(*) as total FROM financeiro')
+            var rec = await client.execute("SELECT COALESCE(SUM(valor), 0) as total FROM financeiro WHERE tipo = 'entrada'")
+            var hoje = new Date().toISOString().slice(0, 10)
+            var ah = await client.execute({ sql: 'SELECT COUNT(*) as total FROM agendamentos WHERE data_hora LIKE ?', args: [hoje + '%'] })
+            var pm = await client.execute("SELECT substr(data_hora, 1, 7) as mes, COUNT(*) as total FROM agendamentos WHERE data_hora >= date('now', '-6 months') GROUP BY mes ORDER BY mes")
+            var pcat = await client.execute("SELECT tipo as categoria, COUNT(*) as total FROM agendamentos WHERE tipo IS NOT NULL AND tipo != '' GROUP BY tipo ORDER BY total DESC LIMIT 10")
+            var inat = await client.execute("SELECT p.id, p.nome, p.telefone, MAX(a.data_hora) as ultima_visita, CAST(julianday('now') - julianday(MAX(a.data_hora)) AS INTEGER) as dias_ausente FROM pacientes p LEFT JOIN agendamentos a ON p.id = a.paciente_id GROUP BY p.id HAVING ultima_visita < date('now', '-180 days') OR ultima_visita IS NULL ORDER BY ultima_visita ASC LIMIT 100")
+            var profs = await client.execute("SELECT pr.id, pr.nome, pr.especialidade, COUNT(a.id) as total_agendamentos FROM profissionais pr LEFT JOIN agendamentos a ON pr.id = a.profissional_id GROUP BY pr.id ORDER BY total_agendamentos DESC")
+            var lsync = await client.execute('SELECT tabela, operacao, registros_processados, finalizado_em FROM sync_log ORDER BY id DESC LIMIT 5')
+            return res.status(200).json({ success: true, resumo: { total_pacientes: pc.rows[0].total, total_profissionais: prc.rows[0].total, total_agendamentos: ac.rows[0].total, total_financeiro: fc.rows[0].total, receita_total: rec.rows[0].total, agendamentos_hoje: ah.rows[0].total }, agendamentos_por_mes: pm.rows, agendamentos_por_categoria: pcat.rows, inativos: inat.rows, profissionais: profs.rows, ultimos_syncs: lsync.rows })
+        }
 
-// 7. PROFISSIONAIS
-window.loadProfissionais=async function(){var le=document.getElementById('prof-loading'),de=document.getElementById('prof-data');if(le)le.classList.remove('hidden');if(de)de.classList.add('hidden');var d=await apiGet('profissionais');if(!d||!d.data)return;ST.profissionais=d.data;var se=document.getElementById('prof-sub');if(se)se.textContent=d.data.length+' profissionais';var CO=['#9C27B0','#4CAF50','#FF9800','#795548','#2196F3','#E91E63','#00BCD4','#F44336'];var ge=document.getElementById('prof-grid');if(ge)ge.innerHTML=d.data.map(function(p,i){var ini=(p.nome||'').split(' ').slice(0,2).map(function(x){return x[0]||''}).join('');var cor=CO[i%CO.length];return'<div class="prof-card"><div class="prof-av" style="background:'+cor+'22;color:'+cor+'">'+ini+'</div><div class="prof-name">'+(p.nome||'')+'</div><div class="prof-esp">'+(p.especialidade||'')+'</div><div style="margin-top:8px;font-size:11px;color:var(--text3)">'+(p.total_agendamentos||0)+' agendamentos</div><div style="font-size:11px;color:var(--green)">'+(p.agendamentos_mes||0)+' este mês</div><span class="badge badge-green" style="margin-top:8px">Ativo</span></div>'}).join('');if(typeof renderProfsList==='function')renderProfsList();if(le)le.classList.add('hidden');if(de)de.classList.remove('hidden')}
+        // ═══ PACIENTES ═══
+        if (route === 'pacientes') {
+            if (q.id) {
+                var pac = await client.execute({ sql: 'SELECT * FROM pacientes WHERE id = ?', args: [parseInt(q.id)] })
+                if (pac.rows.length === 0) return res.status(404).json({ success: false, error: 'Nao encontrado' })
+                var pags = await client.execute({ sql: "SELECT a.id, a.data_hora, a.tipo as categoria, a.status, a.procedimento, pr.nome as profissional FROM agendamentos a LEFT JOIN profissionais pr ON a.profissional_id = pr.id WHERE a.paciente_id = ? ORDER BY a.data_hora DESC LIMIT 50", args: [parseInt(q.id)] })
+                var pfin = await client.execute({ sql: "SELECT * FROM financeiro WHERE paciente_id = ? ORDER BY data_pagamento DESC LIMIT 20", args: [parseInt(q.id)] })
+                return res.status(200).json({ success: true, paciente: pac.rows[0], agendamentos: pags.rows, financeiro: pfin.rows })
+            }
+            var page = parseInt(q.page) || 1, limit = Math.min(parseInt(q.limit) || 50, 200), offset = (page - 1) * limit
+            var sql, csql, args = [], cargs = []
+            if (q.status === 'inativos') {
+                sql = "SELECT p.id, p.nome, p.telefone, p.email, MAX(a.data_hora) as ultima_visita, CAST(julianday('now') - julianday(MAX(a.data_hora)) AS INTEGER) as dias_ausente FROM pacientes p LEFT JOIN agendamentos a ON p.id = a.paciente_id" + (q.busca ? " WHERE p.nome LIKE ?" : "") + " GROUP BY p.id HAVING ultima_visita < date('now', '-180 days') OR ultima_visita IS NULL ORDER BY ultima_visita ASC LIMIT ? OFFSET ?"
+                csql = "SELECT COUNT(*) as total FROM (SELECT p.id FROM pacientes p LEFT JOIN agendamentos a ON p.id = a.paciente_id" + (q.busca ? " WHERE p.nome LIKE ?" : "") + " GROUP BY p.id HAVING MAX(a.data_hora) < date('now', '-180 days') OR MAX(a.data_hora) IS NULL)"
+                if (q.busca) { args.push('%' + q.busca + '%'); cargs.push('%' + q.busca + '%') }
+            } else if (q.status === 'ativos') {
+                sql = "SELECT p.id, p.nome, p.telefone, p.email, MAX(a.data_hora) as ultima_visita, CAST(julianday('now') - julianday(MAX(a.data_hora)) AS INTEGER) as dias_ausente FROM pacientes p INNER JOIN agendamentos a ON p.id = a.paciente_id" + (q.busca ? " WHERE p.nome LIKE ?" : "") + " GROUP BY p.id HAVING ultima_visita >= date('now', '-180 days') ORDER BY ultima_visita DESC LIMIT ? OFFSET ?"
+                csql = "SELECT COUNT(*) as total FROM (SELECT p.id FROM pacientes p INNER JOIN agendamentos a ON p.id = a.paciente_id" + (q.busca ? " WHERE p.nome LIKE ?" : "") + " GROUP BY p.id HAVING MAX(a.data_hora) >= date('now', '-180 days'))"
+                if (q.busca) { args.push('%' + q.busca + '%'); cargs.push('%' + q.busca + '%') }
+            } else {
+                sql = "SELECT p.id, p.nome, p.telefone, p.email, MAX(a.data_hora) as ultima_visita, CAST(julianday('now') - julianday(MAX(a.data_hora)) AS INTEGER) as dias_ausente FROM pacientes p LEFT JOIN agendamentos a ON p.id = a.paciente_id" + (q.busca ? " WHERE p.nome LIKE ?" : "") + " GROUP BY p.id ORDER BY p.nome ASC LIMIT ? OFFSET ?"
+                csql = "SELECT COUNT(*) as total FROM pacientes p" + (q.busca ? " WHERE p.nome LIKE ?" : "")
+                if (q.busca) { args.push('%' + q.busca + '%'); cargs.push('%' + q.busca + '%') }
+            }
+            args.push(limit); args.push(offset)
+            var result = await client.execute({ sql: sql, args: args })
+            var countR = await client.execute({ sql: csql, args: cargs })
+            var totalP = await client.execute('SELECT COUNT(*) as total FROM pacientes')
+            var totalI = await client.execute("SELECT COUNT(*) as total FROM (SELECT p.id FROM pacientes p LEFT JOIN agendamentos a ON p.id = a.paciente_id GROUP BY p.id HAVING MAX(a.data_hora) < date('now', '-180 days') OR MAX(a.data_hora) IS NULL)")
+            return res.status(200).json({ success: true, data: result.rows, paginacao: { page: page, limit: limit, total: countR.rows[0].total, totalPages: Math.ceil(countR.rows[0].total / limit) }, resumo: { total_pacientes: totalP.rows[0].total, total_inativos: totalI.rows[0].total, total_ativos: totalP.rows[0].total - totalI.rows[0].total } })
+        }
 
-// 8. ANIVERSARIANTES
-window.loadAniversariantes=async function(){var le=document.getElementById('aniv-loading'),de=document.getElementById('aniv-data');if(le)le.classList.remove('hidden');if(de)de.classList.add('hidden');var d=await apiGet('aniversariantes');if(!d)return;var MM=['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];var li=document.getElementById('aniv-list');if(li)li.innerHTML=(d.data||[]).length?(d.data||[]).map(function(a){var tel=(a.telefone||'').replace(/\D/g,'');var n1=(a.nome||'').split(' ')[0];var ps=(a.dia_aniversario||'').split('-');var dia=ps[2]||'?',mes=ps[1]?MM[parseInt(ps[1])]:'?';var wa='https://wa.me/55'+tel+'?text='+encodeURIComponent('Feliz aniversário, '+n1+'! A equipe Klinik te deseja um dia incrível!');return'<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)"><div style="width:40px;text-align:center;background:rgba(27,94,59,.08);border-radius:6px;padding:4px"><div style="font-size:18px;font-weight:300;color:var(--green)">'+dia+'</div><div style="font-size:9px;color:var(--text3)">'+mes+'</div></div><div style="flex:1"><div style="font-weight:500;font-size:13px">'+a.nome+'</div><div style="font-size:12px;color:var(--text3)">'+(a.telefone||'—')+' · em '+a.dias_faltam+' dias</div></div>'+(tel?'<a href="'+wa+'" target="_blank" class="wa-btn">Parabenizar</a>':'')+'</div>'}).join(''):'<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum aniversariante</div>';if(le)le.classList.add('hidden');if(de)de.classList.remove('hidden')}
+        // ═══ AGENDA-VIEW ═══
+        if (route === 'agenda-view') {
+            var modo = q.modo || 'dia'
+            var where = [], aargs = []
+            if (modo === 'dia') { where.push("a.data_hora LIKE ?"); aargs.push((q.data || new Date().toISOString().slice(0, 10)) + '%') }
+            else if (modo === 'semana') { var bd = new Date((q.data || new Date().toISOString().slice(0, 10)) + 'T12:00:00'); var dow = bd.getDay(); var seg = new Date(bd); seg.setDate(seg.getDate() - (dow === 0 ? 6 : dow - 1)); var dom = new Date(seg); dom.setDate(dom.getDate() + 6); where.push("a.data_hora >= ? AND a.data_hora <= ?"); aargs.push(seg.toISOString().slice(0, 10)); aargs.push(dom.toISOString().slice(0, 10) + ' 23:59') }
+            else if (modo === 'mes') { where.push("a.data_hora LIKE ?"); aargs.push((q.mes || new Date().toISOString().slice(0, 7)) + '%') }
+            if (q.profissional) { where.push("a.profissional_id = ?"); aargs.push(parseInt(q.profissional)) }
+            where.push("a.status != 'cancelado'")
+            var wc = ' WHERE ' + where.join(' AND ')
+            var agr = await client.execute({ sql: "SELECT a.id, a.data_hora, a.tipo as categoria, a.status, a.procedimento as paciente_nome, a.observacoes, a.profissional_id, pr.nome as profissional_nome FROM agendamentos a LEFT JOIN profissionais pr ON a.profissional_id = pr.id" + wc + " ORDER BY a.data_hora ASC LIMIT 1000", args: aargs })
+            var profs2 = await client.execute("SELECT id, nome, especialidade FROM profissionais ORDER BY nome")
+            var total = agr.rows.length, conf = agr.rows.filter(function(a) { return a.status === 'confirmado' }).length, aged = agr.rows.filter(function(a) { return a.status === 'agendado' }).length
+            return res.status(200).json({ success: true, modo: modo, agendamentos: agr.rows, profissionais: profs2.rows, resumo: { total: total, confirmados: conf, agendados: aged } })
+        }
 
-// 9. FINANCEIRO
-window.loadFinanceiro=async function(){var d=await apiGet('financeiro',{limit:60});if(!d)return;ST.recebimentos=d.data||[];var t=d.totais||{},el;el=document.getElementById('fin-total');if(el)el.textContent=fmtBrl(t.total_geral);el=document.getElementById('fin-ticket');if(el)el.textContent='R$ '+(t.total_registros>0?Math.round(t.total_geral/t.total_registros):0).toLocaleString('pt-BR');el=document.getElementById('fin-count');if(el)el.textContent=t.total_registros||0;var te=document.getElementById('fin-table');if(te)te.innerHTML=(d.data||[]).slice(0,60).map(function(r,i){return'<tr><td class="text-muted">'+(i+1)+'</td><td><div class="pname">'+(r.descricao||'—')+'</div></td><td class="text-muted">'+(r.data_pagamento||'—')+'</td><td style="color:var(--green);font-weight:500">'+fmtBrl(r.valor)+'</td></tr>'}).join('');ST._finData=d.data;var le=document.getElementById('fin-loading'),de=document.getElementById('fin-data');if(le)le.classList.add('hidden');if(de)de.classList.remove('hidden')}
+        // ═══ PROFISSIONAIS ═══
+        if (route === 'profissionais') {
+            if (q.id) {
+                var prof = await client.execute({ sql: 'SELECT * FROM profissionais WHERE id = ?', args: [parseInt(q.id)] })
+                return res.status(200).json({ success: true, profissional: prof.rows[0] || null })
+            }
+            var pr = await client.execute("SELECT pr.id, pr.nome, pr.clinicorp_id, pr.cro, pr.especialidade, pr.ativo, COUNT(a.id) as total_agendamentos, COUNT(CASE WHEN a.data_hora >= date('now', '-30 days') THEN 1 END) as agendamentos_mes FROM profissionais pr LEFT JOIN agendamentos a ON pr.id = a.profissional_id GROUP BY pr.id ORDER BY total_agendamentos DESC")
+            return res.status(200).json({ success: true, data: pr.rows, total: pr.rows.length })
+        }
 
-// 10. BUSCA GLOBAL
-window.globalSearch=async function(q){if(!q||q.length<2)return;var lo=q.toLowerCase();var pgs=['agenda','pacientes','financeiro','relatorios','configuracoes','profissionais','crm','aniversariantes'];var m=pgs.find(function(p){return p.includes(lo)||lo.includes(p.substring(0,4))});if(m&&q.length>3){nav(m);return}var d=await apiGet('busca',{q:q});if(!d||d.total===0)return;if(d.pacientes&&d.pacientes.length>0){nav('pacientes');var se=document.getElementById('pac-search');if(se){se.value=q;filterPac()}}}
+        // ═══ FINANCEIRO ═══
+        if (route === 'financeiro') {
+            var fw = [], fa = []
+            if (q.de) { fw.push("f.data_pagamento >= ?"); fa.push(q.de) }
+            if (q.ate) { fw.push("f.data_pagamento <= ?"); fa.push(q.ate) }
+            if (q.tipo) { fw.push("f.tipo = ?"); fa.push(q.tipo) }
+            if (q.busca) { fw.push("f.descricao LIKE ?"); fa.push('%' + q.busca + '%') }
+            var fwc = fw.length > 0 ? ' WHERE ' + fw.join(' AND ') : ''
+            var flim = Math.min(parseInt(q.limit) || 100, 500)
+            var fr = await client.execute({ sql: "SELECT f.id, f.tipo, f.descricao, f.valor, f.data_pagamento, f.forma_pagamento, f.status FROM financeiro f" + fwc + " ORDER BY f.data_pagamento DESC LIMIT ?", args: fa.concat([flim]) })
+            var ft = await client.execute({ sql: "SELECT COALESCE(SUM(CASE WHEN tipo='entrada' THEN valor ELSE 0 END), 0) as total_entradas, COALESCE(SUM(CASE WHEN tipo='saida' THEN valor ELSE 0 END), 0) as total_saidas, COALESCE(SUM(valor), 0) as total_geral, COUNT(*) as total_registros FROM financeiro f" + fwc, args: fa })
+            return res.status(200).json({ success: true, data: fr.rows, totais: ft.rows[0] })
+        }
 
-// 11. RELATÓRIOS
-window.renderRelatorios=function(){var d=ST.dashboard;if(!d)return;if(typeof renderRelCounts==='function')renderRelCounts(d);var sorted=Object.entries(d.por_mes).sort(function(a,b){return a[0].localeCompare(b[0])}).slice(-6);var max=Math.max.apply(null,sorted.map(function(x){return x[1]}))||1;var MA=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];var ce=document.getElementById('rel-chart');if(ce&&sorted.length>0)ce.innerHTML=sorted.map(function(it){var ps=it[0].split('-');return'<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="font-size:10px;color:var(--text3)">'+it[1]+'</div><div style="height:'+Math.max(4,Math.round(it[1]/max*90))+'px;width:100%;background:rgba(27,94,59,.6);border-radius:2px 2px 0 0;max-width:36px"></div><div style="font-size:10px;color:var(--text3)">'+MA[parseInt(ps[1])-1]+'</div></div>'}).join('');var cats=Object.entries(d.por_categoria).sort(function(a,b){return b[1]-a[1]}).slice(0,10);var tc=cats.reduce(function(s,c){return s+c[1]},0)||1;var pe=document.getElementById('rel-proc');if(pe)pe.innerHTML=cats.map(function(c){return'<tr><td class="pname">'+c[0]+'</td><td>'+c[1]+'</td><td style="color:var(--text3)">'+Math.round(c[1]/tc*100)+'%</td></tr>'}).join('');var pre=document.getElementById('rel-profs');if(pre&&ST.profissionais)pre.innerHTML=(ST.profissionais||[]).map(function(p){return'<tr><td class="pname">'+(p.nome||'—')+'</td><td class="text-muted">'+(p.total_agendamentos||0)+'</td></tr>'}).join('');var ina=d.inativos||[],el;el=document.getElementById('rel-urg');if(el)el.textContent=ina.filter(function(i){return i.dias>365}).length;el=document.getElementById('rel-alta');if(el)el.textContent=ina.filter(function(i){return i.dias>270&&i.dias<=365}).length;el=document.getElementById('rel-med');if(el)el.textContent=ina.filter(function(i){return i.dias<=270}).length}
+        // ═══ CRC ═══
+        if (route === 'crc') {
+            var csql2 = "SELECT p.id, p.nome, p.telefone, p.email, MAX(a.data_hora) as ultima_visita, CAST(julianday('now') - julianday(MAX(a.data_hora)) AS INTEGER) as dias_ausente FROM pacientes p LEFT JOIN agendamentos a ON p.id = a.paciente_id"
+            var chav = " GROUP BY p.id HAVING ultima_visita < date('now', '-180 days') OR ultima_visita IS NULL"
+            var ca = []
+            if (q.busca) { csql2 += " WHERE p.nome LIKE ?"; ca.push('%' + q.busca + '%') }
+            csql2 += chav
+            if (q.prioridade === 'urgente') csql2 += " AND dias_ausente > 365"
+            else if (q.prioridade === 'alta') csql2 += " AND dias_ausente > 270 AND dias_ausente <= 365"
+            else if (q.prioridade === 'media') csql2 += " AND dias_ausente > 180 AND dias_ausente <= 270"
+            csql2 += " ORDER BY dias_ausente DESC LIMIT 200"
+            var cr2 = await client.execute({ sql: csql2, args: ca })
+            var urg = await client.execute("SELECT COUNT(*) as total FROM (SELECT p.id, CAST(julianday('now') - julianday(MAX(a.data_hora)) AS INTEGER) as dias FROM pacientes p LEFT JOIN agendamentos a ON p.id = a.paciente_id GROUP BY p.id HAVING dias > 365 OR MAX(a.data_hora) IS NULL)")
+            var alt = await client.execute("SELECT COUNT(*) as total FROM (SELECT p.id, CAST(julianday('now') - julianday(MAX(a.data_hora)) AS INTEGER) as dias FROM pacientes p INNER JOIN agendamentos a ON p.id = a.paciente_id GROUP BY p.id HAVING dias > 270 AND dias <= 365)")
+            var med = await client.execute("SELECT COUNT(*) as total FROM (SELECT p.id, CAST(julianday('now') - julianday(MAX(a.data_hora)) AS INTEGER) as dias FROM pacientes p INNER JOIN agendamentos a ON p.id = a.paciente_id GROUP BY p.id HAVING dias > 180 AND dias <= 270)")
+            var cdata = cr2.rows.map(function(p) { var pr = 'media'; if (p.dias_ausente > 365 || !p.ultima_visita) pr = 'urgente'; else if (p.dias_ausente > 270) pr = 'alta'; return { id: p.id, nome: p.nome, telefone: p.telefone, email: p.email, ultima_visita: p.ultima_visita, dias_ausente: p.dias_ausente, prioridade: pr } })
+            return res.status(200).json({ success: true, data: cdata, total: cdata.length, contagens: { urgente: urg.rows[0].total, alta: alt.rows[0].total, media: med.rows[0].total, total: urg.rows[0].total + alt.rows[0].total + med.rows[0].total } })
+        }
 
-// 12. DASHBOARD ANALÍTICO
-window.renderDashAnalitico=async function(){var prod=await apiGet('relatorios',{tipo:'producao',meses:3});if(prod&&prod.producao_mensal){var MA=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];var max=Math.max.apply(null,prod.producao_mensal.map(function(m){return m.agendamentos}))||1;var ce=document.getElementById('chart-caixa');if(ce)ce.innerHTML=prod.producao_mensal.map(function(m){var rec=(prod.receita_mensal||[]).find(function(r){return r.mes===m.mes})||{};var ps=m.mes.split('-');return'<div class="bar-grp" style="flex:1"><div class="bar-grp-bars"><div class="bar-seg" style="height:'+Math.max(4,Math.round((rec.receita||0)/Math.max(max*50,1)*90))+'px;background:#1976D2" title="Receita: '+fmtBrl(rec.receita)+'"></div><div class="bar-seg" style="height:'+Math.max(4,Math.round(m.agendamentos/max*90))+'px;background:#F9A825" title="'+m.agendamentos+' ag"></div></div><div class="bar-lbl">'+MA[parseInt(ps[1])-1]+'</div></div>'}).join('')}}
+        // ═══ RELATORIOS ═══
+        if (route === 'relatorios') {
+            var tipo = q.tipo || 'producao'
+            if (tipo === 'producao') {
+                var meses = parseInt(q.meses) || 6
+                var prod = await client.execute({ sql: "SELECT substr(data_hora, 1, 7) as mes, COUNT(*) as agendamentos FROM agendamentos WHERE data_hora >= date('now', '-' || ? || ' months') GROUP BY mes ORDER BY mes", args: [meses] })
+                var rece = await client.execute({ sql: "SELECT substr(data_pagamento, 1, 7) as mes, SUM(valor) as receita FROM financeiro WHERE data_pagamento >= date('now', '-' || ? || ' months') GROUP BY mes ORDER BY mes", args: [meses] })
+                return res.status(200).json({ success: true, tipo: 'producao', producao_mensal: prod.rows, receita_mensal: rece.rows })
+            }
+            if (tipo === 'procedimentos') {
+                var procs = await client.execute("SELECT tipo as categoria, COUNT(*) as total FROM agendamentos WHERE tipo IS NOT NULL AND tipo != '' GROUP BY tipo ORDER BY total DESC LIMIT 15")
+                return res.status(200).json({ success: true, tipo: 'procedimentos', data: procs.rows })
+            }
+            if (tipo === 'inativos') {
+                var u = await client.execute("SELECT COUNT(*) as total FROM (SELECT p.id, CAST(julianday('now') - julianday(MAX(a.data_hora)) AS INTEGER) as dias FROM pacientes p LEFT JOIN agendamentos a ON p.id = a.paciente_id GROUP BY p.id HAVING dias > 365 OR MAX(a.data_hora) IS NULL)")
+                var a2 = await client.execute("SELECT COUNT(*) as total FROM (SELECT p.id, CAST(julianday('now') - julianday(MAX(a.data_hora)) AS INTEGER) as dias FROM pacientes p INNER JOIN agendamentos a ON p.id = a.paciente_id GROUP BY p.id HAVING dias > 270 AND dias <= 365)")
+                var m2 = await client.execute("SELECT COUNT(*) as total FROM (SELECT p.id, CAST(julianday('now') - julianday(MAX(a.data_hora)) AS INTEGER) as dias FROM pacientes p INNER JOIN agendamentos a ON p.id = a.paciente_id GROUP BY p.id HAVING dias > 180 AND dias <= 270)")
+                return res.status(200).json({ success: true, tipo: 'inativos', urgente: u.rows[0].total, alta: a2.rows[0].total, media: m2.rows[0].total })
+            }
+            return res.status(200).json({ success: true, tipo: tipo, data: [] })
+        }
 
-// 13. PRONTUÁRIO
-window.abrirProntuario=async function(nome){nav('prontuario');var pac=await apiGet('pacientes',{busca:nome,limit:1});if(!pac||!pac.data||pac.data.length===0)return;var det=await apiGet('pacientes',{id:pac.data[0].id});if(!det)return;var p=det.paciente,ags=det.agendamentos||[],fin=det.financeiro||[];var ts=[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28];var ti=[48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38];var de=document.getElementById('pront-detail');if(de){var h='<div class="card" style="margin-bottom:12px"><div class="card-header"><div class="card-title">'+p.nome+'</div></div><div class="card-body"><span class="badge badge-blue">'+ags.length+' consultas</span> <span class="badge badge-green">'+fin.length+' financeiro</span>'+(p.telefone?' <span style="margin-left:8px;color:var(--text3)">'+p.telefone+'</span>':'')+'</div></div>';h+='<div class="card" style="margin-bottom:12px"><div class="card-header"><div class="card-title">Odontograma</div></div><div style="padding:4px 8px;font-size:10px;text-align:center;color:var(--text3)">SUPERIOR</div><div class="odont-row">'+ts.map(function(t){return'<div><div class="tooth">'+t+'</div></div>'}).join('')+'</div><div class="odont-row">'+ti.map(function(t){return'<div><div class="tooth">'+t+'</div></div>'}).join('')+'</div><div style="padding:4px 8px;font-size:10px;text-align:center;color:var(--text3)">INFERIOR</div></div>';h+='<div class="card"><div class="card-header"><div class="card-title">Histórico</div></div><div class="card-body p0"><table class="tbl"><thead><tr><th>Data</th><th>Categoria</th><th>Profissional</th><th>Status</th></tr></thead><tbody>'+ags.map(function(a){return'<tr><td>'+(a.data_hora||'—').slice(0,10)+'</td><td><span class="badge badge-blue">'+(a.categoria||'')+'</span></td><td>'+(a.profissional||'—')+'</td><td>'+(a.status||'')+'</td></tr>'}).join('')+'</tbody></table></div></div>';if(fin.length>0)h+='<div class="card" style="margin-top:12px"><div class="card-header"><div class="card-title">Financeiro</div></div><div class="card-body p0"><table class="tbl"><thead><tr><th>Data</th><th>Descrição</th><th>Valor</th></tr></thead><tbody>'+fin.map(function(f){return'<tr><td>'+(f.data_pagamento||'—')+'</td><td>'+(f.descricao||'—')+'</td><td style="color:var(--green)">'+fmtBrl(f.valor)+'</td></tr>'}).join('')+'</tbody></table></div></div>';de.innerHTML=h}if(typeof filterProntList==='function')filterProntList()}
+        // ═══ BUSCA ═══
+        if (route === 'busca') {
+            var bq = q.q || ''; if (bq.length < 2) return res.status(400).json({ success: false, error: 'Min 2 chars' })
+            var bt = '%' + bq + '%'
+            var bp = await client.execute({ sql: "SELECT id, nome, telefone FROM pacientes WHERE nome LIKE ? LIMIT 10", args: [bt] })
+            var ba = await client.execute({ sql: "SELECT a.id, a.data_hora, a.tipo as categoria, a.procedimento as paciente_nome FROM agendamentos a WHERE a.procedimento LIKE ? ORDER BY a.data_hora DESC LIMIT 10", args: [bt] })
+            return res.status(200).json({ success: true, busca: bq, pacientes: bp.rows, agendamentos: ba.rows, total: bp.rows.length + ba.rows.length })
+        }
 
-console.log('[Klinik Turso v2] Todas as telas conectadas')
-})()
+        // ═══ ANIVERSARIANTES ═══
+        if (route === 'aniversariantes') {
+            var anr = await client.execute("SELECT id, nome, telefone, data_nascimento FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento != ''")
+            var hj = new Date(); var adias = parseInt(q.dias) || 60; var anivs = []
+            anr.rows.forEach(function(p) { try { var n = new Date(p.data_nascimento + 'T12:00:00'); if (isNaN(n.getTime())) return; var px = new Date(hj.getFullYear(), n.getMonth(), n.getDate()); if (px < hj) px.setFullYear(px.getFullYear() + 1); var df = Math.floor((px - hj) / 864e5); if (df >= 0 && df <= adias) anivs.push({ id: p.id, nome: p.nome, telefone: p.telefone, data_nascimento: p.data_nascimento, dia_aniversario: px.toISOString().slice(0, 10), dias_faltam: df }) } catch(e) {} })
+            anivs.sort(function(a, b) { return a.dias_faltam - b.dias_faltam })
+            return res.status(200).json({ success: true, data: anivs, total: anivs.length })
+        }
+
+        // ═══ CONTA CORRENTE ═══
+        if (route === 'conta-corrente') {
+            var cate = q.ate || new Date().toISOString().slice(0, 10)
+            var cde = q.de; if (!cde) { var cd = new Date(); cd.setDate(cd.getDate() - 7); cde = cd.toISOString().slice(0, 10) }
+            var ccr = await client.execute({ sql: "SELECT f.id, f.tipo, f.descricao, f.valor, f.data_pagamento, f.forma_pagamento FROM financeiro f WHERE f.data_pagamento >= ? AND f.data_pagamento <= ? ORDER BY f.data_pagamento ASC", args: [cde, cate] })
+            var DSM = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado']
+            var MAB = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ']
+            var cdias = {}, cte = 0, cts = 0
+            ccr.rows.forEach(function(f) {
+                var dia = f.data_pagamento || 'x'; if (!cdias[dia]) { var dt = new Date(dia + 'T12:00:00'); cdias[dia] = { data: dia, dia_num: dt.getDate(), mes_abr: MAB[dt.getMonth()] || '?', dia_semana: DSM[dt.getDay()] || '?', entradas: 0, saidas: 0, transacoes: [] } }
+                var val = Math.abs(f.valor || 0); var fp = (f.forma_pagamento || '').toLowerCase(); var badge = ''
+                if (fp.indexOf('boleto') >= 0) badge = 'boleto'; else if (fp.indexOf('cr') >= 0) badge = 'credito'; else if (fp.indexOf('pix') >= 0) badge = 'pix'; else if (fp.indexOf('transf') >= 0) badge = 'transf'; else if (fp.indexOf('dinheiro') >= 0) badge = 'dinheiro'
+                if (f.tipo === 'entrada') { cdias[dia].entradas += val; cte += val } else { cdias[dia].saidas += val; cts += val }
+                cdias[dia].transacoes.push({ tipo: f.tipo === 'entrada' ? 'Entrada' : 'Saída', badge: badge, descricao: f.descricao || '', valor: val, positivo: f.tipo === 'entrada' })
+            })
+            return res.status(200).json({ success: true, periodo: { de: cde, ate: cate }, totais: { entradas: cte, saidas: cts, saldo: cte - cts }, dias: Object.values(cdias).sort(function(a, b) { return a.data.localeCompare(b.data) }) })
+        }
+
+        // ═══ FLUXO DE CAIXA ═══
+        if (route === 'fluxo-caixa') {
+            var fmes = parseInt(q.mes) || (new Date().getMonth() + 1)
+            var fano = parseInt(q.ano) || new Date().getFullYear()
+            var fmstr = fano + '-' + String(fmes).padStart(2, '0')
+            var fdr = await client.execute({ sql: "SELECT data_pagamento as dia, tipo, SUM(valor) as total FROM financeiro WHERE data_pagamento LIKE ? GROUP BY data_pagamento, tipo ORDER BY data_pagamento", args: [fmstr + '%'] })
+            var fud = new Date(fano, fmes, 0).getDate(); var fpd = []; var fac = 0
+            for (var fd = 1; fd <= fud; fd++) { var fds = fmstr + '-' + String(fd).padStart(2, '0'); var fe = 0, fs = 0; fdr.rows.forEach(function(r) { if (r.dia === fds) { if (r.tipo === 'entrada') fe = r.total || 0; else fs = Math.abs(r.total || 0) } }); fac += fe - fs; fpd.push({ dia: fd, data: fds, entradas: fe, saidas: fs, saldo: fe - fs, acumulado: fac }) }
+            var fte = await client.execute({ sql: "SELECT COALESCE(SUM(valor), 0) as total FROM financeiro WHERE data_pagamento LIKE ? AND tipo = 'entrada'", args: [fmstr + '%'] })
+            var fts = await client.execute({ sql: "SELECT COALESCE(SUM(ABS(valor)), 0) as total FROM financeiro WHERE data_pagamento LIKE ? AND tipo = 'saida'", args: [fmstr + '%'] })
+            var fpf = await client.execute({ sql: "SELECT forma_pagamento, SUM(valor) as total FROM financeiro WHERE data_pagamento LIKE ? AND tipo = 'entrada' GROUP BY forma_pagamento ORDER BY total DESC", args: [fmstr + '%'] })
+            return res.status(200).json({ success: true, mes: fmes, ano: fano, por_dia: fpd, totais: { entradas: fte.rows[0].total, saidas: fts.rows[0].total, saldo: fte.rows[0].total - fts.rows[0].total }, resumo_entradas: fpf.rows })
+        }
+
+        // ═══ METAS ═══
+        if (route === 'metas') {
+            var mm = parseInt(q.mes) || (new Date().getMonth() + 1)
+            var ma = parseInt(q.ano) || new Date().getFullYear()
+            var mstr = ma + '-' + String(mm).padStart(2, '0')
+            var mpr = await client.execute({ sql: "SELECT pr.id, pr.nome, pr.especialidade, COUNT(a.id) as agendamentos_mes, COUNT(DISTINCT a.procedimento) as pacientes_mes FROM profissionais pr LEFT JOIN agendamentos a ON pr.id = a.profissional_id AND a.data_hora LIKE ? AND a.status != 'cancelado' GROUP BY pr.id ORDER BY agendamentos_mes DESC", args: [mstr + '%'] })
+            var mtm = await client.execute({ sql: "SELECT COUNT(*) as agendamentos FROM agendamentos WHERE data_hora LIKE ? AND status != 'cancelado'", args: [mstr + '%'] })
+            var mrm = await client.execute({ sql: "SELECT COALESCE(SUM(valor), 0) as total FROM financeiro WHERE data_pagamento LIKE ? AND tipo = 'entrada'", args: [mstr + '%'] })
+            var MSPT = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+            return res.status(200).json({ success: true, mes: mm, ano: ma, mes_nome: MSPT[mm] || '', resumo_mes: { agendamentos: mtm.rows[0].agendamentos, receita: mrm.rows[0].total }, profissionais: mpr.rows })
+        }
+
+        return res.status(400).json({ success: false, error: 'Rota invalida. Use: r=dashboard, r=pacientes, r=agendamentos, r=profissionais, r=financeiro, r=crc, r=relatorios, r=busca, r=aniversariantes, r=conta-corrente, r=fluxo-caixa, r=metas, r=db-status' })
+
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message })
+    }
+}
