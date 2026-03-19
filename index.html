@@ -1055,7 +1055,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 
     <!-- PROFISSIONAIS -->
     <div class="page gpage" id="p-profissionais">
-      <div class="gpage-header"><div><div class="gpage-title">Profissionais</div><div class="gpage-sub" id="prof-sub">Carregando...</div></div><button class="btn btn-primary">+ Adicionar Profissional</button></div>
+      <div class="gpage-header"><div><div class="gpage-title">Profissionais</div><div class="gpage-sub" id="prof-sub">Carregando...</div></div><button class="btn btn-primary" onclick="openModal('paciente')">+ Adicionar Profissional</button></div>
       <div class="gpage-body">
         <div id="prof-loading" class="loading"><div class="spin"></div></div>
         <div id="prof-data" class="hidden"><div class="prof-grid" id="prof-grid"></div></div>
@@ -1342,12 +1342,26 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
   <div class="modal lg">
     <div class="modal-head"><div class="modal-title">Novo Paciente</div><button class="modal-close" onclick="closeModal('paciente')">✕</button></div>
     <div class="modal-body">
-      <div class="form-row c2"><div class="form-group"><label class="form-label">Nome Completo *</label><input class="form-input" placeholder="Nome completo"></div><div class="form-group"><label class="form-label">CPF</label><input class="form-input" placeholder="000.000.000-00"></div></div>
-      <div class="form-row c3"><div class="form-group"><label class="form-label">Nascimento</label><input class="form-input" type="date"></div><div class="form-group"><label class="form-label">Sexo</label><select class="form-input"><option>Feminino</option><option>Masculino</option></select></div><div class="form-group"><label class="form-label">Estado Civil</label><select class="form-input"><option>Solteiro(a)</option><option>Casado(a)</option></select></div></div>
-      <div class="form-row c2"><div class="form-group"><label class="form-label">Telefone</label><input class="form-input" placeholder="(67) 99999-9999"></div><div class="form-group"><label class="form-label">Email</label><input class="form-input" placeholder="email@email.com"></div></div>
-      <div class="form-group"><label class="form-label">Como nos conheceu?</label><select class="form-input"><option>Indicação</option><option>Instagram</option><option>Google</option><option>Outro</option></select></div>
+      <div class="form-row c2"><div class="form-group"><label class="form-label">Nome Completo *</label><input class="form-input" id="pac-f-nome" placeholder="Nome completo"></div><div class="form-group"><label class="form-label">CPF</label><input class="form-input" id="pac-f-cpf" placeholder="000.000.000-00"></div></div>
+      <div class="form-row c3"><div class="form-group"><label class="form-label">Nascimento</label><input class="form-input" id="pac-f-nasc" type="date"></div><div class="form-group"><label class="form-label">Sexo</label><select class="form-input" id="pac-f-sexo"><option>Feminino</option><option>Masculino</option></select></div><div class="form-group"><label class="form-label">Estado Civil</label><select class="form-input" id="pac-f-civil"><option>Solteiro(a)</option><option>Casado(a)</option></select></div></div>
+      <div class="form-row c2"><div class="form-group"><label class="form-label">Telefone</label><input class="form-input" id="pac-f-tel" placeholder="(67) 99999-9999"></div><div class="form-group"><label class="form-label">Email</label><input class="form-input" id="pac-f-email" placeholder="email@email.com"></div></div>
+      <div class="form-group"><label class="form-label">Como nos conheceu?</label><select class="form-input" id="pac-f-como"><option>Indicação</option><option>Instagram</option><option>Google</option><option>Outro</option></select></div>
     </div>
-    <div class="modal-foot"><button class="btn btn-primary">Salvar Paciente</button><button class="btn" onclick="closeModal('paciente')">Cancelar</button></div>
+    <div class="modal-foot"><button class="btn btn-primary" onclick="salvarPaciente()">Salvar Paciente</button><button class="btn" onclick="closeModal('paciente')">Cancelar</button></div>
+  </div>
+</div>
+
+<!-- MODAL LANÇAMENTO -->
+<div class="modal-ov" id="modal-lancamento" onclick="if(event.target===this)closeModal('lancamento')">
+  <div class="modal lg">
+    <div class="modal-head"><div class="modal-title">Novo Lançamento</div><button class="modal-close" onclick="closeModal('lancamento')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row c2"><div class="form-group"><label class="form-label">Tipo *</label><select class="form-input" id="lanc-tipo"><option value="entrada">Entrada</option><option value="saida">Saída</option></select></div><div class="form-group"><label class="form-label">Data *</label><input class="form-input" id="lanc-data" type="date"></div></div>
+      <div class="form-row c2"><div class="form-group"><label class="form-label">Valor *</label><input class="form-input" id="lanc-valor" type="number" step="0.01" placeholder="0,00"></div><div class="form-group"><label class="form-label">Forma de Pagamento</label><select class="form-input" id="lanc-forma"><option>Dinheiro</option><option>Cartão de Crédito</option><option>Cartão de Débito</option><option>PIX</option><option>Transferência</option><option>Boleto</option></select></div></div>
+      <div class="form-group"><label class="form-label">Descrição</label><input class="form-input" id="lanc-desc" placeholder="Descrição do lançamento"></div>
+      <div class="form-group"><label class="form-label">Paciente (opcional)</label><input class="form-input" id="lanc-pac" placeholder="Nome do paciente"></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-primary" onclick="salvarLancamento()">Salvar Lançamento</button><button class="btn" onclick="closeModal('lancamento')">Cancelar</button></div>
   </div>
 </div>
 
@@ -1516,7 +1530,7 @@ function renderAgendaGrid() {
     html+=`<div class="time-slot-row ${isHora?'hora':''}">
       <div class="time-label">${isHora?h:''}</div>`
     profs.forEach((p,pi)=>{
-      html+=`<div class="slot-cell" onclick="openModal('agendamento')"></div>`
+      html+=`<div class="slot-cell" onclick="openNovaConsulta()"></div>`
     })
     html+='</div>'
   })
@@ -1755,22 +1769,57 @@ function renderRelCounts(d) {
   document.getElementById('rel-med').textContent=(d.inativos||[]).filter(i=>i.dias<=270).length
 }
 
-function renderRelatorios() {
-  const d=ST.dashboard; if(!d)return
+async function renderRelatorios() {
+  // Tenta dados do Turso primeiro, fallback para Clinicorp
+  try{
+    var td=await apiData('dashboard')
+    if(td.success){
+      var r=td.resumo||{}
+      document.getElementById('rel-fat').textContent=fmtBrl(r.receita_mes||0)
+      document.getElementById('rel-receb').textContent=fmtBrl(r.receita_mes||0)
+      document.getElementById('rel-ag').textContent=r.total_agendamentos||0
+      // Inativos
+      var inats=td.inativos||[]
+      document.getElementById('rel-urg').textContent=inats.filter(function(i){return (i.dias_ausente||0)>365}).length
+      document.getElementById('rel-alta').textContent=inats.filter(function(i){var d2=i.dias_ausente||0;return d2>270&&d2<=365}).length
+      document.getElementById('rel-med').textContent=inats.filter(function(i){var d2=i.dias_ausente||0;return d2>180&&d2<=270}).length
+      // Gráfico produção
+      var meses=td.agendamentos_por_mes||[]
+      var maxV=Math.max.apply(null,meses.map(function(m){return m.total||0}).concat([1]))
+      document.getElementById('rel-chart').innerHTML=meses.map(function(m){
+        var mo=parseInt((m.mes||'').split('-')[1])||0
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="height:'+Math.max(4,Math.round((m.total||0)/maxV*90))+'px;width:100%;background:rgba(27,94,59,.6);border-radius:2px 2px 0 0;max-width:36px"></div><div style="font-size:10px;color:var(--text3)">'+(MESES_ABR[mo-1]||'')+'</div></div>'
+      }).join('')
+      // Procedimentos por tipo
+      var tipos=td.agendamentos_por_tipo||[]
+      var totalTipo=tipos.reduce(function(s,t){return s+(t.total||0)},0)||1
+      document.getElementById('rel-proc').innerHTML=tipos.map(function(t){
+        return '<tr><td class="pname">'+(t.tipo||'—')+'</td><td>'+t.total+'</td><td style="color:var(--text3)">'+Math.round((t.total||0)/totalTipo*100)+'%</td></tr>'
+      }).join('')
+      // Profissionais
+      var profs=td.profissionais||[]
+      document.getElementById('rel-profs').innerHTML=profs.map(function(p){
+        return '<tr><td class="pname">'+(p.nome||'—')+'</td><td class="text-muted">'+(p.total_agendamentos||0)+'</td></tr>'
+      }).join('')
+      // Inativos lista no tab
+      var relInats=document.getElementById('rel-inativos')
+      if(relInats&&inats.length){
+        var tblHtml='<div class="card" style="margin-top:16px"><div class="card-body p0"><table class="tbl"><thead><tr><th>Paciente</th><th>Última Visita</th><th>Dias</th><th>Prioridade</th></tr></thead><tbody>'
+        tblHtml+=inats.slice(0,30).map(function(p){
+          var d2=p.dias_ausente||0
+          var pri=d2>365?'urgente':d2>270?'alta':'media'
+          var cor=pri==='urgente'?'red':pri==='alta'?'orange':'green'
+          return '<tr><td class="pname">'+(p.nome||'—')+'</td><td class="text-muted">'+(p.ultima_visita||'—')+'</td><td style="color:var(--red);font-weight:500">'+d2+'d</td><td><span class="badge badge-'+cor+'">'+pri.toUpperCase()+'</span></td></tr>'
+        }).join('')
+        tblHtml+='</tbody></table></div></div>'
+        if(!relInats.querySelector('.card'))relInats.insertAdjacentHTML('beforeend',tblHtml)
+      }
+      return
+    }
+  }catch(e){}
+  // Fallback Clinicorp data
+  var d=ST.dashboard;if(!d)return
   renderRelCounts(d)
-  const sorted=Object.entries(d.por_mes).sort((a,b)=>a[0].localeCompare(b[0])).slice(-6)
-  const max=Math.max(...sorted.map(x=>x[1]))
-  document.getElementById('rel-chart').innerHTML=sorted.map(([m,v])=>{
-    const [y,mo]=m.split('-')
-    return`<div class="chart-bar-group" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
-      <div style="height:${Math.max(4,Math.round(v/max*90))}px;width:100%;background:rgba(27,94,59,.6);border-radius:2px 2px 0 0;max-width:36px"></div>
-      <div style="font-size:10px;color:var(--text3)">${MESES_ABR[parseInt(mo)-1]}</div>
-    </div>`
-  }).join('')
-  const cats=Object.entries(d.por_categoria).sort((a,b)=>b[1]-a[1]).slice(0,10)
-  const totalCat=cats.reduce((s,[,v])=>s+v,0)
-  document.getElementById('rel-proc').innerHTML=cats.map(([c,v])=>`<tr><td class="pname">${c}</td><td>${v}</td><td style="color:var(--text3)">${Math.round(v/totalCat*100)}%</td></tr>`).join('')
-  document.getElementById('rel-profs').innerHTML=(d.profissionais||[]).map(p=>`<tr><td class="pname">${p.name||p.Name||'—'}</td><td class="text-muted">—</td></tr>`).join('')
 }
 
 function relTab(id,el) {
@@ -1903,8 +1952,36 @@ document.addEventListener('click',function(e){if(!e.target.closest('.search-bar'
 document.addEventListener('keydown',function(e){if(e.key==='Escape')document.getElementById('search-dropdown').classList.remove('open')})
 
 // ── MODAIS ──────────────────────────────────────────────────────
-function openModal(id){document.getElementById('modal-'+id).classList.add('open')}
-function closeModal(id){document.getElementById('modal-'+id).classList.remove('open')}
+function openModal(id){var el=document.getElementById('modal-'+id);if(el)el.classList.add('open')}
+function closeModal(id){var el=document.getElementById('modal-'+id);if(el)el.classList.remove('open')}
+
+// ── SALVAR PACIENTE ─────────────────────────────────────────────
+async function salvarPaciente(){
+  var nome=document.getElementById('pac-f-nome').value.trim()
+  if(!nome){alert('Nome é obrigatório');return}
+  var body={nome:nome,cpf:document.getElementById('pac-f-cpf').value.trim(),data_nascimento:document.getElementById('pac-f-nasc').value,telefone:document.getElementById('pac-f-tel').value.trim(),email:document.getElementById('pac-f-email').value.trim()}
+  try{
+    var r=await fetch('/api/data?r=salvar-paciente',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    var d=await r.json()
+    if(d.success){closeModal('paciente');alert('Paciente salvo!')}
+    else{alert(d.error||'Erro ao salvar')}
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+// ── SALVAR LANÇAMENTO ───────────────────────────────────────────
+async function salvarLancamento(){
+  var tipo=document.getElementById('lanc-tipo').value
+  var data=document.getElementById('lanc-data').value
+  var valor=parseFloat(document.getElementById('lanc-valor').value)||0
+  if(!data||!valor){alert('Data e Valor são obrigatórios');return}
+  var body={tipo:tipo,data_pagamento:data,valor:tipo==='saida'?-Math.abs(valor):Math.abs(valor),forma_pagamento:document.getElementById('lanc-forma').value,descricao:document.getElementById('lanc-desc').value.trim()}
+  try{
+    var r=await fetch('/api/data?r=salvar-lancamento',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    var d=await r.json()
+    if(d.success){closeModal('lancamento');alert('Lançamento salvo!');if(typeof renderCC==='function')renderCC()}
+    else{alert(d.error||'Erro ao salvar')}
+  }catch(e){alert('Erro: '+e.message)}
+}
 
 // ── INIT ────────────────────────────────────────────────────────
 renderMiniCal()

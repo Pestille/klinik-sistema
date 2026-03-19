@@ -301,6 +301,24 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: true, data: er.rows, periodo: { de: ede, ate: eate }, total: er.rows.length })
         }
 
+        // ── SALVAR PACIENTE ────────────────────────────────────────────
+        if (route === 'salvar-paciente') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var b = req.body || {}
+            if (!b.nome) return res.status(400).json({ success: false, error: 'Nome obrigatório' })
+            await client.execute({ sql: "INSERT INTO pacientes(nome,cpf,telefone,email,data_nascimento,ativo,criado_em,atualizado_em) VALUES(?,?,?,?,?,1,datetime('now'),datetime('now'))", args: [b.nome, b.cpf||'', b.telefone||'', b.email||'', b.data_nascimento||''] })
+            return res.status(200).json({ success: true, msg: 'Paciente salvo' })
+        }
+
+        // ── SALVAR LANÇAMENTO ─────────────────────────────────────────
+        if (route === 'salvar-lancamento') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var lb = req.body || {}
+            if (!lb.data_pagamento || !lb.valor) return res.status(400).json({ success: false, error: 'Data e valor obrigatórios' })
+            await client.execute({ sql: "INSERT INTO financeiro(tipo,descricao,valor,data_pagamento,forma_pagamento,status,criado_em,atualizado_em) VALUES(?,?,?,?,?,'manual',datetime('now'),datetime('now'))", args: [lb.tipo||'entrada', lb.descricao||'', lb.valor, lb.data_pagamento, lb.forma_pagamento||''] })
+            return res.status(200).json({ success: true, msg: 'Lançamento salvo' })
+        }
+
         return res.status(400).json({ success: false, error: 'Rota inválida: r=' + route })
 
     } catch (error) {
