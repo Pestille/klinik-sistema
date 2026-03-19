@@ -2335,9 +2335,15 @@ function dpSelect(id,y,m,d){var s=DP_STATE[id];s.selected=new Date(y,m,d);s.year
 function dpHoje(id){var h=new Date();dpSelect(id,h.getFullYear(),h.getMonth(),h.getDate())}
 function dpOK(id){
   var sel=DP_STATE[id].selected
-  if(sel){var str=String(sel.getDate()).padStart(2,'0')+'/'+String(sel.getMonth()+1).padStart(2,'0')+'/'+sel.getFullYear();var v=document.getElementById(id+'-val');if(v)v.textContent=str}
+  if(sel){
+    var iso=sel.getFullYear()+'-'+String(sel.getMonth()+1).padStart(2,'0')+'-'+String(sel.getDate()).padStart(2,'0')
+    var br=String(sel.getDate()).padStart(2,'0')+'/'+String(sel.getMonth()+1).padStart(2,'0')+'/'+sel.getFullYear()
+    var v=document.getElementById(id+'-val');if(v)v.textContent=br
+    // Grava na variável global
+    if(id==='dp-de')CC_DATE_DE=iso
+    if(id==='dp-ate')CC_DATE_ATE=iso
+  }
   document.getElementById(id).classList.remove('open')
-  if(id==='dp-de'||id==='dp-ate'){setTimeout(renderCC,100)}
 }
 function dpCancel(id){document.getElementById(id).classList.remove('open')}
 document.addEventListener('click',e=>{
@@ -2376,14 +2382,22 @@ function ccBadge(forma){
 }
 
 // Lê datas do datepicker
+// Datas selecionadas — variáveis globais (não depende do DOM)
+var CC_DATE_DE='', CC_DATE_ATE=''
+function ccInitDatas(){
+  if(!CC_DATE_DE||!CC_DATE_ATE){
+    var h=new Date(),d30=new Date();d30.setDate(d30.getDate()-30)
+    CC_DATE_DE=d30.toISOString().slice(0,10)
+    CC_DATE_ATE=h.toISOString().slice(0,10)
+    // Atualiza labels
+    var lDe=document.getElementById('dp-de-val');if(lDe)lDe.textContent=fmtDtBr(CC_DATE_DE)
+    var lAte=document.getElementById('dp-ate-val');if(lAte)lAte.textContent=fmtDtBr(CC_DATE_ATE)
+  }
+}
+function fmtDtBr(iso){if(!iso)return '—';var p=iso.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
 function ccGetDatas(){
-  var deEl=document.getElementById('dp-de-val'),ateEl=document.getElementById('dp-ate-val')
-  var de='',ate=''
-  if(deEl){var txt=deEl.textContent.trim();if(txt!=='—'){var p=txt.split('/');if(p.length===3)de=p[2]+'-'+p[1]+'-'+p[0]}}
-  if(ateEl){var txt2=ateEl.textContent.trim();if(txt2!=='—'){var p2=txt2.split('/');if(p2.length===3)ate=p2[2]+'-'+p2[1]+'-'+p2[0]}}
-  if(!de){var d=new Date();d.setDate(d.getDate()-7);de=d.toISOString().slice(0,10)}
-  if(!ate)ate=new Date().toISOString().slice(0,10)
-  return {de:de,ate:ate}
+  ccInitDatas()
+  return {de:CC_DATE_DE,ate:CC_DATE_ATE}
 }
 
 // ── CONTA CORRENTE ──────────────────────────────────────────────
