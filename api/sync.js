@@ -174,10 +174,13 @@ async function syncFinanceiro(client) {
         subscriber_id: SUB, businessId: BID,
         from: d365.toISOString().slice(0, 10),
         to: hoje2.toISOString().slice(0, 10),
-        limit: 500, page: 1
+        limit: 500
     }
     var qs = '?' + Object.entries(params)
         .map(function(kv){ return encodeURIComponent(kv[0])+'='+encodeURIComponent(kv[1]) }).join('&')
+
+    var apiStatus = 0
+    var rawSample = ''
     var lista = await new Promise(function(resolve) {
         var opts = {
             hostname: 'api.clinicorp.com',
@@ -186,9 +189,12 @@ async function syncFinanceiro(client) {
             headers: { 'Authorization': auth(), 'accept': 'application/json' }
         }
         var req2 = https.request(opts, function(r) {
+            apiStatus = r.statusCode
             var body = ''
             r.on('data', function(c){ body += c })
             r.on('end', function() {
+                rawSample = body.slice(0, 300)
+                if (r.statusCode >= 400) { resolve([]); return }
                 try { var d = JSON.parse(body); resolve(Array.isArray(d) ? d : (d.data||d.items||[])) }
                 catch(e) { resolve([]) }
             })
@@ -198,15 +204,21 @@ async function syncFinanceiro(client) {
         req2.end()
     })
 
-    // Filtra deletados
-    var ativos = lista.filter(function(r){ return !r.Deleted && r.Deleted !== 'X' })
+    // Filtra deletados (Deleted === true ou Deleted === 'X')
+    var semId      = lista.filter(function(r){ return !r.id && !r.Id }).length
+    var deletados  = lista.filter(function(r){ return r.Deleted === true || r.Deleted === 'X' })
+    var ativos     = lista.filter(function(r){ return r.Deleted !== true && r.Deleted !== 'X' })
+    var semValor   = ativos.filter(function(r){ return !(parseFloat(r.Amount || r.amount || 0) > 0) }).length
 
     var inseridos = 0, atualizados = 0, ignorados = 0
 
     for (var i = 0; i < ativos.length; i++) {
         var r = ativos[i]
         var cid = String(r.id || r.Id || '')
-        if (!cid) continue
+        if (!cid) { ignorados++; continue }
+
+        var valor    = parseFloat(r.Amount || r.amount || 0) || 0
+        if (valor <= 0) { ignorados++; continue }
 
         // Resolve paciente_id pelo clinicorp_id do paciente
         var pacienteId = null
@@ -216,12 +228,8 @@ async function syncFinanceiro(client) {
             if (rp2.rows.length > 0) pacienteId = rp2.rows[0].id
         }
 
-        var valor    = parseFloat(r.Amount || r.amount || 0) || 0
         var dataPag  = isoToDate(r.ReceiptDate || r.receiptDate || r.date || '')
-        var desc     = r.Description || r.description || ''
-        var pacNome  = r.PatientName || r.patientName || ''
-
-        if (valor <= 0) { ignorados++; continue }
+        var desc     = r.Description || r.description || r.PatientName || r.patientName || ''
 
         var existe = await client.execute({ sql: 'SELECT id FROM financeiro WHERE clinicorp_id=?', args: [cid] })
         if (existe.rows.length > 0) {
@@ -240,7 +248,18 @@ async function syncFinanceiro(client) {
     }
 
     try { await client.execute({ sql: "INSERT INTO sync_log(tabela,operacao,registros_processados,finalizado_em) VALUES('financeiro','sync',?,datetime('now'))", args: [ativos.length] }) } catch(e) {}
-    return { tipo: 'financeiro', total: lista.length, ativos: ativos.length, deletados: lista.length - ativos.length, inseridos, atualizados, ignorados }
+    return {
+        tipo: 'financeiro',
+        api_status: apiStatus,
+        total: lista.length,
+        ativos: ativos.length,
+        deletados: deletados.length,
+        sem_id: semId,
+        sem_valor: semValor,
+        inseridos, atualizados, ignorados,
+        primeiro_item: lista[0] || null,
+        raw_sample: lista.length === 0 ? rawSample : undefined
+    }
 }
 
 // ── HANDLER PRINCIPAL ─────────────────────────────────────────────────────────
