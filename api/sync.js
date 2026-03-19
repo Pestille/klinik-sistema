@@ -207,10 +207,11 @@ async function syncPacientes(client, pagina) {
 // ── SYNC AGENDAMENTOS ─────────────────────────────────────────────────────────
 // Padrão: últimos 365 dias, até 15 páginas (1500 registros)
 async function syncAgendamentos(client, dataInicio, dataFim) {
-    var dt = hoje365()
-    var inicio = dataInicio || dt.from
-    var fim    = dataFim    || dt.to
-    var lista = await fetchAll('appointment/list', { from: inicio, to: fim }, 15)
+    var h = new Date()
+    var d7 = new Date(); d7.setDate(d7.getDate() - 7)
+    var inicio = dataInicio || d7.toISOString().slice(0,10)
+    var fim    = dataFim    || h.toISOString().slice(0,10)
+    var lista = await fetchAll('appointment/list', { from: inicio, to: fim }, 10)
     var inseridos = 0, atualizados = 0
     for (var i = 0; i < lista.length; i++) {
         var a = lista[i]
