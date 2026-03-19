@@ -2685,7 +2685,7 @@ function renderNcHorarios(){
   const el=document.getElementById('nc-horarios');if(!el)return
   el.innerHTML=HORAS_NC.map(h=>{
     const occ=ocu.has(h),sel=h===ncSelectedHora
-    return`<div class="h-slot ${occ?'occupied':''} ${sel?'selected':''}" onclick="${occ?'':'ncSelectHora(''+h+'')'}">${h}</div>`
+    return'<div class="h-slot '+(occ?'occupied':'')+' '+(sel?'selected':'')+'" onclick="'+(occ?'':'ncSelectHora(\''+h+'\')')+'">'+h+'</div>'
   }).join('')
 }
 function ncSelectHora(h){ncSelectedHora=h;renderNcHorarios()}
