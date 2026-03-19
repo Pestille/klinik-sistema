@@ -1144,6 +1144,42 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     </div>
 
 
+    <!-- USUÁRIOS E PERMISSÕES -->
+    <div class="page gpage" id="p-usuarios">
+      <div class="gpage-header">
+        <div><div class="gpage-title">Usuários e Permissões</div><div class="gpage-sub" id="usr-sub">Gerenciar acessos ao sistema</div></div>
+        <button class="btn btn-primary" onclick="openModal('novo-usuario')">+ Novo Usuário</button>
+      </div>
+      <div class="gpage-body" style="max-width:900px;margin:0 auto;padding:20px 24px">
+        <div id="usr-list" style="color:var(--text3);text-align:center;padding:40px">Carregando...</div>
+      </div>
+    </div>
+
+    <!-- MODAL NOVO USUÁRIO -->
+    <div class="modal-ov" id="modal-novo-usuario" onclick="if(event.target===this)closeModal('novo-usuario')">
+      <div class="modal lg">
+        <div class="modal-head"><div class="modal-title">Novo Usuário</div><button class="modal-close" onclick="closeModal('novo-usuario')">✕</button></div>
+        <div class="modal-body">
+          <div class="form-row c2"><div class="form-group"><label class="form-label">Nome Completo *</label><input class="form-input" id="usr-f-nome" placeholder="Nome completo"></div><div class="form-group"><label class="form-label">Email *</label><input class="form-input" id="usr-f-email" type="email" placeholder="email@klinik.com"></div></div>
+          <div class="form-row c2"><div class="form-group"><label class="form-label">Senha *</label><input class="form-input" id="usr-f-senha" type="password" placeholder="Mínimo 4 caracteres"></div><div class="form-group"><label class="form-label">Perfil *</label><select class="form-input" id="usr-f-perfil"><option value="recepcionista">Recepcionista</option><option value="dentista">Dentista</option><option value="admin">Administrador</option></select></div></div>
+        </div>
+        <div class="modal-foot"><button class="btn btn-primary" onclick="salvarUsuario()">Criar Usuário</button><button class="btn" onclick="closeModal('novo-usuario')">Cancelar</button></div>
+      </div>
+    </div>
+
+    <!-- MODAL ALTERAR SENHA -->
+    <div class="modal-ov" id="modal-alterar-senha" onclick="if(event.target===this)closeModal('alterar-senha')">
+      <div class="modal">
+        <div class="modal-head"><div class="modal-title">Alterar Senha</div><button class="modal-close" onclick="closeModal('alterar-senha')">✕</button></div>
+        <div class="modal-body">
+          <input type="hidden" id="usr-s-id">
+          <div class="form-group"><label class="form-label">Usuário</label><div id="usr-s-nome" style="font-weight:500;padding:8px 0"></div></div>
+          <div class="form-group"><label class="form-label">Nova Senha *</label><input class="form-input" id="usr-s-senha" type="password" placeholder="Mínimo 4 caracteres"></div>
+        </div>
+        <div class="modal-foot"><button class="btn btn-primary" onclick="alterarSenhaUsuario()">Alterar Senha</button><button class="btn" onclick="closeModal('alterar-senha')">Cancelar</button></div>
+      </div>
+    </div>
+
     <!-- CONFIGURAÇÕES -->
     <div class="page gpage" id="p-configuracoes">
       <div class="gpage-header"><div><div class="gpage-title">Configuração</div></div></div>
@@ -1507,6 +1543,7 @@ function nav(id) {
   if (id==='aniversariantes' && !ST.aniversariantes) loadAniversariantes()
   if (id==='relatorios' && ST.dashboard) renderRelatorios()
   if (id==='configuracoes') renderConfiguracoes()
+  if (id==='usuarios') loadUsuarios()
 }
 
 // ── API ──────────────────────────────────────────────────────────
@@ -2113,6 +2150,78 @@ async function salvarLancamento(){
     var d=await r.json()
     if(d.success){closeModal('lancamento');alert('Lançamento salvo!');if(typeof renderCC==='function')renderCC()}
     else{alert(d.error||'Erro ao salvar')}
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+// ── USUÁRIOS ────────────────────────────────────────────────────
+async function loadUsuarios(){
+  var el=document.getElementById('usr-list');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var r=await fetch('/api/auth?action=listar-usuarios')
+    var d=await r.json()
+    var users=d.data||[]
+    document.getElementById('usr-sub').textContent=users.length+' usuário'+(users.length!==1?'s':'')+' cadastrado'+(users.length!==1?'s':'')
+    if(!users.length){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">Nenhum usuário cadastrado</div>';return}
+    el.innerHTML='<table class="tbl" style="width:100%"><thead><tr><th>Nome</th><th>Email</th><th>Perfil</th><th>Status</th><th>Último Login</th><th>Ações</th></tr></thead><tbody>'+
+      users.map(function(u){
+        var perfilCor=u.perfil==='admin'?'red':u.perfil==='dentista'?'blue':'green'
+        var statusBadge=u.ativo?'<span class="badge badge-green">Ativo</span>':'<span class="badge badge-orange">Inativo</span>'
+        var login=u.ultimo_login?fmtDt(u.ultimo_login):'Nunca'
+        return '<tr><td class="pname">'+u.nome+'</td><td style="color:var(--text3)">'+u.email+'</td>'+
+          '<td><span class="badge badge-'+perfilCor+'">'+u.perfil.toUpperCase()+'</span></td>'+
+          '<td>'+statusBadge+'</td>'+
+          '<td style="color:var(--text3);font-size:12px">'+login+'</td>'+
+          '<td style="display:flex;gap:6px">'+
+            '<button class="btn btn-sm" onclick="abrirAlterarSenha('+u.id+',\''+u.nome.replace(/'/g,"\\'")+'\')">Senha</button>'+
+            '<button class="btn btn-sm" style="color:'+(u.ativo?'var(--red)':'var(--green)')+'" onclick="toggleUsuario('+u.id+')">'+(u.ativo?'Desativar':'Ativar')+'</button>'+
+          '</td></tr>'
+      }).join('')+
+    '</tbody></table>'
+  }catch(e){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">'+e.message+'</div>'}
+}
+
+async function salvarUsuario(){
+  var nome=document.getElementById('usr-f-nome').value.trim()
+  var email=document.getElementById('usr-f-email').value.trim()
+  var senha=document.getElementById('usr-f-senha').value
+  var perfil=document.getElementById('usr-f-perfil').value
+  if(!nome||!email||!senha){alert('Preencha todos os campos');return}
+  if(senha.length<4){alert('Senha deve ter no mínimo 4 caracteres');return}
+  try{
+    var r=await fetch('/api/auth?action=criar-usuario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:nome,email:email,senha:senha,perfil:perfil})})
+    var d=await r.json()
+    if(d.success){closeModal('novo-usuario');loadUsuarios();document.getElementById('usr-f-nome').value='';document.getElementById('usr-f-email').value='';document.getElementById('usr-f-senha').value=''}
+    else{alert(d.error||'Erro ao criar')}
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+function abrirAlterarSenha(id,nome){
+  document.getElementById('usr-s-id').value=id
+  document.getElementById('usr-s-nome').textContent=nome
+  document.getElementById('usr-s-senha').value=''
+  openModal('alterar-senha')
+}
+
+async function alterarSenhaUsuario(){
+  var id=document.getElementById('usr-s-id').value
+  var senha=document.getElementById('usr-s-senha').value
+  if(!senha||senha.length<4){alert('Senha deve ter no mínimo 4 caracteres');return}
+  try{
+    var r=await fetch('/api/auth?action=alterar-senha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario_id:parseInt(id),nova_senha:senha})})
+    var d=await r.json()
+    if(d.success){closeModal('alterar-senha');alert('Senha alterada!')}
+    else{alert(d.error||'Erro')}
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function toggleUsuario(id){
+  if(!confirm('Confirma alteração de status?'))return
+  try{
+    var r=await fetch('/api/auth?action=toggle-usuario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario_id:id})})
+    var d=await r.json()
+    if(d.success)loadUsuarios()
+    else alert(d.error||'Erro')
   }catch(e){alert('Erro: '+e.message)}
 }
 
