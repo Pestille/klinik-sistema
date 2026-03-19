@@ -303,6 +303,114 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: true, data: er.rows, periodo: { de: ede, ate: eate }, total: er.rows.length })
         }
 
+        // ── ANALYTICS (Dashboard completo) ────────────────────────────
+        if (route === 'analytics') {
+            var mesAtual = new Date().toISOString().slice(0, 7)
+            var mesAnt = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString().slice(0, 7)
+            var rs = await Promise.all([
+                client.execute("SELECT COUNT(*) as total FROM pacientes"),
+                client.execute("SELECT COUNT(DISTINCT p.id) as total FROM pacientes p INNER JOIN agendamentos a ON p.id=a.paciente_id WHERE a.data_hora >= date('now','-180 days')"),
+                client.execute("SELECT COUNT(DISTINCT p.id) as total FROM pacientes p LEFT JOIN agendamentos a ON p.id=a.paciente_id GROUP BY p.id HAVING MAX(a.data_hora) < date('now','-180 days') OR MAX(a.data_hora) IS NULL"),
+                client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE tipo='entrada' AND strftime('%Y-%m',data_pagamento)=?", args: [mesAtual] }),
+                client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE tipo='entrada' AND strftime('%Y-%m',data_pagamento)=?", args: [mesAnt] }),
+                client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=?", args: [mesAtual] }),
+                client.execute({ sql: "SELECT COUNT(*) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0", args: [mesAtual] }),
+                client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0", args: [mesAtual] }),
+                // Receita por forma de pagamento
+                client.execute({ sql: "SELECT forma_pagamento, COUNT(*) as qtd, SUM(valor) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 GROUP BY forma_pagamento ORDER BY total DESC", args: [mesAtual] }),
+                // Evolução receita 6 meses
+                client.execute("SELECT strftime('%Y-%m',data_pagamento) as mes, SUM(valor) as total FROM pagamentos WHERE data_pagamento >= date('now','-6 months') AND cancelado=0 GROUP BY mes ORDER BY mes"),
+                // Top procedimentos
+                client.execute("SELECT tipo, COUNT(*) as total FROM agendamentos WHERE tipo IS NOT NULL AND tipo!='' GROUP BY tipo ORDER BY total DESC LIMIT 10"),
+                // Produção por profissional
+                client.execute("SELECT pr.nome, COUNT(a.id) as agendamentos, COALESCE(SUM(a.valor),0) as receita FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id AND a.data_hora >= date('now','-30 days') WHERE pr.ativo=1 GROUP BY pr.id ORDER BY agendamentos DESC"),
+                // Status agendamentos mês
+                client.execute({ sql: "SELECT status, COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? GROUP BY status", args: [mesAtual] }),
+                // Faixa etária
+                client.execute("SELECT CASE WHEN data_nascimento IS NULL OR data_nascimento='' THEN 'N/I' WHEN CAST((julianday('now')-julianday(data_nascimento))/365.25 AS INT)<18 THEN '0-17' WHEN CAST((julianday('now')-julianday(data_nascimento))/365.25 AS INT)<30 THEN '18-29' WHEN CAST((julianday('now')-julianday(data_nascimento))/365.25 AS INT)<45 THEN '30-44' WHEN CAST((julianday('now')-julianday(data_nascimento))/365.25 AS INT)<60 THEN '45-59' ELSE '60+' END as faixa, COUNT(*) as total FROM pacientes GROUP BY faixa ORDER BY faixa"),
+                // Novos pacientes por mês
+                client.execute("SELECT strftime('%Y-%m',criado_em) as mes, COUNT(*) as total FROM pacientes WHERE criado_em >= date('now','-6 months') GROUP BY mes ORDER BY mes"),
+                // Ticket médio
+                client.execute({ sql: "SELECT AVG(valor) as ticket FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND valor>0", args: [mesAtual] }),
+                // Bandeira cartão
+                client.execute({ sql: "SELECT bandeira, COUNT(*) as qtd, SUM(valor) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND bandeira!='' GROUP BY bandeira ORDER BY total DESC", args: [mesAtual] }),
+                // Parcelas
+                client.execute({ sql: "SELECT parcelas, COUNT(*) as qtd, SUM(valor) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 GROUP BY parcelas ORDER BY parcelas", args: [mesAtual] }),
+            ])
+            var receitaMes = +(rs[3].rows[0].total||0) + +(rs[7].rows[0].total||0)
+            var receitaAnt = +(rs[4].rows[0].total||0)
+            return res.status(200).json({
+                success: true,
+                kpis: {
+                    total_pacientes: rs[0].rows[0].total,
+                    pacientes_ativos: rs[1].rows[0].total,
+                    pacientes_inativos: rs[2].rows[0].total,
+                    receita_mes: receitaMes,
+                    receita_mes_anterior: receitaAnt,
+                    variacao_receita: receitaAnt > 0 ? Math.round((receitaMes - receitaAnt) / receitaAnt * 100) : 0,
+                    agendamentos_mes: rs[5].rows[0].total,
+                    pagamentos_mes: rs[6].rows[0].total,
+                    ticket_medio: +(rs[15].rows[0].ticket||0),
+                },
+                por_forma_pagamento: rs[8].rows,
+                evolucao_receita: rs[9].rows,
+                top_procedimentos: rs[10].rows,
+                producao_profissionais: rs[11].rows,
+                status_agendamentos: rs[12].rows,
+                faixa_etaria: rs[13].rows,
+                novos_pacientes_mes: rs[14].rows,
+                bandeiras_cartao: rs[16].rows,
+                distribuicao_parcelas: rs[17].rows,
+            })
+        }
+
+        // ── MARKETING ─────────────────────────────────────────────────
+        if (route === 'marketing') {
+            var rs2 = await Promise.all([
+                // Como conheceu
+                client.execute("SELECT como_conheceu, COUNT(*) as total FROM pacientes WHERE como_conheceu IS NOT NULL AND como_conheceu!='' GROUP BY como_conheceu ORDER BY total DESC"),
+                // Aniversariantes do mês
+                client.execute("SELECT id,nome,telefone,email,data_nascimento FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!=''"),
+                // Inativos por faixa
+                client.execute("SELECT CASE WHEN dias>365 THEN 'Crítico (+1 ano)' WHEN dias>270 THEN 'Urgente (+9m)' WHEN dias>180 THEN 'Atenção (+6m)' ELSE 'Recente' END as faixa, COUNT(*) as total FROM (SELECT CAST(julianday('now')-julianday(MAX(a.data_hora)) AS INT) as dias FROM pacientes p INNER JOIN agendamentos a ON p.id=a.paciente_id GROUP BY p.id HAVING dias>180) GROUP BY faixa ORDER BY total DESC"),
+                // Novos por mês (6 meses)
+                client.execute("SELECT strftime('%Y-%m',criado_em) as mes, COUNT(*) as total FROM pacientes WHERE criado_em >= date('now','-6 months') GROUP BY mes ORDER BY mes"),
+                // Top pacientes por receita
+                client.execute("SELECT paciente_nome, COUNT(*) as pagamentos, SUM(valor) as total FROM pagamentos WHERE cancelado=0 AND paciente_nome IS NOT NULL GROUP BY paciente_nome ORDER BY total DESC LIMIT 10"),
+                // Retenção: ativos vs total
+                client.execute("SELECT COUNT(*) as total, SUM(CASE WHEN ultima < date('now','-180 days') OR ultima IS NULL THEN 1 ELSE 0 END) as inativos FROM (SELECT MAX(a.data_hora) as ultima FROM pacientes p LEFT JOIN agendamentos a ON p.id=a.paciente_id GROUP BY p.id)"),
+                // Procedimentos mais lucrativos
+                client.execute("SELECT tipo, COUNT(*) as qtd, COALESCE(SUM(valor),0) as receita FROM agendamentos WHERE tipo IS NOT NULL AND tipo!='' AND valor>0 GROUP BY tipo ORDER BY receita DESC LIMIT 8"),
+            ])
+            // Processar aniversariantes do mês atual
+            var mesAtual2 = new Date().getMonth() + 1
+            var anivs = []
+            rs2[1].rows.forEach(function(p) {
+                try {
+                    var n = new Date(p.data_nascimento + 'T12:00:00')
+                    if (!isNaN(n.getTime()) && (n.getMonth() + 1) === mesAtual2) {
+                        anivs.push({ nome: p.nome, telefone: p.telefone, email: p.email, dia: n.getDate() })
+                    }
+                } catch(e) {}
+            })
+            anivs.sort(function(a, b) { return a.dia - b.dia })
+            var retencao = rs2[5].rows[0] || {}
+            var totalPac = +(retencao.total || 0)
+            var inatPac = +(retencao.inativos || 0)
+            return res.status(200).json({
+                success: true,
+                como_conheceu: rs2[0].rows,
+                aniversariantes_mes: anivs,
+                inativos_faixa: rs2[2].rows,
+                novos_por_mes: rs2[3].rows,
+                top_pacientes_receita: rs2[4].rows,
+                taxa_retencao: totalPac > 0 ? Math.round((totalPac - inatPac) / totalPac * 100) : 0,
+                total_pacientes: totalPac,
+                pacientes_inativos: inatPac,
+                procedimentos_lucrativos: rs2[6].rows,
+            })
+        }
+
         // ── SALVAR PACIENTE ────────────────────────────────────────────
         if (route === 'salvar-paciente') {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })

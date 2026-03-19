@@ -550,12 +550,76 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
             <div class="module-desc">Cadastre e gerencie os profissionais da clínica.</div>
           </div>
         </div>
-        <div class="home-modules-2" style="grid-template-columns:1fr;max-width:200px">
+        <div class="home-modules" style="grid-template-columns:repeat(3,1fr)">
           <div class="module-card" onclick="nav('relatorios')">
             <div class="module-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l4-4 4 4 4-6 4 4"/><path d="M3 20h18"/></svg></div>
             <div class="module-title">Relatórios</div>
             <div class="module-desc">Acompanhe métricas com relatórios da clínica.</div>
           </div>
+          <div class="module-card" onclick="nav('dashboard')">
+            <div class="module-icon" style="background:rgba(230,81,0,.08)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--orange)"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="8" height="8" rx="1"/><rect x="14" y="14" width="8" height="8" rx="1"/></svg></div>
+            <div class="module-title">Dashboard</div>
+            <div class="module-desc">KPIs, métricas e análises em tempo real.</div>
+          </div>
+          <div class="module-card" onclick="nav('marketing')">
+            <div class="module-icon" style="background:rgba(25,118,210,.08)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--blue)"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+            <div class="module-title">Marketing</div>
+            <div class="module-desc">Aquisição, retenção e campanhas.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD ANALÍTICO -->
+    <div class="page" id="p-dashboard">
+      <div style="padding:20px 24px;max-width:1200px;margin:0 auto">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div><div style="font-size:20px;font-weight:500;color:var(--text)">Dashboard Analítico</div><div style="font-size:13px;color:var(--text3)" id="dash-periodo">Carregando...</div></div>
+          <button class="btn btn-sm" onclick="loadAnalytics()" style="color:var(--orange);border-color:var(--orange)">Atualizar</button>
+        </div>
+        <!-- KPIs -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px" id="dash-kpis"></div>
+        <!-- Charts Row 1 -->
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Evolução da Receita (6 meses)</div><canvas id="chart-evolucao" height="200"></canvas></div>
+          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Formas de Pagamento</div><canvas id="chart-formas" height="200"></canvas></div>
+        </div>
+        <!-- Charts Row 2 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Top Procedimentos</div><div id="dash-procs"></div></div>
+          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Faixa Etária dos Pacientes</div><canvas id="chart-idade" height="180"></canvas></div>
+          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Status Agendamentos</div><canvas id="chart-status" height="180"></canvas></div>
+        </div>
+        <!-- Row 3: Profissionais + Parcelas -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Produção por Profissional</div><div id="dash-profs"></div></div>
+          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Bandeiras de Cartão</div><canvas id="chart-bandeiras" height="180"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MARKETING -->
+    <div class="page" id="p-marketing">
+      <div style="padding:20px 24px;max-width:1200px;margin:0 auto">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div><div style="font-size:20px;font-weight:500;color:var(--text)">Marketing e Relacionamento</div><div style="font-size:13px;color:var(--text3)">Aquisição, retenção e engajamento de pacientes</div></div>
+          <button class="btn btn-sm" onclick="loadMarketing()" style="color:var(--orange);border-color:var(--orange)">Atualizar</button>
+        </div>
+        <!-- KPIs Marketing -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px" id="mkt-kpis"></div>
+        <!-- Charts -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Como nos Conheceram</div><canvas id="chart-como" height="220"></canvas></div>
+          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Novos Pacientes por Mês</div><canvas id="chart-novos" height="220"></canvas></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Pacientes Inativos por Faixa</div><canvas id="chart-inativos" height="180"></canvas></div>
+          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Procedimentos mais Lucrativos</div><div id="mkt-procs-lucro"></div></div>
+        </div>
+        <!-- Aniversariantes + Top Pacientes -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Aniversariantes do Mês</div><div id="mkt-aniv"></div></div>
+          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Top Pacientes por Receita</div><div id="mkt-top-pac"></div></div>
         </div>
       </div>
     </div>
@@ -1631,6 +1695,8 @@ function nav(id) {
   if (id==='metas') loadMetas()
   if (id==='crc') { nav('crm'); return }
   if (id==='confirmacoes') loadConfirmacoes()
+  if (id==='dashboard') loadAnalytics()
+  if (id==='marketing') loadMarketing()
 }
 
 // ── API ──────────────────────────────────────────────────────────
@@ -2355,6 +2421,112 @@ async function loadConfirmacoes(){
     html+='</tbody></table>'
     el.innerHTML=html
   }catch(e){el.innerHTML='<div style="color:var(--red);text-align:center;padding:30px">'+e.message+'</div>'}
+}
+
+// ── DASHBOARD ANALÍTICO ─────────────────────────────────────────
+var _dashCharts={}
+function destroyChart(id){if(_dashCharts[id]){_dashCharts[id].destroy();delete _dashCharts[id]}}
+var CHART_COLORS=['#1B5E3B','#E65100','#1565C0','#9C27B0','#00695C','#D32F2F','#FF6D00','#795548','#F9A825','#4CAF50']
+
+async function loadAnalytics(){
+  var kpiEl=document.getElementById('dash-kpis');if(!kpiEl)return
+  kpiEl.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">Carregando...</div>'
+  try{
+    var d=await apiData('analytics')
+    var k=d.kpis||{}
+    document.getElementById('dash-periodo').textContent=MESES_PT[new Date().getMonth()]+' '+new Date().getFullYear()+' — atualizado agora'
+
+    // KPIs
+    var varColor=k.variacao_receita>=0?'var(--green)':'var(--red)'
+    var varIcon=k.variacao_receita>=0?'▲':'▼'
+    kpiEl.innerHTML=[
+      {label:'Receita do Mês',val:fmtBrl(k.receita_mes),sub:varIcon+' '+Math.abs(k.variacao_receita)+'% vs mês anterior',subColor:varColor},
+      {label:'Ticket Médio',val:fmtBrl(k.ticket_medio),sub:k.pagamentos_mes+' pagamentos',subColor:'var(--text3)'},
+      {label:'Agendamentos',val:k.agendamentos_mes,sub:'No mês atual',subColor:'var(--text3)'},
+      {label:'Pacientes Ativos',val:k.pacientes_ativos,sub:k.pacientes_inativos+' inativos (6m+)',subColor:'var(--orange)'},
+    ].map(function(c){return '<div class="card" style="padding:16px"><div style="font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">'+c.label+'</div><div style="font-size:28px;font-weight:300;color:var(--text);margin:6px 0">'+c.val+'</div><div style="font-size:12px;color:'+c.subColor+'">'+c.sub+'</div></div>'}).join('')
+
+    // Evolução Receita (bar chart)
+    destroyChart('chart-evolucao')
+    var ev=d.evolucao_receita||[]
+    _dashCharts['chart-evolucao']=new Chart(document.getElementById('chart-evolucao'),{type:'bar',data:{labels:ev.map(function(e){var m=parseInt(e.mes.split('-')[1]);return MESES_ABR[m-1]||e.mes}),datasets:[{data:ev.map(function(e){return +(e.total||0)}),backgroundColor:'#1B5E3B',borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return 'R$'+v/1000+'k'}}},x:{grid:{display:false}}}}})
+
+    // Formas de Pagamento (doughnut)
+    destroyChart('chart-formas')
+    var fp=d.por_forma_pagamento||[]
+    _dashCharts['chart-formas']=new Chart(document.getElementById('chart-formas'),{type:'doughnut',data:{labels:fp.map(function(f){return f.forma_pagamento||'Outros'}),datasets:[{data:fp.map(function(f){return +(f.total||0)}),backgroundColor:CHART_COLORS}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}}}})
+
+    // Faixa Etária (bar horizontal)
+    destroyChart('chart-idade')
+    var fe=d.faixa_etaria||[]
+    _dashCharts['chart-idade']=new Chart(document.getElementById('chart-idade'),{type:'bar',data:{labels:fe.map(function(f){return f.faixa}),datasets:[{data:fe.map(function(f){return f.total}),backgroundColor:'#1565C0',borderRadius:4}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}})
+
+    // Status Agendamentos (doughnut)
+    destroyChart('chart-status')
+    var sa=d.status_agendamentos||[]
+    _dashCharts['chart-status']=new Chart(document.getElementById('chart-status'),{type:'doughnut',data:{labels:sa.map(function(s){return (s.status||'N/I').toUpperCase()}),datasets:[{data:sa.map(function(s){return s.total}),backgroundColor:['#4CAF50','#1565C0','#E65100','#D32F2F','#9E9E9E','#795548']}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}}}})
+
+    // Bandeiras (pie)
+    destroyChart('chart-bandeiras')
+    var bc=d.bandeiras_cartao||[]
+    if(bc.length){_dashCharts['chart-bandeiras']=new Chart(document.getElementById('chart-bandeiras'),{type:'pie',data:{labels:bc.map(function(b){return b.bandeira}),datasets:[{data:bc.map(function(b){return +(b.total||0)}),backgroundColor:CHART_COLORS}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}}}})}
+
+    // Top Procedimentos (HTML bars)
+    var tp=d.top_procedimentos||[]
+    var tpMax=tp.length?tp[0].total:1
+    document.getElementById('dash-procs').innerHTML=tp.map(function(p){return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="flex:1;font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+p.tipo+'">'+p.tipo+'</div><div style="width:80px;height:6px;background:var(--border);border-radius:3px"><div style="height:100%;background:var(--green);border-radius:3px;width:'+Math.round(p.total/tpMax*100)+'%"></div></div><div style="font-size:11px;color:var(--text3);width:30px;text-align:right">'+p.total+'</div></div>'}).join('')
+
+    // Produção Profissionais (HTML table)
+    var pp=d.producao_profissionais||[]
+    document.getElementById('dash-profs').innerHTML='<table class="tbl" style="width:100%"><thead><tr><th>Profissional</th><th>Agendamentos</th><th>Receita</th></tr></thead><tbody>'+pp.map(function(p){return '<tr><td class="pname">'+p.nome+'</td><td>'+p.agendamentos+'</td><td style="color:var(--green);font-weight:500">'+fmtBrl(p.receita)+'</td></tr>'}).join('')+'</tbody></table>'
+
+  }catch(e){kpiEl.innerHTML='<div style="grid-column:1/-1;color:var(--red);text-align:center;padding:20px">'+e.message+'</div>'}
+}
+
+// ── MARKETING ───────────────────────────────────────────────────
+async function loadMarketing(){
+  var kpiEl=document.getElementById('mkt-kpis');if(!kpiEl)return
+  kpiEl.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">Carregando...</div>'
+  try{
+    var d=await apiData('marketing')
+    // KPIs
+    var anivCount=(d.aniversariantes_mes||[]).length
+    kpiEl.innerHTML=[
+      {label:'Taxa de Retenção',val:d.taxa_retencao+'%',sub:'Pacientes ativos vs total',color:'var(--green)'},
+      {label:'Pacientes Inativos',val:d.pacientes_inativos,sub:'Sem consulta há 6+ meses',color:'var(--orange)'},
+      {label:'Aniversariantes do Mês',val:anivCount,sub:'Oportunidade de contato',color:'var(--blue)'},
+      {label:'Canais de Aquisição',val:(d.como_conheceu||[]).length,sub:'Fontes identificadas',color:'var(--text3)'},
+    ].map(function(c){return '<div class="card" style="padding:16px"><div style="font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">'+c.label+'</div><div style="font-size:28px;font-weight:300;color:'+c.color+';margin:6px 0">'+c.val+'</div><div style="font-size:12px;color:var(--text3)">'+c.sub+'</div></div>'}).join('')
+
+    // Como Conheceu (bar)
+    destroyChart('chart-como')
+    var ck=d.como_conheceu||[]
+    _dashCharts['chart-como']=new Chart(document.getElementById('chart-como'),{type:'bar',data:{labels:ck.map(function(c){return c.como_conheceu}),datasets:[{data:ck.map(function(c){return c.total}),backgroundColor:'#1565C0',borderRadius:4}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}})
+
+    // Novos por Mês (line)
+    destroyChart('chart-novos')
+    var np=d.novos_por_mes||[]
+    _dashCharts['chart-novos']=new Chart(document.getElementById('chart-novos'),{type:'line',data:{labels:np.map(function(n){var m=parseInt(n.mes.split('-')[1]);return MESES_ABR[m-1]||n.mes}),datasets:[{data:np.map(function(n){return n.total}),borderColor:'#E65100',backgroundColor:'rgba(230,81,0,.1)',fill:true,tension:.3,pointRadius:4,pointBackgroundColor:'#E65100'}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true},x:{grid:{display:false}}}}})
+
+    // Inativos por Faixa (bar)
+    destroyChart('chart-inativos')
+    var inf=d.inativos_faixa||[]
+    _dashCharts['chart-inativos']=new Chart(document.getElementById('chart-inativos'),{type:'bar',data:{labels:inf.map(function(i){return i.faixa}),datasets:[{data:inf.map(function(i){return i.total}),backgroundColor:['#D32F2F','#E65100','#F9A825','#4CAF50']}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}})
+
+    // Procedimentos Lucrativos (HTML)
+    var pl=d.procedimentos_lucrativos||[]
+    document.getElementById('mkt-procs-lucro').innerHTML='<table class="tbl" style="width:100%"><thead><tr><th>Procedimento</th><th>Qtd</th><th>Receita</th></tr></thead><tbody>'+pl.map(function(p){return '<tr><td class="pname" style="max-width:200px;overflow:hidden;text-overflow:ellipsis">'+p.tipo+'</td><td>'+p.qtd+'</td><td style="color:var(--green);font-weight:500">'+fmtBrl(p.receita)+'</td></tr>'}).join('')+'</tbody></table>'
+
+    // Aniversariantes (HTML)
+    var anivs=d.aniversariantes_mes||[]
+    document.getElementById('mkt-aniv').innerHTML=anivs.length?anivs.map(function(a){var wa=a.telefone?'https://wa.me/55'+a.telefone.replace(/\D/g,''):''
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border2)"><div style="width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+a.dia+'</div><div style="flex:1;font-size:13px">'+a.nome+'</div>'+(wa?'<a href="'+wa+'" target="_blank" class="wa-btn" style="font-size:11px">WhatsApp</a>':'')+'</div>'}).join(''):'<div style="color:var(--text3);padding:20px;text-align:center">Nenhum aniversariante este mês</div>'
+
+    // Top Pacientes Receita (HTML)
+    var tpr=d.top_pacientes_receita||[]
+    document.getElementById('mkt-top-pac').innerHTML='<table class="tbl" style="width:100%"><thead><tr><th>Paciente</th><th>Pgtos</th><th>Total</th></tr></thead><tbody>'+tpr.map(function(p,i){return '<tr><td class="pname"><span style="color:var(--orange);font-weight:700;margin-right:6px">#'+(i+1)+'</span>'+p.paciente_nome+'</td><td>'+p.pagamentos+'</td><td style="color:var(--green);font-weight:500">'+fmtBrl(p.total)+'</td></tr>'}).join('')+'</tbody></table>'
+
+  }catch(e){kpiEl.innerHTML='<div style="grid-column:1/-1;color:var(--red);text-align:center;padding:20px">'+e.message+'</div>'}
 }
 
 // ── INIT ────────────────────────────────────────────────────────
