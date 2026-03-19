@@ -2331,7 +2331,17 @@ function dpShiftYears(id,n){DP_STATE[id].year+=n;dpRender(id)}
 function dpToggleView(id,view){DP_STATE[id].view=view;dpRender(id)}
 function dpPickMonth(id,m){var s=DP_STATE[id];s.month=m;s.view='days';dpRender(id)}
 function dpPickYear(id,y){var s=DP_STATE[id];s.year=y;s.view='months';dpRender(id)}
-function dpSelect(id,y,m,d){var s=DP_STATE[id];s.selected=new Date(y,m,d);s.year=y;s.month=m;s.view='days';dpRender(id)}
+function dpSelect(id,y,m,d){
+  var s=DP_STATE[id];s.selected=new Date(y,m,d);s.year=y;s.month=m;s.view='days'
+  // Salva imediatamente na variável e no label
+  var iso=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0')
+  var br=String(d).padStart(2,'0')+'/'+String(m+1).padStart(2,'0')+'/'+y
+  var v=document.getElementById(id+'-val');if(v)v.textContent=br
+  if(id==='dp-de')CC_DATE_DE=iso
+  if(id==='dp-ate')CC_DATE_ATE=iso
+  // Fecha o popup
+  var pop=document.getElementById(id);if(pop)pop.classList.remove('open')
+}
 function dpHoje(id){var h=new Date();dpSelect(id,h.getFullYear(),h.getMonth(),h.getDate())}
 function dpOK(id){
   var sel=DP_STATE[id].selected
@@ -2339,7 +2349,6 @@ function dpOK(id){
     var iso=sel.getFullYear()+'-'+String(sel.getMonth()+1).padStart(2,'0')+'-'+String(sel.getDate()).padStart(2,'0')
     var br=String(sel.getDate()).padStart(2,'0')+'/'+String(sel.getMonth()+1).padStart(2,'0')+'/'+sel.getFullYear()
     var v=document.getElementById(id+'-val');if(v)v.textContent=br
-    // Grava na variável global
     if(id==='dp-de')CC_DATE_DE=iso
     if(id==='dp-ate')CC_DATE_ATE=iso
   }
