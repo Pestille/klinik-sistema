@@ -2250,48 +2250,93 @@ const MESES_DP=['janeiro','fevereiro','março','abril','maio','junho','julho','a
 const MESES_DP_S=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
 const DIAS_DP=['D','S','T','Q','Q','S','S']
 function dpOpen(id){
-  document.querySelectorAll('.datepicker-pop.open').forEach(p=>{if(p.id!==id)p.classList.remove('open')})
-  const pop=document.getElementById(id)
+  document.querySelectorAll('.datepicker-pop.open').forEach(function(p){if(p.id!==id)p.classList.remove('open')})
+  var pop=document.getElementById(id)
   if(pop.classList.contains('open')){pop.classList.remove('open');return}
   if(!DP_STATE[id]){
     var hoje=new Date(),d7=new Date();d7.setDate(d7.getDate()-7)
     var def=id==='dp-de'?d7:hoje
-    DP_STATE[id]={year:def.getFullYear(),month:def.getMonth(),selected:def}
-    // Atualiza o label se for a primeira vez
+    DP_STATE[id]={year:def.getFullYear(),month:def.getMonth(),selected:def,view:'days'}
     var lbl=document.getElementById(id+'-val')
-    if(lbl)lbl.textContent=String(def.getDate()).padStart(2,'0')+'/'+String(def.getMonth()+1).padStart(2,'0')+'/'+def.getFullYear()
+    if(lbl&&lbl.textContent==='—')lbl.textContent=String(def.getDate()).padStart(2,'0')+'/'+String(def.getMonth()+1).padStart(2,'0')+'/'+def.getFullYear()
   }
+  DP_STATE[id].view='days'
   dpRender(id);pop.classList.add('open')
 }
 function dpRender(id){
-  const s=DP_STATE[id],pop=document.getElementById(id),sel=s.selected
-  const primeiro=new Date(s.year,s.month,1),ultimo=new Date(s.year,s.month+1,0)
-  const hoje=new Date()
-  const selStr=sel?`${DIAS_DP[sel.getDay()]||'D'}., ${String(sel.getDate()).padStart(2,'0')} de ${MESES_DP_S[sel.getMonth()]}.`:'—'
-  let h=`<div class="dp-header"><div class="dp-year">${s.year}</div><div class="dp-date">${selStr}</div></div>
-  <div class="dp-nav"><button class="dp-nav-btn" onclick="dpPrev('${id}')">‹</button><div class="dp-nav-month">${MESES_DP[s.month]} de ${s.year}</div><button class="dp-nav-btn" onclick="dpNext('${id}')">›</button></div>
-  <div class="dp-grid">`
-  DIAS_DP.forEach(d=>{h+=`<div class="dp-dh">${d}</div>`})
-  for(let i=0;i<primeiro.getDay();i++){const d=new Date(s.year,s.month,1-primeiro.getDay()+i);h+=`<div class="dp-day dp-other">${d.getDate()}</div>`}
-  for(let d=1;d<=ultimo.getDate();d++){
-    const dt=new Date(s.year,s.month,d)
-    const isSel=sel&&dt.toDateString()===sel.toDateString()
-    const isToday=dt.toDateString()===hoje.toDateString()
-    h+=`<div class="dp-day ${isSel?'dp-selected':''} ${isToday&&!isSel?'dp-today':''}" onclick="dpSelect('${id}',${s.year},${s.month},${d})">${d}</div>`
+  var s=DP_STATE[id],pop=document.getElementById(id),sel=s.selected
+  if(!pop)return
+  var hoje=new Date()
+
+  // View: months
+  if(s.view==='months'){
+    var h='<div class="dp-header"><div class="dp-year" onclick="dpToggleView(\''+id+'\',\'years\')" style="cursor:pointer">'+s.year+'</div><div class="dp-date">Selecione o mês</div></div>'
+    h+='<div class="dp-nav"><button class="dp-nav-btn" onclick="dpPrevYear(\''+id+'\')">‹</button><div class="dp-nav-month">'+s.year+'</div><button class="dp-nav-btn" onclick="dpNextYear(\''+id+'\')">›</button></div>'
+    h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:8px 12px">'
+    for(var mi=0;mi<12;mi++){
+      var isCur=mi===s.month
+      h+='<div style="padding:10px;text-align:center;cursor:pointer;border-radius:6px;font-size:13px;'+(isCur?'background:var(--orange);color:#fff;font-weight:500':'color:var(--text2)')+'" onclick="dpPickMonth(\''+id+'\','+mi+')">'+MESES_DP_S[mi]+'</div>'
+    }
+    h+='</div>'
+    pop.innerHTML=h;return
   }
-  const rem=(primeiro.getDay()+ultimo.getDate())%7
-  if(rem)for(let i=1;i<=7-rem;i++)h+=`<div class="dp-day dp-other">${i}</div>`
-  h+=`</div><div class="dp-footer"><button class="dp-btn" onclick="dpCancel('${id}')">CANCELAR</button><button class="dp-btn" onclick="dpOK('${id}')">OK</button></div>`
-  pop.innerHTML=h
+
+  // View: years
+  if(s.view==='years'){
+    var base=Math.floor(s.year/12)*12
+    var h2='<div class="dp-header"><div class="dp-year">'+base+' — '+(base+11)+'</div><div class="dp-date">Selecione o ano</div></div>'
+    h2+='<div class="dp-nav"><button class="dp-nav-btn" onclick="dpShiftYears(\''+id+'\',-12)">‹</button><div class="dp-nav-month">'+base+' – '+(base+11)+'</div><button class="dp-nav-btn" onclick="dpShiftYears(\''+id+'\',12)">›</button></div>'
+    h2+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:8px 12px">'
+    for(var yi=base;yi<base+12;yi++){
+      var isY=yi===s.year
+      h2+='<div style="padding:10px;text-align:center;cursor:pointer;border-radius:6px;font-size:13px;'+(isY?'background:var(--orange);color:#fff;font-weight:500':'color:var(--text2)')+'" onclick="dpPickYear(\''+id+'\','+yi+')">'+yi+'</div>'
+    }
+    h2+='</div>'
+    pop.innerHTML=h2;return
+  }
+
+  // View: days (default)
+  var primeiro=new Date(s.year,s.month,1),ultimo=new Date(s.year,s.month+1,0)
+  var selStr=sel?DIAS_DP[sel.getDay()]+', '+String(sel.getDate()).padStart(2,'0')+' de '+MESES_DP_S[sel.getMonth()]+'.':'—'
+  var h3='<div class="dp-header"><div class="dp-year" onclick="dpToggleView(\''+id+'\',\'years\')" style="cursor:pointer">'+s.year+'</div><div class="dp-date">'+selStr+'</div></div>'
+  h3+='<div class="dp-nav"><button class="dp-nav-btn" onclick="dpPrev(\''+id+'\')">‹</button><div class="dp-nav-month" onclick="dpToggleView(\''+id+'\',\'months\')" style="cursor:pointer">'+MESES_DP[s.month]+' de '+s.year+'</div><button class="dp-nav-btn" onclick="dpNext(\''+id+'\')">›</button></div>'
+  h3+='<div class="dp-grid">'
+  DIAS_DP.forEach(function(d){h3+='<div class="dp-dh">'+d+'</div>'})
+  // Dias do mês anterior (clicáveis)
+  for(var i=0;i<primeiro.getDay();i++){
+    var pd=new Date(s.year,s.month,1-primeiro.getDay()+i)
+    h3+='<div class="dp-day dp-other" onclick="dpSelect(\''+id+'\','+pd.getFullYear()+','+pd.getMonth()+','+pd.getDate()+')">'+pd.getDate()+'</div>'
+  }
+  // Dias do mês atual
+  for(var d=1;d<=ultimo.getDate();d++){
+    var dt=new Date(s.year,s.month,d)
+    var isSel=sel&&dt.toDateString()===sel.toDateString()
+    var isToday=dt.toDateString()===hoje.toDateString()
+    h3+='<div class="dp-day'+(isSel?' dp-selected':'')+(isToday&&!isSel?' dp-today':'')+'" onclick="dpSelect(\''+id+'\','+s.year+','+s.month+','+d+')">'+d+'</div>'
+  }
+  // Dias do próximo mês (clicáveis)
+  var rem=(primeiro.getDay()+ultimo.getDate())%7
+  if(rem)for(var j=1;j<=7-rem;j++){
+    var nd=new Date(s.year,s.month+1,j)
+    h3+='<div class="dp-day dp-other" onclick="dpSelect(\''+id+'\','+nd.getFullYear()+','+nd.getMonth()+','+nd.getDate()+')">'+j+'</div>'
+  }
+  h3+='</div><div class="dp-footer"><button class="dp-btn" onclick="dpHoje(\''+id+'\')">HOJE</button><button class="dp-btn" onclick="dpCancel(\''+id+'\')">CANCELAR</button><button class="dp-btn" style="font-weight:700" onclick="dpOK(\''+id+'\')">OK</button></div>'
+  pop.innerHTML=h3
 }
-function dpPrev(id){const s=DP_STATE[id];s.month--;if(s.month<0){s.month=11;s.year--}dpRender(id)}
-function dpNext(id){const s=DP_STATE[id];s.month++;if(s.month>11){s.month=0;s.year++}dpRender(id)}
-function dpSelect(id,y,m,d){DP_STATE[id].selected=new Date(y,m,d);dpRender(id)}
+function dpPrev(id){var s=DP_STATE[id];s.month--;if(s.month<0){s.month=11;s.year--}dpRender(id)}
+function dpNext(id){var s=DP_STATE[id];s.month++;if(s.month>11){s.month=0;s.year++}dpRender(id)}
+function dpPrevYear(id){DP_STATE[id].year--;dpRender(id)}
+function dpNextYear(id){DP_STATE[id].year++;dpRender(id)}
+function dpShiftYears(id,n){DP_STATE[id].year+=n;dpRender(id)}
+function dpToggleView(id,view){DP_STATE[id].view=view;dpRender(id)}
+function dpPickMonth(id,m){var s=DP_STATE[id];s.month=m;s.view='days';dpRender(id)}
+function dpPickYear(id,y){var s=DP_STATE[id];s.year=y;s.view='months';dpRender(id)}
+function dpSelect(id,y,m,d){var s=DP_STATE[id];s.selected=new Date(y,m,d);s.year=y;s.month=m;s.view='days';dpRender(id)}
+function dpHoje(id){var h=new Date();dpSelect(id,h.getFullYear(),h.getMonth(),h.getDate())}
 function dpOK(id){
-  const sel=DP_STATE[id].selected
-  if(sel){const str=`${String(sel.getDate()).padStart(2,'0')}/${String(sel.getMonth()+1).padStart(2,'0')}/${sel.getFullYear()}`;const v=document.getElementById(id+'-val');if(v)v.textContent=str}
+  var sel=DP_STATE[id].selected
+  if(sel){var str=String(sel.getDate()).padStart(2,'0')+'/'+String(sel.getMonth()+1).padStart(2,'0')+'/'+sel.getFullYear();var v=document.getElementById(id+'-val');if(v)v.textContent=str}
   document.getElementById(id).classList.remove('open')
-  // Auto-reload da aba ativa quando muda data
   if(id==='dp-de'||id==='dp-ate'){setTimeout(renderCC,100)}
 }
 function dpCancel(id){document.getElementById(id).classList.remove('open')}
