@@ -71,14 +71,14 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 .sidebar-footer{padding:12px 18px;border-top:1px solid var(--border);font-size:11px;color:var(--gray5)}
 
 /* ── MAIN CONTENT ── */
-#content{flex:1;overflow-y:auto;overflow-x:hidden}
+#content{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:32px}
 #content::-webkit-scrollbar{width:6px}
 #content::-webkit-scrollbar-thumb{background:var(--gray4);border-radius:3px}
 
 /* ── PAGES ── */
 .page{display:none!important}
 .page.active{display:block!important}
-#p-financeiro.active{display:flex!important;flex-direction:column;height:calc(100vh - 52px - 28px)}
+#p-financeiro.active{display:flex!important;flex-direction:column;height:calc(100vh - 52px - 32px)}
 
 /* ── HOME PAGE ── */
 .home-wrap{padding:60px 40px;max-width:1000px;margin:0 auto}
@@ -93,7 +93,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 .module-badge{position:absolute;top:12px;right:12px;background:var(--orange);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px}
 
 /* ── AGENDA ── */
-#p-agenda{display:none;height:calc(100vh - 52px);overflow:hidden;flex-direction:column}
+#p-agenda{display:none;height:calc(100vh - 52px - 32px);overflow:hidden;flex-direction:column}
 #p-agenda.active{display:flex}
 .agenda-topbar{height:52px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0}
 .btn-novo{background:var(--orange);color:#fff;border:none;border-radius:4px;padding:7px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Roboto',sans-serif;display:flex;align-items:center;gap:6px}
@@ -735,7 +735,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
               <div class="datepicker-wrap">
                 <div class="cc-date-btn" onclick="dpOpen('dp-de')" id="dp-de-btn">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
-                  <span id="dp-de-val">08/03/2026</span>
+                  <span id="dp-de-val">—</span>
                 </div>
                 <div class="datepicker-pop" id="dp-de" data-id="dp-de"></div>
               </div>
@@ -745,7 +745,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
               <div class="datepicker-wrap">
                 <div class="cc-date-btn" onclick="dpOpen('dp-ate')" id="dp-ate-btn">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
-                  <span id="dp-ate-val">14/03/2026</span>
+                  <span id="dp-ate-val">—</span>
                 </div>
                 <div class="datepicker-pop" id="dp-ate" data-id="dp-ate"></div>
               </div>
@@ -2038,26 +2038,6 @@ loadDashboard()
 .cc-day-vals{display:flex;gap:24px;padding:12px 16px;margin-left:auto;flex-shrink:0}
 .cc-val-item{text-align:right;font-size:13px}
 .cc-val-lbl{color:var(--text3);font-size:11px;margin-right:4px}
-/* ── DATE PICKER ── */
-.datepicker-wrap{position:relative;display:inline-block}
-.datepicker-pop{position:absolute;top:calc(100% + 4px);left:0;background:var(--white);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:500;width:320px;overflow:hidden;display:none}
-.datepicker-pop.open{display:block}
-.dp-header{background:var(--orange);color:#fff;padding:16px 20px 20px;display:flex;flex-direction:column;gap:4px}
-.dp-year{font-size:13px;opacity:.8}.dp-date{font-size:22px;font-weight:400}
-.dp-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 4px}
-.dp-nav-month{font-size:13px;font-weight:500}
-.dp-nav-btn{background:none;border:none;cursor:pointer;color:var(--text3);padding:4px 8px;font-size:18px;border-radius:50%;transition:background .12s}
-.dp-nav-btn:hover{background:var(--gray2)}
-.dp-grid{display:grid;grid-template-columns:repeat(7,1fr);padding:0 8px 8px}
-.dp-dh{font-size:11px;font-weight:500;color:var(--text3);text-align:center;padding:4px 0}
-.dp-day{width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;border-radius:50%;transition:background .12s;color:var(--text2)}
-.dp-day:hover:not(.dp-selected){background:var(--gray2)}
-.dp-day.dp-selected{background:var(--orange);color:#fff;font-weight:500}
-.dp-day.dp-today:not(.dp-selected){color:var(--orange);font-weight:500}
-.dp-day.dp-other{color:var(--gray4)}
-.dp-footer{display:flex;justify-content:flex-end;gap:8px;padding:6px 16px 12px}
-.dp-btn{background:none;border:none;font-size:13px;font-weight:500;cursor:pointer;color:var(--orange);font-family:'Roboto',sans-serif;padding:4px 8px;border-radius:4px}
-.dp-btn:hover{background:rgba(230,81,0,.08)}
 /* ── FDC ── */
 .fdc-canvas-wrap{position:relative;height:280px}
 .fdc-legend{display:flex;gap:16px;flex-wrap:wrap}
@@ -2273,13 +2253,20 @@ function dpOpen(id){
   document.querySelectorAll('.datepicker-pop.open').forEach(p=>{if(p.id!==id)p.classList.remove('open')})
   const pop=document.getElementById(id)
   if(pop.classList.contains('open')){pop.classList.remove('open');return}
-  if(!DP_STATE[id])DP_STATE[id]={year:2026,month:2,selected:id==='dp-de'?new Date(2026,2,8):new Date(2026,2,14)}
+  if(!DP_STATE[id]){
+    var hoje=new Date(),d7=new Date();d7.setDate(d7.getDate()-7)
+    var def=id==='dp-de'?d7:hoje
+    DP_STATE[id]={year:def.getFullYear(),month:def.getMonth(),selected:def}
+    // Atualiza o label se for a primeira vez
+    var lbl=document.getElementById(id+'-val')
+    if(lbl)lbl.textContent=String(def.getDate()).padStart(2,'0')+'/'+String(def.getMonth()+1).padStart(2,'0')+'/'+def.getFullYear()
+  }
   dpRender(id);pop.classList.add('open')
 }
 function dpRender(id){
   const s=DP_STATE[id],pop=document.getElementById(id),sel=s.selected
   const primeiro=new Date(s.year,s.month,1),ultimo=new Date(s.year,s.month+1,0)
-  const hoje=new Date(2026,2,14)
+  const hoje=new Date()
   const selStr=sel?`${DIAS_DP[sel.getDay()]||'D'}., ${String(sel.getDate()).padStart(2,'0')} de ${MESES_DP_S[sel.getMonth()]}.`:'—'
   let h=`<div class="dp-header"><div class="dp-year">${s.year}</div><div class="dp-date">${selStr}</div></div>
   <div class="dp-nav"><button class="dp-nav-btn" onclick="dpPrev('${id}')">‹</button><div class="dp-nav-month">${MESES_DP[s.month]} de ${s.year}</div><button class="dp-nav-btn" onclick="dpNext('${id}')">›</button></div>
@@ -2304,6 +2291,8 @@ function dpOK(id){
   const sel=DP_STATE[id].selected
   if(sel){const str=`${String(sel.getDate()).padStart(2,'0')}/${String(sel.getMonth()+1).padStart(2,'0')}/${sel.getFullYear()}`;const v=document.getElementById(id+'-val');if(v)v.textContent=str}
   document.getElementById(id).classList.remove('open')
+  // Auto-reload da aba ativa quando muda data
+  if(id==='dp-de'||id==='dp-ate'){setTimeout(renderCC,100)}
 }
 function dpCancel(id){document.getElementById(id).classList.remove('open')}
 document.addEventListener('click',e=>{
@@ -2345,8 +2334,8 @@ function ccBadge(forma){
 function ccGetDatas(){
   var deEl=document.getElementById('dp-de-val'),ateEl=document.getElementById('dp-ate-val')
   var de='',ate=''
-  if(deEl){var p=deEl.textContent.trim().split('/');if(p.length===3)de=p[2]+'-'+p[1]+'-'+p[0]}
-  if(ateEl){var p2=ateEl.textContent.trim().split('/');if(p2.length===3)ate=p2[2]+'-'+p2[1]+'-'+p2[0]}
+  if(deEl){var txt=deEl.textContent.trim();if(txt!=='—'){var p=txt.split('/');if(p.length===3)de=p[2]+'-'+p[1]+'-'+p[0]}}
+  if(ateEl){var txt2=ateEl.textContent.trim();if(txt2!=='—'){var p2=txt2.split('/');if(p2.length===3)ate=p2[2]+'-'+p2[1]+'-'+p2[0]}}
   if(!de){var d=new Date();d.setDate(d.getDate()-7);de=d.toISOString().slice(0,10)}
   if(!ate)ate=new Date().toISOString().slice(0,10)
   return {de:de,ate:ate}
