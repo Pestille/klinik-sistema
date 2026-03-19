@@ -407,9 +407,46 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 
 /* ── FDC CHART CANVAS ── */
 .fdc-canvas-wrap{position:relative;height:280px;background:var(--white);margin-bottom:0}
+
+/* ── LOGIN ── */
+#login-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center}
+#login-screen.hidden{display:none}
+.login-card{background:var(--white);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:40px 36px;width:100%;max-width:380px}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;justify-content:center}
+.login-logo svg{color:var(--green)}
+.login-logo span{font-size:20px;font-weight:700;color:var(--green)}
+.login-field{margin-bottom:16px}
+.login-field label{display:block;font-size:12px;font-weight:500;color:var(--text3);margin-bottom:4px}
+.login-field input{width:100%;border:1.5px solid var(--border);border-radius:6px;padding:10px 12px;font-size:14px;font-family:'Roboto',sans-serif;color:var(--text);outline:none;transition:border-color .15s}
+.login-field input:focus{border-color:var(--green)}
+.login-btn{width:100%;background:var(--orange);color:#fff;border:none;border-radius:6px;padding:11px;font-size:14px;font-weight:500;cursor:pointer;font-family:'Roboto',sans-serif;transition:background .15s}
+.login-btn:hover{background:var(--orange2)}
+.login-btn:active{transform:scale(.98)}
+.login-btn:disabled{opacity:.6;cursor:not-allowed}
+.login-error{color:var(--red);font-size:12px;text-align:center;margin-top:12px;min-height:18px}
 </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 2C12 2 7 6 7 11a5 5 0 0010 0c0-5-5-9-5-9z" stroke="currentColor" stroke-width="1.5" fill="rgba(27,94,59,.2)"/></svg>
+      <span>KLINIK SISTEMA</span>
+    </div>
+    <div class="login-field">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input type="password" id="login-senha" placeholder="Sua senha" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
 
 <!-- TOP BAR -->
 <div id="topbar">
@@ -428,9 +465,9 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     <button class="icon-btn" title="Vídeos"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
     <button class="icon-btn" title="Suporte"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg></button>
     <button class="icon-btn" title="Notificações"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg><span class="badge"></span></button>
-    <div class="user-info">
+    <div class="user-info" onclick="doLogout()" title="Clique para sair">
       <div class="user-av">RP</div>
-      RAFAEL PESTILLE
+      <span>RAFAEL PESTILLE</span>
     </div>
   </div>
 </div>
@@ -1380,14 +1417,71 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 </div>
 
 <script>
+// ── AUTH ────────────────────────────────────────────────────────
+var KLINIK_USER = null
+
+async function checkAuth() {
+  var token = localStorage.getItem('klinik_token')
+  if (!token) { showLogin(); return }
+  try {
+    var r = await fetch('/api/auth?action=me', { headers: { 'Authorization': 'Bearer ' + token } })
+    var d = await r.json()
+    if (d.success) { KLINIK_USER = d.usuario; hideLogin(); updateUserInfo(); return }
+  } catch(e) {}
+  localStorage.removeItem('klinik_token')
+  showLogin()
+}
+
+async function doLogin() {
+  var email = document.getElementById('login-email').value.trim()
+  var senha = document.getElementById('login-senha').value
+  var errEl = document.getElementById('login-error')
+  var btn = document.getElementById('login-btn')
+  errEl.textContent = ''
+  if (!email || !senha) { errEl.textContent = 'Preencha email e senha'; return }
+  btn.disabled = true; btn.textContent = 'Entrando...'
+  try {
+    var r = await fetch('/api/auth?action=login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, senha: senha }) })
+    var d = await r.json()
+    if (d.success) {
+      localStorage.setItem('klinik_token', d.token)
+      KLINIK_USER = d.usuario
+      hideLogin()
+      updateUserInfo()
+    } else { errEl.textContent = d.error || 'Erro no login' }
+  } catch(e) { errEl.textContent = 'Erro de conexão' }
+  btn.disabled = false; btn.textContent = 'Entrar'
+}
+
+function doLogout() {
+  var token = localStorage.getItem('klinik_token')
+  if (token) fetch('/api/auth?action=logout', { headers: { 'Authorization': 'Bearer ' + token } }).catch(function(){})
+  localStorage.removeItem('klinik_token')
+  KLINIK_USER = null
+  showLogin()
+}
+
+function showLogin() { document.getElementById('login-screen').classList.remove('hidden') }
+function hideLogin() { document.getElementById('login-screen').classList.add('hidden') }
+function updateUserInfo() {
+  if (!KLINIK_USER) return
+  var el = document.querySelector('.user-info span')
+  if (el) el.textContent = KLINIK_USER.nome.split(' ')[0]
+  var av = document.querySelector('.user-av')
+  if (av) av.textContent = KLINIK_USER.nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
+}
+
+// Verifica auth ao carregar
+checkAuth()
+
 // ── ESTADO ──────────────────────────────────────────────────────
 const ST = { dashboard:null, agendamentos:null, recebimentos:null, profissionais:null, aniversariantes:null, inativos:null }
 const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro']
 const MESES_ABR = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 const DIAS_PT = ['dom','seg','ter','qua','qui','sex','sáb']
 const DIAS_FULL = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado']
-let agendaDate = new Date(2026,2,14) // 14 Março 2026
-let miniCalDate = new Date(2026,2,1)
+let agendaDate = new Date()
+let miniCalDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
 let curPage = 'home'
 
 const PROF_CORES = ['#9C27B0','#4CAF50','#FF9800','#795548','#2196F3','#E91E63','#00BCD4','#F44336']
