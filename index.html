@@ -1674,34 +1674,38 @@ async function loadFinanceiro() {
   document.getElementById('fin-loading').classList.remove('hidden')
   document.getElementById('fin-data').classList.add('hidden')
   try {
-    const data=await api('recebimentos')
+    // Busca do Turso (dados locais, rápido)
+    const d=await apiData('financeiro')
+    const data=d.data||[]
     ST.recebimentos=data
-    const total=data.reduce((s,r)=>s+parseFloat(r.Amount||r.amount||r.Value||0),0)
-    const ticket=data.length>0?total/data.length:0
-    const max=data.reduce((m,r)=>Math.max(m,parseFloat(r.Amount||r.amount||r.Value||0)),0)
-    document.getElementById('fin-total').textContent='R$ '+total.toLocaleString('pt-BR',{minimumFractionDigits:2})
-    document.getElementById('fin-ticket').textContent='R$ '+Math.round(ticket).toLocaleString('pt-BR')
-    document.getElementById('fin-count').textContent=data.length
-    document.getElementById('fin-max').textContent='R$ '+max.toLocaleString('pt-BR',{minimumFractionDigits:2})
     ST._finData=data
+    const totais=d.totais||{}
+    document.getElementById('fin-total').textContent=fmtBrl(totais.total_entradas||0)
+    document.getElementById('fin-ticket').textContent=data.length>0?fmtBrl((totais.total_entradas||0)/data.length):'R$ 0'
+    document.getElementById('fin-count').textContent=data.length
+    const max=data.reduce(function(m,r){return Math.max(m,+(r.valor||0))},0)
+    document.getElementById('fin-max').textContent=fmtBrl(max)
     renderFinTable(data)
-    document.getElementById('fin-loading').classList.add('hidden')
-    document.getElementById('fin-data').classList.remove('hidden')
   } catch(e) {
-    document.getElementById('fin-loading').innerHTML=`<div style="color:var(--red);text-align:center;padding:40px">${e.message}<br><br><button class="btn" onclick="loadFinanceiro()">Tentar novamente</button></div>`
+    ST.recebimentos=[]
+    ST._finData=[]
   }
+  // Sempre mostra as abas, independente do resultado
+  document.getElementById('fin-loading').classList.add('hidden')
+  document.getElementById('fin-data').classList.remove('hidden')
 }
 
 function renderFinTable(data) {
-  document.getElementById('fin-table').innerHTML=data.slice(0,60).map((r,i)=>{
-    const v=parseFloat(r.Amount||r.amount||r.Value||0)
-    const dt=(r.ReceiptDate||r.date||'').slice(0,10)
-    return`<tr><td class="text-muted">${i+1}</td><td><div class="pname">${r.PatientName||'—'}</div></td><td class="text-muted">${dt?new Date(dt+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</td><td style="color:var(--green);font-weight:500">R$ ${v.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td></tr>`
+  document.getElementById('fin-table').innerHTML=data.slice(0,60).map(function(r,i){
+    var v=+(r.valor||r.Amount||r.Value||0)
+    var nome=r.paciente_nome||r.PatientName||'—'
+    var dt=r.data_pagamento||(r.ReceiptDate||'').slice(0,10)||''
+    return '<tr><td class="text-muted">'+(i+1)+'</td><td><div class="pname">'+nome+'</div></td><td class="text-muted">'+(dt?fmtDt(dt):'—')+'</td><td style="color:var(--green);font-weight:500">'+fmtBrl(v)+'</td></tr>'
   }).join('')
 }
 
 function filterFin(q) {
-  renderFinTable((ST._finData||[]).filter(r=>(r.PatientName||'').toLowerCase().includes(q.toLowerCase())))
+  renderFinTable((ST._finData||[]).filter(function(r){return (r.paciente_nome||r.PatientName||'').toLowerCase().includes(q.toLowerCase())}))
 }
 
 // ── PROFISSIONAIS ──────────────────────────────────────────────
