@@ -140,25 +140,26 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 .agenda-grid-wrap{flex:1;overflow:auto;position:relative}
 .agenda-grid-wrap::-webkit-scrollbar{width:6px;height:6px}
 .agenda-grid-wrap::-webkit-scrollbar-thumb{background:var(--gray4);border-radius:3px}
-.agenda-grid{min-width:800px}
+.agenda-grid{min-width:900px}
 .agenda-header-row{display:flex;position:sticky;top:0;z-index:10;background:var(--white);border-bottom:2px solid var(--border)}
-.agenda-prof-label{width:160px;min-width:160px;flex-shrink:0;border-right:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text3);padding:8px 10px;text-transform:uppercase;letter-spacing:.04em}
-.agenda-hour-col{flex:0 0 60px;text-align:center;padding:6px 0;font-size:10px;font-weight:500;color:var(--text3);border-right:1px solid var(--border2)}
+.agenda-prof-label{width:130px;min-width:130px;flex-shrink:0;border-right:1px solid var(--border);font-size:10px;font-weight:700;color:var(--text3);padding:6px 8px;text-transform:uppercase;letter-spacing:.04em}
+.agenda-hour-col{flex:0 0 80px;text-align:center;padding:6px 0;font-size:10px;font-weight:500;color:var(--text3);border-right:1px solid var(--border);position:relative}
 .agenda-hour-col:last-child{border-right:none}
 .agenda-hour-col.now{color:var(--orange);font-weight:700}
+.agenda-q-marks{display:flex;position:absolute;bottom:0;left:0;right:0}
+.agenda-q-mark{flex:1;text-align:center;font-size:8px;color:var(--gray4);border-right:1px solid var(--border2)}
+.agenda-q-mark:last-child{border-right:none}
 .agenda-slots{position:relative}
-.agenda-prof-row{display:flex;border-bottom:1px solid var(--border);min-height:60px;position:relative}
-.agenda-prof-info{width:160px;min-width:160px;flex-shrink:0;border-right:1px solid var(--border);padding:10px;display:flex;align-items:center;gap:8px;background:var(--white)}
-.agenda-prof-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
-.agenda-prof-name{font-size:12px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.agenda-prof-esp{font-size:10px;color:var(--text3)}
-.agenda-prof-count{font-size:10px;color:var(--text3)}
-.agenda-slots-row{flex:1;display:flex;position:relative}
-.slot-cell{flex:0 0 60px;height:100%;min-height:60px;border-right:1px solid var(--border2);position:relative;cursor:pointer}
-.slot-cell:last-child{border-right:none}
+.agenda-prof-row{display:flex;border-bottom:1px solid var(--border);min-height:52px;position:relative}
+.agenda-prof-info{width:130px;min-width:130px;flex-shrink:0;border-right:1px solid var(--border);padding:6px 8px;display:flex;align-items:center;gap:6px;background:var(--white);position:sticky;left:0;z-index:3}
+.agenda-prof-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.agenda-prof-name{font-size:11px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px}
+.agenda-prof-count{font-size:9px;color:var(--text3)}
+.agenda-slots-row{flex:1;display:flex;position:relative;overflow:visible}
+.slot-cell{flex:0 0 20px;height:100%;min-height:52px;border-right:1px solid var(--border2);position:relative;cursor:pointer}
 .slot-cell:hover{background:rgba(27,94,59,.04)}
-.slot-cell.hora{border-right:1px solid var(--border)}
-.appt-block{position:absolute;top:4px;bottom:4px;border-radius:4px;padding:3px 6px;font-size:10px;overflow:hidden;cursor:pointer;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.15);display:flex;flex-direction:column;justify-content:center}
+.slot-cell.q0{border-right-color:var(--border)}
+.appt-block{position:absolute;top:3px;bottom:3px;border-radius:4px;padding:2px 6px;font-size:10px;overflow:hidden;cursor:pointer;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.15);display:flex;flex-direction:column;justify-content:center}
 .appt-name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .appt-time{font-size:9px;opacity:.8}
 .now-marker{position:absolute;top:0;bottom:0;width:2px;background:var(--orange);z-index:5;pointer-events:none}
@@ -1509,17 +1510,18 @@ function renderAgendaGrid() {
   var ag = ST.agendamentos||[]
   var dtStr = agendaDate.toISOString().slice(0,10)
   var profs = ST.dashboard?.profissionais || []
-  var HORAS_FULL = []
-  for (var hh=7;hh<=20;hh++) HORAS_FULL.push(hh)
+  var START_H=7, END_H=20, PX_PER_15=20 // 20px por slot de 15min = 80px/hora
   var now = new Date()
-  var nowH = now.getHours()
+  var nowH = now.getHours(), nowM = now.getMinutes()
 
-  // Header: horários no topo
+  // Header: horários no topo com marcas de 15min
   var html = '<div class="agenda-header-row"><div class="agenda-prof-label">Profissional</div>'
-  HORAS_FULL.forEach(function(h){
-    var isNow = h === nowH
-    html+='<div class="agenda-hour-col'+(isNow?' now':'')+'">'+String(h).padStart(2,'0')+':00</div>'
-  })
+  for(var hh=START_H;hh<=END_H;hh++){
+    var isNow = hh === nowH
+    html+='<div class="agenda-hour-col'+(isNow?' now':'')+'" style="flex:0 0 '+(PX_PER_15*4)+'px">'+String(hh).padStart(2,'0')+':00'
+    html+='<div class="agenda-q-marks"><div class="agenda-q-mark">00</div><div class="agenda-q-mark">15</div><div class="agenda-q-mark">30</div><div class="agenda-q-mark">45</div></div>'
+    html+='</div>'
+  }
   html += '</div><div class="agenda-slots">'
 
   // Agendamentos do dia
@@ -1530,48 +1532,48 @@ function renderAgendaGrid() {
     var nome = p.name||p.Name||p.nome||'Profissional'
     var ini = nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
     var cor = PROF_CORES[pi%PROF_CORES.length]
-    // Agendamentos deste profissional
     var profAg = todayAg.filter(function(a){
       return String(a.ProfessionalId||a.professionalId||'')=== String(p.id||p.Id||'')
     })
 
     html+='<div class="agenda-prof-row">'
-    html+='<div class="agenda-prof-info"><div class="agenda-prof-av" style="background:'+cor+'">'+ini+'</div><div><div class="agenda-prof-name" title="'+nome+'">'+nome.split(' ').slice(0,3).join(' ')+'</div><div class="agenda-prof-count">'+profAg.length+' paciente'+(profAg.length!==1?'s':'')+'</div></div></div>'
+    html+='<div class="agenda-prof-info"><div class="agenda-prof-av" style="background:'+cor+'">'+ini+'</div><div><div class="agenda-prof-name" title="'+nome+'">'+nome.split(' ').slice(0,2).join(' ')+'</div><div class="agenda-prof-count">'+profAg.length+' pac.</div></div></div>'
     html+='<div class="agenda-slots-row">'
 
-    // Células de hora
-    HORAS_FULL.forEach(function(h){
-      html+='<div class="slot-cell'+(h%2===0?' hora':'')+'" onclick="openNovaConsulta()"></div>'
-    })
+    // 4 slots por hora (15min cada)
+    for(var sh=START_H;sh<=END_H;sh++){
+      for(var sq=0;sq<4;sq++){
+        html+='<div class="slot-cell'+(sq===0?' q0':'')+'" style="flex:0 0 '+PX_PER_15+'px" onclick="openNovaConsulta()"></div>'
+      }
+    }
 
-    // Blocos de agendamento posicionados
+    // Blocos de agendamento posicionados em px
     profAg.forEach(function(a){
       var parts = (a.fromTime||'9:00').split(':').map(Number)
       var aH=parts[0], aM=parts[1]||0
       var parts2 = (a.toTime||((aH+1)+':'+aM)).replace(/h$/,'').split(':').map(Number)
       var aH2=parts2[0], aM2=parts2[1]||0
       var durMin = (aH2*60+aM2)-(aH*60+aM); if(durMin<=0) durMin=60
-      var startOffset = (aH-7)*60 + aM // minutos desde 7:00
-      var left = (startOffset/60)*60 // 60px por hora
-      var width = Math.max(30,(durMin/60)*60)
+      var startMin = (aH-START_H)*60 + aM
+      var left = (startMin/15)*PX_PER_15
+      var width = Math.max(PX_PER_15,(durMin/15)*PX_PER_15)
       html+='<div class="appt-block" style="left:'+left+'px;width:'+width+'px;background:'+cor+'dd;color:#fff">'
       html+='<div class="appt-name">'+(a.PatientName||a.patientName||'Paciente')+'</div>'
       html+='<div class="appt-time">'+(a.fromTime||'—')+' - '+aH2+':'+String(aM2).padStart(2,'0')+'</div>'
       html+='</div>'
     })
 
-    html+='</div></div>' // fecha slots-row e prof-row
+    html+='</div></div>'
   })
 
-  // Se não há profissionais, mostra mensagem
   if(!profs.length){
-    html+='<div style="text-align:center;padding:40px;color:var(--text3)">Nenhum profissional cadastrado. Sincronize os profissionais primeiro.</div>'
+    html+='<div style="text-align:center;padding:40px;color:var(--text3)">Nenhum profissional cadastrado</div>'
   }
 
   // Marcador de hora atual
-  var nowOffset = (nowH-7)*60 + now.getMinutes()
-  if(nowH>=7 && nowH<=20){
-    var nowLeft = 160 + (nowOffset/60)*60
+  if(nowH>=START_H && nowH<=END_H){
+    var nowMin = (nowH-START_H)*60 + nowM
+    var nowLeft = 130 + (nowMin/15)*PX_PER_15
     html+='<div class="now-marker" style="left:'+nowLeft+'px"></div>'
   }
 
