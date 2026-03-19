@@ -391,8 +391,9 @@ async function syncPagamentos(client) {
         await client.execute("CREATE TABLE IF NOT EXISTS pagamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinicorp_id TEXT UNIQUE, paciente_id INTEGER, paciente_nome TEXT, valor REAL, forma_pagamento TEXT, tipo TEXT, bandeira TEXT, parcelas INTEGER, data_pagamento TEXT, data_vencimento TEXT, data_recebimento TEXT, data_checkout TEXT, confirmado INTEGER DEFAULT 0, cancelado INTEGER DEFAULT 0, descricao TEXT, treatment_id TEXT, criado_em TEXT, atualizado_em TEXT)")
     } catch(e) {}
 
-    var dt = hoje365()
-    var lista = await fetchAll('payment/list', { from: dt.from, to: dt.to }, 15)
+    var h = new Date()
+    var d30 = new Date(); d30.setDate(d30.getDate() - 30)
+    var lista = await fetchAll('payment/list', { from: d30.toISOString().slice(0,10), to: h.toISOString().slice(0,10) }, 15)
     var inseridos = 0, atualizados = 0, ignorados = 0
 
     for (var i = 0; i < lista.length; i++) {
