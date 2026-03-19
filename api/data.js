@@ -232,9 +232,11 @@ module.exports = async function handler(req, res) {
         if (route === 'conta-corrente') {
             var ccde = q.de || (function(){ var d = new Date(); d.setDate(d.getDate()-7); return d.toISOString().slice(0,10) })()
             var ccate = q.ate || new Date().toISOString().slice(0, 10)
-            var ccr = await client.execute({ sql: "SELECT f.*,p.nome as paciente_nome FROM financeiro f LEFT JOIN pacientes p ON p.id=f.paciente_id WHERE f.data_pagamento >= ? AND f.data_pagamento <= ? ORDER BY f.data_pagamento ASC,f.id ASC", args: [ccde, ccate] })
+            // Union financeiro + pagamentos para ter todos os lançamentos
+            var ccsql = "SELECT 'recibo' as origem, f.id, f.clinicorp_id, f.tipo, f.descricao, f.valor, f.data_pagamento, f.forma_pagamento, f.criado_em, p.nome as paciente_nome FROM financeiro f LEFT JOIN pacientes p ON p.id=f.paciente_id WHERE f.data_pagamento >= ? AND f.data_pagamento <= ? UNION ALL SELECT 'pagamento' as origem, pg.id, pg.clinicorp_id, CASE WHEN pg.cancelado=1 THEN 'cancelado' ELSE 'entrada' END as tipo, pg.descricao, pg.valor, pg.data_pagamento, pg.forma_pagamento, pg.criado_em, pg.paciente_nome FROM pagamentos pg WHERE pg.data_pagamento >= ? AND pg.data_pagamento <= ? AND pg.cancelado=0 ORDER BY data_pagamento ASC, criado_em ASC"
+            var ccr = await client.execute({ sql: ccsql, args: [ccde, ccate, ccde, ccate] })
             var totalE = 0, totalS = 0
-            ccr.rows.forEach(function(r){ if (r.tipo==='entrada') totalE += (r.valor||0); else totalS += Math.abs(r.valor||0) })
+            ccr.rows.forEach(function(r){ var v = +(r.valor||0); if (r.tipo==='entrada'||v>0) totalE += Math.abs(v); else totalS += Math.abs(v) })
             return res.status(200).json({ success: true, data: ccr.rows, totais: { entradas: totalE, saidas: totalS, saldo: totalE-totalS }, periodo: { de: ccde, ate: ccate } })
         }
 
