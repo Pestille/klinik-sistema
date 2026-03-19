@@ -164,11 +164,39 @@ async function syncAgendamentos(client, dataInicio, dataFim) {
 }
 
 // ── SYNC FINANCEIRO ───────────────────────────────────────────────────────────
-// Clinicorp retorna TODOS os recebimentos sem filtro de data
-// Campos: Amount, ReceiptDate, PatientId, PatientName, id, Deleted, Description
+// Clinicorp retorna array direto — fetch direto sem fetchAll
+// Campos: Amount, ReceiptDate, PatientId, PatientName, id, Deleted
 async function syncFinanceiro(client) {
-    // Busca todas as páginas (sem filtro de data — API retorna tudo)
-    var lista = await fetchAll('financial/list_receipt', {}, 10)
+    var https = require('https')
+    var hoje2 = new Date()
+    var d365 = new Date(); d365.setDate(d365.getDate() - 365)
+    var params = {
+        subscriber_id: SUB, businessId: BID,
+        from: d365.toISOString().slice(0, 10),
+        to: hoje2.toISOString().slice(0, 10),
+        limit: 500, page: 1
+    }
+    var qs = '?' + Object.entries(params)
+        .map(function(kv){ return encodeURIComponent(kv[0])+'='+encodeURIComponent(kv[1]) }).join('&')
+    var lista = await new Promise(function(resolve) {
+        var opts = {
+            hostname: 'api.clinicorp.com',
+            path: '/rest/v1/financial/list_receipt' + qs,
+            method: 'GET',
+            headers: { 'Authorization': auth(), 'accept': 'application/json' }
+        }
+        var req2 = https.request(opts, function(r) {
+            var body = ''
+            r.on('data', function(c){ body += c })
+            r.on('end', function() {
+                try { var d = JSON.parse(body); resolve(Array.isArray(d) ? d : (d.data||d.items||[])) }
+                catch(e) { resolve([]) }
+            })
+        })
+        req2.on('error', function(){ resolve([]) })
+        req2.setTimeout(9000, function(){ req2.destroy(); resolve([]) })
+        req2.end()
+    })
 
     // Filtra deletados
     var ativos = lista.filter(function(r){ return !r.Deleted && r.Deleted !== 'X' })
