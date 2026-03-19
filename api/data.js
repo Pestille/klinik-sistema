@@ -366,6 +366,15 @@ module.exports = async function handler(req, res) {
 
         // ── MARKETING ─────────────────────────────────────────────────
         if (route === 'marketing') {
+            // Garante colunas extras existem
+            try { await client.execute("ALTER TABLE pacientes ADD COLUMN como_conheceu TEXT") } catch(e) {}
+            try { await client.execute("ALTER TABLE pacientes ADD COLUMN whatsapp TEXT") } catch(e) {}
+            try { await client.execute("ALTER TABLE pacientes ADD COLUMN sexo TEXT") } catch(e) {}
+            try { await client.execute("ALTER TABLE pacientes ADD COLUMN estado_civil TEXT") } catch(e) {}
+            try { await client.execute("ALTER TABLE pacientes ADD COLUMN bairro TEXT") } catch(e) {}
+            try { await client.execute("ALTER TABLE pacientes ADD COLUMN alerta_medico TEXT") } catch(e) {}
+            try { await client.execute("ALTER TABLE pacientes ADD COLUMN numero_convenio TEXT") } catch(e) {}
+
             var rs2 = await Promise.all([
                 // Como conheceu
                 client.execute("SELECT como_conheceu, COUNT(*) as total FROM pacientes WHERE como_conheceu IS NOT NULL AND como_conheceu!='' GROUP BY como_conheceu ORDER BY total DESC"),
