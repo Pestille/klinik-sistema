@@ -308,8 +308,37 @@ module.exports = async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var b = req.body || {}
             if (!b.nome) return res.status(400).json({ success: false, error: 'Nome obrigatório' })
-            await client.execute({ sql: "INSERT INTO pacientes(nome,cpf,telefone,email,data_nascimento,ativo,criado_em,atualizado_em) VALUES(?,?,?,?,?,1,datetime('now'),datetime('now'))", args: [b.nome, b.cpf||'', b.telefone||'', b.email||'', b.data_nascimento||''] })
+            await client.execute({ sql: "INSERT INTO pacientes(nome,cpf,telefone,whatsapp,email,data_nascimento,sexo,estado_civil,como_conheceu,endereco,bairro,cidade,cep,convenio,alerta_medico,ativo,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,datetime('now'),datetime('now'))", args: [b.nome, b.cpf||'', b.telefone||'', b.whatsapp||'', b.email||'', b.data_nascimento||'', b.sexo||'', b.estado_civil||'', b.como_conheceu||'', b.endereco||'', b.bairro||'', b.cidade||'', b.cep||'', b.convenio||'', b.alerta_medico||''] })
             return res.status(200).json({ success: true, msg: 'Paciente salvo' })
+        }
+
+        // ── PROCEDIMENTOS (lista para selects) ────────────────────────
+        if (route === 'procedimentos') {
+            var ptab = q.tabela || ''
+            var pw2 = ptab ? ' WHERE tabela_preco=?' : ''
+            var pa2 = ptab ? [ptab] : []
+            var prc = await client.execute({ sql: "SELECT * FROM procedimentos" + pw2 + " WHERE ativo=1 ORDER BY tabela_preco,descricao".replace('WHERE ativo','AND ativo').replace(' WHERE tabela_preco=? AND',' WHERE tabela_preco=? AND').replace(' WHERE ativo=1',' WHERE ativo=1'), args: pa2 })
+            // Fix: handle WHERE correctly
+            var sqlProc = ptab ? "SELECT * FROM procedimentos WHERE tabela_preco=? AND ativo=1 ORDER BY tabela_preco,descricao" : "SELECT * FROM procedimentos WHERE ativo=1 ORDER BY tabela_preco,descricao"
+            var prcr = await client.execute({ sql: sqlProc, args: pa2 })
+            var tabelas2 = await client.execute("SELECT DISTINCT tabela_preco FROM procedimentos WHERE ativo=1 ORDER BY tabela_preco")
+            return res.status(200).json({ success: true, data: prcr.rows, total: prcr.rows.length, tabelas: tabelas2.rows.map(function(t){return t.tabela_preco}) })
+        }
+
+        // ── ANIVERSARIANTES DO MÊS ───────────────────────────────────
+        if (route === 'aniversariantes-mes') {
+            var ames = parseInt(q.mes) || (new Date().getMonth() + 1)
+            var aanr = await client.execute("SELECT id,nome,telefone,email,data_nascimento FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!=''")
+            var aanivs = []
+            aanr.rows.forEach(function(p) {
+                try {
+                    var n = new Date(p.data_nascimento + 'T12:00:00')
+                    if (isNaN(n.getTime())) return
+                    if ((n.getMonth() + 1) === ames) aanivs.push({ id: p.id, nome: p.nome, telefone: p.telefone, email: p.email, data_nascimento: p.data_nascimento, dia: n.getDate() })
+                } catch(e) {}
+            })
+            aanivs.sort(function(a, b) { return a.dia - b.dia })
+            return res.status(200).json({ success: true, data: aanivs, total: aanivs.length, mes: ames })
         }
 
         // ── SALVAR LANÇAMENTO ─────────────────────────────────────────

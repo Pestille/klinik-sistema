@@ -141,8 +141,12 @@ async function syncProfissionais(client) {
         var p = lista[i]
         var cid  = String(p.id || p.Id || '')
         if (!cid) continue
-        var nome = p.name || p.Name || p.nome || ''
-        var esp  = p.specialty || p.Specialty || p.especialidade || ''
+        var nome  = p.name || p.Name || p.nome || ''
+        var esp   = p.specialty || p.Specialty || p.especialidade || ''
+        var cpf   = p.cpf || p.CPF || p.document || ''
+        var email = p.email || p.Email || ''
+        var tel   = p.phone || p.Phone || p.mobilePhone || ''
+        var cro   = p.cro || p.CRO || p.council || ''
         var ativo = (p.active === false || p.Active === false) ? 0 : 1
         var existe = await client.execute({ sql: 'SELECT id FROM profissionais WHERE clinicorp_id=?', args: [cid] })
         if (existe.rows.length > 0) {
@@ -389,7 +393,13 @@ async function syncProcedimentos(client) {
 // payment/list retorna 1098+ registros com forma de pagamento, bandeira, parcelas
 async function syncPagamentos(client) {
     try {
-        await client.execute("CREATE TABLE IF NOT EXISTS pagamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinicorp_id TEXT UNIQUE, paciente_id INTEGER, paciente_nome TEXT, valor REAL, forma_pagamento TEXT, tipo TEXT, bandeira TEXT, parcelas INTEGER, data_pagamento TEXT, data_vencimento TEXT, data_recebimento TEXT, data_checkout TEXT, confirmado INTEGER DEFAULT 0, cancelado INTEGER DEFAULT 0, descricao TEXT, treatment_id TEXT, criado_em TEXT, atualizado_em TEXT)")
+        await client.execute("CREATE TABLE IF NOT EXISTS pagamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinicorp_id TEXT UNIQUE, paciente_id INTEGER, paciente_nome TEXT, valor REAL, forma_pagamento TEXT, tipo TEXT, bandeira TEXT, parcelas INTEGER, data_pagamento TEXT, data_vencimento TEXT, data_recebimento TEXT, data_checkout TEXT, confirmado INTEGER DEFAULT 0, cancelado INTEGER DEFAULT 0, descricao TEXT, treatment_id TEXT, titular TEXT, titular_cpf TEXT, pagador_email TEXT, data_confirmacao TEXT, tipo_pessoa TEXT, criado_em TEXT, atualizado_em TEXT)")
+        // Adiciona colunas novas se tabela já existia
+        try { await client.execute("ALTER TABLE pagamentos ADD COLUMN titular TEXT") } catch(e) {}
+        try { await client.execute("ALTER TABLE pagamentos ADD COLUMN titular_cpf TEXT") } catch(e) {}
+        try { await client.execute("ALTER TABLE pagamentos ADD COLUMN pagador_email TEXT") } catch(e) {}
+        try { await client.execute("ALTER TABLE pagamentos ADD COLUMN data_confirmacao TEXT") } catch(e) {}
+        try { await client.execute("ALTER TABLE pagamentos ADD COLUMN tipo_pessoa TEXT") } catch(e) {}
     } catch(e) {}
 
     var h = new Date()
@@ -426,18 +436,23 @@ async function syncPagamentos(client) {
         var desc      = p.PaymentDescription || ''
         var pacNome   = p.PatientName || ''
         var treatId   = String(p.TreatmentId || '')
+        var titular   = p.OwnerName || p.PayerName || ''
+        var titCpf    = p.OwnerCPF || ''
+        var pagEmail  = p.PayerEmail || ''
+        var dataConf  = isoToDate(p.ConfirmedDate || '')
+        var tipoPess  = p.PersonType || ''
 
         var existe = await client.execute({ sql: 'SELECT id FROM pagamentos WHERE clinicorp_id=?', args: [cid] })
         if (existe.rows.length > 0) {
             await client.execute({
-                sql: "UPDATE pagamentos SET paciente_id=?,paciente_nome=?,valor=?,forma_pagamento=?,tipo=?,bandeira=?,parcelas=?,data_pagamento=?,data_vencimento=?,data_recebimento=?,data_checkout=?,confirmado=?,cancelado=?,descricao=?,treatment_id=?,atualizado_em=datetime('now') WHERE clinicorp_id=?",
-                args: [pacienteId, pacNome, valor, forma, tipo, bandeira, parcelas, dataPag, dataVenc, dataReceb, dataCheck, confirmado, cancelado, desc, treatId, cid]
+                sql: "UPDATE pagamentos SET paciente_id=?,paciente_nome=?,valor=?,forma_pagamento=?,tipo=?,bandeira=?,parcelas=?,data_pagamento=?,data_vencimento=?,data_recebimento=?,data_checkout=?,confirmado=?,cancelado=?,descricao=?,treatment_id=?,titular=?,titular_cpf=?,pagador_email=?,data_confirmacao=?,tipo_pessoa=?,atualizado_em=datetime('now') WHERE clinicorp_id=?",
+                args: [pacienteId, pacNome, valor, forma, tipo, bandeira, parcelas, dataPag, dataVenc, dataReceb, dataCheck, confirmado, cancelado, desc, treatId, titular, titCpf, pagEmail, dataConf, tipoPess, cid]
             })
             atualizados++
         } else {
             await client.execute({
-                sql: "INSERT INTO pagamentos(clinicorp_id,paciente_id,paciente_nome,valor,forma_pagamento,tipo,bandeira,parcelas,data_pagamento,data_vencimento,data_recebimento,data_checkout,confirmado,cancelado,descricao,treatment_id,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))",
-                args: [cid, pacienteId, pacNome, valor, forma, tipo, bandeira, parcelas, dataPag, dataVenc, dataReceb, dataCheck, confirmado, cancelado, desc, treatId]
+                sql: "INSERT INTO pagamentos(clinicorp_id,paciente_id,paciente_nome,valor,forma_pagamento,tipo,bandeira,parcelas,data_pagamento,data_vencimento,data_recebimento,data_checkout,confirmado,cancelado,descricao,treatment_id,titular,titular_cpf,pagador_email,data_confirmacao,tipo_pessoa,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))",
+                args: [cid, pacienteId, pacNome, valor, forma, tipo, bandeira, parcelas, dataPag, dataVenc, dataReceb, dataCheck, confirmado, cancelado, desc, treatId, titular, titCpf, pagEmail, dataConf, tipoPess]
             })
             inseridos++
         }

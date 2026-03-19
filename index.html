@@ -1343,9 +1343,12 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     <div class="modal-head"><div class="modal-title">Novo Paciente</div><button class="modal-close" onclick="closeModal('paciente')">✕</button></div>
     <div class="modal-body">
       <div class="form-row c2"><div class="form-group"><label class="form-label">Nome Completo *</label><input class="form-input" id="pac-f-nome" placeholder="Nome completo"></div><div class="form-group"><label class="form-label">CPF</label><input class="form-input" id="pac-f-cpf" placeholder="000.000.000-00"></div></div>
-      <div class="form-row c3"><div class="form-group"><label class="form-label">Nascimento</label><input class="form-input" id="pac-f-nasc" type="date"></div><div class="form-group"><label class="form-label">Sexo</label><select class="form-input" id="pac-f-sexo"><option>Feminino</option><option>Masculino</option></select></div><div class="form-group"><label class="form-label">Estado Civil</label><select class="form-input" id="pac-f-civil"><option>Solteiro(a)</option><option>Casado(a)</option></select></div></div>
-      <div class="form-row c2"><div class="form-group"><label class="form-label">Telefone</label><input class="form-input" id="pac-f-tel" placeholder="(67) 99999-9999"></div><div class="form-group"><label class="form-label">Email</label><input class="form-input" id="pac-f-email" placeholder="email@email.com"></div></div>
-      <div class="form-group"><label class="form-label">Como nos conheceu?</label><select class="form-input" id="pac-f-como"><option>Indicação</option><option>Instagram</option><option>Google</option><option>Outro</option></select></div>
+      <div class="form-row c3"><div class="form-group"><label class="form-label">Nascimento</label><input class="form-input" id="pac-f-nasc" type="date"></div><div class="form-group"><label class="form-label">Sexo</label><select class="form-input" id="pac-f-sexo"><option value="">—</option><option>Feminino</option><option>Masculino</option></select></div><div class="form-group"><label class="form-label">Estado Civil</label><select class="form-input" id="pac-f-civil"><option value="">—</option><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option></select></div></div>
+      <div class="form-row c2"><div class="form-group"><label class="form-label">Telefone</label><input class="form-input" id="pac-f-tel" placeholder="(67) 99999-9999"></div><div class="form-group"><label class="form-label">WhatsApp</label><input class="form-input" id="pac-f-whats" placeholder="(67) 99999-9999"></div></div>
+      <div class="form-row c2"><div class="form-group"><label class="form-label">Email</label><input class="form-input" id="pac-f-email" placeholder="email@email.com"></div><div class="form-group"><label class="form-label">Como nos conheceu?</label><select class="form-input" id="pac-f-como"><option value="">—</option><option>Indicação</option><option>Instagram</option><option>Google</option><option>Facebook</option><option>Plano/Convênio</option><option>Placa</option><option>Panfleto</option><option>Outro</option></select></div></div>
+      <div class="form-row c2"><div class="form-group"><label class="form-label">Endereço</label><input class="form-input" id="pac-f-end" placeholder="Rua, número"></div><div class="form-group"><label class="form-label">Bairro</label><input class="form-input" id="pac-f-bairro" placeholder="Bairro"></div></div>
+      <div class="form-row c3"><div class="form-group"><label class="form-label">Cidade</label><input class="form-input" id="pac-f-cidade" placeholder="Campo Grande"></div><div class="form-group"><label class="form-label">CEP</label><input class="form-input" id="pac-f-cep" placeholder="79000-000"></div><div class="form-group"><label class="form-label">Convênio</label><input class="form-input" id="pac-f-conv" placeholder="Plano de saúde"></div></div>
+      <div class="form-group"><label class="form-label">Alerta Médico</label><input class="form-input" id="pac-f-alerta" placeholder="Alergias, condições especiais, medicamentos..."></div>
     </div>
     <div class="modal-foot"><button class="btn btn-primary" onclick="salvarPaciente()">Salvar Paciente</button><button class="btn" onclick="closeModal('paciente')">Cancelar</button></div>
   </div>
@@ -1958,7 +1961,23 @@ function closeModal(id){var el=document.getElementById('modal-'+id);if(el)el.cla
 async function salvarPaciente(){
   var nome=document.getElementById('pac-f-nome').value.trim()
   if(!nome){alert('Nome é obrigatório');return}
-  var body={nome:nome,cpf:document.getElementById('pac-f-cpf').value.trim(),data_nascimento:document.getElementById('pac-f-nasc').value,telefone:document.getElementById('pac-f-tel').value.trim(),email:document.getElementById('pac-f-email').value.trim()}
+  var body={
+    nome:nome,
+    cpf:(document.getElementById('pac-f-cpf').value||'').trim(),
+    data_nascimento:document.getElementById('pac-f-nasc').value||'',
+    sexo:(document.getElementById('pac-f-sexo').value||''),
+    estado_civil:(document.getElementById('pac-f-civil').value||''),
+    telefone:(document.getElementById('pac-f-tel').value||'').trim(),
+    whatsapp:(document.getElementById('pac-f-whats').value||'').trim(),
+    email:(document.getElementById('pac-f-email').value||'').trim(),
+    como_conheceu:(document.getElementById('pac-f-como').value||''),
+    endereco:(document.getElementById('pac-f-end').value||'').trim(),
+    bairro:(document.getElementById('pac-f-bairro').value||'').trim(),
+    cidade:(document.getElementById('pac-f-cidade').value||'').trim(),
+    cep:(document.getElementById('pac-f-cep').value||'').trim(),
+    convenio:(document.getElementById('pac-f-conv').value||'').trim(),
+    alerta_medico:(document.getElementById('pac-f-alerta').value||'').trim()
+  }
   try{
     var r=await fetch('/api/data?r=salvar-paciente',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
     var d=await r.json()
