@@ -140,27 +140,29 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 .agenda-grid-wrap{flex:1;overflow:auto;position:relative}
 .agenda-grid-wrap::-webkit-scrollbar{width:6px;height:6px}
 .agenda-grid-wrap::-webkit-scrollbar-thumb{background:var(--gray4);border-radius:3px}
-.agenda-grid{display:grid;min-width:800px}
-.agenda-header-row{display:flex;position:sticky;top:0;z-index:10;background:var(--white);border-bottom:1px solid var(--border)}
-.agenda-time-col{width:60px;min-width:60px;flex-shrink:0;border-right:1px solid var(--border2)}
-.agenda-prof-col{flex:1;min-width:120px;border-right:1px solid var(--border2);padding:8px 10px;text-align:center;cursor:pointer}
-.agenda-prof-col:last-child{border-right:none}
-.agenda-prof-name{font-size:11px;font-weight:700;color:var(--text);letter-spacing:.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.agenda-prof-count{font-size:10px;color:var(--text3);margin-top:2px}
-.agenda-prof-bar{height:3px;border-radius:2px;margin-top:4px}
+.agenda-grid{min-width:800px}
+.agenda-header-row{display:flex;position:sticky;top:0;z-index:10;background:var(--white);border-bottom:2px solid var(--border)}
+.agenda-prof-label{width:160px;min-width:160px;flex-shrink:0;border-right:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text3);padding:8px 10px;text-transform:uppercase;letter-spacing:.04em}
+.agenda-hour-col{flex:0 0 60px;text-align:center;padding:6px 0;font-size:10px;font-weight:500;color:var(--text3);border-right:1px solid var(--border2)}
+.agenda-hour-col:last-child{border-right:none}
+.agenda-hour-col.now{color:var(--orange);font-weight:700}
 .agenda-slots{position:relative}
-.time-slot-row{display:flex;border-bottom:1px solid var(--border2)}
-.time-slot-row.hora{border-bottom:1px solid var(--border)}
-.time-label{width:60px;min-width:60px;font-size:10px;color:var(--gray5);padding:0 8px;text-align:right;line-height:1;padding-top:2px;flex-shrink:0;border-right:1px solid var(--border2)}
-.slot-cell{flex:1;min-width:120px;height:20px;border-right:1px solid var(--border2);position:relative;cursor:pointer}
+.agenda-prof-row{display:flex;border-bottom:1px solid var(--border);min-height:60px;position:relative}
+.agenda-prof-info{width:160px;min-width:160px;flex-shrink:0;border-right:1px solid var(--border);padding:10px;display:flex;align-items:center;gap:8px;background:var(--white)}
+.agenda-prof-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.agenda-prof-name{font-size:12px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agenda-prof-esp{font-size:10px;color:var(--text3)}
+.agenda-prof-count{font-size:10px;color:var(--text3)}
+.agenda-slots-row{flex:1;display:flex;position:relative}
+.slot-cell{flex:0 0 60px;height:100%;min-height:60px;border-right:1px solid var(--border2);position:relative;cursor:pointer}
 .slot-cell:last-child{border-right:none}
-.slot-cell:hover{background:rgba(27,94,59,.03)}
-.appt-block{position:absolute;left:2px;right:2px;border-radius:4px;padding:2px 5px;font-size:10px;overflow:hidden;cursor:pointer;z-index:2;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.slot-cell:hover{background:rgba(27,94,59,.04)}
+.slot-cell.hora{border-right:1px solid var(--border)}
+.appt-block{position:absolute;top:4px;bottom:4px;border-radius:4px;padding:3px 6px;font-size:10px;overflow:hidden;cursor:pointer;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.15);display:flex;flex-direction:column;justify-content:center}
 .appt-name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .appt-time{font-size:9px;opacity:.8}
-.appt-check{float:right;width:14px;height:14px;border-radius:3px;background:rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center}
-.now-line{position:absolute;left:0;right:0;height:2px;background:var(--orange);z-index:5;pointer-events:none}
-.now-line::before{content:'';position:absolute;left:-5px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--orange)}
+.now-marker{position:absolute;top:0;bottom:0;width:2px;background:var(--orange);z-index:5;pointer-events:none}
+.now-marker::before{content:'';position:absolute;top:-4px;left:-4px;width:10px;height:10px;border-radius:50%;background:var(--orange)}
 
 /* ── GENERIC PAGE ── */
 .gpage{padding:0}
@@ -1501,65 +1503,84 @@ function renderProfsList() {
 }
 
 function renderAgendaGrid() {
-  const el = document.getElementById('agenda-grid')
+  var el = document.getElementById('agenda-grid')
   document.getElementById('agenda-date-title').textContent = formatAgendaDate(agendaDate)
   renderMiniCal()
-  const ag = ST.agendamentos||[]
-  const dtStr = agendaDate.toISOString().slice(0,10)
-  const profs = ST.dashboard?.profissionais || []
-  const HORAS = []
-  for (let h=8;h<=19;h++) for (let m=0;m<60;m+=15) HORAS.push(`${h}:${m===0?'00':m}`)
+  var ag = ST.agendamentos||[]
+  var dtStr = agendaDate.toISOString().slice(0,10)
+  var profs = ST.dashboard?.profissionais || []
+  var HORAS_FULL = []
+  for (var hh=7;hh<=20;hh++) HORAS_FULL.push(hh)
+  var now = new Date()
+  var nowH = now.getHours()
 
-  let html = `<div class="agenda-header-row">
-    <div class="agenda-time-col"></div>`
-  profs.forEach((p,i)=>{
-    const nome = (p.name||p.Name||'Prof').toUpperCase()
-    const cor = PROF_CORES[i%PROF_CORES.length]
-    const pts = ag.filter(a=>!a.Deleted&&a.date&&a.date.slice(0,10)===dtStr).length
-    html+=`<div class="agenda-prof-col"><div class="agenda-prof-name" title="${nome}">${nome.substring(0,18)}${nome.length>18?'...':''}</div><div class="agenda-prof-count">Pacientes: ${i===0?pts:0}</div><div class="agenda-prof-bar" style="background:${cor}"></div></div>`
+  // Header: horários no topo
+  var html = '<div class="agenda-header-row"><div class="agenda-prof-label">Profissional</div>'
+  HORAS_FULL.forEach(function(h){
+    var isNow = h === nowH
+    html+='<div class="agenda-hour-col'+(isNow?' now':'')+'">'+String(h).padStart(2,'0')+':00</div>'
   })
   html += '</div><div class="agenda-slots">'
 
-  // Linha de agora
-  const now = new Date()
-  const nowMins = now.getHours()*60+now.getMinutes()
-  const startMins = 8*60
-  const totalMins = 11*60
+  // Agendamentos do dia
+  var todayAg = ag.filter(function(a){return !a.Deleted&&a.date&&a.date.slice(0,10)===dtStr})
 
-  HORAS.forEach((h,idx)=>{
-    const isHora = h.endsWith(':00')
-    html+=`<div class="time-slot-row ${isHora?'hora':''}">
-      <div class="time-label">${isHora?h:''}</div>`
-    profs.forEach((p,pi)=>{
-      html+=`<div class="slot-cell" onclick="openNovaConsulta()"></div>`
+  // Uma linha por profissional
+  profs.forEach(function(p,pi){
+    var nome = p.name||p.Name||p.nome||'Profissional'
+    var ini = nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
+    var cor = PROF_CORES[pi%PROF_CORES.length]
+    // Agendamentos deste profissional
+    var profAg = todayAg.filter(function(a){
+      return String(a.ProfessionalId||a.professionalId||'')=== String(p.id||p.Id||'')
     })
-    html+='</div>'
+
+    html+='<div class="agenda-prof-row">'
+    html+='<div class="agenda-prof-info"><div class="agenda-prof-av" style="background:'+cor+'">'+ini+'</div><div><div class="agenda-prof-name" title="'+nome+'">'+nome.split(' ').slice(0,3).join(' ')+'</div><div class="agenda-prof-count">'+profAg.length+' paciente'+(profAg.length!==1?'s':'')+'</div></div></div>'
+    html+='<div class="agenda-slots-row">'
+
+    // Células de hora
+    HORAS_FULL.forEach(function(h){
+      html+='<div class="slot-cell'+(h%2===0?' hora':'')+'" onclick="openNovaConsulta()"></div>'
+    })
+
+    // Blocos de agendamento posicionados
+    profAg.forEach(function(a){
+      var parts = (a.fromTime||'9:00').split(':').map(Number)
+      var aH=parts[0], aM=parts[1]||0
+      var parts2 = (a.toTime||((aH+1)+':'+aM)).replace(/h$/,'').split(':').map(Number)
+      var aH2=parts2[0], aM2=parts2[1]||0
+      var durMin = (aH2*60+aM2)-(aH*60+aM); if(durMin<=0) durMin=60
+      var startOffset = (aH-7)*60 + aM // minutos desde 7:00
+      var left = (startOffset/60)*60 // 60px por hora
+      var width = Math.max(30,(durMin/60)*60)
+      html+='<div class="appt-block" style="left:'+left+'px;width:'+width+'px;background:'+cor+'dd;color:#fff">'
+      html+='<div class="appt-name">'+(a.PatientName||a.patientName||'Paciente')+'</div>'
+      html+='<div class="appt-time">'+(a.fromTime||'—')+' - '+aH2+':'+String(aM2).padStart(2,'0')+'</div>'
+      html+='</div>'
+    })
+
+    html+='</div></div>' // fecha slots-row e prof-row
   })
 
-  // Appointments
-  const todayAg = ag.filter(a=>!a.Deleted&&a.date&&a.date.slice(0,10)===dtStr)
-  todayAg.forEach(a=>{
-    const [h,m] = (a.fromTime||'9:00').split(':').map(Number)
-    const [h2,m2] = (a.toTime||`${h+1}:${m||0}`).replace(/(\d+):(\d+)h?/,'$1:$2').split(':').map(Number)
-    const startMin = h*60+(m||0)-startMins
-    const durMin = (h2*60+(m2||0))-(h*60+(m||0))||60
-    const top = Math.max(0,startMin/15)*20
-    const height = Math.max(20,durMin/15*20)
-    const pi = 0 // Primeiro profissional por padrão
-    const cor = PROF_CORES[pi%PROF_CORES.length]
-    html+=`<div class="appt-block" style="top:${top}px;height:${height}px;background:${cor}cc;color:#fff;left:calc(60px + 4px);width:calc((100% - 60px) / ${profs.length||1} - 6px)">
-      <div style="float:right;margin-left:3px"><svg width="12" height="12" viewBox="0 0 12 12" fill="white" opacity=".7"><path d="M1 6l4 4 6-6" stroke="white" stroke-width="1.5" fill="none"/></svg></div>
-      <div class="appt-name">${a.PatientName||'Paciente'}</div>
-      <div class="appt-time">${a.fromTime||'—'} - ${h2}:${String(m2||0).padStart(2,'0')}h</div>
-    </div>`
-  })
+  // Se não há profissionais, mostra mensagem
+  if(!profs.length){
+    html+='<div style="text-align:center;padding:40px;color:var(--text3)">Nenhum profissional cadastrado. Sincronize os profissionais primeiro.</div>'
+  }
+
+  // Marcador de hora atual
+  var nowOffset = (nowH-7)*60 + now.getMinutes()
+  if(nowH>=7 && nowH<=20){
+    var nowLeft = 160 + (nowOffset/60)*60
+    html+='<div class="now-marker" style="left:'+nowLeft+'px"></div>'
+  }
 
   html+='</div>'
   el.innerHTML = html
 
   // Profissionais para modal
-  const sel = document.getElementById('ag-prof-sel')
-  if (sel) sel.innerHTML = '<option>Selecione...</option>'+(profs.map(p=>`<option>${p.name||p.Name||''}</option>`).join(''))
+  var sel = document.getElementById('ag-prof-sel')
+  if (sel) sel.innerHTML = '<option>Selecione...</option>'+(profs.map(function(p){return '<option>'+(p.name||p.Name||p.nome||'')+'</option>'}).join(''))
 }
 
 // ── PACIENTES ──────────────────────────────────────────────────
