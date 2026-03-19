@@ -38,7 +38,7 @@ function fetchPage(endpoint, params) {
             })
         })
         req.on('error', function(e){ resolve({ items: [], _err: e.message }) })
-        req.setTimeout(8000, function(){ req.destroy(); resolve({ items: [], _timeout: true }) })
+        req.setTimeout(5000, function(){ req.destroy(); resolve({ items: [], _timeout: true }) })
         req.end()
     })
 }
@@ -211,7 +211,7 @@ async function syncAgendamentos(client, dataInicio, dataFim) {
     var d7 = new Date(); d7.setDate(d7.getDate() - 7)
     var inicio = dataInicio || d7.toISOString().slice(0,10)
     var fim    = dataFim    || h.toISOString().slice(0,10)
-    var lista = await fetchAll('appointment/list', { from: inicio, to: fim }, 10)
+    var lista = await fetchAll('appointment/list', { from: inicio, to: fim }, 3)
     var inseridos = 0, atualizados = 0
     for (var i = 0; i < lista.length; i++) {
         var a = lista[i]
