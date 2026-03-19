@@ -750,12 +750,12 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
                 <div class="datepicker-pop" id="dp-ate" data-id="dp-ate"></div>
               </div>
             </div>
-            <button class="cc-listar" onclick="renderCC()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <button class="cc-listar" onclick="renderCC()" title="Listar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Listar
             </button>
             <div style="margin-left:auto;display:flex;gap:8px">
-              <button class="btn btn-sm" title="Exportar"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg></button>
-              <button class="btn btn-sm" title="Imprimir"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg></button>
+              <button class="btn btn-sm" title="Exportar" onclick="ccExportar()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg></button>
+              <button class="btn btn-sm" title="Imprimir" onclick="ccImprimir()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg></button>
               <button class="btn btn-orange btn-sm" onclick="openModal('lancamento')">+ Adicionar Lançamento</button>
             </div>
           </div>
@@ -2026,7 +2026,7 @@ loadDashboard()
 .cc-tx-tipo.entrada{color:var(--green)}.cc-tx-tipo.vendas{color:var(--blue)}.cc-tx-tipo.saida{color:var(--red)}
 .cc-tx-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase;color:#fff}
 .badge-boleto{background:#FF9800}.badge-credito{background:#9C27B0}.badge-debito{background:#2196F3}
-.badge-pix{background:#00897B}.badge-transf{background:#607D8B}.badge-dinheiro{background:#4CAF50}
+.badge-pix{background:#00897B}.badge-transf{background:#607D8B}.badge-dinheiro{background:#2E7D52}.badge-plano{background:#1565C0}
 .cc-tx-desc{color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cc-tx-pac{color:var(--blue);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cc-tx-pac:hover{text-decoration:underline}
@@ -2307,56 +2307,7 @@ document.addEventListener('click',e=>{
 // ══════════════════════════════════════════════════════
 // CONTA CORRENTE
 // ══════════════════════════════════════════════════════
-const CC_LANCAMENTOS=[
-  {dia:8,mes:'MAR',nome:'Domingo',vendas:0,entrada:427.86,saida:0,tx:[
-    {hora:'15:09',tipo:'Entrada',badge:'boleto',desc:'Reconciliação de Pagamento com Boletos',pac:'EDUARDO PAVÃO BORGES',val:196.43,pos:true},
-    {hora:'15:14',tipo:'Entrada',badge:'boleto',desc:'Reconciliação de Pagamento com Boletos',pac:'EDUARDO PAVÃO BORGES',val:231.43,pos:true},
-  ]},
-  {dia:9,mes:'MAR',nome:'Segunda-feira',vendas:8709.14,entrada:4740.87,saida:0,tx:[
-    {hora:'00:00',tipo:'Vendas',badge:'',desc:'Lançamento de Tratamento',pac:'CARLOS ADALBERTO PEREIRA P...',val:8600.00,pos:true},
-    {hora:'00:00',tipo:'Vendas',badge:'',desc:'Lançamento de Tratamento',pac:'CARLOS ADALBERTO PEREIRA P...',val:36.38,pos:true},
-    {hora:'00:00',tipo:'Vendas',badge:'',desc:'Lançamento de Tratamento',pac:'PAULO HENRIQUE BARROS MA...',val:72.76,pos:true},
-    {hora:'01:00',tipo:'Entrada',badge:'credito',desc:'Reconciliação de Pagamento com Cartão de Crédito',pac:'JAMES DAL POGETO DE DEUS',val:320.10,pos:true},
-    {hora:'01:00',tipo:'Entrada',badge:'credito',desc:'Reconciliação de Pagamento com Cartão de Crédito',pac:'JULIANA DA SILVA MARTINS',val:261.90,pos:true},
-    {hora:'01:43',tipo:'Entrada',badge:'boleto',desc:'Reconciliação de Pagamento com Boletos',pac:'LEONARDO PESTILLE LEAO',val:364.10,pos:true},
-    {hora:'16:38',tipo:'Entrada',badge:'boleto',desc:'Reconciliação de Pagamento com Boletos',pac:'EDILSON DOS SANTOS',val:214.77,pos:true},
-    {hora:'17:03',tipo:'Entrada',badge:'',desc:'Confirmação Transferência',pac:'MARYCLEIDE VASQUES',val:1000.00,pos:true},
-    {hora:'17:46',tipo:'Entrada',badge:'',desc:'Confirmação Transferência',pac:'CARLOS ADALBERTO PEREIRA P...',val:2580.00,pos:true},
-  ]},
-  {dia:10,mes:'MAR',nome:'Terça-feira',vendas:757.54,entrada:809.55,saida:4239.87,tx:[
-    {hora:'00:00',tipo:'Vendas',badge:'',desc:'Lançamento de Tratamento',pac:'PATRICIA MOURA LIMA',val:757.54,pos:true},
-    {hora:'08:00',tipo:'Saída',badge:'',desc:'Comissão Profissional',pac:'DR JOÃO PAULO SCHUSSLER',val:825.00,pos:false},
-    {hora:'08:00',tipo:'Saída',badge:'',desc:'Comissão Profissional',pac:'DRA CAROLINE PREUS',val:805.00,pos:false},
-    {hora:'08:00',tipo:'Saída',badge:'',desc:'Rescisão Complementar',pac:'Funcionários',val:622.53,pos:false},
-    {hora:'08:00',tipo:'Saída',badge:'',desc:'Comissão Profissional',pac:'DR NELSON OSHIRO',val:825.00,pos:false},
-    {hora:'08:00',tipo:'Saída',badge:'',desc:'Comissão Profissional',pac:'DRA ELOISA AMARAL',val:160.00,pos:false},
-    {hora:'08:00',tipo:'Saída',badge:'',desc:'Fornecedor SOS ALARMES',pac:'Fornecedores',val:247.07,pos:false},
-    {hora:'14:22',tipo:'Entrada',badge:'pix',desc:'Pagamento PIX',pac:'FERNANDA RODRIGUES',val:809.55,pos:true},
-  ]},
-  {dia:11,mes:'MAR',nome:'Quarta-feira',vendas:2252.96,entrada:742.95,saida:881.55,tx:[
-    {hora:'00:00',tipo:'Vendas',badge:'',desc:'Lançamento de Tratamento',pac:'ADRIANA COSTA SILVA',val:2252.96,pos:true},
-    {hora:'10:15',tipo:'Entrada',badge:'credito',desc:'Reconc. Pagamento Cartão de Crédito',pac:'SIMONE GOMES FERREIRA',val:742.95,pos:true},
-    {hora:'08:00',tipo:'Saída',badge:'',desc:'JP Produtos Odontológicos',pac:'Fornecedores',val:414.33,pos:false},
-    {hora:'08:00',tipo:'Saída',badge:'',desc:'LSI - CREMER 10/12',pac:'Materiais',val:340.94,pos:false},
-    {hora:'08:00',tipo:'Saída',badge:'',desc:'SOS Alarmes',pac:'Fornecedores',val:126.28,pos:false},
-  ]},
-  {dia:12,mes:'MAR',nome:'Quinta-feira',vendas:6682.24,entrada:1099.34,saida:0,tx:[
-    {hora:'00:00',tipo:'Vendas',badge:'',desc:'Lançamento de Tratamento',pac:'BEATRIZ SANTOS CARVALHO',val:6682.24,pos:true},
-    {hora:'09:30',tipo:'Entrada',badge:'transf',desc:'Confirmação Transferência',pac:'RAQUEL FERREIRA COSTA',val:1099.34,pos:true},
-  ]},
-  {dia:13,mes:'MAR',nome:'Sexta-feira',vendas:458.28,entrada:6710.60,saida:0,tx:[
-    {hora:'00:00',tipo:'Vendas',badge:'',desc:'Lançamento de Tratamento',pac:'LARISSA MONTEIRO SILVA',val:458.28,pos:true},
-    {hora:'08:52',tipo:'Entrada',badge:'pix',desc:'Pagamento PIX',pac:'DANIELLE SOUZA RAMOS',val:3200.00,pos:true},
-    {hora:'11:30',tipo:'Entrada',badge:'credito',desc:'Reconc. Pagamento Cartão de Crédito',pac:'CAROLINA LOPES VIEIRA',val:2580.60,pos:true},
-    {hora:'16:15',tipo:'Entrada',badge:'boleto',desc:'Reconc. Pagamento Boleto',pac:'ISADORA CAMPOS NETO',val:930.00,pos:true},
-  ]},
-  {dia:14,mes:'MAR',nome:'Sábado',vendas:870.00,entrada:350.00,saida:0,tx:[
-    {hora:'00:00',tipo:'Vendas',badge:'',desc:'Lançamento de Tratamento',pac:'WANYA DA SILVA XAVIER BENTO',val:870.00,pos:true},
-    {hora:'11:00',tipo:'Entrada',badge:'',desc:'Confirmação Transferência',pac:'JAMES DAL POGETO DE DEUS',val:350.00,pos:true},
-  ]},
-]
-const BM={boleto:'<span class="cc-tx-badge badge-boleto">BOLETO</span>',credito:'<span class="cc-tx-badge badge-credito">CRÉDITO</span>',debito:'<span class="cc-tx-badge badge-debito">DÉBITO</span>',pix:'<span class="cc-tx-badge badge-pix">PIX</span>',transf:'<span class="cc-tx-badge badge-transf">TRANSF.</span>','':''}
-const TC={Entrada:'entrada',Vendas:'vendas','Saída':'saida'}
+// ── HELPERS ──────────────────────────────────────────────────────
 function fmtBrl(v){return 'R$ '+(+v||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
 function fmtDt(s){if(!s)return '—';var d=s.slice(0,10);try{return new Date(d+'T12:00:00').toLocaleDateString('pt-BR')}catch(e){return d}}
 async function apiData(rota,params){
@@ -2365,44 +2316,127 @@ async function apiData(rota,params){
   if(!r.ok)throw new Error('HTTP '+r.status)
   return r.json()
 }
-function renderCC(){
-  const tV=CC_LANCAMENTOS.reduce((s,d)=>s+d.vendas,0)
-  const tE=CC_LANCAMENTOS.reduce((s,d)=>s+d.entrada,0)
-  const tS=CC_LANCAMENTOS.reduce((s,d)=>s+d.saida,0)
-  const tv=document.getElementById('cc-tot-vendas');if(tv)tv.textContent=fmtBrl(tV)
-  const te=document.getElementById('cc-tot-entrada');if(te)te.textContent=fmtBrl(tE)
-  const ts=document.getElementById('cc-tot-saida');if(ts)ts.textContent=fmtBrl(tS)
-  document.getElementById('cc-list').innerHTML=CC_LANCAMENTOS.map((dia,idx)=>`
-    <div class="cc-day-expand">
-      <div class="cc-day-header" onclick="ccToggle(${idx})">
-        <div class="cc-day-badge"><div class="cc-day-num">${dia.dia}</div><div class="cc-day-mon">${dia.mes}</div></div>
-        <div class="cc-day-chevron" id="cc-chev-${idx}">›</div>
-        <div class="cc-day-name">${dia.nome}</div>
-        <div class="cc-day-vals">
-          ${dia.vendas>0?`<div class="cc-val-item"><span class="cc-val-lbl">Vendas</span><span style="color:var(--blue)">${fmtBrl(dia.vendas)}</span></div>`:''}
-          ${dia.entrada>0?`<div class="cc-val-item"><span class="cc-val-lbl">Entrada</span><span style="color:var(--green)">${fmtBrl(dia.entrada)}</span></div>`:''}
-          <div class="cc-val-item"><span class="cc-val-lbl">Saída</span><span style="color:${dia.saida>0?'var(--red)':'var(--text3)'}">${fmtBrl(dia.saida)}</span></div>
-        </div>
-      </div>
-      <div class="cc-transactions" id="cc-tx-${idx}">
-        <div style="display:grid;grid-template-columns:60px 80px 90px 1fr 1fr 110px;padding:6px 14px;background:var(--gray1);font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border)">
-          <span>Hora</span><span>Tipo</span><span>Forma</span><span>Descrição</span><span>Paciente</span><span style="text-align:right">Valor</span>
-        </div>
-        ${dia.tx.map(t=>`<div class="cc-tx-row">
-          <span class="cc-tx-hora">${t.hora}</span>
-          <span class="cc-tx-tipo ${TC[t.tipo]||''}">${t.tipo}</span>
-          <span>${BM[t.badge]||''}</span>
-          <span class="cc-tx-desc" title="${t.desc}">${t.desc}</span>
-          <span class="cc-tx-pac" onclick="abrirProntuario('${t.pac.replace(/'/g,"\'")}') ">${t.pac}</span>
-          <span class="cc-tx-val ${t.pos?'pos':'neg'}">${t.pos?'+':'-'}${fmtBrl(t.val)}</span>
-        </div>`).join('')}
-      </div>
-    </div>`).join('')
+const DIAS_SEMANA=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado']
+const MESES_CC=['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ']
+
+// Badge de forma de pagamento
+function ccBadge(forma){
+  if(!forma)return ''
+  var f=forma.toLowerCase()
+  if(f.includes('cr\u00e9dito')||f.includes('credit'))return '<span class="cc-tx-badge badge-credito">CRÉDITO</span>'
+  if(f.includes('d\u00e9bito')||f.includes('debit'))return '<span class="cc-tx-badge badge-debito">DÉBITO</span>'
+  if(f.includes('pix'))return '<span class="cc-tx-badge badge-pix">PIX</span>'
+  if(f.includes('boleto'))return '<span class="cc-tx-badge badge-boleto">BOLETO</span>'
+  if(f.includes('dinheiro'))return '<span class="cc-tx-badge badge-dinheiro">DINHEIRO</span>'
+  if(f.includes('transfer'))return '<span class="cc-tx-badge badge-transf">TRANSF.</span>'
+  if(f.includes('plano')||f.includes('conv'))return '<span class="cc-tx-badge badge-plano">PLANO</span>'
+  return '<span class="cc-tx-badge" style="background:var(--gray3);color:var(--text2)">'+forma.slice(0,10).toUpperCase()+'</span>'
 }
+
+// Lê datas do datepicker
+function ccGetDatas(){
+  var deEl=document.getElementById('dp-de-val'),ateEl=document.getElementById('dp-ate-val')
+  var de='',ate=''
+  if(deEl){var p=deEl.textContent.trim().split('/');if(p.length===3)de=p[2]+'-'+p[1]+'-'+p[0]}
+  if(ateEl){var p2=ateEl.textContent.trim().split('/');if(p2.length===3)ate=p2[2]+'-'+p2[1]+'-'+p2[0]}
+  if(!de){var d=new Date();d.setDate(d.getDate()-7);de=d.toISOString().slice(0,10)}
+  if(!ate)ate=new Date().toISOString().slice(0,10)
+  return {de:de,ate:ate}
+}
+
+// ── CONTA CORRENTE ──────────────────────────────────────────────
+async function renderCC(){
+  var el=document.getElementById('cc-list');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">Carregando lançamentos...</div>'
+  try{
+    var datas=ccGetDatas()
+    var d=await apiData('conta-corrente',{de:datas.de,ate:datas.ate})
+    var rows=d.data||[]
+    var totais=d.totais||{}
+
+    // Atualiza totais
+    var tv=document.getElementById('cc-tot-vendas');if(tv)tv.textContent=fmtBrl(totais.entradas||0)
+    var te=document.getElementById('cc-tot-entrada');if(te)te.textContent=fmtBrl(totais.entradas||0)
+    var ts=document.getElementById('cc-tot-saida');if(ts)ts.textContent=fmtBrl(totais.saidas||0)
+
+    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">Nenhum lançamento no período</div>';return}
+
+    // Agrupar por data
+    var porDia={}
+    rows.forEach(function(r){
+      var dia=r.data_pagamento||'';if(!dia)return
+      if(!porDia[dia])porDia[dia]={rows:[],entrada:0,saida:0}
+      var v=+(r.valor||0)
+      if(r.tipo==='entrada'||v>0){porDia[dia].entrada+=Math.abs(v)}
+      else{porDia[dia].saida+=Math.abs(v)}
+      porDia[dia].rows.push(r)
+    })
+
+    var dias=Object.keys(porDia).sort()
+    el.innerHTML=dias.map(function(diaKey,idx){
+      var g=porDia[diaKey]
+      var dt=new Date(diaKey+'T12:00:00')
+      var dNum=dt.getDate(),mesAbr=MESES_CC[dt.getMonth()]||'',nomeDia=DIAS_SEMANA[dt.getDay()]||''
+
+      // Linhas de transação
+      var txHtml=g.rows.map(function(r){
+        var v=+(r.valor||0)
+        var isEntrada=r.tipo==='entrada'||v>0
+        var tipoLabel=isEntrada?'Entrada':'Saída'
+        var hora=(r.criado_em||'').slice(11,16)||'—'
+        var desc=r.descricao||r.forma_pagamento||'Lançamento'
+        var pac=r.paciente_nome||'—'
+        var forma=r.forma_pagamento||''
+
+        return '<div class="cc-tx-row">'+
+          '<span class="cc-tx-hora">'+hora+'</span>'+
+          '<span class="cc-tx-tipo '+(isEntrada?'entrada':'saida')+'">'+tipoLabel+'</span>'+
+          '<span>'+ccBadge(forma)+'</span>'+
+          '<span class="cc-tx-desc" title="'+desc+'">'+desc+'</span>'+
+          '<span class="cc-tx-pac" onclick="abrirProntuario(\''+pac.replace(/'/g,"\\'")+'\')">'+ pac+'</span>'+
+          '<span class="cc-tx-val '+(isEntrada?'pos':'neg')+'">'+(isEntrada?'+':'-')+fmtBrl(Math.abs(v))+'</span></div>'
+      }).join('')
+
+      return '<div class="cc-day-expand">'+
+        '<div class="cc-day-header" onclick="ccToggle('+idx+')">'+
+          '<div class="cc-day-badge"><div class="cc-day-num">'+dNum+'</div><div class="cc-day-mon">'+mesAbr+'</div></div>'+
+          '<div class="cc-day-chevron" id="cc-chev-'+idx+'">›</div>'+
+          '<div class="cc-day-name">'+nomeDia+'</div>'+
+          '<div class="cc-day-vals">'+
+            (g.entrada>0?'<div class="cc-val-item"><span class="cc-val-lbl">Entrada</span><span style="color:var(--green)">'+fmtBrl(g.entrada)+'</span></div>':'')+
+            '<div class="cc-val-item"><span class="cc-val-lbl">Saída</span><span style="color:'+(g.saida>0?'var(--red)':'var(--text3)')+'">'+fmtBrl(g.saida)+'</span></div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="cc-transactions" id="cc-tx-'+idx+'">'+
+          '<div style="display:grid;grid-template-columns:60px 80px 90px 1fr 1fr 110px;padding:6px 14px;background:var(--gray1);font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border)">'+
+            '<span>Hora</span><span>Tipo</span><span>Forma</span><span>Descrição</span><span>Paciente</span><span style="text-align:right">Valor</span>'+
+          '</div>'+txHtml+
+        '</div></div>'
+    }).join('')
+  }catch(e){
+    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--red)">Erro: '+e.message+'</div>'
+  }
+}
+
 function ccToggle(idx){
-  const tx=document.getElementById('cc-tx-'+idx),chev=document.getElementById('cc-chev-'+idx)
-  tx.classList.toggle('open');chev.classList.toggle('open')
+  var tx=document.getElementById('cc-tx-'+idx),chev=document.getElementById('cc-chev-'+idx)
+  if(tx)tx.classList.toggle('open')
+  if(chev)chev.classList.toggle('open')
 }
+
+function ccExportar(){
+  var el=document.getElementById('cc-list')
+  if(!el||!el.innerHTML.includes('cc-day'))return alert('Carregue os dados primeiro')
+  var w=window.open('','_blank')
+  w.document.write('<html><head><title>Conta Corrente - Klinik</title><style>body{font-family:Arial,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:12px}th{background:#f5f5f5}</style></head><body>')
+  w.document.write('<h2>Conta Corrente — Klinik Odontologia</h2>')
+  w.document.write(el.innerHTML)
+  w.document.write('</body></html>')
+  w.document.close()
+  w.print()
+}
+
+function ccImprimir(){ccExportar()}
 
 // ══════════════════════════════════════════════════════
 // FLUXO DE CAIXA — Chart.js
