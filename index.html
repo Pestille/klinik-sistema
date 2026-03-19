@@ -773,7 +773,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
           <div class="cc-filters">
             <div class="cc-field"><div class="cc-label">Mês</div><select class="ctrl-type-sel"><option>Março</option><option>Fevereiro</option><option>Janeiro</option></select></div>
             <div class="cc-field"><div class="cc-label">Ano</div><select class="ctrl-type-sel"><option>2026</option><option>2025</option></select></div>
-            <button class="ctrl-listar"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
+            <button class="ctrl-listar" onclick="renderFDC()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
           </div>
           <div style="padding:16px 20px">
             <!-- Filtros FDC -->
@@ -840,7 +840,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
               <label class="ctrl-radio"><input type="radio" name="bol-status"> Pago</label>
               <label class="ctrl-radio"><input type="radio" name="bol-status"> Todos</label>
             </div>
-            <button class="ctrl-listar"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
+            <button class="ctrl-listar" onclick="renderBoletos()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
             <button class="ctrl-expand" style="margin-left:auto">⤢</button>
           </div>
           <div class="ctrl-tbl-head" style="grid-template-columns:130px 130px 1fr 1fr 120px 100px 80px 100px 80px 80px;background:var(--text)">
@@ -855,7 +855,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
             <div class="cc-field"><div class="cc-label">De</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
             <div class="cc-field"><div class="cc-label">Até</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
             <div class="ctrl-radio-grp"><label class="ctrl-radio"><input type="radio" name="chq-s" checked> Em Aberto</label><label class="ctrl-radio"><input type="radio" name="chq-s"> Pago</label><label class="ctrl-radio"><input type="radio" name="chq-s"> Todos</label></div>
-            <button class="ctrl-listar"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
+            <button class="ctrl-listar" onclick="renderCheques()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
           </div>
           <div class="ctrl-tbl-head" style="grid-template-columns:120px 120px 120px 1fr 100px 80px 80px 80px">
             <span>Vencimento</span><span>Recebimento</span><span>Banco</span><span>Número do Cheque</span><span>Sacado</span><span>Vl.Final</span><span>Status</span><span>Confirmar</span>
@@ -870,7 +870,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
             <div class="cc-field"><div class="cc-label">Até</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
             <div class="ctrl-radio-grp"><label class="ctrl-radio"><input type="radio" name="cart-s" checked> Em Aberto</label><label class="ctrl-radio"><input type="radio" name="cart-s"> Pago</label><label class="ctrl-radio"><input type="radio" name="cart-s"> Todos</label></div>
             <div class="cc-field"><div class="cc-label">Tipo</div><select class="ctrl-type-sel"><option>Todos os Cartões</option><option>Crédito</option><option>Débito</option></select></div>
-            <button class="ctrl-listar"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
+            <button class="ctrl-listar" onclick="renderCartoes()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
           </div>
           <div class="ctrl-tbl-head" style="grid-template-columns:100px 100px 100px 80px 1fr 100px 80px 120px 100px 100px 80px 80px 70px;font-size:10px">
             <span>Vencimento</span><span>Pagamento</span><span>Recebimento</span><span>Tipo</span><span>Titular</span><span>CPF</span><span>Bandeira</span><span>4 Últ. Dígitos</span><span>Cód. Autorização</span><span>Comp. Venda</span><span>Valor</span><span>Taxas</span><span>Vl.Final</span>
@@ -885,7 +885,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
             <div class="cc-field"><div class="cc-label">Até</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
             <div class="cc-field"><div class="cc-label">Listas/Tabelas de Preço</div><select class="ctrl-type-sel"><option>Todos</option><option>Particular</option><option>SULAMÉRICA</option><option>VIVENTERIS</option></select></div>
             <div class="cc-field"><div class="cc-label">Tipo</div><select class="ctrl-type-sel"><option>Em Aberto</option><option>Pago</option><option>Todos</option></select></div>
-            <button class="ctrl-listar"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
+            <button class="ctrl-listar" onclick="renderPlanos()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
           </div>
           <div class="ctrl-tbl-head" style="grid-template-columns:100px 1fr 80px 1fr 100px 80px 60px">
             <span>Data</span><span>Paciente</span><span>Guia</span><span>Procedimentos</span><span>Confirmação</span><span>Ações</span>
@@ -901,7 +901,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
             <div class="cc-field"><div class="cc-label">Conta/Maquininha</div><select class="ctrl-type-sel"><option>—</option></select></div>
             <div class="cc-field"><div class="cc-label">Forma de pagamento</div><select class="ctrl-type-sel"><option>—</option></select></div>
             <div class="cc-field"><div class="cc-label">Status</div><select class="ctrl-type-sel"><option>Todos</option><option>A Receber</option><option>Disponível</option></select></div>
-            <button class="ctrl-listar"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
+            <button class="ctrl-listar" onclick="renderRecebiveis()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
             <div class="rec-indicators">
               <div><div class="rec-indicator rec-disp">✓ DISPONÍVEL</div><div class="rec-lbl" style="text-align:center;font-size:10px;color:var(--text3);margin-top:2px">R$ 0,00</div></div>
               <div><div class="rec-indicator rec-antec">← ANTECIPÁVEL</div><div class="rec-lbl" style="text-align:center;font-size:10px;color:var(--text3);margin-top:2px">R$ 0,00</div></div>
@@ -925,7 +925,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
           <div class="cpagar-alert">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="#1976D2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
             <div class="cpagar-alert-txt"><strong>23 novos boletos foram emitidos para seu CNPJ</strong><br>Confira a lista de boletos e escolha quais deseja registrar no seu Contas a Pagar.</div>
-            <button class="cpagar-alert-btn">Listar boletos</button>
+            <button class="cpagar-alert-btn" onclick="renderCPagar()">Listar boletos</button>
           </div>
           <div class="cpagar-actions">
             <button class="btn-text" style="color:var(--orange)">Contas Recorrentes</button>
@@ -940,7 +940,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
             <div class="cc-field"><div class="cc-label">Até</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
             <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox">Criadas pelo DDA</label>
             <button class="btn btn-sm">+ Mais filtros</button>
-            <button class="btn btn-orange btn-sm">▼ Listar</button>
+            <button class="btn btn-orange btn-sm" onclick="renderCPagar()">▼ Listar</button>
             <button class="btn btn-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg></button>
           </div>
           <div class="cpagar-totais">
@@ -959,7 +959,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
             <div class="cc-field"><div class="cc-label">De</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>01/03/2026</div></div>
             <div class="cc-field"><div class="cc-label">Até</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
             <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox">Exibir lançamentos sem Check-out</label>
-            <button class="ctrl-listar"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
+            <button class="ctrl-listar" onclick="renderCReceber()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
             <button class="btn btn-sm" style="margin-left:auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg></button>
           </div>
           <div class="ctrl-tbl-head" style="grid-template-columns:100px 100px 1fr 1fr 80px 60px;background:var(--text)">
@@ -976,7 +976,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
             <div class="cc-field"><div class="cc-label">Até</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
             <div class="cc-field"><div class="cc-label">Conta</div><select class="ctrl-type-sel"><option>Todas</option><option>KLINIK ODONTOLOGI...</option></select></div>
             <div class="cc-field"><div class="cc-label">Tipo</div><select class="ctrl-type-sel"><option>Todos</option><option>Entrada</option><option>Saída</option><option>Saque</option></select></div>
-            <button class="ctrl-listar"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
+            <button class="ctrl-listar" onclick="renderExtrato()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
             <div class="rec-indicators">
               <div><div class="rec-indicator rec-disp" style="font-size:10px">✓ DISPONÍVEL</div><div style="font-size:10px;color:var(--text3);text-align:center;margin-top:2px">R$ 0,00</div></div>
               <div><div class="rec-indicator rec-antec" style="font-size:10px">← ANTECIPÁVEL</div><div style="font-size:10px;color:var(--text3);text-align:center;margin-top:2px">R$ 0,00</div></div>
@@ -2121,6 +2121,60 @@ function finTab(id,el){
   if(id==='contaspagar')renderCPagar()
   if(id==='contasreceber')renderCReceber()
   if(id==='extrato')renderExtrato()
+  if(id==='boletos')renderBoletos()
+  if(id==='cheques')renderCheques()
+  if(id==='recebiveis')renderRecebiveis()
+}
+
+function renderBoletos(){
+  // Boletos: dados virão de pagamentos com forma Boleto
+  apiData('pagamentos',{forma:'Boleto'}).then(function(d){
+    var rows=d.data||[]
+    var parent=document.querySelector('#fin-boletos .empty-state')||document.querySelector('#fin-boletos .ctrl-tbl-head+div')
+    if(!parent)return
+    if(!rows.length){parent.innerHTML='<div class="empty-state"><svg width="80" height="80" viewBox="0 0 100 100" fill="none"><rect x="20" y="15" width="35" height="45" rx="3" fill="#8B4513" transform="rotate(-15 20 15)"/><rect x="35" y="20" width="35" height="45" rx="3" fill="#E65100" transform="rotate(-7 35 20)"/><rect x="50" y="25" width="35" height="45" rx="3" fill="#FF6D00"/></svg><span>Sem boletos no período</span></div>';return}
+    parent.innerHTML=rows.map(function(r){
+      return '<div style="display:grid;grid-template-columns:130px 130px 1fr 1fr 120px 100px 80px 100px 80px 80px;padding:10px 14px;border-bottom:1px solid var(--border2);font-size:12px;background:var(--white);align-items:center">'+
+        '<span>'+fmtDt(r.data_vencimento)+'</span><span>'+fmtDt(r.data_recebimento)+'</span><span>—</span>'+
+        '<span style="color:var(--blue)">'+(r.paciente_nome||'—')+'</span><span>—</span>'+
+        '<span style="font-weight:500">'+fmtBrl(r.valor)+'</span><span>—</span><span>'+fmtBrl(r.valor)+'</span>'+
+        '<span style="color:'+(r.confirmado?'var(--green)':'var(--orange)')+'">'+( r.confirmado?'Pago':'Em Aberto')+'</span><span></span></div>'
+    }).join('')
+  }).catch(function(){})
+}
+
+function renderCheques(){
+  // Sem dados de cheques na API — exibe estado vazio
+}
+
+async function renderRecebiveis(){
+  var container=document.querySelector('#fin-recebiveis .ctrl-tbl-head')
+  var target=container?container.nextElementSibling:null
+  if(!target)return
+  target.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var d=await apiData('pagamentos',{cancelado:'0'})
+    var rows=d.data||[]
+    var totais=d.totais||{}
+    if(!rows.length){target.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum recebível encontrado</div>';return}
+    target.innerHTML=rows.map(function(r){
+      var v=+(r.valor||0)
+      var status=r.confirmado?'Disponível':'A Receber'
+      return '<div style="display:grid;grid-template-columns:100px 80px 1fr 1fr 100px 100px 100px 1fr 80px 80px 80px 80px 80px 80px;padding:8px 14px;border-bottom:1px solid var(--border2);font-size:11px;background:var(--white);align-items:center">'+
+        '<span>'+fmtDt(r.data_pagamento)+'</span>'+
+        '<span style="color:'+(r.confirmado?'var(--green)':'var(--blue)')+'">'+status+'</span>'+
+        '<span>KLINIK</span><span style="color:var(--blue)">'+(r.paciente_nome||'—')+'</span>'+
+        '<span>'+fmtDt(r.data_vencimento)+'</span><span>'+fmtDt(r.data_pagamento)+'</span><span>'+fmtDt(r.data_recebimento)+'</span>'+
+        '<span>'+(r.descricao||'—')+'</span><span>'+(r.forma_pagamento||'—')+'</span>'+
+        '<span>'+(r.parcelas||1)+'/'+(r.parcelas||1)+'</span>'+
+        '<span style="font-weight:500">'+fmtBrl(v)+'</span><span>—</span><span>—</span><span style="font-weight:500">'+fmtBrl(v)+'</span></div>'
+    }).join('')
+    // Atualiza indicadores
+    var pend=+(totais.pendente||0),conf=+(totais.confirmado||0)
+    var inds=document.querySelectorAll('#fin-recebiveis .rec-lbl')
+    if(inds[0])inds[0].textContent=fmtBrl(conf)
+    if(inds[2])inds[2].textContent=fmtBrl(pend)
+  }catch(e){target.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">'+e.message+'</div>'}
 }
 
 // ══════════════════════════════════════════════════════
@@ -2226,7 +2280,14 @@ const CC_LANCAMENTOS=[
 ]
 const BM={boleto:'<span class="cc-tx-badge badge-boleto">BOLETO</span>',credito:'<span class="cc-tx-badge badge-credito">CRÉDITO</span>',debito:'<span class="cc-tx-badge badge-debito">DÉBITO</span>',pix:'<span class="cc-tx-badge badge-pix">PIX</span>',transf:'<span class="cc-tx-badge badge-transf">TRANSF.</span>','':''}
 const TC={Entrada:'entrada',Vendas:'vendas','Saída':'saida'}
-function fmtBrl(v){return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2})}
+function fmtBrl(v){return 'R$ '+(+v||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+function fmtDt(s){if(!s)return '—';var d=s.slice(0,10);try{return new Date(d+'T12:00:00').toLocaleDateString('pt-BR')}catch(e){return d}}
+async function apiData(rota,params){
+  var qs=Object.entries(params||{}).filter(function(kv){return kv[1]!==undefined&&kv[1]!==''}).map(function(kv){return encodeURIComponent(kv[0])+'='+encodeURIComponent(kv[1])}).join('&')
+  var r=await fetch('/api/data?r='+rota+(qs?'&'+qs:''))
+  if(!r.ok)throw new Error('HTTP '+r.status)
+  return r.json()
+}
 function renderCC(){
   const tV=CC_LANCAMENTOS.reduce((s,d)=>s+d.vendas,0)
   const tE=CC_LANCAMENTOS.reduce((s,d)=>s+d.entrada,0)
@@ -2310,13 +2371,23 @@ function renderFDC(){
 // ══════════════════════════════════════════════════════
 // OUTRAS ABAS FINANCEIRAS
 // ══════════════════════════════════════════════════════
-function renderCartoes(){
-  const data=[{venc:'14/03/2026',pag:'14/01/2026',receb:'14/04/2026',tipo:'Cartão de Crédito',titular:'JÚLIA SOARES TAKIMOTO',cpf:'07260935138',band:'01-Visa',valor:'266,66',taxa:'8,00',final:'258,66'}]
-  document.getElementById('cart-list').innerHTML=data.map(r=>`<div style="display:grid;grid-template-columns:100px 100px 100px 80px 1fr 100px 80px 120px 80px 80px 70px;padding:10px 14px;border-bottom:1px solid var(--border2);font-size:12px;background:var(--white);align-items:center;gap:8px">
-    <span>${r.venc}</span><span>${r.pag}</span><span>${r.receb}</span><span style="font-size:11px">${r.tipo}</span>
-    <span style="color:var(--blue);cursor:pointer">${r.titular}</span><span>${r.cpf}</span><span>${r.band}</span>
-    <span>—</span><span>${r.valor}</span><span>${r.taxa}</span><span>${r.final}</span>
-  </div>`).join('')
+async function renderCartoes(){
+  var el=document.getElementById('cart-list');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var d=await apiData('pagamentos',{forma:'Cart'})
+    var rows=d.data||[]
+    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum pagamento com cartão encontrado</div>';return}
+    el.innerHTML=rows.map(function(r){
+      var v=+(r.valor||0)
+      return '<div style="display:grid;grid-template-columns:100px 100px 100px 80px 1fr 100px 80px 120px 80px 80px 70px;padding:10px 14px;border-bottom:1px solid var(--border2);font-size:12px;background:var(--white);align-items:center;gap:8px">'+
+        '<span>'+fmtDt(r.data_vencimento)+'</span><span>'+fmtDt(r.data_pagamento)+'</span><span>'+fmtDt(r.data_recebimento)+'</span>'+
+        '<span style="font-size:11px">'+(r.forma_pagamento||'')+'</span>'+
+        '<span style="color:var(--blue);cursor:pointer">'+(r.paciente_nome||'—')+'</span><span>—</span>'+
+        '<span>'+(r.bandeira||'—')+'</span><span>'+(r.parcelas||1)+'x</span>'+
+        '<span>'+fmtBrl(v)+'</span><span>—</span><span>'+fmtBrl(v)+'</span></div>'
+    }).join('')
+  }catch(e){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">'+e.message+'</div>'}
 }
 function renderPlanos(){
   const data=[
@@ -2363,46 +2434,69 @@ function renderCPagar(){
     </div>
   </div>`
 }
-function renderCReceber(){
-  const data=[
-    {status:'Em Aberto',dt:'14/03/2026',nome:'WANYA DA SILVA XAVIER BENTO',forma:'Boleto',val:'233,33'},
-    {status:'Vencido',dt:'11/03/2026',nome:'DANIEL KAGEYAMA',forma:'Transferência',val:'75,00'},
-    {status:'Vencido',dt:'04/03/2026',nome:'SILVIA NÉLIDA DA SILVA CONCEIÇÃO LIMA LEITE',forma:'Boleto',val:'630,00'},
-  ]
-  document.getElementById('creceber-list').innerHTML=data.map(r=>`<div style="display:grid;grid-template-columns:100px 100px 1fr 1fr 80px 60px;padding:10px 14px;border-bottom:1px solid var(--border2);font-size:13px;background:var(--white);align-items:center;gap:8px">
-    <span style="color:${r.status==='Vencido'?'var(--red)':'var(--text2)'}">${r.status}</span>
-    <span style="color:var(--text3)">${r.dt}</span>
-    <span style="color:var(--blue);cursor:pointer">${r.nome}</span>
-    <span style="color:var(--text3)">${r.forma}</span>
-    <span style="font-weight:500">${r.val}</span>
-    <button class="btn btn-sm" style="background:var(--green);border-color:var(--green);color:#fff;padding:4px 8px">⬇</button>
-  </div>`).join('')
+async function renderCReceber(){
+  var el=document.getElementById('creceber-list');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var d=await apiData('pagamentos',{cancelado:'0'})
+    var rows=d.data||[]
+    var total=0
+    el.innerHTML=rows.map(function(r){
+      var v=+(r.valor||0);total+=v
+      var hoje=new Date().toISOString().slice(0,10)
+      var venc=r.data_vencimento||''
+      var status=r.confirmado?'Recebido':(venc&&venc<hoje?'Vencido':'Em Aberto')
+      var cor=status==='Vencido'?'var(--red)':status==='Recebido'?'var(--green)':'var(--text2)'
+      return '<div style="display:grid;grid-template-columns:100px 100px 1fr 1fr 80px 60px;padding:10px 14px;border-bottom:1px solid var(--border2);font-size:13px;background:var(--white);align-items:center;gap:8px">'+
+        '<span style="color:'+cor+'">'+status+'</span>'+
+        '<span style="color:var(--text3)">'+fmtDt(r.data_pagamento)+'</span>'+
+        '<span style="color:var(--blue);cursor:pointer">'+(r.paciente_nome||'—')+'</span>'+
+        '<span style="color:var(--text3)">'+(r.forma_pagamento||'—')+'</span>'+
+        '<span style="font-weight:500">'+fmtBrl(v)+'</span>'+
+        '<span style="color:var(--green);font-weight:700">'+(r.confirmado?'✓':'')+'</span></div>'
+    }).join('')
+    var telTot=el.parentElement.querySelector('[style*="Total R$"]')||el.nextElementSibling
+    if(telTot)telTot.innerHTML='Total '+fmtBrl(total)
+  }catch(e){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">'+e.message+'</div>'}
 }
-function renderExtrato(){
-  const el=document.getElementById('extrato-list');if(!el)return
-  const dias=[
-    {dia:1,mes:'MAR',rows:[],saldo:'485,51'},
-    {dia:2,mes:'MAR',rows:[
-      {tipo:'SAQUE',status:'PAGO',conta:'KLINIK ODONTOLOGI...',desc:'Saque W1170892',hora:'08:52',val:'-485,51',neg:true},
-      {tipo:'ENTRADA',status:'',conta:'KLINIK ODONTOLOGI...',desc:'Paciente: LEONARDO PAIVA GARCIA',hora:'17:26',val:'+148,10',neg:false},
-    ],saldo:'148,10'},
-  ]
-  el.innerHTML=dias.map(d=>`<div class="ext-day">
-    <div style="display:flex;align-items:center;border-bottom:1px solid var(--border)">
-      <div class="cc-day-badge"><div class="cc-day-num">${d.dia}</div><div class="cc-day-mon">${d.mes}</div></div>
-      <div style="flex:1">
-        <div class="ext-tbl-head" style="grid-template-columns:100px 80px 1fr 1fr 80px 80px 90px"><span>Tipo</span><span>Status</span><span>Conta</span><span>Descrição</span><span>Hora</span><span>Comprov.</span><span style="text-align:right">Valor</span></div>
-        ${d.rows.length?d.rows.map(r=>`<div class="ext-tbl-row" style="grid-template-columns:100px 80px 1fr 1fr 80px 80px 90px">
-          <span class="ext-tipo-badge ${r.tipo==='SAQUE'?'ext-tipo-saque':'ext-tipo-entrada'}">${r.tipo}</span>
-          <span style="color:var(--green);font-size:11px;font-weight:500">${r.status?'✓ '+r.status:''}</span>
-          <span>${r.conta}</span><span style="color:var(--blue);cursor:pointer">${r.desc}</span><span>${r.hora}</span>
-          <button class="btn-icon-sm" style="color:var(--blue)">⎋</button>
-          <span style="text-align:right;font-weight:500;color:${r.neg?'var(--red)':'var(--green)'}">${r.val}</span>
-        </div>`).join(''):'<div style="text-align:center;padding:12px;font-size:12px;color:var(--text3)">Sem movimentações</div>'}
-        <div class="ext-saldo-row"><span>Saldo do dia</span><span>${d.saldo}</span></div>
-      </div>
-    </div>
-  </div>`).join('')
+async function renderExtrato(){
+  var el=document.getElementById('extrato-list');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var d=await apiData('extrato')
+    var rows=d.data||[]
+    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Sem movimentações no período</div>';return}
+    // Agrupar por dia
+    var porDia={}
+    rows.forEach(function(r){
+      var dia=r.data||'';if(!dia)return
+      if(!porDia[dia])porDia[dia]={rows:[],total:0}
+      porDia[dia].rows.push(r)
+      porDia[dia].total+=+(r.valor||0)
+    })
+    var MESES_ABR2=['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ']
+    var saldoAc=0
+    el.innerHTML=Object.keys(porDia).sort().map(function(dia){
+      var g=porDia[dia];saldoAc+=g.total
+      var dt=new Date(dia+'T12:00:00')
+      var dNum=dt.getDate(),mes=MESES_ABR2[dt.getMonth()]||''
+      return '<div class="ext-day"><div style="display:flex;align-items:center;border-bottom:1px solid var(--border)">'+
+        '<div class="cc-day-badge"><div class="cc-day-num">'+dNum+'</div><div class="cc-day-mon">'+mes+'</div></div>'+
+        '<div style="flex:1">'+
+        '<div class="ext-tbl-head" style="grid-template-columns:100px 80px 1fr 1fr 90px"><span>Tipo</span><span>Origem</span><span>Descrição</span><span>Forma</span><span style="text-align:right">Valor</span></div>'+
+        g.rows.map(function(r){
+          var v=+(r.valor||0)
+          return '<div class="ext-tbl-row" style="grid-template-columns:100px 80px 1fr 1fr 90px">'+
+            '<span class="ext-tipo-badge ext-tipo-entrada">ENTRADA</span>'+
+            '<span style="font-size:11px;color:var(--text3)">'+(r.origem||'')+'</span>'+
+            '<span style="color:var(--blue);cursor:pointer">'+(r.descricao||'—')+'</span>'+
+            '<span style="color:var(--text3)">'+(r.forma||'—')+'</span>'+
+            '<span style="text-align:right;font-weight:500;color:var(--green)">'+fmtBrl(v)+'</span></div>'
+        }).join('')+
+        '<div class="ext-saldo-row"><span>Saldo acumulado</span><span>'+fmtBrl(saldoAc)+'</span></div>'+
+        '</div></div></div>'
+    }).join('')
+  }catch(e){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">'+e.message+'</div>'}
 }
 
 // ══════════════════════════════════════════════════════

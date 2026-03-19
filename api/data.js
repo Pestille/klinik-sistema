@@ -269,6 +269,38 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: true, mes: mm, ano: ma, resumo_mes: { agendamentos: mtm.rows[0].total, receita: mrm.rows[0].total }, profissionais: mpr.rows })
         }
 
+        // ── PAGAMENTOS ─────────────────────────────────────────────────
+        if (route === 'pagamentos') {
+            var pw = [], pa = []
+            if (q.de)    { pw.push("data_pagamento >= ?"); pa.push(q.de) }
+            if (q.ate)   { pw.push("data_pagamento <= ?"); pa.push(q.ate) }
+            if (q.forma) { pw.push("forma_pagamento LIKE ?"); pa.push('%'+q.forma+'%') }
+            if (q.tipo)  { pw.push("tipo LIKE ?"); pa.push('%'+q.tipo+'%') }
+            if (q.cancelado === '0') { pw.push("cancelado=0") }
+            if (q.cancelado === '1') { pw.push("cancelado=1") }
+            if (!q.de && !q.ate) {
+                var pm = q.mes || new Date().toISOString().slice(0, 7)
+                pw.push("strftime('%Y-%m',data_pagamento)=?"); pa.push(pm)
+            }
+            var pwc = pw.length ? ' WHERE ' + pw.join(' AND ') : ''
+            var plim = Math.min(parseInt(q.limit) || 200, 500)
+            var pr2 = await client.execute({ sql: "SELECT * FROM pagamentos" + pwc + " ORDER BY data_pagamento DESC LIMIT ?", args: pa.concat([plim]) })
+            // Totais por forma
+            var ptf = await client.execute({ sql: "SELECT forma_pagamento,COUNT(*) as qtd,SUM(valor) as total FROM pagamentos" + pwc + " GROUP BY forma_pagamento ORDER BY total DESC", args: pa })
+            var ptot = await client.execute({ sql: "SELECT COUNT(*) as qtd,COALESCE(SUM(valor),0) as total,SUM(CASE WHEN confirmado=1 THEN valor ELSE 0 END) as confirmado,SUM(CASE WHEN confirmado=0 AND cancelado=0 THEN valor ELSE 0 END) as pendente FROM pagamentos" + pwc, args: pa })
+            return res.status(200).json({ success: true, data: pr2.rows, total: pr2.rows.length, por_forma: ptf.rows, totais: ptot.rows[0] })
+        }
+
+        // ── EXTRATO ───────────────────────────────────────────────────────
+        if (route === 'extrato') {
+            var ede = q.de || (function(){ var d2 = new Date(); d2.setDate(d2.getDate()-30); return d2.toISOString().slice(0,10) })()
+            var eate = q.ate || new Date().toISOString().slice(0, 10)
+            // Union de financeiro + pagamentos
+            var esql = "SELECT 'recibo' as origem, clinicorp_id, descricao, valor, data_pagamento as data, 'entrada' as tipo_mov, NULL as forma, NULL as bandeira FROM financeiro WHERE data_pagamento >= ? AND data_pagamento <= ? UNION ALL SELECT 'pagamento' as origem, clinicorp_id, descricao, valor, data_pagamento as data, CASE WHEN cancelado=1 THEN 'cancelado' ELSE 'entrada' END as tipo_mov, forma_pagamento as forma, bandeira FROM pagamentos WHERE data_pagamento >= ? AND data_pagamento <= ? AND cancelado=0 ORDER BY data DESC, origem"
+            var er = await client.execute({ sql: esql, args: [ede, eate, ede, eate] })
+            return res.status(200).json({ success: true, data: er.rows, periodo: { de: ede, ate: eate }, total: er.rows.length })
+        }
+
         return res.status(400).json({ success: false, error: 'Rota inválida: r=' + route })
 
     } catch (error) {
