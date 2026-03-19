@@ -833,8 +833,8 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         <!-- BOLETOS -->
         <div class="fin-sub" id="fin-boletos">
           <div class="ctrl-filters">
-            <div class="cc-field"><div class="cc-label">De</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
-            <div class="cc-field"><div class="cc-label">Até</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
+            <div class="cc-field"><div class="cc-label">De</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-bol-de')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-bol-de-val">—</span></div><div class="datepicker-pop" id="dp-bol-de"></div></div></div>
+            <div class="cc-field"><div class="cc-label">Até</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-bol-ate')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-bol-ate-val">—</span></div><div class="datepicker-pop" id="dp-bol-ate"></div></div></div>
             <div class="ctrl-radio-grp">
               <label class="ctrl-radio"><input type="radio" name="bol-status" checked> Em Aberto</label>
               <label class="ctrl-radio"><input type="radio" name="bol-status"> Pago</label>
@@ -852,8 +852,8 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         <!-- CHEQUES -->
         <div class="fin-sub" id="fin-cheques">
           <div class="ctrl-filters">
-            <div class="cc-field"><div class="cc-label">De</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
-            <div class="cc-field"><div class="cc-label">Até</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
+            <div class="cc-field"><div class="cc-label">De</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-chq-de')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-chq-de-val">—</span></div><div class="datepicker-pop" id="dp-chq-de"></div></div></div>
+            <div class="cc-field"><div class="cc-label">Até</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-chq-ate')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-chq-ate-val">—</span></div><div class="datepicker-pop" id="dp-chq-ate"></div></div></div>
             <div class="ctrl-radio-grp"><label class="ctrl-radio"><input type="radio" name="chq-s" checked> Em Aberto</label><label class="ctrl-radio"><input type="radio" name="chq-s"> Pago</label><label class="ctrl-radio"><input type="radio" name="chq-s"> Todos</label></div>
             <button class="ctrl-listar" onclick="renderCheques()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
           </div>
@@ -866,8 +866,8 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         <!-- CARTÕES -->
         <div class="fin-sub" id="fin-cartoes">
           <div class="ctrl-filters">
-            <div class="cc-field"><div class="cc-label">De</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
-            <div class="cc-field"><div class="cc-label">Até</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
+            <div class="cc-field"><div class="cc-label">De</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-cart-de')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-cart-de-val">—</span></div><div class="datepicker-pop" id="dp-cart-de"></div></div></div>
+            <div class="cc-field"><div class="cc-label">Até</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-cart-ate')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-cart-ate-val">—</span></div><div class="datepicker-pop" id="dp-cart-ate"></div></div></div>
             <div class="ctrl-radio-grp"><label class="ctrl-radio"><input type="radio" name="cart-s" checked> Em Aberto</label><label class="ctrl-radio"><input type="radio" name="cart-s"> Pago</label><label class="ctrl-radio"><input type="radio" name="cart-s"> Todos</label></div>
             <div class="cc-field"><div class="cc-label">Tipo</div><select class="ctrl-type-sel"><option>Todos os Cartões</option><option>Crédito</option><option>Débito</option></select></div>
             <button class="ctrl-listar" onclick="renderCartoes()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
@@ -881,8 +881,8 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         <!-- PLANOS -->
         <div class="fin-sub" id="fin-planos">
           <div class="ctrl-filters">
-            <div class="cc-field"><div class="cc-label">De</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>01/03/2026</div></div>
-            <div class="cc-field"><div class="cc-label">Até</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
+            <div class="cc-field"><div class="cc-label">De</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-pla-de')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-pla-de-val">—</span></div><div class="datepicker-pop" id="dp-pla-de"></div></div></div>
+            <div class="cc-field"><div class="cc-label">Até</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-pla-ate')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-pla-ate-val">—</span></div><div class="datepicker-pop" id="dp-pla-ate"></div></div></div>
             <div class="cc-field"><div class="cc-label">Listas/Tabelas de Preço</div><select class="ctrl-type-sel"><option>Todos</option><option>Particular</option><option>SULAMÉRICA</option><option>VIVENTERIS</option></select></div>
             <div class="cc-field"><div class="cc-label">Tipo</div><select class="ctrl-type-sel"><option>Em Aberto</option><option>Pago</option><option>Todos</option></select></div>
             <button class="ctrl-listar" onclick="renderPlanos()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
@@ -896,8 +896,8 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         <!-- RECEBÍVEIS -->
         <div class="fin-sub" id="fin-recebiveis">
           <div class="ctrl-filters">
-            <div class="cc-field"><div class="cc-label">De</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
-            <div class="cc-field"><div class="cc-label">Até</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
+            <div class="cc-field"><div class="cc-label">De</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-rec-de')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-rec-de-val">—</span></div><div class="datepicker-pop" id="dp-rec-de"></div></div></div>
+            <div class="cc-field"><div class="cc-label">Até</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-rec-ate')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-rec-ate-val">—</span></div><div class="datepicker-pop" id="dp-rec-ate"></div></div></div>
             <div class="cc-field"><div class="cc-label">Conta/Maquininha</div><select class="ctrl-type-sel"><option>—</option></select></div>
             <div class="cc-field"><div class="cc-label">Forma de pagamento</div><select class="ctrl-type-sel"><option>—</option></select></div>
             <div class="cc-field"><div class="cc-label">Status</div><select class="ctrl-type-sel"><option>Todos</option><option>A Receber</option><option>Disponível</option></select></div>
@@ -936,8 +936,8 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
           </div>
           <div class="ctrl-filters" style="gap:12px">
             <div style="display:flex;align-items:center;gap:8px;font-size:13px">Mostrar Contas <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" checked style="accent-color:var(--orange)">A Pagar</label><label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" checked style="accent-color:var(--orange)">Pagas</label></div>
-            <div class="cc-field"><div class="cc-label">De</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>08/03/2026</div></div>
-            <div class="cc-field"><div class="cc-label">Até</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
+            <div class="cc-field"><div class="cc-label">De</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-cpag-de')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-cpag-de-val">—</span></div><div class="datepicker-pop" id="dp-cpag-de"></div></div></div>
+            <div class="cc-field"><div class="cc-label">Até</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-cpag-ate')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-cpag-ate-val">—</span></div><div class="datepicker-pop" id="dp-cpag-ate"></div></div></div>
             <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox">Criadas pelo DDA</label>
             <button class="btn btn-sm">+ Mais filtros</button>
             <button class="btn btn-orange btn-sm" onclick="renderCPagar()">▼ Listar</button>
@@ -956,8 +956,8 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         <!-- CONTAS A RECEBER -->
         <div class="fin-sub" id="fin-contasreceber">
           <div class="ctrl-filters">
-            <div class="cc-field"><div class="cc-label">De</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>01/03/2026</div></div>
-            <div class="cc-field"><div class="cc-label">Até</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
+            <div class="cc-field"><div class="cc-label">De</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-crec-de')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-crec-de-val">—</span></div><div class="datepicker-pop" id="dp-crec-de"></div></div></div>
+            <div class="cc-field"><div class="cc-label">Até</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-crec-ate')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-crec-ate-val">—</span></div><div class="datepicker-pop" id="dp-crec-ate"></div></div></div>
             <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox">Exibir lançamentos sem Check-out</label>
             <button class="ctrl-listar" onclick="renderCReceber()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
             <button class="btn btn-sm" style="margin-left:auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg></button>
@@ -972,8 +972,8 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         <!-- EXTRATO -->
         <div class="fin-sub" id="fin-extrato">
           <div class="ctrl-filters">
-            <div class="cc-field"><div class="cc-label">De</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>01/03/2026</div></div>
-            <div class="cc-field"><div class="cc-label">Até</div><div class="cc-date-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>14/03/2026</div></div>
+            <div class="cc-field"><div class="cc-label">De</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-ext-de')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-ext-de-val">—</span></div><div class="datepicker-pop" id="dp-ext-de"></div></div></div>
+            <div class="cc-field"><div class="cc-label">Até</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-ext-ate')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-ext-ate-val">—</span></div><div class="datepicker-pop" id="dp-ext-ate"></div></div></div>
             <div class="cc-field"><div class="cc-label">Conta</div><select class="ctrl-type-sel"><option>Todas</option><option>KLINIK ODONTOLOGI...</option></select></div>
             <div class="cc-field"><div class="cc-label">Tipo</div><select class="ctrl-type-sel"><option>Todos</option><option>Entrada</option><option>Saída</option><option>Saque</option></select></div>
             <button class="ctrl-listar" onclick="renderExtrato()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
@@ -2192,8 +2192,8 @@ function finTab(id,el){
 }
 
 function renderBoletos(){
-  // Boletos: dados virão de pagamentos com forma Boleto
-  apiData('pagamentos',{forma:'Boleto'}).then(function(d){
+  var dt=getTabDates('dp-bol-de','dp-bol-ate')
+  apiData('pagamentos',{forma:'Boleto',de:dt.de,ate:dt.ate}).then(function(d){
     var rows=d.data||[]
     var parent=document.querySelector('#fin-boletos .empty-state')||document.querySelector('#fin-boletos .ctrl-tbl-head+div')
     if(!parent)return
@@ -2218,7 +2218,8 @@ async function renderRecebiveis(){
   if(!target)return
   target.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
   try{
-    var d=await apiData('pagamentos',{cancelado:'0'})
+    var dt=getTabDates('dp-rec-de','dp-rec-ate')
+    var d=await apiData('pagamentos',{cancelado:'0',de:dt.de,ate:dt.ate})
     var rows=d.data||[]
     var totais=d.totais||{}
     if(!rows.length){target.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum recebível encontrado</div>';return}
@@ -2333,13 +2334,10 @@ function dpPickMonth(id,m){var s=DP_STATE[id];s.month=m;s.view='days';dpRender(i
 function dpPickYear(id,y){var s=DP_STATE[id];s.year=y;s.view='months';dpRender(id)}
 function dpSelect(id,y,m,d){
   var s=DP_STATE[id];s.selected=new Date(y,m,d);s.year=y;s.month=m;s.view='days'
-  // Salva imediatamente na variável e no label
   var iso=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0')
   var br=String(d).padStart(2,'0')+'/'+String(m+1).padStart(2,'0')+'/'+y
   var v=document.getElementById(id+'-val');if(v)v.textContent=br
-  if(id==='dp-de')CC_DATE_DE=iso
-  if(id==='dp-ate')CC_DATE_ATE=iso
-  // Fecha o popup
+  FILTER_DATES[id]=iso
   var pop=document.getElementById(id);if(pop)pop.classList.remove('open')
 }
 function dpHoje(id){var h=new Date();dpSelect(id,h.getFullYear(),h.getMonth(),h.getDate())}
@@ -2349,8 +2347,7 @@ function dpOK(id){
     var iso=sel.getFullYear()+'-'+String(sel.getMonth()+1).padStart(2,'0')+'-'+String(sel.getDate()).padStart(2,'0')
     var br=String(sel.getDate()).padStart(2,'0')+'/'+String(sel.getMonth()+1).padStart(2,'0')+'/'+sel.getFullYear()
     var v=document.getElementById(id+'-val');if(v)v.textContent=br
-    if(id==='dp-de')CC_DATE_DE=iso
-    if(id==='dp-ate')CC_DATE_ATE=iso
+    FILTER_DATES[id]=iso
   }
   document.getElementById(id).classList.remove('open')
 }
@@ -2391,23 +2388,21 @@ function ccBadge(forma){
 }
 
 // Lê datas do datepicker
-// Datas selecionadas — variáveis globais (não depende do DOM)
-var CC_DATE_DE='', CC_DATE_ATE=''
-function ccInitDatas(){
-  if(!CC_DATE_DE||!CC_DATE_ATE){
-    var h=new Date(),d30=new Date();d30.setDate(d30.getDate()-30)
-    CC_DATE_DE=d30.toISOString().slice(0,10)
-    CC_DATE_ATE=h.toISOString().slice(0,10)
-    // Atualiza labels
-    var lDe=document.getElementById('dp-de-val');if(lDe)lDe.textContent=fmtDtBr(CC_DATE_DE)
-    var lAte=document.getElementById('dp-ate-val');if(lAte)lAte.textContent=fmtDtBr(CC_DATE_ATE)
-  }
-}
+// Sistema global de filtros por data — cada datepicker armazena aqui
+var FILTER_DATES={}
 function fmtDtBr(iso){if(!iso)return '—';var p=iso.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
-function ccGetDatas(){
-  ccInitDatas()
-  return {de:CC_DATE_DE,ate:CC_DATE_ATE}
+
+// Retorna {de,ate} para qualquer par de datepickers. Prefixo ex: 'dp-de'/'dp-ate' ou 'dp-bol-de'/'dp-bol-ate'
+function getTabDates(deId,ateId){
+  var de=FILTER_DATES[deId]||''
+  var ate=FILTER_DATES[ateId]||''
+  if(!de){var d=new Date();d.setDate(d.getDate()-30);de=d.toISOString().slice(0,10)}
+  if(!ate)ate=new Date().toISOString().slice(0,10)
+  return {de:de,ate:ate}
 }
+
+// Atalho para Conta Corrente (compatibilidade)
+function ccGetDatas(){return getTabDates('dp-de','dp-ate')}
 
 // ── CONTA CORRENTE ──────────────────────────────────────────────
 async function renderCC(){
@@ -2551,7 +2546,8 @@ async function renderCartoes(){
   var el=document.getElementById('cart-list');if(!el)return
   el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
   try{
-    var d=await apiData('pagamentos',{forma:'Cart'})
+    var dt=getTabDates('dp-cart-de','dp-cart-ate')
+    var d=await apiData('pagamentos',{forma:'Cart',de:dt.de,ate:dt.ate})
     var rows=d.data||[]
     if(!rows.length){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum pagamento com cartão encontrado</div>';return}
     el.innerHTML=rows.map(function(r){
@@ -2614,7 +2610,8 @@ async function renderCReceber(){
   var el=document.getElementById('creceber-list');if(!el)return
   el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
   try{
-    var d=await apiData('pagamentos',{cancelado:'0'})
+    var dt=getTabDates('dp-crec-de','dp-crec-ate')
+    var d=await apiData('pagamentos',{cancelado:'0',de:dt.de,ate:dt.ate})
     var rows=d.data||[]
     var total=0
     el.innerHTML=rows.map(function(r){
@@ -2639,7 +2636,8 @@ async function renderExtrato(){
   var el=document.getElementById('extrato-list');if(!el)return
   el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
   try{
-    var d=await apiData('extrato')
+    var dt=getTabDates('dp-ext-de','dp-ext-ate')
+    var d=await apiData('extrato',{de:dt.de,ate:dt.ate})
     var rows=d.data||[]
     if(!rows.length){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Sem movimentações no período</div>';return}
     // Agrupar por dia
