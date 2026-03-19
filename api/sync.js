@@ -28,17 +28,17 @@ function fetchPage(endpoint, params) {
             var body = ''
             res.on('data', function(c){ body += c })
             res.on('end', function() {
-                if (res.statusCode === 429) { resolve({ _rateLimit: true, items: [] }); return }
-                if (res.statusCode >= 400)  { resolve({ _error: res.statusCode, items: [] }); return }
+                if (res.statusCode === 429) { resolve({ _rateLimit: true, status: 429, items: [] }); return }
+                if (res.statusCode >= 400)  { resolve({ _error: res.statusCode, status: res.statusCode, items: [], raw_start: body.slice(0,200) }); return }
                 try {
                     var d = JSON.parse(body)
                     var items = Array.isArray(d) ? d : (d.data || d.items || d.results || d.list || [])
-                    resolve({ items: items, raw: d })
-                } catch(e) { resolve({ items: [] }) }
+                    resolve({ status: res.statusCode, items: items, raw: d, keys: Array.isArray(d) ? null : Object.keys(d) })
+                } catch(e) { resolve({ status: res.statusCode, items: [], raw_start: body.slice(0,200) }) }
             })
         })
         req.on('error', function(e){ resolve({ items: [], _err: e.message }) })
-        req.setTimeout(9000, function(){ req.destroy(); resolve({ items: [], _timeout: true }) })
+        req.setTimeout(8000, function(){ req.destroy(); resolve({ items: [], _timeout: true }) })
         req.end()
     })
 }
@@ -57,13 +57,85 @@ async function fetchAll(endpoint, params, maxPages) {
 
 function isoToDate(str) {
     if (!str) return null
-    // "2025-03-20T04:00:00.000Z" → "2025-03-20"
     return str.slice(0, 10)
+}
+
+function hoje365() {
+    var h = new Date()
+    var d = new Date(); d.setDate(d.getDate() - 365)
+    return { from: d.toISOString().slice(0,10), to: h.toISOString().slice(0,10) }
+}
+
+// ── EXPLORAR ENDPOINTS CLINICORP ──────────────────────────────────────────────
+async function explorar() {
+    var dt = hoje365()
+    var endpoints = [
+        // Já conhecidos
+        { ep: 'patient/list', p: { limit: 2, page: 1 } },
+        { ep: 'patient/birthdays', p: { initial_date: dt.from, final_date: dt.to, limit: 2 } },
+        { ep: 'professional/list_all_professionals', p: { limit: 2 } },
+        { ep: 'appointment/list', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'financial/list_receipt', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'procedures/list', p: { limit: 2 } },
+        // Possíveis novos
+        { ep: 'budget/list', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'budget/list_budgets', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'treatment/list', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'treatment/list_treatments', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'treatment_plan/list', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'financial/list_payment', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'financial/list_all', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'financial/list_invoice', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'anamnesis/list', p: { limit: 2 } },
+        { ep: 'anamnese/list', p: { limit: 2 } },
+        { ep: 'document/list', p: { limit: 2 } },
+        { ep: 'prescription/list', p: { limit: 2 } },
+        { ep: 'category/list', p: { limit: 2 } },
+        { ep: 'attendance/list', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'clinical_record/list', p: { limit: 2 } },
+        { ep: 'stock/list', p: { limit: 2 } },
+        { ep: 'service/list', p: { limit: 2 } },
+        { ep: 'payment/list', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'dental_chart/list', p: { limit: 2 } },
+        { ep: 'odontogram/list', p: { limit: 2 } },
+        { ep: 'schedule/list', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'recall/list', p: { limit: 2 } },
+        { ep: 'indication/list', p: { limit: 2 } },
+        { ep: 'insurance/list', p: { limit: 2 } },
+        { ep: 'price_table/list', p: { limit: 2 } },
+    ]
+
+    var results = await Promise.allSettled(
+        endpoints.map(function(e) { return fetchPage(e.ep, e.p) })
+    )
+
+    var found = []
+    var notFound = []
+    for (var i = 0; i < endpoints.length; i++) {
+        var ep = endpoints[i].ep
+        var r = results[i].status === 'fulfilled' ? results[i].value : { _err: 'rejected' }
+        if (r._timeout)   { notFound.push({ endpoint: ep, reason: 'timeout' }); continue }
+        if (r._err)       { notFound.push({ endpoint: ep, reason: r._err }); continue }
+        if (r._error)     { notFound.push({ endpoint: ep, reason: 'HTTP ' + r._error, detail: r.raw_start }); continue }
+        var count = r.items ? r.items.length : 0
+        var isArray = Array.isArray(r.raw)
+        found.push({
+            endpoint: ep,
+            status: r.status,
+            count: count,
+            is_array: isArray,
+            keys: r.keys,
+            first_item_keys: count > 0 ? Object.keys(r.items[0]) : null,
+            first_item: count > 0 ? r.items[0] : null
+        })
+    }
+
+    return { tipo: 'explorar', encontrados: found.length, nao_encontrados: notFound.length, endpoints: found, erros: notFound }
 }
 
 // ── SYNC PROFISSIONAIS ────────────────────────────────────────────────────────
 async function syncProfissionais(client) {
-    var lista = await fetchAll('professional/list_all_professionals', {}, 2)
+    var lista = await fetchAll('professional/list_all_professionals', {}, 3)
     var inseridos = 0, atualizados = 0
     for (var i = 0; i < lista.length; i++) {
         var p = lista[i]
@@ -85,39 +157,60 @@ async function syncProfissionais(client) {
 }
 
 // ── SYNC PACIENTES ────────────────────────────────────────────────────────────
+// Auto-paginação: se pagina='auto', busca TODAS as páginas (max 10 = 1000 pacientes)
 async function syncPacientes(client, pagina) {
-    var pg = parseInt(pagina) || 1
-    var r = await fetchPage('patient/list', { limit: 100, page: pg })
-    var lista = r.items || []
-    var temMais = lista.length === 100
-    var inseridos = 0, atualizados = 0
-    for (var i = 0; i < lista.length; i++) {
-        var p = lista[i]
-        var cid  = String(p.id || p.Id || p.patientId || '')
-        if (!cid) continue
-        var nome  = p.name || p.Name || p.nome || ''
-        var tel   = p.phone || p.Phone || p.mobilePhone || p.MobilePhone || p.telefone || ''
-        var email = p.email || p.Email || ''
-        var nasc  = p.birthDate || p.BirthDate || p.birth_date || ''
-        var cpf   = p.cpf || p.CPF || p.document || ''
-        var existe = await client.execute({ sql: 'SELECT id FROM pacientes WHERE clinicorp_id=?', args: [cid] })
-        if (existe.rows.length > 0) {
-            await client.execute({ sql: "UPDATE pacientes SET nome=?,telefone=?,email=?,data_nascimento=?,cpf=?,atualizado_em=datetime('now') WHERE clinicorp_id=?", args: [nome, tel, email, nasc, cpf, cid] })
-            atualizados++
-        } else {
-            await client.execute({ sql: "INSERT INTO pacientes(clinicorp_id,nome,telefone,email,data_nascimento,cpf,ativo,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,1,datetime('now'),datetime('now'))", args: [cid, nome, tel, email, nasc, cpf] })
-            inseridos++
+    var autoMode = pagina === 'auto'
+    var startPage = autoMode ? 1 : (parseInt(pagina) || 1)
+    var maxPage   = autoMode ? 10 : startPage
+    var totalProcessados = 0, totalInseridos = 0, totalAtualizados = 0
+    var paginasProcessadas = 0
+
+    for (var pg = startPage; pg <= maxPage; pg++) {
+        var r = await fetchPage('patient/list', { limit: 100, page: pg })
+        var lista = r.items || []
+        if (lista.length === 0) break
+        paginasProcessadas++
+
+        for (var i = 0; i < lista.length; i++) {
+            var p = lista[i]
+            var cid  = String(p.id || p.Id || p.patientId || '')
+            if (!cid) continue
+            var nome  = p.name || p.Name || p.nome || ''
+            var tel   = p.phone || p.Phone || p.mobilePhone || p.MobilePhone || p.telefone || ''
+            var email = p.email || p.Email || ''
+            var nasc  = p.birthDate || p.BirthDate || p.birth_date || ''
+            var cpf   = p.cpf || p.CPF || p.document || ''
+            var existe = await client.execute({ sql: 'SELECT id FROM pacientes WHERE clinicorp_id=?', args: [cid] })
+            if (existe.rows.length > 0) {
+                await client.execute({ sql: "UPDATE pacientes SET nome=?,telefone=?,email=?,data_nascimento=?,cpf=?,atualizado_em=datetime('now') WHERE clinicorp_id=?", args: [nome, tel, email, nasc, cpf, cid] })
+                totalAtualizados++
+            } else {
+                await client.execute({ sql: "INSERT INTO pacientes(clinicorp_id,nome,telefone,email,data_nascimento,cpf,ativo,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,1,datetime('now'),datetime('now'))", args: [cid, nome, tel, email, nasc, cpf] })
+                totalInseridos++
+            }
         }
+        totalProcessados += lista.length
+        if (lista.length < 100) break // última página
     }
-    return { tipo: 'pacientes', pagina: pg, processados: lista.length, inseridos, atualizados, temMaisPaginas: temMais, proximaPagina: temMais ? pg + 1 : null }
+
+    return {
+        tipo: 'pacientes',
+        modo: autoMode ? 'auto' : 'pagina',
+        paginas_processadas: paginasProcessadas,
+        total_processados: totalProcessados,
+        inseridos: totalInseridos,
+        atualizados: totalAtualizados,
+        completo: autoMode ? (paginasProcessadas < 10 || totalProcessados % 100 !== 0) : undefined
+    }
 }
 
 // ── SYNC AGENDAMENTOS ─────────────────────────────────────────────────────────
+// Padrão: últimos 365 dias, até 15 páginas (1500 registros)
 async function syncAgendamentos(client, dataInicio, dataFim) {
-    var hoje = new Date()
-    var inicio = dataInicio || new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10)
-    var fim    = dataFim    || new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().slice(0, 10)
-    var lista = await fetchAll('appointment/list', { from: inicio, to: fim }, 5)
+    var dt = hoje365()
+    var inicio = dataInicio || dt.from
+    var fim    = dataFim    || dt.to
+    var lista = await fetchAll('appointment/list', { from: inicio, to: fim }, 15)
     var inseridos = 0, atualizados = 0
     for (var i = 0; i < lista.length; i++) {
         var a = lista[i]
@@ -165,16 +258,12 @@ async function syncAgendamentos(client, dataInicio, dataFim) {
 
 // ── SYNC FINANCEIRO ───────────────────────────────────────────────────────────
 // Clinicorp retorna array direto — fetch direto sem fetchAll
-// Campos: Amount, ReceiptDate, PatientId, PatientName, id, Deleted
 async function syncFinanceiro(client) {
     var https = require('https')
-    var hoje2 = new Date()
-    var d365 = new Date(); d365.setDate(d365.getDate() - 365)
+    var dt = hoje365()
     var params = {
         subscriber_id: SUB, businessId: BID,
-        from: d365.toISOString().slice(0, 10),
-        to: hoje2.toISOString().slice(0, 10),
-        limit: 500
+        from: dt.from, to: dt.to, limit: 500
     }
     var qs = '?' + Object.entries(params)
         .map(function(kv){ return encodeURIComponent(kv[0])+'='+encodeURIComponent(kv[1]) }).join('&')
@@ -204,11 +293,8 @@ async function syncFinanceiro(client) {
         req2.end()
     })
 
-    // Filtra deletados (Deleted === true ou Deleted === 'X')
-    var semId      = lista.filter(function(r){ return !r.id && !r.Id }).length
     var deletados  = lista.filter(function(r){ return r.Deleted === true || r.Deleted === 'X' })
     var ativos     = lista.filter(function(r){ return r.Deleted !== true && r.Deleted !== 'X' })
-    var semValor   = ativos.filter(function(r){ return !(parseFloat(r.Amount || r.amount || 0) > 0) }).length
 
     var inseridos = 0, atualizados = 0, ignorados = 0
 
@@ -220,7 +306,6 @@ async function syncFinanceiro(client) {
         var valor    = parseFloat(r.Amount || r.amount || 0) || 0
         if (valor <= 0) { ignorados++; continue }
 
-        // Resolve paciente_id pelo clinicorp_id do paciente
         var pacienteId = null
         var pacCid = String(r.PatientId || r.patientId || '')
         if (pacCid) {
@@ -254,12 +339,38 @@ async function syncFinanceiro(client) {
         total: lista.length,
         ativos: ativos.length,
         deletados: deletados.length,
-        sem_id: semId,
-        sem_valor: semValor,
-        inseridos, atualizados, ignorados,
-        primeiro_item: lista[0] || null,
-        raw_sample: lista.length === 0 ? rawSample : undefined
+        inseridos, atualizados, ignorados
     }
+}
+
+// ── SYNC PROCEDIMENTOS ───────────────────────────────────────────────────────
+async function syncProcedimentos(client) {
+    // Garante que tabela existe
+    try {
+        await client.execute("CREATE TABLE IF NOT EXISTS procedimentos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinicorp_id TEXT UNIQUE, codigo TEXT, descricao TEXT NOT NULL, valor REAL DEFAULT 0, ativo INTEGER DEFAULT 1, criado_em TEXT, atualizado_em TEXT)")
+    } catch(e) {}
+
+    var lista = await fetchAll('procedures/list', {}, 5)
+    var inseridos = 0, atualizados = 0
+    for (var i = 0; i < lista.length; i++) {
+        var p = lista[i]
+        var cid = String(p.id || p.Id || '')
+        if (!cid) continue
+        var codigo = p.code || p.Code || p.codigo || ''
+        var desc   = p.name || p.Name || p.description || p.Description || ''
+        var valor  = parseFloat(p.value || p.Value || p.price || p.Price || 0) || 0
+        var ativo  = (p.active === false || p.Active === false || p.Deleted) ? 0 : 1
+
+        var existe = await client.execute({ sql: 'SELECT id FROM procedimentos WHERE clinicorp_id=?', args: [cid] })
+        if (existe.rows.length > 0) {
+            await client.execute({ sql: "UPDATE procedimentos SET codigo=?,descricao=?,valor=?,ativo=?,atualizado_em=datetime('now') WHERE clinicorp_id=?", args: [codigo, desc, valor, ativo, cid] })
+            atualizados++
+        } else {
+            await client.execute({ sql: "INSERT INTO procedimentos(clinicorp_id,codigo,descricao,valor,ativo,criado_em,atualizado_em) VALUES(?,?,?,?,?,datetime('now'),datetime('now'))", args: [cid, codigo, desc, valor, ativo] })
+            inseridos++
+        }
+    }
+    return { tipo: 'procedimentos', total: lista.length, inseridos, atualizados }
 }
 
 // ── HANDLER PRINCIPAL ─────────────────────────────────────────────────────────
@@ -278,26 +389,38 @@ module.exports = async function handler(req, res) {
     if (!tipo) {
         return res.status(400).json({
             error: "Parâmetro 'tipo' obrigatório.",
-            tipos: ['profissionais', 'pacientes', 'agendamentos', 'financeiro', 'todos'],
+            tipos: ['explorar', 'profissionais', 'pacientes', 'agendamentos', 'financeiro', 'procedimentos', 'todos'],
             exemplos: [
+                '/api/sync?tipo=explorar                     → sonda TODOS os endpoints Clinicorp',
+                '/api/sync?tipo=pacientes&pagina=auto        → sync TODOS os pacientes',
+                '/api/sync?tipo=agendamentos                 → últimos 365 dias',
+                '/api/sync?tipo=agendamentos&de=2025-01-01&ate=2026-03-18',
                 '/api/sync?tipo=financeiro',
-                '/api/sync?tipo=agendamentos&de=2026-03-01&ate=2026-03-31',
-                '/api/sync?tipo=pacientes&pagina=1',
-                '/api/sync?tipo=profissionais'
+                '/api/sync?tipo=procedimentos',
+                '/api/sync?tipo=profissionais',
+                '/api/sync?tipo=todos'
             ]
         })
     }
 
-    var client = getClient()
     var t0 = Date.now()
 
     try {
         var resultado
+
+        if (tipo === 'explorar') {
+            resultado = await explorar()
+            return res.json({ success: true, duracao_ms: Date.now() - t0, ...resultado })
+        }
+
+        var client = getClient()
+
         if (tipo === 'todos') {
             var r1 = await syncProfissionais(client)
-            var r2 = await syncAgendamentos(client, dataInicio, dataFim)
-            var r3 = await syncFinanceiro(client)
-            resultado = { sincs: [r1, r2, r3], aviso: 'Pacientes omitidos no modo todos — use tipo=pacientes paginado' }
+            var r2 = await syncProcedimentos(client)
+            var r3 = await syncAgendamentos(client, dataInicio, dataFim)
+            var r4 = await syncFinanceiro(client)
+            resultado = { sincs: [r1, r2, r3, r4], aviso: 'Pacientes: use tipo=pacientes&pagina=auto separado (pode demorar)' }
         } else if (tipo === 'profissionais') {
             resultado = await syncProfissionais(client)
         } else if (tipo === 'pacientes') {
@@ -306,6 +429,8 @@ module.exports = async function handler(req, res) {
             resultado = await syncAgendamentos(client, dataInicio, dataFim)
         } else if (tipo === 'financeiro') {
             resultado = await syncFinanceiro(client)
+        } else if (tipo === 'procedimentos') {
+            resultado = await syncProcedimentos(client)
         } else {
             return res.status(404).json({ error: "Tipo '" + tipo + "' não encontrado." })
         }
