@@ -297,6 +297,65 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: true, data: er.rows, periodo: { de: ede, ate: eate }, total: er.rows.length })
         }
 
+        // ── DASHBOARD ANALÍTICO (dados reais por mês) ─────────────────
+        if (route === 'dashboard-analitico') {
+            var meses3 = []
+            var now2 = new Date()
+            for (var mi = 2; mi >= 0; mi--) {
+                var dd = new Date(now2.getFullYear(), now2.getMonth() - mi, 1)
+                meses3.push(dd.getFullYear() + '-' + String(dd.getMonth() + 1).padStart(2, '0'))
+            }
+            var result = { meses: meses3, por_mes: {} }
+            for (var mx = 0; mx < meses3.length; mx++) {
+                var mm = meses3[mx]
+                var rs3 = await Promise.all([
+                    // Agendamentos totais do mês
+                    client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=?", args: [mm] }),
+                    // Cancelados
+                    client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND status='cancelado'", args: [mm] }),
+                    // Faltas
+                    client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND (status LIKE '%falt%' OR status='faltou')", args: [mm] }),
+                    // Primeiras consultas (tipo contém 'Avaliação' ou primeiro agendamento)
+                    client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND (tipo LIKE '%Avaliação%' OR tipo LIKE '%avaliacao%')", args: [mm] }),
+                    // Receita entrada (pagamentos)
+                    client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0", args: [mm] }),
+                    // Receita saída (financeiro tipo=saida)
+                    client.execute({ sql: "SELECT COALESCE(SUM(ABS(valor)),0) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='saida'", args: [mm] }),
+                    // Recibos
+                    client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='entrada'", args: [mm] }),
+                    // Pagamentos confirmados
+                    client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND confirmado=1", args: [mm] }),
+                    // Pagamentos pendentes
+                    client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND confirmado=0 AND cancelado=0", args: [mm] }),
+                    // Categorias agendadas
+                    client.execute({ sql: "SELECT tipo, COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND tipo IS NOT NULL AND tipo!='' GROUP BY tipo ORDER BY total DESC LIMIT 10", args: [mm] }),
+                    // Total pagamentos (qtd)
+                    client.execute({ sql: "SELECT COUNT(*) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0", args: [mm] }),
+                    // Parcelas
+                    client.execute({ sql: "SELECT COALESCE(SUM(parcelas),0) as total, COUNT(*) as qtd FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND parcelas>0", args: [mm] }),
+                    // Faltas primeiras consultas
+                    client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND (tipo LIKE '%Avaliação%') AND (status LIKE '%falt%' OR status='faltou')", args: [mm] }),
+                ])
+                result.por_mes[mm] = {
+                    agendamentos: rs3[0].rows[0].total,
+                    cancelados: rs3[1].rows[0].total,
+                    faltas: rs3[2].rows[0].total,
+                    primeiras_consultas: rs3[3].rows[0].total,
+                    receita_entrada: +(rs3[4].rows[0].total || 0),
+                    receita_saida: +(rs3[5].rows[0].total || 0),
+                    recibos: +(rs3[6].rows[0].total || 0),
+                    pagamentos_confirmados: +(rs3[7].rows[0].total || 0),
+                    pagamentos_pendentes: +(rs3[8].rows[0].total || 0),
+                    categorias: rs3[9].rows,
+                    pagamentos_qtd: rs3[10].rows[0].total,
+                    parcelas_total: +(rs3[11].rows[0].total || 0),
+                    parcelas_qtd: +(rs3[11].rows[0].qtd || 0),
+                    faltas_primeira: rs3[12].rows[0].total,
+                }
+            }
+            return res.status(200).json({ success: true, ...result })
+        }
+
         // ── ANALYTICS (Dashboard completo) ────────────────────────────
         if (route === 'analytics') {
             var mesAtual = new Date().toISOString().slice(0, 7)
