@@ -328,7 +328,26 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 
 /* ── PROF CARDS ── */
 .prof-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
-.prof-card{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:16px;text-align:center;box-shadow:var(--shadow)}
+.prof-card{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:16px;text-align:center;box-shadow:var(--shadow);transition:border-color .12s}
+.prof-card:hover{border-color:var(--green)}
+.prof-det-panel{display:none}
+.prof-det-panel.active{display:block}
+.pdt-form-row{display:grid;gap:16px;margin-bottom:16px}
+.pdt-form-row.c2{grid-template-columns:1fr 1fr}
+.pdt-form-row.c3{grid-template-columns:1fr 1fr 1fr}
+.pdt-form-row.c4{grid-template-columns:1fr 1fr 1fr 1fr}
+.pdt-field{display:flex;flex-direction:column;gap:4px}
+.pdt-field label{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
+.pdt-field input,.pdt-field select{border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;font-family:'Roboto',sans-serif;color:var(--text);outline:none;background:var(--white)}
+.pdt-field input:focus,.pdt-field select:focus{border-color:var(--green)}
+.pdt-field .val{font-size:14px;color:var(--text);padding:9px 0}
+.agenda-work-grid{display:grid;grid-template-columns:80px repeat(6,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden;font-size:11px}
+.agenda-work-header{background:var(--green);color:#fff;padding:8px 4px;text-align:center;font-weight:500}
+.agenda-work-time{background:var(--white);padding:6px 8px;text-align:right;color:var(--text3);font-size:10px}
+.agenda-work-cell{background:var(--white);padding:4px;text-align:center;cursor:pointer;min-height:24px;transition:background .1s}
+.agenda-work-cell:hover{background:rgba(27,94,59,.06)}
+.agenda-work-cell.available{background:#E8F5E9}
+.agenda-work-cell.unavailable{background:var(--gray3)}
 .prof-av{width:48px;height:48px;border-radius:50%;background:rgba(27,94,59,.1);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500;color:var(--green);margin:0 auto 10px}
 .prof-name{font-size:13px;font-weight:500;color:var(--text)}
 .prof-esp{font-size:11px;color:var(--text3);margin-top:3px}
@@ -1178,10 +1197,41 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 
     <!-- PROFISSIONAIS -->
     <div class="page gpage" id="p-profissionais">
-      <div class="gpage-header"><div><div class="gpage-title">Profissionais</div><div class="gpage-sub" id="prof-sub">Carregando...</div></div><button class="btn btn-primary" onclick="openModal('paciente')">+ Adicionar Profissional</button></div>
+      <div class="gpage-header"><div><div class="gpage-title">Profissionais</div><div class="gpage-sub" id="prof-sub">Carregando...</div></div><button class="btn btn-primary" onclick="openModal('paciente')">+ Novo Profissional</button></div>
       <div class="gpage-body">
         <div id="prof-loading" class="loading"><div class="spin"></div></div>
         <div id="prof-data" class="hidden"><div class="prof-grid" id="prof-grid"></div></div>
+      </div>
+    </div>
+
+    <!-- DETALHE DO PROFISSIONAL -->
+    <div class="page" id="p-prof-detalhe">
+      <div style="background:var(--white);border-bottom:1px solid var(--border);padding:16px 24px">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;gap:16px" id="prof-det-header"></div>
+        <!-- Tabs -->
+        <div style="display:flex;gap:0;margin-top:16px;border-bottom:2px solid var(--border)" id="prof-det-tabs">
+          <div class="fin-htab active" onclick="profDetTab('dados',this)">Dados Básicos</div>
+          <div class="fin-htab" onclick="profDetTab('assinatura',this)">Assinatura</div>
+          <div class="fin-htab" onclick="profDetTab('agenda-trabalho',this)">Agenda de Trabalho</div>
+          <div class="fin-htab" onclick="profDetTab('config-comissao',this)">Config. Comissão</div>
+          <div class="fin-htab" onclick="profDetTab('analise-comissao',this)">Análise de Comissões</div>
+          <div class="fin-htab" onclick="profDetTab('comissoes',this)">Comissões</div>
+        </div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:20px 24px;max-width:1100px">
+        <!-- Tab: Dados Básicos -->
+        <div class="prof-det-panel active" id="pdt-dados"></div>
+        <!-- Tab: Assinatura -->
+        <div class="prof-det-panel" id="pdt-assinatura"><div style="text-align:center;padding:60px;color:var(--text3)">Módulo de Assinatura Digital — em desenvolvimento</div></div>
+        <!-- Tab: Agenda de Trabalho -->
+        <div class="prof-det-panel" id="pdt-agenda-trabalho"></div>
+        <!-- Tab: Config Comissão -->
+        <div class="prof-det-panel" id="pdt-config-comissao"><div style="text-align:center;padding:60px;color:var(--text3)">Configuração de Comissão — em desenvolvimento</div></div>
+        <!-- Tab: Análise Comissões -->
+        <div class="prof-det-panel" id="pdt-analise-comissao"></div>
+        <!-- Tab: Comissões -->
+        <div class="prof-det-panel" id="pdt-comissoes"></div>
       </div>
     </div>
 
@@ -2146,30 +2196,146 @@ async function loadProfissionais() {
 }
 
 // ── VER PROFISSIONAL ─────────────────────────────────────────────
+var _profDetIdx = null
 function verProfissional(idx){
   var p=(ST.profissionais||[])[idx];if(!p)return
+  _profDetIdx=idx
   var nome=p.name||p.Name||p.nome||'Profissional'
   var cor=PROF_CORES[idx%PROF_CORES.length]
   var ini=nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
-  document.getElementById('prof-modal-title').textContent=nome
-  document.getElementById('prof-modal-body').innerHTML=
-    '<div style="display:flex;gap:20px;align-items:flex-start">'+
-      '<div style="width:64px;height:64px;border-radius:50%;background:'+cor+'22;color:'+cor+';display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;flex-shrink:0">'+ini+'</div>'+
-      '<div style="flex:1">'+
-        '<div style="font-size:18px;font-weight:500;margin-bottom:4px">'+nome+'</div>'+
-        '<div style="font-size:13px;color:var(--text3);margin-bottom:16px">'+(p.specialty||p.especialidade||'Clínico Geral')+'</div>'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
-          '<div class="card" style="padding:12px"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">CRO</div><div style="font-size:14px;font-weight:500;margin-top:4px">'+(p.cro||'—')+'</div></div>'+
-          '<div class="card" style="padding:12px"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">CPF</div><div style="font-size:14px;font-weight:500;margin-top:4px">'+(p.cpf||'—')+'</div></div>'+
-          '<div class="card" style="padding:12px"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Telefone</div><div style="font-size:14px;font-weight:500;margin-top:4px">'+(p.telefone||'—')+'</div></div>'+
-          '<div class="card" style="padding:12px"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Email</div><div style="font-size:14px;font-weight:500;margin-top:4px">'+(p.email||'—')+'</div></div>'+
-        '</div>'+
-        '<div style="margin-top:16px;display:flex;gap:16px">'+
-          '<div class="card" style="padding:12px;flex:1;text-align:center"><div style="font-size:28px;font-weight:300;color:var(--green)">'+(p.total_agendamentos||0)+'</div><div style="font-size:11px;color:var(--text3)">Total de Agendamentos</div></div>'+
-        '</div>'+
+  var esp=p.specialty||p.especialidade||'Clínico Geral'
+
+  // Navega para página de detalhe
+  document.querySelectorAll('.page').forEach(function(pg){pg.classList.remove('active')})
+  document.getElementById('p-prof-detalhe').classList.add('active')
+
+  // Header
+  document.getElementById('prof-det-header').innerHTML=
+    '<div style="width:56px;height:56px;border-radius:50%;background:'+cor+'22;color:'+cor+';display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0">'+ini+'</div>'+
+    '<div style="flex:1">'+
+      '<div style="font-size:18px;font-weight:500">'+nome+'</div>'+
+      '<div style="font-size:13px;color:var(--text3)">'+esp+'</div>'+
+      '<div style="display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--text3)">'+
+        '<span title="Telefone"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:3px"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>'+(p.telefone||'Não informado')+'</span>'+
+        '<span title="Email"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:3px"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>'+(p.email||'Não informado')+'</span>'+
+      '</div>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px">'+
+      '<button class="btn btn-sm" onclick="nav(\'profissionais\')" style="color:var(--text3)">← Voltar</button>'+
+    '</div>'
+
+  // Reset tabs
+  document.querySelectorAll('#prof-det-tabs .fin-htab').forEach(function(t,i){t.classList.toggle('active',i===0)})
+  document.querySelectorAll('.prof-det-panel').forEach(function(p2,i){p2.classList.toggle('active',i===0)})
+
+  // Render dados básicos
+  renderProfDados(p, cor)
+  renderProfAgendaTrabalho(p)
+  renderProfAnaliseComissao(p)
+  renderProfComissoes(p)
+}
+
+function profDetTab(id,el){
+  document.querySelectorAll('#prof-det-tabs .fin-htab').forEach(function(t){t.classList.remove('active')})
+  document.querySelectorAll('.prof-det-panel').forEach(function(p){p.classList.remove('active')})
+  el.classList.add('active')
+  document.getElementById('pdt-'+id).classList.add('active')
+}
+
+function renderProfDados(p, cor){
+  var nome=p.name||p.Name||p.nome||''
+  document.getElementById('pdt-dados').innerHTML=
+    '<div class="card" style="padding:20px;margin-bottom:16px">'+
+      '<div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px">Dados Cadastrais</div>'+
+      '<div class="pdt-form-row c2">'+
+        '<div class="pdt-field"><label>Nome Completo</label><div class="val" style="font-size:16px;font-weight:500">'+nome+'</div></div>'+
+        '<div class="pdt-field"><label>Cor na Agenda</label><div style="display:flex;align-items:center;gap:8px;padding:9px 0"><div style="width:24px;height:24px;border-radius:4px;background:'+cor+'"></div><span style="font-size:13px;color:var(--text3)">'+cor+'</span></div></div>'+
+      '</div>'+
+      '<div class="pdt-form-row c3">'+
+        '<div class="pdt-field"><label>CRO</label><div class="val">'+(p.cro||'—')+'</div></div>'+
+        '<div class="pdt-field"><label>CPF</label><div class="val">'+(p.cpf||'—')+'</div></div>'+
+        '<div class="pdt-field"><label>Especialidade</label><div class="val">'+(p.specialty||p.especialidade||'Clínico Geral')+'</div></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="card" style="padding:20px;margin-bottom:16px">'+
+      '<div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px">Contato</div>'+
+      '<div class="pdt-form-row c3">'+
+        '<div class="pdt-field"><label>Telefone</label><div class="val">'+(p.telefone||'—')+'</div></div>'+
+        '<div class="pdt-field"><label>Email</label><div class="val">'+(p.email||'—')+'</div></div>'+
+        '<div class="pdt-field"><label>Total Agendamentos</label><div class="val" style="font-size:20px;font-weight:300;color:var(--green)">'+(p.total_agendamentos||0)+'</div></div>'+
       '</div>'+
     '</div>'
-  openModal('profissional')
+}
+
+function renderProfAgendaTrabalho(p){
+  var dias=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado']
+  var html='<div class="card" style="padding:20px;margin-bottom:16px">'+
+    '<div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Grade de Disponibilidade</div>'+
+    '<div style="display:flex;gap:16px;margin-bottom:16px;font-size:12px"><span><span style="display:inline-block;width:14px;height:14px;background:#E8F5E9;border:1px solid var(--border);border-radius:2px;vertical-align:-2px"></span> Disponível</span><span><span style="display:inline-block;width:14px;height:14px;background:var(--gray3);border:1px solid var(--border);border-radius:2px;vertical-align:-2px"></span> Indisponível</span></div>'+
+    '<div class="agenda-work-grid"><div class="agenda-work-header">Horário</div>'
+  dias.forEach(function(d){html+='<div class="agenda-work-header">'+d+'</div>'})
+  for(var h=8;h<=18;h++){
+    for(var m=0;m<60;m+=30){
+      var t=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')
+      html+='<div class="agenda-work-time">'+t+'</div>'
+      dias.forEach(function(d,di){
+        var avail=(h>=8&&h<12)||(h>=14&&h<18)
+        html+='<div class="agenda-work-cell '+(avail?'available':'unavailable')+'" onclick="this.classList.toggle(\'available\');this.classList.toggle(\'unavailable\')"></div>'
+      })
+    }
+  }
+  html+='</div></div>'
+  document.getElementById('pdt-agenda-trabalho').innerHTML=html
+}
+
+async function renderProfAnaliseComissao(p){
+  var el=document.getElementById('pdt-analise-comissao')
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var profId=p.id||((ST.profissionais||[])[_profDetIdx]||{}).id
+    if(!profId){el.innerHTML='<div style="color:var(--text3);padding:20px">ID não disponível</div>';return}
+    var d=await apiData('agendamentos',{profissional:profId,limit:50})
+    var ag=d.agendamentos||[]
+    if(!ag.length){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">Nenhum agendamento encontrado para este profissional</div>';return}
+    var totalVal=ag.reduce(function(s,a){return s+(+(a.valor||0))},0)
+    el.innerHTML=
+      '<div style="display:flex;gap:16px;margin-bottom:16px">'+
+        '<div class="card" style="padding:12px;flex:1;text-align:center"><div style="font-size:28px;font-weight:300;color:var(--green)">'+ag.length+'</div><div style="font-size:11px;color:var(--text3)">Agendamentos</div></div>'+
+        '<div class="card" style="padding:12px;flex:1;text-align:center"><div style="font-size:28px;font-weight:300;color:var(--blue)">'+fmtBrl(totalVal)+'</div><div style="font-size:11px;color:var(--text3)">Valor Total</div></div>'+
+      '</div>'+
+      '<div class="card" style="padding:0;overflow:hidden"><table class="tbl" style="width:100%"><thead><tr><th>Data</th><th>Paciente</th><th>Procedimento</th><th>Status</th><th>Valor</th></tr></thead><tbody>'+
+      ag.map(function(a){
+        var dt=(a.data_hora||'').slice(0,10)
+        var hora=(a.data_hora||'').slice(11,16)||''
+        var stCor=a.status==='confirmado'?'green':a.status==='cancelado'?'red':'orange'
+        return '<tr><td style="color:var(--text3)">'+fmtDt(dt)+(hora?' '+hora:'')+'</td><td class="pname">'+(a.paciente_nome||'—')+'</td><td style="color:var(--text3)">'+(a.procedimento||a.tipo||'—')+'</td><td><span class="badge badge-'+stCor+'">'+(a.status||'agendado').toUpperCase()+'</span></td><td style="font-weight:500;color:var(--green)">'+fmtBrl(a.valor||0)+'</td></tr>'
+      }).join('')+
+      '</tbody></table></div>'
+  }catch(e){el.innerHTML='<div style="color:var(--red);padding:20px">'+e.message+'</div>'}
+}
+
+async function renderProfComissoes(p){
+  var el=document.getElementById('pdt-comissoes')
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var profId=p.id||((ST.profissionais||[])[_profDetIdx]||{}).id
+    var d=await apiData('agendamentos',{profissional:profId,limit:100})
+    var ag=d.agendamentos||[]
+    var comissoes=ag.filter(function(a){return +(a.valor||0)>0})
+    var total=comissoes.reduce(function(s,a){return s+(+(a.valor||0))},0)
+    el.innerHTML=
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+        '<div style="font-size:13px;color:var(--text3)">'+comissoes.length+' lançamento'+(comissoes.length!==1?'s':'')+'</div>'+
+      '</div>'+
+      (comissoes.length?
+        '<div class="card" style="padding:0;overflow:hidden"><table class="tbl" style="width:100%"><thead><tr><th>Data</th><th>Tipo</th><th>Paciente</th><th>Valor</th></tr></thead><tbody>'+
+        comissoes.map(function(a){
+          return '<tr><td style="color:var(--text3)">'+fmtDt((a.data_hora||'').slice(0,10))+'</td><td style="color:var(--text3)">'+(a.tipo||'—')+'</td><td class="pname">'+(a.paciente_nome||'—')+'</td><td style="font-weight:500;color:var(--green)">'+fmtBrl(a.valor)+'</td></tr>'
+        }).join('')+
+        '</tbody></table>'+
+        '<div style="padding:12px 16px;text-align:right;font-weight:700;border-top:2px solid var(--border)">Total: '+fmtBrl(total)+'</div></div>'
+      :'<div style="text-align:center;padding:40px;color:var(--text3)">Sem comissões</div>')
+  }catch(e){el.innerHTML='<div style="color:var(--red);padding:20px">'+e.message+'</div>'}
 }
 
 // ── ANIVERSARIANTES ──────────────────────────────────────────────

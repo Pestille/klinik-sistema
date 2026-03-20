@@ -106,18 +106,12 @@ module.exports = async function handler(req, res) {
         if (route === 'agendamentos') {
             var lim2 = Math.min(parseInt(q.limit) || 200, 500)
             var base = "SELECT a.id,a.data_hora,a.hora_fim,a.tipo,a.status,a.procedimento,a.valor,a.observacoes,a.profissional_id,COALESCE(p.nome,a.paciente_nome) as paciente_nome,COALESCE(p.telefone,a.paciente_telefone) as paciente_telefone,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id"
-            var sqlAg, argsAg
-            if (q.dataInicio && q.dataFim) {
-                sqlAg = base + " WHERE DATE(a.data_hora) BETWEEN ? AND ? ORDER BY a.data_hora DESC LIMIT " + lim2
-                argsAg = [q.dataInicio, q.dataFim]
-            } else if (q.data) {
-                sqlAg = base + " WHERE DATE(a.data_hora)=? ORDER BY a.data_hora"
-                argsAg = [q.data]
-            } else {
-                var m = q.mes || new Date().toISOString().slice(0, 7)
-                sqlAg = base + " WHERE strftime('%Y-%m',a.data_hora)=? ORDER BY a.data_hora DESC LIMIT " + lim2
-                argsAg = [m]
-            }
+            var wheres = [], argsAg = []
+            if (q.dataInicio && q.dataFim) { wheres.push("DATE(a.data_hora) BETWEEN ? AND ?"); argsAg.push(q.dataInicio, q.dataFim) }
+            else if (q.data) { wheres.push("DATE(a.data_hora)=?"); argsAg.push(q.data) }
+            else { var m = q.mes || new Date().toISOString().slice(0, 7); wheres.push("strftime('%Y-%m',a.data_hora)=?"); argsAg.push(m) }
+            if (q.profissional) { wheres.push("a.profissional_id=?"); argsAg.push(q.profissional) }
+            var sqlAg = base + (wheres.length ? " WHERE " + wheres.join(" AND ") : "") + " ORDER BY a.data_hora DESC LIMIT " + lim2
             var ra = await client.execute({ sql: sqlAg, args: argsAg })
             return res.status(200).json({ success: true, agendamentos: ra.rows, total: ra.rows.length })
         }
