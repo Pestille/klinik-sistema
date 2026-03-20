@@ -234,34 +234,40 @@ async function syncAgendamentos(client, dataInicio, dataFim) {
         if (!cid) continue
 
         var pacienteId = null
-        var pacCid = String(a.patientId || a.PatientId || a.patient_id || '')
+        // Clinicorp usa Patient_PersonId e Dentist_PersonId
+        var pacCid = String(a.Patient_PersonId || a.patientId || a.PatientId || '')
         if (pacCid) {
             var rp = await client.execute({ sql: 'SELECT id FROM pacientes WHERE clinicorp_id=?', args: [pacCid] })
             if (rp.rows.length > 0) pacienteId = rp.rows[0].id
         }
 
         var profId = null
-        var proCid = String(a.professionalId || a.ProfessionalId || a.professional_id || '')
+        var proCid = String(a.Dentist_PersonId || a.professionalId || a.ProfessionalId || '')
         if (proCid) {
             var rpr = await client.execute({ sql: 'SELECT id FROM profissionais WHERE clinicorp_id=?', args: [proCid] })
             if (rpr.rows.length > 0) profId = rpr.rows[0].id
         }
 
-        var dataHora = a.date || a.Date || a.dateTime || ''
-        var horaInicio = a.fromTime || a.FromTime || a.startTime || ''
+        var dataHora = a.date || a.Date || ''
+        var horaInicio = a.fromTime || a.FromTime || ''
         if (dataHora && horaInicio && !dataHora.includes('T') && !dataHora.includes(' ')) {
             dataHora = dataHora + ' ' + horaInicio
         }
 
-        var tipo     = a.CategoryDescription || a.categoryDescription || a.tipo || a.type || ''
-        var status   = (a.status || a.Status || 'agendado').toLowerCase()
-        var proc     = a.procedureName || a.ProcedureName || a.procedure || ''
+        var tipo     = a.CategoryDescription || a.categoryDescription || ''
+        var statusRaw = a.StatusId || a.status || a.Status || ''
+        var status   = (typeof statusRaw === 'string' ? statusRaw : 'agendado').toLowerCase() || 'agendado'
+        var proc     = a.Procedures || a.procedureName || a.ProcedureName || ''
         var valor    = parseFloat(a.value || a.Value || a.amount || 0) || 0
-        var obs      = a.observations || a.Observations || a.observacoes || ''
-        var horaFim  = a.toTime || a.ToTime || a.endTime || ''
-        var pacNome  = a.PatientName || a.patientName || ''
-        var pacTel   = a.MobilePhone || a.mobilePhone || a.Phone || ''
-        var profNome = a.ProfessionalName || a.professionalName || ''
+        var obs      = a.Notes || a.observations || a.Observations || ''
+        var horaFim  = a.toTime || a.ToTime || ''
+        var pacNome  = a.PatientName || a.Name || ''
+        var pacTel   = a.MobilePhone || ''
+        var profNome = '' // Resolve pelo profId
+        if (profId) {
+            var prn = await client.execute({ sql: 'SELECT nome FROM profissionais WHERE id=?', args: [profId] })
+            if (prn.rows.length > 0) profNome = prn.rows[0].nome
+        }
 
         var existe = await client.execute({ sql: 'SELECT id FROM agendamentos WHERE clinicorp_id=?', args: [cid] })
         if (existe.rows.length > 0) {
