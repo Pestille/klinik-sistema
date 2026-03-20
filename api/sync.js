@@ -104,6 +104,26 @@ async function explorar() {
         { ep: 'indication/list', p: { limit: 2 } },
         { ep: 'insurance/list', p: { limit: 2 } },
         { ep: 'price_table/list', p: { limit: 2 } },
+        // Batch 2: variações para orçamentos/tratamentos/vendas
+        { ep: 'checkout/list', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'sale/list', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'sales/list', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'estimate/list', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'quotation/list', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'treatment/list_all', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'treatment/list_plans', p: { limit: 2 } },
+        { ep: 'treatment_plan/list_all', p: { limit: 2 } },
+        { ep: 'financial/list_checkout', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'financial/list_sales', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'financial/list_treatments', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'payment/list_checkout', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'payment/list_all', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'payment/list_header', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'payment_header/list', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'accounting/list', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'invoice/list', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'receivable/list', p: { from: dt.from, to: dt.to, limit: 2 } },
+        { ep: 'receivables/list', p: { from: dt.from, to: dt.to, limit: 2 } },
     ]
 
     var results = await Promise.allSettled(
