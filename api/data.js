@@ -680,7 +680,7 @@ module.exports = async function handler(req, res) {
             } catch(eImport) { stats.erros.push(eImport.message) }
             // 3. Contar resultado final
             var finalStats = await client.execute("SELECT COUNT(*) as total, SUM(CASE WHEN email!='' AND email IS NOT NULL THEN 1 ELSE 0 END) as com_email, SUM(CASE WHEN cpf!='' AND cpf IS NOT NULL THEN 1 ELSE 0 END) as com_cpf, SUM(CASE WHEN telefone!='' AND telefone IS NOT NULL THEN 1 ELSE 0 END) as com_tel, SUM(CASE WHEN endereco!='' AND endereco IS NOT NULL THEN 1 ELSE 0 END) as com_endereco, SUM(CASE WHEN como_conheceu!='' AND como_conheceu IS NOT NULL THEN 1 ELSE 0 END) as com_como, SUM(CASE WHEN data_nascimento!='' AND data_nascimento IS NOT NULL THEN 1 ELSE 0 END) as com_nasc FROM pacientes")
-            return res.status(200).json({ success: true, importados: stats, pagamentos_processados: pgData.length, agendamentos_processados: agData.length, resultado_final: finalStats.rows[0] })
+            return res.status(200).json({ success: true, importados: stats, resultado_final: (finalStats && finalStats.rows) ? finalStats.rows[0] : {} })
         }
 
         // ── ENRIQUECER PACIENTES (preenche campos vazios com dados dos pagamentos) ──
