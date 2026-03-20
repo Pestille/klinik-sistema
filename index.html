@@ -1655,7 +1655,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
   <div class="modal lg">
     <div class="modal-head"><div class="modal-title">Novo Paciente</div><button class="modal-close" onclick="closeModal('paciente')">✕</button></div>
     <div class="modal-body">
-      <div class="form-row c2"><div class="form-group"><label class="form-label">Nome Completo *</label><input class="form-input" id="pac-f-nome" placeholder="Nome completo"></div><div class="form-group"><label class="form-label">CPF</label><input class="form-input" id="pac-f-cpf" placeholder="000.000.000-00"></div></div>
+      <div class="form-row c2"><div class="form-group"><label class="form-label">Nome Completo *</label><input class="form-input" id="pac-f-nome" placeholder="Nome completo"></div><div class="form-group"><label class="form-label">CPF</label><input class="form-input" id="pac-f-cpf" placeholder="000.000.000-00" oninput="mascaraCpf(this)" onblur="validarCpfField(this)"></div></div>
       <div class="form-row c3"><div class="form-group"><label class="form-label">Nascimento</label><input class="form-input" id="pac-f-nasc" type="date"></div><div class="form-group"><label class="form-label">Sexo</label><select class="form-input" id="pac-f-sexo"><option value="">—</option><option>Feminino</option><option>Masculino</option></select></div><div class="form-group"><label class="form-label">Estado Civil</label><select class="form-input" id="pac-f-civil"><option value="">—</option><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option></select></div></div>
       <div class="form-row c2"><div class="form-group"><label class="form-label">Telefone</label><input class="form-input" id="pac-f-tel" placeholder="(67) 99999-9999"></div><div class="form-group"><label class="form-label">WhatsApp</label><input class="form-input" id="pac-f-whats" placeholder="(67) 99999-9999"></div></div>
       <div class="form-row c2"><div class="form-group"><label class="form-label">Email</label><input class="form-input" id="pac-f-email" placeholder="email@email.com"></div><div class="form-group"><label class="form-label">Como nos conheceu?</label><select class="form-input" id="pac-f-como"><option value="">—</option><option>Indicação</option><option>Instagram</option><option>Google</option><option>Facebook</option><option>Plano/Convênio</option><option>Placa</option><option>Panfleto</option><option>Outro</option></select></div></div>
@@ -2301,7 +2301,7 @@ function renderProfDados(p,cor){
       // RG | CPF
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">'+
         '<div class="pdt-field"><label>RG</label><input id="prof-f-rg" value="" placeholder="RG"></div>'+
-        '<div class="pdt-field"><label>CPF</label><input id="prof-f-cpf" value="'+(cpf||'')+'" placeholder="000.000.000-00"></div>'+
+        '<div class="pdt-field"><label>CPF</label><input id="prof-f-cpf" value="'+(cpf||'')+'" placeholder="000.000.000-00" oninput="mascaraCpf(this)" onblur="validarCpfField(this)"></div>'+
       '</div>'+
       // Especialidades
       '<div class="pdt-field" style="margin-bottom:24px"><label>Especialidades</label><input id="prof-f-esp" value="'+(esp||'')+'" placeholder="Especialidades"></div>'+
@@ -2336,6 +2336,38 @@ function renderProfContato(p){
       '</div>'+
       '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="pdt-btn-outline" onclick="nav(\'profissionais\')">Cancelar</button><button class="pdt-btn-fill" onclick="salvarProfissional()">Salvar Alterações</button></div>'+
     '</div>'
+}
+
+// ── CPF: MÁSCARA + VALIDAÇÃO ─────────────────────────────────────
+function mascaraCpf(el){
+  var v=el.value.replace(/\D/g,'').slice(0,11)
+  if(v.length>9)v=v.replace(/(\d{3})(\d{3})(\d{3})(\d+)/,'$1.$2.$3-$4')
+  else if(v.length>6)v=v.replace(/(\d{3})(\d{3})(\d+)/,'$1.$2.$3')
+  else if(v.length>3)v=v.replace(/(\d{3})(\d+)/,'$1.$2')
+  el.value=v
+}
+function validarCpf(cpf){
+  var n=cpf.replace(/\D/g,'')
+  if(n.length!==11)return false
+  if(/^(\d)\1{10}$/.test(n))return false
+  for(var t=9;t<11;t++){
+    var s=0
+    for(var i=0;i<t;i++)s+=parseInt(n[i])*(t+1-i)
+    var d=((s*10)%11)%10
+    if(parseInt(n[t])!==d)return false
+  }
+  return true
+}
+function validarCpfField(el){
+  var v=el.value.replace(/\D/g,'')
+  if(!v)return
+  if(validarCpf(v)){
+    el.style.borderBottomColor='#4CAF50'
+    setTimeout(function(){el.style.borderBottomColor=''},2000)
+  }else{
+    el.style.borderBottomColor='#D32F2F'
+    el.title='CPF inválido'
+  }
 }
 
 // ── BUSCA CEP (ViaCEP) ──────────────────────────────────────────
