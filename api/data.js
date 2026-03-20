@@ -625,12 +625,14 @@ module.exports = async function handler(req, res) {
                 })
             }
 
-            var stats = { enderecos: 0, como_conheceu: 0, telefone: 0, email: 0, cpf: 0 }
-
+            var stats = { enderecos: 0, como_conheceu: 0, telefone: 0, email: 0, cpf: 0, erros: [] }
+            try {
             // 1. Enriquecer a partir dos dados JÁ NO TURSO (pagamentos + agendamentos)
             // CPF e email dos pagamentos
             var pgCpf = await client.execute("SELECT DISTINCT paciente_nome, titular_cpf, pagador_email FROM pagamentos WHERE (titular_cpf IS NOT NULL AND titular_cpf!='') OR (pagador_email IS NOT NULL AND pagador_email!='')")
-            for (var pi2 = 0; pi2 < pgCpf.rows.length; pi2++) {
+            var pgRows = (pgCpf && pgCpf.rows) ? pgCpf.rows : []
+            for (var pi2 = 0; pi2 < pgRows.length; pi2++) {
+                var pg = pgRows[pi2]
                 var pg = pgCpf.rows[pi2]; var sets = []; var args3 = []
                 if (pg.titular_cpf) { sets.push("cpf=CASE WHEN cpf IS NULL OR cpf='' THEN ? ELSE cpf END"); args3.push(pg.titular_cpf); stats.cpf++ }
                 if (pg.pagador_email) { sets.push("email=CASE WHEN email IS NULL OR email='' THEN ? ELSE email END"); args3.push(pg.pagador_email); stats.email++ }
@@ -638,8 +640,9 @@ module.exports = async function handler(req, res) {
             }
             // Telefone dos agendamentos
             var agTel2 = await client.execute("SELECT DISTINCT paciente_nome, paciente_telefone FROM agendamentos WHERE paciente_telefone IS NOT NULL AND paciente_telefone!=''")
-            for (var ti2 = 0; ti2 < agTel2.rows.length; ti2++) {
-                var at2 = agTel2.rows[ti2]; if (!at2.paciente_nome) continue
+            var agRows = (agTel2 && agTel2.rows) ? agTel2.rows : []
+            for (var ti2 = 0; ti2 < agRows.length; ti2++) {
+                var at2 = agRows[ti2]; if (!at2.paciente_nome) continue
                 await client.execute({ sql: "UPDATE pacientes SET telefone=CASE WHEN telefone IS NULL OR telefone='' THEN ? ELSE telefone END, atualizado_em=datetime('now') WHERE nome=?", args: [at2.paciente_telefone, at2.paciente_nome] })
                 stats.telefone++
             }
@@ -674,6 +677,7 @@ module.exports = async function handler(req, res) {
             } catch(e4) { /* timeout ok */ }
             } // fim etapa 2
 
+            } catch(eImport) { stats.erros.push(eImport.message) }
             // 3. Contar resultado final
             var finalStats = await client.execute("SELECT COUNT(*) as total, SUM(CASE WHEN email!='' AND email IS NOT NULL THEN 1 ELSE 0 END) as com_email, SUM(CASE WHEN cpf!='' AND cpf IS NOT NULL THEN 1 ELSE 0 END) as com_cpf, SUM(CASE WHEN telefone!='' AND telefone IS NOT NULL THEN 1 ELSE 0 END) as com_tel, SUM(CASE WHEN endereco!='' AND endereco IS NOT NULL THEN 1 ELSE 0 END) as com_endereco, SUM(CASE WHEN como_conheceu!='' AND como_conheceu IS NOT NULL THEN 1 ELSE 0 END) as com_como, SUM(CASE WHEN data_nascimento!='' AND data_nascimento IS NOT NULL THEN 1 ELSE 0 END) as com_nasc FROM pacientes")
             return res.status(200).json({ success: true, importados: stats, pagamentos_processados: pgData.length, agendamentos_processados: agData.length, resultado_final: finalStats.rows[0] })
