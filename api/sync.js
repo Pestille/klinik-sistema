@@ -248,11 +248,10 @@ async function syncAgendamentos(client, dataInicio, dataFim) {
             if (rpr.rows.length > 0) profId = rpr.rows[0].id
         }
 
-        var dataHora = a.date || a.Date || ''
+        var dataRaw = a.date || a.Date || ''
+        var dataPart = dataRaw ? dataRaw.slice(0,10) : '' // "2026-03-19"
         var horaInicio = a.fromTime || a.FromTime || ''
-        if (dataHora && horaInicio && !dataHora.includes('T') && !dataHora.includes(' ')) {
-            dataHora = dataHora + ' ' + horaInicio
-        }
+        var dataHora = dataPart && horaInicio ? dataPart + ' ' + horaInicio : dataPart
 
         var tipo     = a.CategoryDescription || a.categoryDescription || ''
         var statusRaw = a.StatusId || a.status || a.Status || ''
