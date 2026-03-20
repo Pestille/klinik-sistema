@@ -212,8 +212,23 @@ module.exports = async function handler(req, res) {
         var b4 = req.body || {}
         if (!b4.usuario_id) return res.status(400).json({ success: false, error: 'usuario_id obrigatório' })
         await client.execute({ sql: "UPDATE usuarios SET ativo = CASE WHEN ativo=1 THEN 0 ELSE 1 END WHERE id=?", args: [b4.usuario_id] })
+        // Invalida sessões se desativou
+        var check = await client.execute({ sql: "SELECT ativo FROM usuarios WHERE id=?", args: [b4.usuario_id] })
+        if (check.rows.length && !check.rows[0].ativo) {
+            await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=?", args: [b4.usuario_id] })
+        }
         return res.status(200).json({ success: true })
     }
 
-    return res.status(400).json({ success: false, error: 'Action inválida', actions: ['login', 'me', 'logout', 'criar-usuario', 'listar-usuarios', 'alterar-senha', 'redefinir-senha', 'toggle-usuario'] })
+    // ── EXCLUIR USUÁRIO ──────────────────────────────────────
+    if (action === 'excluir-usuario') {
+        if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+        var b5 = req.body || {}
+        if (!b5.usuario_id) return res.status(400).json({ success: false, error: 'usuario_id obrigatório' })
+        await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=?", args: [b5.usuario_id] })
+        await client.execute({ sql: "DELETE FROM usuarios WHERE id=?", args: [b5.usuario_id] })
+        return res.status(200).json({ success: true, msg: 'Usuário excluído' })
+    }
+
+    return res.status(400).json({ success: false, error: 'Action inválida', actions: ['login', 'me', 'logout', 'criar-usuario', 'listar-usuarios', 'alterar-senha', 'redefinir-senha', 'toggle-usuario', 'excluir-usuario'] })
 }

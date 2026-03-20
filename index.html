@@ -2384,6 +2384,7 @@ async function loadUsuarios(){
           '<td style="display:flex;gap:6px">'+
             '<button class="btn btn-sm" onclick="abrirAlterarSenha('+u.id+',\''+u.nome.replace(/'/g,"\\'")+'\')">Senha</button>'+
             '<button class="btn btn-sm" style="color:'+(u.ativo?'var(--red)':'var(--green)')+'" onclick="toggleUsuario('+u.id+')">'+(u.ativo?'Desativar':'Ativar')+'</button>'+
+            '<button class="btn btn-sm" style="color:var(--red)" onclick="excluirUsuario('+u.id+',\''+u.nome.replace(/'/g,"\\'")+'\')">Excluir</button>'+
           '</td></tr>'
       }).join('')+
     '</tbody></table>'
@@ -2430,9 +2431,19 @@ async function alterarSenhaUsuario(){
 }
 
 async function toggleUsuario(id){
-  if(!confirm('Confirma alteração de status?'))return
+  if(!confirm('Confirma alteração de status do usuário?'))return
   try{
     var r=await fetch('/api/auth?action=toggle-usuario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario_id:id})})
+    var d=await r.json()
+    if(d.success)loadUsuarios()
+    else alert(d.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function excluirUsuario(id,nome){
+  if(!confirm('Excluir o usuário "'+nome+'" permanentemente?\n\nEsta ação não pode ser desfeita.'))return
+  try{
+    var r=await fetch('/api/auth?action=excluir-usuario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario_id:id})})
     var d=await r.json()
     if(d.success)loadUsuarios()
     else alert(d.error||'Erro')
