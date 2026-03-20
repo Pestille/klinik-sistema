@@ -337,6 +337,16 @@ module.exports = async function handler(req, res) {
                     client.execute({ sql: "SELECT COALESCE(SUM(parcelas),0) as total, COUNT(*) as qtd FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND parcelas>0", args: [mm] }),
                     // Faltas primeiras consultas
                     client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND (tipo LIKE '%Avaliação%') AND (status LIKE '%falt%' OR status='faltou')", args: [mm] }),
+                    // Pagamentos por forma
+                    client.execute({ sql: "SELECT forma_pagamento, COUNT(*) as qtd, SUM(valor) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 GROUP BY forma_pagamento ORDER BY total DESC", args: [mm] }),
+                    // Pagamentos cancelados (valor)
+                    client.execute({ sql: "SELECT COUNT(*) as qtd, COALESCE(SUM(valor),0) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=1", args: [mm] }),
+                    // Orçamentos: agendamentos com valor > 0 (aprovados = com pagamento)
+                    client.execute({ sql: "SELECT COUNT(*) as total, COALESCE(SUM(a.valor),0) as valor FROM agendamentos a WHERE strftime('%Y-%m',a.data_hora)=? AND a.valor>0", args: [mm] }),
+                    // Orçamentos pendentes: agendamentos com valor > 0 mas sem pagamento vinculado
+                    client.execute({ sql: "SELECT COUNT(*) as total, COALESCE(SUM(a.valor),0) as valor FROM agendamentos a WHERE strftime('%Y-%m',a.data_hora)=? AND a.valor>0 AND a.status NOT IN ('cancelado','faltou')", args: [mm] }),
+                    // Ticket médio pagamentos
+                    client.execute({ sql: "SELECT AVG(valor) as ticket FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND valor>0", args: [mm] }),
                 ])
                 result.por_mes[mm] = {
                     agendamentos: rs3[0].rows[0].total,
@@ -353,6 +363,14 @@ module.exports = async function handler(req, res) {
                     parcelas_total: +(rs3[11].rows[0].total || 0),
                     parcelas_qtd: +(rs3[11].rows[0].qtd || 0),
                     faltas_primeira: rs3[12].rows[0].total,
+                    por_forma: rs3[13].rows,
+                    pagamentos_cancelados_qtd: rs3[14].rows[0].qtd,
+                    pagamentos_cancelados_valor: +(rs3[14].rows[0].total || 0),
+                    orcamentos_total: rs3[15].rows[0].total,
+                    orcamentos_valor: +(rs3[15].rows[0].valor || 0),
+                    orcamentos_aprovados: rs3[16].rows[0].total,
+                    orcamentos_aprovados_valor: +(rs3[16].rows[0].valor || 0),
+                    ticket_medio: +(rs3[17].rows[0].ticket || 0),
                 }
             }
             return res.status(200).json({ success: true, ...result })

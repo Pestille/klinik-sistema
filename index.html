@@ -3057,10 +3057,11 @@ async function loadAnalytics(){
     // G11: Parcelamento
     daChart('da-parcelamento',{type:'bar',data:{labels:labels,datasets:[{label:'Pagamentos Totais',data:pagQtd,backgroundColor:'#1976D2'},{label:'Parcelamento Total',data:parcTot,backgroundColor:'#4CAF50'},{label:'Média Parcelamento',data:parcMedia,backgroundColor:'#F9A825'}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}}}})
 
-    // G12: Conversão
-    var recTotal=entradas.map(function(v){return Math.round(v*2.5)})
-    var convPerc=entradas.map(function(v,i){return recTotal[i]>0?Math.round(v/recTotal[i]*10000)/100:0})
-    daChart('da-conversao',{type:'bar',data:{labels:labels,datasets:[{label:'Oportunidades',data:recTotal,backgroundColor:'#1976D2',yAxisID:'y'},{label:'Conversão %',data:convPerc,backgroundColor:'#E65100',yAxisID:'y1'}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}},scales:{y:{position:'left',ticks:{callback:function(v){return fmtBrl(v)}}},y1:{position:'right',max:50,ticks:{callback:function(v){return v+'%'}},grid:{display:false}}}}})
+    // G12: Conversão (dados reais: orçamentos vs aprovados)
+    var orcTotais=vals.map(function(v){return v.orcamentos_valor||0})
+    var orcAprovados=vals.map(function(v){return v.orcamentos_aprovados_valor||0})
+    var convPerc2=orcTotais.map(function(v,i){return v>0?Math.round(orcAprovados[i]/v*10000)/100:0})
+    daChart('da-conversao',{type:'bar',data:{labels:labels,datasets:[{label:'Oportunidades (R$)',data:orcTotais,backgroundColor:'#1976D2',yAxisID:'y'},{label:'Vendas Realizadas (R$)',data:orcAprovados,backgroundColor:'#4CAF50',yAxisID:'y'},{label:'Conversão %',data:convPerc2,backgroundColor:'#E65100',yAxisID:'y1'}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}},scales:{y:{position:'left',ticks:{callback:function(v){return fmtBrl(v)}}},y1:{position:'right',max:100,ticks:{callback:function(v){return v+'%'}},grid:{display:false}}}}})
 
     // G13: Vendas por Especialidade
     daChart('da-vendasEsp',{type:'bar',data:{labels:labels,datasets:catNames.slice(0,5).map(function(cat,i){var cores=['#FF8A65','#42A5F5','#8D6E63','#26A69A','#9C27B0'];return {label:cat,data:vals.map(function(v){var found=(v.categorias||[]).find(function(c){return c.tipo===cat});return found?found.total*150:0}),backgroundColor:cores[i%5]}})},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:function(v){return fmtBrl(v)}}}}}})
@@ -3074,13 +3075,27 @@ async function loadAnalytics(){
     // Orçamentos
     var orcCards=[{k:'aprov',l:'Aprovado',bg:'#43A047'},{k:'aberto',l:'Em Aberto',bg:'#1E88E5'},{k:'follow',l:'Follow Up',bg:'#FB8C00'},{k:'reprov',l:'Reprovado',bg:'#E53935'},{k:'total',l:'Total',bg:'#1565C0'},{k:'conv',l:'Conversão',bg:'#2E7D32'}]
     document.getElementById('da-orcamentos').innerHTML=meses.map(function(m,i){
-      var v=vals[i];var ag=v.agendamentos||0;var prim2=v.primeiras_consultas||0;var rec2=v.receita_entrada||0
-      var om={aprov:ag-cancelados[i],aberto:cancelados[i]+pagPend[i]?Math.round(pagPend[i]/100):0,follow:0,reprov:cancelados[i],total:ag,conv:ag>0?Math.round(rec2/(rec2*2.5||1)*10000)/100:0,recAprov:rec2,ticket:ag>0?Math.round(rec2/ag*100)/100:0}
+      var v=vals[i]
+      var orcTotal=v.orcamentos_total||0
+      var orcAprov=v.orcamentos_aprovados||0
+      var orcValor=v.orcamentos_aprovados_valor||0
+      var orcReprov=v.pagamentos_cancelados_qtd||0
+      var orcAberto=Math.max(0,orcTotal-orcAprov-orcReprov)
+      var orcTotalGeral=v.agendamentos||0
+      var recMes=v.receita_entrada||0
+      var ticketMes=v.ticket_medio||0
+      var convPerc=orcTotalGeral>0?Math.round(orcAprov/orcTotalGeral*10000)/100:0
+      var orcCards2=[
+        {l:'Aprovado',v:orcAprov,bg:'#43A047',sub:fmtBrl(recMes)+'<br>Ticket Médio '+fmtBrl(ticketMes)},
+        {l:'Em Aberto',v:orcAberto,bg:'#1E88E5',sub:fmtBrl(v.pagamentos_pendentes||0)},
+        {l:'Follow Up',v:0,bg:'#FB8C00',sub:''},
+        {l:'Reprovado',v:orcReprov,bg:'#E53935',sub:fmtBrl(v.pagamentos_cancelados_valor||0)},
+        {l:'Total',v:orcTotalGeral,bg:'#1565C0',sub:fmtBrl(recMes+(v.pagamentos_pendentes||0))},
+        {l:'Conversão',v:convPerc+'%',bg:'#2E7D32',sub:''}
+      ]
       return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><div style="min-width:80px;font-size:13px;font-weight:500;color:#212121;padding:8px 12px;border:1px solid #e0e0e0;border-radius:4px">'+labels[i]+'</div><div style="display:flex;gap:8px;flex:1;overflow-x:auto">'+
-        orcCards.map(function(c){
-          var val2=c.k==='conv'?om.conv+'%':om[c.k]
-          var sub2=c.k==='aprov'?fmtBrl(om.recAprov)+'<br>Ticket '+fmtBrl(om.ticket):''
-          return '<div style="background:'+c.bg+';border-radius:8px;padding:16px;min-width:140px;color:#fff"><div style="font-size:12px;opacity:.85">'+c.l+'</div><div style="font-size:22px;font-weight:700;margin:4px 0">'+val2+'</div><div style="font-size:11px;opacity:.75">'+sub2+'</div></div>'
+        orcCards2.map(function(c){
+          return '<div style="background:'+c.bg+';border-radius:8px;padding:16px;min-width:140px;color:#fff"><div style="font-size:12px;opacity:.85">'+c.l+'</div><div style="font-size:22px;font-weight:700;margin:4px 0">'+c.v+'</div><div style="font-size:11px;opacity:.75">'+(c.sub||'')+'</div></div>'
         }).join('')+'</div></div>'
     }).join('')
 
