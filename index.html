@@ -2216,16 +2216,20 @@ function verProfissional(idx){
   document.querySelectorAll('.page').forEach(function(pg){pg.classList.remove('active')})
   var pg=document.getElementById('p-prof-detalhe');pg.style.display='flex';pg.classList.add('active')
 
-  // Header pixel-perfect
+  // Header editável
   document.getElementById('prof-det-header').innerHTML=
     '<div style="display:flex;align-items:center;gap:16px">'+
-      '<div style="width:64px;height:64px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="28" height="28" viewBox="0 0 24 24" fill="#9e9e9e"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>'+
+      '<div style="position:relative;cursor:pointer" onclick="document.getElementById(\'prof-foto-input\').click()">'+
+        '<div id="prof-avatar-circle" style="width:64px;height:64px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden"><svg width="28" height="28" viewBox="0 0 24 24" fill="#9e9e9e"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>'+
+        '<div style="position:absolute;bottom:0;right:0;width:20px;height:20px;border-radius:50%;background:#E65100;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px">📷</div>'+
+        '<input type="file" id="prof-foto-input" accept="image/*" style="display:none" onchange="profFotoPreview(this)">'+
+      '</div>'+
       '<div style="flex:1">'+
         '<div style="font-size:22px;font-weight:600;color:#212121">'+nome+'</div>'+
-        '<div style="margin-top:6px;display:flex;flex-direction:column;gap:4px;font-size:13px;color:#616161">'+
-          '<div>☎ '+(tel?tel:'Não informado')+'</div>'+
-          '<div>📱 '+(tel||'Não informado')+'</div>'+
-          '<div>✉ '+(email||'Não informado')+'</div>'+
+        '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;font-size:13px;color:#616161">'+
+          '<div style="display:flex;align-items:center;gap:6px">☎ <input id="prof-h-tel" value="'+(tel||'')+'" placeholder="Não informado" style="border:none;border-bottom:1px solid transparent;font-size:13px;color:#616161;padding:2px 0;outline:none;font-family:Roboto,sans-serif;background:transparent;width:200px" onfocus="this.style.borderBottomColor=\'#E65100\'" onblur="this.style.borderBottomColor=\'transparent\'"></div>'+
+          '<div style="display:flex;align-items:center;gap:6px">📱 <input id="prof-h-cel" value="'+(tel||'')+'" placeholder="Não informado" style="border:none;border-bottom:1px solid transparent;font-size:13px;color:#616161;padding:2px 0;outline:none;font-family:Roboto,sans-serif;background:transparent;width:200px" onfocus="this.style.borderBottomColor=\'#E65100\'" onblur="this.style.borderBottomColor=\'transparent\'"></div>'+
+          '<div style="display:flex;align-items:center;gap:6px">✉ <input id="prof-h-email" value="'+(email||'')+'" placeholder="Não informado" style="border:none;border-bottom:1px solid transparent;font-size:13px;color:#616161;padding:2px 0;outline:none;font-family:Roboto,sans-serif;background:transparent;width:260px" onfocus="this.style.borderBottomColor=\'#E65100\'" onblur="this.style.borderBottomColor=\'transparent\'"></div>'+
         '</div>'+
       '</div>'+
       '<div style="display:flex;align-items:center;gap:8px">'+
@@ -2253,42 +2257,88 @@ function profDetTab(id,el){
   el.classList.add('active');document.getElementById('pdt-'+id).classList.add('active')
 }
 
+var PALETA_CORES=['#9C27B0','#4CAF50','#FF9800','#795548','#2196F3','#E91E63','#00BCD4','#F44336','#3F51B5','#009688','#FF5722','#607D8B','#8BC34A','#FFC107','#673AB7','#1B5E3B']
+
 function renderProfDados(p,cor){
   var nome=p.name||p.Name||p.nome||''
   var esp=p.specialty||p.especialidade||''
   var cpf=p.cpf||'';var cro=p.cro||''
+  // Gera selects de nascimento
+  var diasOpts='<option value="">—</option>';for(var dd=1;dd<=31;dd++)diasOpts+='<option value="'+dd+'">'+dd+'</option>'
+  var mesesOpts='<option value="">—</option>';var mNomes=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];for(var mm=0;mm<12;mm++)mesesOpts+='<option value="'+(mm+1)+'">'+mNomes[mm]+'</option>'
+  var anosOpts='<option value="">—</option>';for(var yy=2010;yy>=1940;yy--)anosOpts+='<option value="'+yy+'">'+yy+'</option>'
+  // Paleta de cores
+  var paletaHtml=PALETA_CORES.map(function(c){return '<div onclick="profSelectCor(\''+c+'\')" style="width:24px;height:24px;border-radius:50%;background:'+c+';cursor:pointer;border:2px solid '+(c===cor?'#212121':'transparent')+';transition:border-color .12s" title="'+c+'"></div>'}).join('')
+
   document.getElementById('pdt-dados').innerHTML=
     '<div style="display:flex;gap:24px">'+
-    // Sidebar
     '<div style="width:240px;flex-shrink:0">'+
       '<div class="pdt-sidebar-item active"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:#E65100"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Dados Cadastrais</div>'+
       '<div class="pdt-sidebar-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:#757575"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>Contato</div>'+
     '</div>'+
-    // Conteúdo
     '<div style="flex:1">'+
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:24px"><svg width="20" height="20" viewBox="0 0 24 24" fill="#E65100"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg><span style="font-size:16px;font-weight:500;color:#212121">Dados Cadastrais</span></div>'+
       // Nome + Cor
-      '<div style="display:flex;gap:24px;margin-bottom:24px"><div class="pdt-field" style="flex:1"><label>Nome *</label><input value="'+nome+'" readonly></div><div class="pdt-field" style="width:80px"><label>Cor</label><div style="display:flex;align-items:center;gap:6px;padding:8px 0"><div style="width:20px;height:20px;border-radius:50%;background:'+cor+'"></div></div></div></div>'+
+      '<div style="display:flex;gap:24px;margin-bottom:24px">'+
+        '<div class="pdt-field" style="flex:1"><label>Nome *</label><input id="prof-f-nome" value="'+nome+'"></div>'+
+        '<div class="pdt-field" style="width:200px"><label>Cor na Agenda</label><div style="display:flex;flex-wrap:wrap;gap:6px;padding:8px 0" id="prof-paleta">'+paletaHtml+'</div></div>'+
+      '</div>'+
       // Nascimento | Sexo | Estado Civil
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:24px">'+
-        '<div class="pdt-field"><label>Nascimento</label><div style="display:flex;gap:8px;padding:8px 0"><select style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;color:#212121;padding:4px 0"><option>—</option></select><select style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;color:#212121;padding:4px 0"><option>—</option></select><select style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;color:#212121;padding:4px 0"><option>—</option></select></div></div>'+
-        '<div class="pdt-field"><label>Sexo</label><div style="display:flex;gap:16px;padding:8px 0;font-size:14px"><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" style="accent-color:#E65100"> Masculino</label><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" style="accent-color:#E65100"> Feminino</label><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" style="accent-color:#E65100"> Outro</label></div></div>'+
-        '<div class="pdt-field"><label>Estado Civil</label><select><option>—</option><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option></select></div>'+
+        '<div class="pdt-field"><label>Nascimento</label><div style="display:flex;gap:8px;padding:4px 0"><select id="prof-f-nasc-dia" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;color:#212121;padding:4px 0">'+diasOpts+'</select><select id="prof-f-nasc-mes" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;color:#212121;padding:4px 0">'+mesesOpts+'</select><select id="prof-f-nasc-ano" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;color:#212121;padding:4px 0">'+anosOpts+'</select></div></div>'+
+        '<div class="pdt-field"><label>Sexo</label><div style="display:flex;gap:16px;padding:8px 0;font-size:14px"><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" value="M" style="accent-color:#E65100"> Masculino</label><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" value="F" style="accent-color:#E65100"> Feminino</label><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" value="O" style="accent-color:#E65100"> Outro</label></div></div>'+
+        '<div class="pdt-field"><label>Estado Civil</label><select id="prof-f-civil"><option value="">—</option><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option></select></div>'+
       '</div>'+
       // CRO | Número | Usuário
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:24px">'+
-        '<div class="pdt-field"><label>CRO</label><select><option>MS</option><option>SP</option><option>RJ</option><option>MG</option><option>PR</option></select></div>'+
-        '<div class="pdt-field"><label>Número</label><input value="'+(cro||'')+'" placeholder="Número CRO"></div>'+
-        '<div class="pdt-field"><label>Usuário</label><input value="" placeholder="Usuário do sistema"></div>'+
+        '<div class="pdt-field"><label>CRO Estado</label><select id="prof-f-cro-uf"><option>MS</option><option>SP</option><option>RJ</option><option>MG</option><option>PR</option><option>GO</option><option>MT</option><option>SC</option><option>RS</option><option>BA</option></select></div>'+
+        '<div class="pdt-field"><label>CRO Número</label><input id="prof-f-cro" value="'+(cro||'')+'" placeholder="Número CRO"></div>'+
+        '<div class="pdt-field"><label>Usuário</label><input id="prof-f-usuario" value="" placeholder="Usuário do sistema"></div>'+
       '</div>'+
       // RG | CPF
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">'+
-        '<div class="pdt-field"><label>RG</label><input value="" placeholder="RG"></div>'+
-        '<div class="pdt-field"><label>CPF</label><input value="'+(cpf||'')+'" placeholder="000.000.000-00"></div>'+
+        '<div class="pdt-field"><label>RG</label><input id="prof-f-rg" value="" placeholder="RG"></div>'+
+        '<div class="pdt-field"><label>CPF</label><input id="prof-f-cpf" value="'+(cpf||'')+'" placeholder="000.000.000-00"></div>'+
       '</div>'+
       // Especialidades
-      '<div class="pdt-field"><label>Especialidades</label><input value="'+(esp||'')+'" placeholder="Especialidades"></div>'+
+      '<div class="pdt-field" style="margin-bottom:24px"><label>Especialidades</label><input id="prof-f-esp" value="'+(esp||'')+'" placeholder="Especialidades"></div>'+
+      // Botão Salvar
+      '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="pdt-btn-outline" onclick="nav(\'profissionais\')">Cancelar</button><button class="pdt-btn-fill" onclick="salvarProfissional()">Salvar Alterações</button></div>'+
     '</div></div>'
+  // Guarda cor selecionada
+  if(!p._corSelecionada)p._corSelecionada=cor
+}
+
+var _profCorSelecionada=null
+function profSelectCor(c){
+  _profCorSelecionada=c
+  var els=document.querySelectorAll('#prof-paleta div')
+  els.forEach(function(el){el.style.borderColor=el.style.background===c?'#212121':'transparent'})
+}
+
+function profFotoPreview(input){
+  if(!input.files||!input.files[0])return
+  var reader=new FileReader()
+  reader.onload=function(e){
+    document.getElementById('prof-avatar-circle').innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">'
+  }
+  reader.readAsDataURL(input.files[0])
+}
+
+async function salvarProfissional(){
+  var p=_profDetData;if(!p)return
+  var nome=(document.getElementById('prof-f-nome').value||'').trim()
+  if(!nome){alert('Nome é obrigatório');return}
+  var tel=(document.getElementById('prof-h-cel').value||'').trim()
+  var email=(document.getElementById('prof-h-email').value||'').trim()
+  var cpf=(document.getElementById('prof-f-cpf').value||'').trim()
+  var cro=(document.getElementById('prof-f-cro').value||'').trim()
+  var esp=(document.getElementById('prof-f-esp').value||'').trim()
+  // Atualiza local
+  p.nome=nome;p.name=nome;p.Name=nome
+  p.telefone=tel;p.email=email;p.cpf=cpf;p.cro=cro;p.especialidade=esp;p.specialty=esp
+  alert('Dados atualizados localmente.\nPara persistir, os dados serão salvos no próximo sync.')
+  nav('profissionais')
 }
 
 function renderProfAgendaTrabalho(){
