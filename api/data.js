@@ -625,55 +625,53 @@ module.exports = async function handler(req, res) {
                 })
             }
 
-            var stats = { enderecos: 0, como_conheceu: 0, nascimento: 0, telefone: 0, email: 0, cpf: 0 }
+            var stats = { enderecos: 0, como_conheceu: 0, telefone: 0, email: 0, cpf: 0 }
 
-            // 1. Importar endereços + CPF + telefone dos pagamentos (boletos)
+            // 1. Enriquecer a partir dos dados JÁ NO TURSO (pagamentos + agendamentos)
+            // CPF e email dos pagamentos
+            var pgCpf = await client.execute("SELECT DISTINCT paciente_nome, titular_cpf, pagador_email FROM pagamentos WHERE (titular_cpf IS NOT NULL AND titular_cpf!='') OR (pagador_email IS NOT NULL AND pagador_email!='')")
+            for (var pi2 = 0; pi2 < pgCpf.rows.length; pi2++) {
+                var pg = pgCpf.rows[pi2]; var sets = []; var args3 = []
+                if (pg.titular_cpf) { sets.push("cpf=CASE WHEN cpf IS NULL OR cpf='' THEN ? ELSE cpf END"); args3.push(pg.titular_cpf); stats.cpf++ }
+                if (pg.pagador_email) { sets.push("email=CASE WHEN email IS NULL OR email='' THEN ? ELSE email END"); args3.push(pg.pagador_email); stats.email++ }
+                if (sets.length) { sets.push("atualizado_em=datetime('now')"); args3.push(pg.paciente_nome); await client.execute({ sql: "UPDATE pacientes SET " + sets.join(',') + " WHERE nome=?", args: args3 }) }
+            }
+            // Telefone dos agendamentos
+            var agTel2 = await client.execute("SELECT DISTINCT paciente_nome, paciente_telefone FROM agendamentos WHERE paciente_telefone IS NOT NULL AND paciente_telefone!=''")
+            for (var ti2 = 0; ti2 < agTel2.rows.length; ti2++) {
+                var at2 = agTel2.rows[ti2]; if (!at2.paciente_nome) continue
+                await client.execute({ sql: "UPDATE pacientes SET telefone=CASE WHEN telefone IS NULL OR telefone='' THEN ? ELSE telefone END, atualizado_em=datetime('now') WHERE nome=?", args: [at2.paciente_telefone, at2.paciente_nome] })
+                stats.telefone++
+            }
+
+            // 2. Buscar dados extras da Clinicorp (endereços de boletos + como conheceu)
             var h2 = new Date(); var d365 = new Date(); d365.setDate(d365.getDate() - 365)
-            var pgRaw = await fetchClinicorp('payment/list', { from: d365.toISOString().slice(0, 10), to: h2.toISOString().slice(0, 10), limit: 2000 })
-            var pgData = Array.isArray(pgRaw) ? pgRaw : (pgRaw && typeof pgRaw === 'object' ? (pgRaw.data || pgRaw.items || []) : [])
-            // Agrupar por paciente
-            var pacMap = {}
-            pgData.forEach(function(pg) {
-                var nome = pg.PatientName || ''; if (!nome) return
-                if (!pacMap[nome]) pacMap[nome] = {}
-                if (pg.PayerAddressStreet && !pacMap[nome].endereco) { pacMap[nome].endereco = pg.PayerAddressStreet; pacMap[nome].numero = pg.PayerAddressNumber || ''; pacMap[nome].bairro = pg.PayerAddressDistrict || ''; pacMap[nome].cidade = pg.PayerAddressCity || ''; pacMap[nome].estado = pg.PayerAddressState || ''; pacMap[nome].cep = pg.PayerAddressZip || ''; pacMap[nome].complemento = pg.PayerAddressComplement || '' }
-                if (pg.PayerEmail && !pacMap[nome].email) pacMap[nome].email = pg.PayerEmail
-                if (pg.OwnerCPF && !pacMap[nome].cpf) pacMap[nome].cpf = pg.OwnerCPF
-                if (pg.PayerDocumentNumber && !pacMap[nome].cpf) pacMap[nome].cpf = pg.PayerDocumentNumber
-                if (pg.PayerPhone && !pacMap[nome].telefone) pacMap[nome].telefone = pg.PayerPhone
-            })
-            // Aplicar endereços e dados
-            for (var pNome in pacMap) {
-                var pd = pacMap[pNome]; var sets = []; var args3 = []
-                if (pd.endereco) { sets.push("endereco=CASE WHEN endereco IS NULL OR endereco='' THEN ? ELSE endereco END"); args3.push(pd.endereco); stats.enderecos++ }
-                if (pd.bairro) { sets.push("bairro=CASE WHEN bairro IS NULL OR bairro='' THEN ? ELSE bairro END"); args3.push(pd.bairro) }
-                if (pd.cidade) { sets.push("cidade=CASE WHEN cidade IS NULL OR cidade='' THEN ? ELSE cidade END"); args3.push(pd.cidade) }
-                if (pd.estado) { sets.push("estado=CASE WHEN estado IS NULL OR estado='' THEN ? ELSE estado END"); args3.push(pd.estado) }
-                if (pd.cep) { sets.push("cep=CASE WHEN cep IS NULL OR cep='' THEN ? ELSE cep END"); args3.push(pd.cep) }
-                if (pd.email) { sets.push("email=CASE WHEN email IS NULL OR email='' THEN ? ELSE email END"); args3.push(pd.email); stats.email++ }
-                if (pd.cpf) { sets.push("cpf=CASE WHEN cpf IS NULL OR cpf='' THEN ? ELSE cpf END"); args3.push(pd.cpf); stats.cpf++ }
-                if (pd.telefone) { sets.push("telefone=CASE WHEN telefone IS NULL OR telefone='' THEN ? ELSE telefone END"); args3.push(pd.telefone); stats.telefone++ }
-                if (sets.length) { sets.push("atualizado_em=datetime('now')"); args3.push(pNome); await client.execute({ sql: "UPDATE pacientes SET " + sets.join(',') + " WHERE nome=?", args: args3 }) }
-            }
+            try {
+                var pgRaw = await fetchClinicorp('payment/list', { from: d365.toISOString().slice(0, 10), to: h2.toISOString().slice(0, 10), limit: 500 })
+                var pgData = Array.isArray(pgRaw) ? pgRaw : (pgRaw && typeof pgRaw === 'object' ? (pgRaw.data || pgRaw.items || []) : [])
+                for (var pi3 = 0; pi3 < pgData.length; pi3++) {
+                    var pg2 = pgData[pi3]; var nome = pg2.PatientName || ''; if (!nome) continue
+                    if (pg2.PayerAddressStreet) {
+                        await client.execute({ sql: "UPDATE pacientes SET endereco=CASE WHEN endereco IS NULL OR endereco='' THEN ? ELSE endereco END, bairro=CASE WHEN bairro IS NULL OR bairro='' THEN ? ELSE bairro END, cidade=CASE WHEN cidade IS NULL OR cidade='' THEN ? ELSE cidade END, estado=CASE WHEN estado IS NULL OR estado='' THEN ? ELSE estado END, cep=CASE WHEN cep IS NULL OR cep='' THEN ? ELSE cep END, atualizado_em=datetime('now') WHERE nome=?", args: [pg2.PayerAddressStreet, pg2.PayerAddressDistrict || '', pg2.PayerAddressCity || '', pg2.PayerAddressState || '', pg2.PayerAddressZip || '', nome] })
+                        stats.enderecos++
+                    }
+                }
+            } catch(e3) { /* Clinicorp pode dar timeout, não é crítico */ }
 
-            // 2. Importar HowDidMeet dos agendamentos (só se etapa=2)
+            // 3. Buscar como conheceu dos agendamentos Clinicorp
             if (q.etapa === '2') {
-            var agRaw = await fetchClinicorp('appointment/list', { from: d365.toISOString().slice(0, 10), to: h2.toISOString().slice(0, 10), limit: 100, page: 1 })
-            var agData = Array.isArray(agRaw) ? agRaw : (agRaw && typeof agRaw === 'object' ? (agRaw.data || agRaw.items || []) : [])
-            var comoMap = {}
-            agData.forEach(function(ag) {
-                var nome2 = ag.PatientName || ''; var como = ag.HowDidMeet || ''; var email2 = ag.Email || ''; var tel2 = ag.MobilePhone || ''
-                if (!nome2) return
-                if (como && !comoMap[nome2]) comoMap[nome2] = { como: como, email: email2, telefone: tel2 }
-                else if (!comoMap[nome2]) comoMap[nome2] = { email: email2, telefone: tel2 }
-            })
-            for (var cNome in comoMap) {
-                var cd = comoMap[cNome]; var sets2 = []; var args4 = []
-                if (cd.como) { sets2.push("como_conheceu=CASE WHEN como_conheceu IS NULL OR como_conheceu='' THEN ? ELSE como_conheceu END"); args4.push(cd.como); stats.como_conheceu++ }
-                if (cd.email) { sets2.push("email=CASE WHEN email IS NULL OR email='' THEN ? ELSE email END"); args4.push(cd.email) }
-                if (cd.telefone) { sets2.push("telefone=CASE WHEN telefone IS NULL OR telefone='' THEN ? ELSE telefone END"); args4.push(cd.telefone) }
-                if (sets2.length) { sets2.push("atualizado_em=datetime('now')"); args4.push(cNome); await client.execute({ sql: "UPDATE pacientes SET " + sets2.join(',') + " WHERE nome=?", args: args4 }) }
-            }
+            try {
+                var agRaw = await fetchClinicorp('appointment/list', { from: d365.toISOString().slice(0, 10), to: h2.toISOString().slice(0, 10), limit: 100, page: 1 })
+                var agData = Array.isArray(agRaw) ? agRaw : (agRaw && typeof agRaw === 'object' ? (agRaw.data || agRaw.items || []) : [])
+                for (var ai2 = 0; ai2 < agData.length; ai2++) {
+                    var ag2 = agData[ai2]; if (!ag2.PatientName) continue
+                    var sets2 = []; var args4 = []
+                    if (ag2.HowDidMeet) { sets2.push("como_conheceu=CASE WHEN como_conheceu IS NULL OR como_conheceu='' THEN ? ELSE como_conheceu END"); args4.push(ag2.HowDidMeet); stats.como_conheceu++ }
+                    if (ag2.Email) { sets2.push("email=CASE WHEN email IS NULL OR email='' THEN ? ELSE email END"); args4.push(ag2.Email) }
+                    if (ag2.MobilePhone) { sets2.push("telefone=CASE WHEN telefone IS NULL OR telefone='' THEN ? ELSE telefone END"); args4.push(ag2.MobilePhone) }
+                    if (sets2.length) { sets2.push("atualizado_em=datetime('now')"); args4.push(ag2.PatientName); await client.execute({ sql: "UPDATE pacientes SET " + sets2.join(',') + " WHERE nome=?", args: args4 }) }
+                }
+            } catch(e4) { /* timeout ok */ }
             } // fim etapa 2
 
             // 3. Contar resultado final
