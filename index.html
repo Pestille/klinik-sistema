@@ -1253,6 +1253,14 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
       </div>
     </div>
 
+    <!-- MODAL PROFISSIONAL -->
+    <div class="modal-ov" id="modal-profissional" onclick="if(event.target===this)closeModal('profissional')">
+      <div class="modal lg">
+        <div class="modal-head"><div class="modal-title" id="prof-modal-title">Profissional</div><button class="modal-close" onclick="closeModal('profissional')">✕</button></div>
+        <div class="modal-body" id="prof-modal-body"></div>
+      </div>
+    </div>
+
     <!-- MODAL ALTERAR SENHA -->
     <div class="modal-ov" id="modal-alterar-senha" onclick="if(event.target===this)closeModal('alterar-senha')">
       <div class="modal">
@@ -1886,13 +1894,19 @@ function renderAgendaGrid() {
   // Agendamentos do dia
   var todayAg = ag.filter(function(a){return !a.Deleted&&a.date&&a.date.slice(0,10)===dtStr})
 
+  // Marca quais agendamentos têm profissional atribuído
+  var atribuidos = {}
+
   // Uma linha por profissional
   profs.forEach(function(p,pi){
     var nome = p.name||p.Name||p.nome||'Profissional'
     var ini = nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
     var cor = PROF_CORES[pi%PROF_CORES.length]
+    var profId = String(p.id||p.Id||'')
     var profAg = todayAg.filter(function(a){
-      return String(a.ProfessionalId||a.professionalId||'')=== String(p.id||p.Id||'')
+      var aid = String(a.ProfessionalId||a.professionalId||'')
+      if(aid && aid===profId){atribuidos[a.id||a.date+a.fromTime]=true;return true}
+      return false
     })
 
     html+='<div class="agenda-prof-row">'
@@ -1925,8 +1939,26 @@ function renderAgendaGrid() {
     html+='</div></div>'
   })
 
-  if(!profs.length){
-    html+='<div style="text-align:center;padding:40px;color:var(--text3)">Nenhum profissional cadastrado</div>'
+  // Linha para agendamentos sem profissional atribuído
+  var semProf = todayAg.filter(function(a){ return !atribuidos[a.id||a.date+a.fromTime] })
+  if(semProf.length){
+    html+='<div class="agenda-prof-row">'
+    html+='<div class="agenda-prof-info"><div class="agenda-prof-av" style="background:var(--gray5)">?</div><div><div class="agenda-prof-name">Sem profissional</div><div class="agenda-prof-count">'+semProf.length+' pac.</div></div></div>'
+    html+='<div class="agenda-slots-row">'
+    for(var sh2=START_H;sh2<=END_H;sh2++){for(var sq2=0;sq2<4;sq2++){html+='<div class="slot-cell'+(sq2===0?' q0':'')+'" style="flex:0 0 '+PX_PER_15+'px" onclick="openNovaConsulta()"></div>'}}
+    semProf.forEach(function(a){
+      var parts3=(a.fromTime||'9:00').split(':').map(Number);var aH3=parts3[0],aM3=parts3[1]||0
+      var parts4=(a.toTime||((aH3+1)+':'+aM3)).replace(/h$/,'').split(':').map(Number);var aH4=parts4[0],aM4=parts4[1]||0
+      var durMin3=(aH4*60+aM4)-(aH3*60+aM3);if(durMin3<=0)durMin3=60
+      var left3=((aH3-START_H)*60+aM3)/15*PX_PER_15
+      var width3=Math.max(PX_PER_15,(durMin3/15)*PX_PER_15)
+      html+='<div class="appt-block" style="left:'+left3+'px;width:'+width3+'px;background:var(--gray5)dd;color:#fff"><div class="appt-name">'+(a.PatientName||a.patientName||'Paciente')+'</div><div class="appt-time">'+(a.fromTime||'—')+'</div></div>'
+    })
+    html+='</div></div>'
+  }
+
+  if(!profs.length && !semProf.length){
+    html+='<div style="text-align:center;padding:40px;color:var(--text3)">Nenhum agendamento para este dia</div>'
   }
 
   // Marcador de hora atual
@@ -2103,7 +2135,7 @@ async function loadProfissionais() {
       var esp=p.especialidade||''
       var ini=nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
       var cor=PROF_CORES[i%PROF_CORES.length]
-      return '<div class="prof-card"><div class="prof-av" style="background:'+cor+'22;color:'+cor+'">'+ini+'</div><div class="prof-name">'+nome.split(' ').slice(0,3).join(' ')+'</div><div class="prof-esp">'+esp+'</div><div style="font-size:11px;color:var(--text3);margin-top:4px">'+(p.total_agendamentos||0)+' agendamentos</div><span class="badge badge-green" style="margin-top:6px">Ativo</span></div>'
+      return '<div class="prof-card" style="cursor:pointer" onclick="verProfissional('+i+')"><div class="prof-av" style="background:'+cor+'22;color:'+cor+'">'+ini+'</div><div class="prof-name">'+nome.split(' ').slice(0,3).join(' ')+'</div><div class="prof-esp">'+(esp||'Clínico Geral')+'</div><div style="font-size:11px;color:var(--text3);margin-top:4px">'+(p.total_agendamentos||0)+' agendamentos</div><span class="badge badge-green" style="margin-top:6px">Ativo</span></div>'
     }).join('')
     renderProfsList()
     if(loadEl)loadEl.classList.add('hidden')
@@ -2111,6 +2143,33 @@ async function loadProfissionais() {
   } catch(e) {
     if(loadEl)loadEl.innerHTML='<div style="color:var(--red);text-align:center;padding:40px">'+e.message+'</div>'
   }
+}
+
+// ── VER PROFISSIONAL ─────────────────────────────────────────────
+function verProfissional(idx){
+  var p=(ST.profissionais||[])[idx];if(!p)return
+  var nome=p.name||p.Name||p.nome||'Profissional'
+  var cor=PROF_CORES[idx%PROF_CORES.length]
+  var ini=nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
+  document.getElementById('prof-modal-title').textContent=nome
+  document.getElementById('prof-modal-body').innerHTML=
+    '<div style="display:flex;gap:20px;align-items:flex-start">'+
+      '<div style="width:64px;height:64px;border-radius:50%;background:'+cor+'22;color:'+cor+';display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;flex-shrink:0">'+ini+'</div>'+
+      '<div style="flex:1">'+
+        '<div style="font-size:18px;font-weight:500;margin-bottom:4px">'+nome+'</div>'+
+        '<div style="font-size:13px;color:var(--text3);margin-bottom:16px">'+(p.specialty||p.especialidade||'Clínico Geral')+'</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
+          '<div class="card" style="padding:12px"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">CRO</div><div style="font-size:14px;font-weight:500;margin-top:4px">'+(p.cro||'—')+'</div></div>'+
+          '<div class="card" style="padding:12px"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">CPF</div><div style="font-size:14px;font-weight:500;margin-top:4px">'+(p.cpf||'—')+'</div></div>'+
+          '<div class="card" style="padding:12px"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Telefone</div><div style="font-size:14px;font-weight:500;margin-top:4px">'+(p.telefone||'—')+'</div></div>'+
+          '<div class="card" style="padding:12px"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Email</div><div style="font-size:14px;font-weight:500;margin-top:4px">'+(p.email||'—')+'</div></div>'+
+        '</div>'+
+        '<div style="margin-top:16px;display:flex;gap:16px">'+
+          '<div class="card" style="padding:12px;flex:1;text-align:center"><div style="font-size:28px;font-weight:300;color:var(--green)">'+(p.total_agendamentos||0)+'</div><div style="font-size:11px;color:var(--text3)">Total de Agendamentos</div></div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'
+  openModal('profissional')
 }
 
 // ── ANIVERSARIANTES ──────────────────────────────────────────────
