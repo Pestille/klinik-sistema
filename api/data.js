@@ -84,15 +84,16 @@ module.exports = async function handler(req, res) {
         if (route === 'paciente') {
             var pid = parseInt(q.id) || 0
             var pnome = q.nome || ''
-            var sqlP = pid ? "SELECT * FROM pacientes WHERE id=?" : "SELECT * FROM pacientes WHERE nome=? LIMIT 1"
-            var argP = pid ? [pid] : [pnome]
+            var sqlP, argP
+            if (pid) { sqlP = "SELECT * FROM pacientes WHERE id=?"; argP = [pid] }
+            else { sqlP = "SELECT * FROM pacientes WHERE nome LIKE ? LIMIT 1"; argP = ['%'+pnome+'%'] }
             var rp = await client.execute({ sql: sqlP, args: argP })
             if (!rp.rows.length) return res.status(404).json({ success: false, error: 'Paciente não encontrado' })
             var pac = rp.rows[0]
             var rpId = pac.id
             var rs5 = await Promise.all([
-                client.execute({ sql: "SELECT a.*,COALESCE(pr.nome,a.profissional_nome) as prof_nome FROM agendamentos a LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE a.paciente_id=? OR a.paciente_nome=? ORDER BY a.data_hora DESC LIMIT 100", args: [rpId, pac.nome] }),
-                client.execute({ sql: "SELECT * FROM pagamentos WHERE paciente_id=? OR paciente_nome=? ORDER BY data_pagamento DESC LIMIT 100", args: [rpId, pac.nome] }),
+                client.execute({ sql: "SELECT a.*,COALESCE(pr.nome,a.profissional_nome) as prof_nome FROM agendamentos a LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE a.paciente_id=? OR a.paciente_nome LIKE ? ORDER BY a.data_hora DESC LIMIT 100", args: [rpId, '%'+pac.nome+'%'] }),
+                client.execute({ sql: "SELECT * FROM pagamentos WHERE paciente_id=? OR paciente_nome LIKE ? ORDER BY data_pagamento DESC LIMIT 100", args: [rpId, '%'+pac.nome+'%'] }),
                 client.execute({ sql: "SELECT * FROM financeiro WHERE paciente_id=? ORDER BY data_pagamento DESC LIMIT 50", args: [rpId] }),
             ])
             return res.status(200).json({ success: true, paciente: pac, agendamentos: rs5[0].rows, pagamentos: rs5[1].rows, financeiro: rs5[2].rows })
