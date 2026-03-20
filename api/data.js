@@ -382,28 +382,35 @@ module.exports = async function handler(req, res) {
             var dDesde = new Date(); dDesde.setMonth(dDesde.getMonth() - rmeses)
             var desde = dDesde.toISOString().slice(0, 10)
             var rs4 = await Promise.all([
-                // Produtividade: valor por profissional
-                client.execute({ sql: "SELECT pr.id,pr.nome,pr.especialidade,COUNT(a.id) as atendimentos,COALESCE(SUM(a.valor),0) as valor_total FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id AND a.data_hora>=? WHERE pr.ativo=1 GROUP BY pr.id ORDER BY valor_total DESC", args: [desde] }),
-                // Procedimentos por profissional
-                client.execute({ sql: "SELECT pr.nome as profissional,a.tipo as procedimento,COUNT(*) as qtd,COALESCE(SUM(a.valor),0) as valor FROM agendamentos a INNER JOIN profissionais pr ON pr.id=a.profissional_id WHERE a.data_hora>=? AND a.tipo IS NOT NULL AND a.tipo!='' GROUP BY pr.id,a.tipo ORDER BY pr.nome,qtd DESC", args: [desde] }),
-                // Orçamentos aprovados por profissional
-                client.execute({ sql: "SELECT pr.nome as profissional,COUNT(a.id) as orcamentos,COALESCE(SUM(a.valor),0) as valor_orcamentos FROM agendamentos a INNER JOIN profissionais pr ON pr.id=a.profissional_id WHERE a.data_hora>=? AND a.valor>0 AND a.status NOT IN ('cancelado','faltou') GROUP BY pr.id ORDER BY valor_orcamentos DESC", args: [desde] }),
-                // Totais gerais
-                client.execute({ sql: "SELECT COUNT(*) as total_atendimentos,COALESCE(SUM(valor),0) as total_valor,COUNT(DISTINCT profissional_id) as total_profissionais FROM agendamentos WHERE data_hora>=?", args: [desde] }),
+                // Produtividade: atendimentos + receita via pagamentos vinculados ao paciente do profissional
+                client.execute({ sql: "SELECT pr.id,pr.nome,pr.especialidade,COUNT(DISTINCT a.id) as atendimentos,COALESCE((SELECT SUM(pg.valor) FROM pagamentos pg WHERE pg.paciente_id IN (SELECT DISTINCT a2.paciente_id FROM agendamentos a2 WHERE a2.profissional_id=pr.id AND a2.data_hora>=?) AND pg.data_pagamento>=? AND pg.cancelado=0),0) as valor_total FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id AND a.data_hora>=? WHERE pr.ativo=1 GROUP BY pr.id ORDER BY valor_total DESC", args: [desde, desde, desde] }),
+                // Procedimentos por profissional (qtd + receita estimada via ticket médio)
+                client.execute({ sql: "SELECT pr.nome as profissional,a.tipo as procedimento,COUNT(*) as qtd FROM agendamentos a INNER JOIN profissionais pr ON pr.id=a.profissional_id WHERE a.data_hora>=? AND a.tipo IS NOT NULL AND a.tipo!='' GROUP BY pr.id,a.tipo ORDER BY pr.nome,qtd DESC", args: [desde] }),
+                // Orçamentos: pagamentos confirmados vinculados a pacientes de cada profissional
+                client.execute({ sql: "SELECT pr.nome as profissional,COUNT(DISTINCT pg.id) as orcamentos,COALESCE(SUM(pg.valor),0) as valor_orcamentos FROM profissionais pr INNER JOIN agendamentos a ON pr.id=a.profissional_id AND a.data_hora>=? INNER JOIN pagamentos pg ON pg.paciente_id=a.paciente_id AND pg.data_pagamento>=? AND pg.cancelado=0 WHERE pr.ativo=1 GROUP BY pr.id ORDER BY valor_orcamentos DESC", args: [desde, desde] }),
+                // Totais gerais (atendimentos + receita pagamentos)
+                client.execute({ sql: "SELECT COUNT(*) as total_atendimentos,COUNT(DISTINCT profissional_id) as total_profissionais FROM agendamentos WHERE data_hora>=?", args: [desde] }),
+                // Total receita pagamentos no período
+                client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total_valor FROM pagamentos WHERE data_pagamento>=? AND cancelado=0", args: [desde] }),
             ])
-            // Agrupar procedimentos por profissional
+            // Agrupar procedimentos por profissional + calcular valor via ticket médio
             var procsPorProf = {}
+            var totalValor = +(rs4[4].rows[0].total_valor || 0)
+            var totalAtend = rs4[3].rows[0].total_atendimentos || 1
+            var ticketMedio = totalValor / totalAtend
             rs4[1].rows.forEach(function(r) {
                 if (!procsPorProf[r.profissional]) procsPorProf[r.profissional] = []
-                procsPorProf[r.profissional].push({ procedimento: r.procedimento, qtd: r.qtd, valor: r.valor })
+                procsPorProf[r.profissional].push({ procedimento: r.procedimento, qtd: r.qtd, valor: Math.round(r.qtd * ticketMedio * 100) / 100 })
             })
+            var totais = rs4[3].rows[0]
+            totais.total_valor = totalValor
             return res.status(200).json({
                 success: true,
                 meses: rmeses,
                 produtividade: rs4[0].rows,
                 procedimentos_por_profissional: procsPorProf,
                 orcamentos_por_profissional: rs4[2].rows,
-                totais: rs4[3].rows[0]
+                totais: totais
             })
         }
 
