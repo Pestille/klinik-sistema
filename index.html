@@ -1227,6 +1227,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
       <!-- Tabs -->
       <div style="background:#fff;border-bottom:1px solid #e0e0e0;display:flex;gap:0;padding:0 24px" id="prof-det-tabs">
         <div class="pdt-tab active" onclick="profDetTab('dados',this)">Dados Básicos</div>
+        <div class="pdt-tab" onclick="profDetTab('contato',this)">Contato</div>
         <div class="pdt-tab" onclick="profDetTab('assinatura',this)">Assinatura</div>
         <div class="pdt-tab" onclick="profDetTab('agenda-trabalho',this)">Agenda de Trabalho</div>
         <div class="pdt-tab" onclick="profDetTab('config-comissao',this)">Configuração Comissão</div>
@@ -1236,6 +1237,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
       <!-- Content -->
       <div style="flex:1;overflow-y:auto;background:var(--bg);padding:24px">
         <div class="prof-det-panel active" id="pdt-dados"></div>
+        <div class="prof-det-panel" id="pdt-contato"></div>
         <div class="prof-det-panel" id="pdt-assinatura"><div style="text-align:center;padding:60px;color:var(--text3)">Módulo de Assinatura Digital — em desenvolvimento</div></div>
         <div class="prof-det-panel" id="pdt-agenda-trabalho"></div>
         <div class="prof-det-panel" id="pdt-config-comissao"></div>
@@ -2245,6 +2247,7 @@ function verProfissional(idx){
   document.querySelectorAll('.prof-det-panel').forEach(function(p2,i){p2.classList.toggle('active',i===0)})
 
   renderProfDados(p,cor)
+  renderProfContato(p)
   renderProfAgendaTrabalho()
   renderProfConfigComissao()
   renderProfAnaliseComissao(p)
@@ -2307,6 +2310,32 @@ function renderProfDados(p,cor){
     '</div></div>'
   // Guarda cor selecionada
   if(!p._corSelecionada)p._corSelecionada=cor
+}
+
+function renderProfContato(p){
+  var tel=p.telefone||'';var email=p.email||''
+  document.getElementById('pdt-contato').innerHTML=
+    '<div style="max-width:800px">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:24px"><svg width="20" height="20" viewBox="0 0 24 24" fill="#E65100"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg><span style="font-size:16px;font-weight:500;color:#212121">Contato</span></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">'+
+        '<div class="pdt-field"><label>Celular</label><input id="prof-c-cel" value="'+tel+'" placeholder="(67) 99999-9999"></div>'+
+        '<div class="pdt-field"><label>Email</label><input id="prof-c-email" value="'+email+'" placeholder="email@email.com"></div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:24px">'+
+        '<div class="pdt-field"><label>CEP</label><input id="prof-c-cep" placeholder="79000-000"></div>'+
+        '<div class="pdt-field"><label>Cidade</label><input id="prof-c-cidade" placeholder="Campo Grande"></div>'+
+        '<div class="pdt-field"><label>UF</label><select id="prof-c-uf"><option value="">—</option><option>AC</option><option>AL</option><option>AM</option><option>AP</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option><option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option><option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option><option>SP</option><option>TO</option></select></div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;margin-bottom:24px">'+
+        '<div class="pdt-field"><label>Endereço</label><input id="prof-c-endereco" placeholder="Rua, Avenida..."></div>'+
+        '<div class="pdt-field"><label>Número</label><input id="prof-c-numero" placeholder="Nº"></div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">'+
+        '<div class="pdt-field"><label>Bairro</label><input id="prof-c-bairro" placeholder="Bairro"></div>'+
+        '<div class="pdt-field"><label>Complemento</label><input id="prof-c-complemento" placeholder="Sala, Andar..."></div>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="pdt-btn-outline" onclick="nav(\'profissionais\')">Cancelar</button><button class="pdt-btn-fill" onclick="salvarProfissional()">Salvar Alterações</button></div>'+
+    '</div>'
 }
 
 var _profCorSelecionada=null
