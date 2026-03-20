@@ -2,7 +2,7 @@
 // Rotas: login, logout, me, criar-usuario, listar-usuarios, alterar-senha, redefinir-senha
 
 var crypto = require('crypto')
-var https = require('https')
+var nodemailer = require('nodemailer')
 var { getClient } = require('./db')
 
 function hashSenha(senha) {
@@ -13,7 +13,6 @@ function gerarToken() {
     return crypto.randomBytes(32).toString('hex')
 }
 
-// Validação de senha forte: min 8 chars, 1 número, 1 especial
 function validarSenha(senha) {
     if (!senha || senha.length < 8) return 'Senha deve ter no mínimo 8 caracteres'
     if (!/[0-9]/.test(senha)) return 'Senha deve conter pelo menos 1 número'
@@ -21,33 +20,28 @@ function validarSenha(senha) {
     return null
 }
 
-// Envio de email via Resend API (gratuito até 100/dia)
+// Envio de email via Gmail SMTP (nodemailer)
+// Configurar no Vercel: EMAIL_USER (gmail) e EMAIL_PASS (senha de app)
 async function enviarEmail(para, assunto, html) {
-    var apiKey = process.env.RESEND_API_KEY
-    if (!apiKey) { console.log('[auth] RESEND_API_KEY não configurada — email não enviado'); return false }
-    return new Promise(function(resolve) {
-        var body = JSON.stringify({
-            from: 'Klinik Sistema <onboarding@resend.dev>',
-            to: [para],
+    var user = process.env.EMAIL_USER
+    var pass = process.env.EMAIL_PASS
+    if (!user || !pass) { console.log('[auth] EMAIL_USER/EMAIL_PASS não configurados'); return false }
+    try {
+        var transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: { user: user, pass: pass }
+        })
+        await transporter.sendMail({
+            from: 'Klinik Sistema <' + user + '>',
+            to: para,
             subject: assunto,
             html: html
         })
-        var opts = {
-            hostname: 'api.resend.com',
-            path: '/emails',
-            method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-        }
-        var req = https.request(opts, function(res) {
-            var data = ''
-            res.on('data', function(c) { data += c })
-            res.on('end', function() { resolve(res.statusCode < 300) })
-        })
-        req.on('error', function() { resolve(false) })
-        req.setTimeout(8000, function() { req.destroy(); resolve(false) })
-        req.write(body)
-        req.end()
-    })
+        return true
+    } catch(e) {
+        console.error('[auth] Erro ao enviar email:', e.message)
+        return false
+    }
 }
 
 module.exports = async function handler(req, res) {
