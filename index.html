@@ -629,15 +629,15 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
       <!-- Filtros -->
       <div style="background:#fff;padding:16px 24px;border-bottom:1px solid #e0e0e0">
         <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;font-size:14px">
-          <span style="font-size:13px;color:#9e9e9e">Filtrar por</span>
-          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="dash-period" checked style="accent-color:#E65100"> Últimos 3 meses</label>
-          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="dash-period" style="accent-color:#E65100"> Selecionar período</label>
+          <span style="font-size:13px;color:#9e9e9e">Período</span>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="da-periodo" value="1" style="accent-color:#E65100"> Mensal</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="da-periodo" value="3" checked style="accent-color:#E65100"> Trimestral</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="da-periodo" value="12" style="accent-color:#E65100"> Anual</label>
         </div>
         <div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
-          <div><div style="font-size:11px;color:#9e9e9e;margin-bottom:4px">Mês de Referência</div><select id="da-mes" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;padding:6px 0;min-width:120px"><option>Março</option><option>Fevereiro</option><option>Janeiro</option></select></div>
-          <div><div style="font-size:11px;color:#9e9e9e;margin-bottom:4px">Ano</div><select id="da-ano" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;padding:6px 0;min-width:80px"><option>2026</option><option>2025</option></select></div>
+          <div><div style="font-size:11px;color:#9e9e9e;margin-bottom:4px">Mês de Referência</div><select id="da-mes" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;padding:6px 0;min-width:120px"><option value="3">Março</option><option value="2">Fevereiro</option><option value="1">Janeiro</option><option value="12">Dezembro</option><option value="11">Novembro</option><option value="10">Outubro</option><option value="9">Setembro</option><option value="8">Agosto</option><option value="7">Julho</option><option value="6">Junho</option><option value="5">Maio</option><option value="4">Abril</option></select></div>
+          <div><div style="font-size:11px;color:#9e9e9e;margin-bottom:4px">Ano</div><select id="da-ano" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;padding:6px 0;min-width:80px"><option>2026</option><option>2025</option><option>2024</option></select></div>
           <div><div style="font-size:11px;color:#9e9e9e;margin-bottom:4px">Clínica</div><select style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;padding:6px 0;min-width:200px"><option>Klinik Odontologia</option></select></div>
-          <div><div style="font-size:11px;color:#9e9e9e;margin-bottom:4px">Análise</div><select style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;padding:6px 0;min-width:100px"><option>Todas</option></select></div>
           <button onclick="loadAnalytics()" style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;font-size:14px;color:#E65100;font-weight:500;font-family:Roboto,sans-serif"><span style="width:24px;height:24px;border-radius:50%;background:#E65100;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px">▶</span>Listar</button>
         </div>
       </div>
@@ -2963,7 +2963,13 @@ async function loadAnalytics(){
   var el=document.getElementById('da-charts');if(!el)return
   el.innerHTML='<div style="text-align:center;padding:60px;color:#9e9e9e">Carregando gráficos...</div>'
   try{
-    var d=await apiData('dashboard-analitico')
+    var periodoSel=document.querySelector('input[name="da-periodo"]:checked')
+    var qtdMeses=periodoSel?parseInt(periodoSel.value):3
+    var mesSel=document.getElementById('da-mes')
+    var anoSel=document.getElementById('da-ano')
+    var mesRef=mesSel?parseInt(mesSel.value):new Date().getMonth()+1
+    var anoRef=anoSel?parseInt(anoSel.value):new Date().getFullYear()
+    var d=await apiData('dashboard-analitico',{meses:qtdMeses,mes:mesRef,ano:anoRef})
     var meses=d.meses||[];var pm=d.por_mes||{}
     var labels=meses.map(function(m){var mi=parseInt(m.split('-')[1]);return MESES_ABR[mi-1]||m})
     var vals=meses.map(function(m){return pm[m]||{}})

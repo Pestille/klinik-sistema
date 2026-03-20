@@ -299,10 +299,12 @@ module.exports = async function handler(req, res) {
 
         // ── DASHBOARD ANALÍTICO (dados reais por mês) ─────────────────
         if (route === 'dashboard-analitico') {
+            var qtdMeses = parseInt(q.meses) || 3
+            var mesRef = parseInt(q.mes) || (new Date().getMonth() + 1)
+            var anoRef = parseInt(q.ano) || new Date().getFullYear()
             var meses3 = []
-            var now2 = new Date()
-            for (var mi = 2; mi >= 0; mi--) {
-                var dd = new Date(now2.getFullYear(), now2.getMonth() - mi, 1)
+            for (var mi = qtdMeses - 1; mi >= 0; mi--) {
+                var dd = new Date(anoRef, mesRef - 1 - mi, 1)
                 meses3.push(dd.getFullYear() + '-' + String(dd.getMonth() + 1).padStart(2, '0'))
             }
             var result = { meses: meses3, por_mes: {} }
