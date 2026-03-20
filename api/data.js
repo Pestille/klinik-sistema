@@ -379,16 +379,17 @@ module.exports = async function handler(req, res) {
         // ── RELATÓRIO PRODUTIVIDADE PROFISSIONAIS ─────────────────────
         if (route === 'relatorio-profissionais') {
             var rmeses = parseInt(q.meses) || 3
-            var rdata = "a.data_hora >= date('now','-" + rmeses + " months')"
+            var dDesde = new Date(); dDesde.setMonth(dDesde.getMonth() - rmeses)
+            var desde = dDesde.toISOString().slice(0, 10)
             var rs4 = await Promise.all([
                 // Produtividade: valor por profissional
-                client.execute("SELECT pr.id,pr.nome,pr.especialidade,COUNT(a.id) as atendimentos,COALESCE(SUM(a.valor),0) as valor_total,COUNT(DISTINCT DATE(a.data_hora)) as dias_trabalhados FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id AND " + rdata + " WHERE pr.ativo=1 GROUP BY pr.id ORDER BY valor_total DESC"),
+                client.execute({ sql: "SELECT pr.id,pr.nome,pr.especialidade,COUNT(a.id) as atendimentos,COALESCE(SUM(a.valor),0) as valor_total FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id AND a.data_hora>=? WHERE pr.ativo=1 GROUP BY pr.id ORDER BY valor_total DESC", args: [desde] }),
                 // Procedimentos por profissional
-                client.execute("SELECT pr.nome as profissional,a.tipo as procedimento,COUNT(*) as qtd,COALESCE(SUM(a.valor),0) as valor FROM agendamentos a INNER JOIN profissionais pr ON pr.id=a.profissional_id WHERE " + rdata + " AND a.tipo IS NOT NULL AND a.tipo!='' GROUP BY pr.id,a.tipo ORDER BY pr.nome,qtd DESC"),
+                client.execute({ sql: "SELECT pr.nome as profissional,a.tipo as procedimento,COUNT(*) as qtd,COALESCE(SUM(a.valor),0) as valor FROM agendamentos a INNER JOIN profissionais pr ON pr.id=a.profissional_id WHERE a.data_hora>=? AND a.tipo IS NOT NULL AND a.tipo!='' GROUP BY pr.id,a.tipo ORDER BY pr.nome,qtd DESC", args: [desde] }),
                 // Orçamentos aprovados por profissional
-                client.execute("SELECT pr.nome as profissional,COUNT(a.id) as orcamentos,COALESCE(SUM(a.valor),0) as valor_orcamentos FROM agendamentos a INNER JOIN profissionais pr ON pr.id=a.profissional_id WHERE " + rdata + " AND a.valor>0 AND a.status NOT IN ('cancelado','faltou') GROUP BY pr.id ORDER BY valor_orcamentos DESC"),
+                client.execute({ sql: "SELECT pr.nome as profissional,COUNT(a.id) as orcamentos,COALESCE(SUM(a.valor),0) as valor_orcamentos FROM agendamentos a INNER JOIN profissionais pr ON pr.id=a.profissional_id WHERE a.data_hora>=? AND a.valor>0 AND a.status NOT IN ('cancelado','faltou') GROUP BY pr.id ORDER BY valor_orcamentos DESC", args: [desde] }),
                 // Totais gerais
-                client.execute("SELECT COUNT(*) as total_atendimentos,COALESCE(SUM(valor),0) as total_valor,COUNT(DISTINCT profissional_id) as total_profissionais FROM agendamentos WHERE " + rdata),
+                client.execute({ sql: "SELECT COUNT(*) as total_atendimentos,COALESCE(SUM(valor),0) as total_valor,COUNT(DISTINCT profissional_id) as total_profissionais FROM agendamentos WHERE data_hora>=?", args: [desde] }),
             ])
             // Agrupar procedimentos por profissional
             var procsPorProf = {}
