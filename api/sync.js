@@ -45,12 +45,13 @@ function fetchPage(endpoint, params) {
 
 async function fetchAll(endpoint, params, maxPages) {
     maxPages = maxPages || 3
+    var pageSize = parseInt(params.limit) || 100
     var all = []
     for (var page = 1; page <= maxPages; page++) {
-        var r = await fetchPage(endpoint, Object.assign({}, params, { limit: 100, page: page }))
+        var r = await fetchPage(endpoint, Object.assign({}, params, { limit: pageSize, page: page }))
         if (r._rateLimit || r._timeout || r._error) break
         all = all.concat(r.items)
-        if (r.items.length < 100) break
+        if (r.items.length < pageSize) break
     }
     return all
 }
@@ -422,9 +423,12 @@ async function syncPagamentos(client) {
         try { await client.execute("ALTER TABLE pagamentos ADD COLUMN tipo_pessoa TEXT") } catch(e) {}
     } catch(e) {}
 
+    // Aceita parâmetros de data ou usa mês atual
     var h = new Date()
-    var d30 = new Date(); d30.setDate(d30.getDate() - 30)
-    var lista = await fetchAll('payment/list', { from: d30.toISOString().slice(0,10), to: h.toISOString().slice(0,10) }, 15)
+    var dInicio = new Date(h.getFullYear(), h.getMonth(), 1) // primeiro dia do mês
+    var desde = dInicio.toISOString().slice(0,10)
+    var ate = h.toISOString().slice(0,10)
+    var lista = await fetchAll('payment/list', { from: desde, to: ate, limit: 500 }, 5)
     var inseridos = 0, atualizados = 0, ignorados = 0
 
     for (var i = 0; i < lista.length; i++) {
