@@ -656,7 +656,8 @@ module.exports = async function handler(req, res) {
                 if (sets.length) { sets.push("atualizado_em=datetime('now')"); args3.push(pNome); await client.execute({ sql: "UPDATE pacientes SET " + sets.join(',') + " WHERE nome=?", args: args3 }) }
             }
 
-            // 2. Importar HowDidMeet dos agendamentos
+            // 2. Importar HowDidMeet dos agendamentos (só se etapa=2)
+            if (q.etapa === '2') {
             var agRaw = await fetchClinicorp('appointment/list', { from: d365.toISOString().slice(0, 10), to: h2.toISOString().slice(0, 10), limit: 100, page: 1 })
             var agData = Array.isArray(agRaw) ? agRaw : (agRaw.data || agRaw.items || [])
             var comoMap = {}
@@ -673,6 +674,7 @@ module.exports = async function handler(req, res) {
                 if (cd.telefone) { sets2.push("telefone=CASE WHEN telefone IS NULL OR telefone='' THEN ? ELSE telefone END"); args4.push(cd.telefone) }
                 if (sets2.length) { sets2.push("atualizado_em=datetime('now')"); args4.push(cNome); await client.execute({ sql: "UPDATE pacientes SET " + sets2.join(',') + " WHERE nome=?", args: args4 }) }
             }
+            } // fim etapa 2
 
             // 3. Contar resultado final
             var finalStats = await client.execute("SELECT COUNT(*) as total, SUM(CASE WHEN email!='' AND email IS NOT NULL THEN 1 ELSE 0 END) as com_email, SUM(CASE WHEN cpf!='' AND cpf IS NOT NULL THEN 1 ELSE 0 END) as com_cpf, SUM(CASE WHEN telefone!='' AND telefone IS NOT NULL THEN 1 ELSE 0 END) as com_tel, SUM(CASE WHEN endereco!='' AND endereco IS NOT NULL THEN 1 ELSE 0 END) as com_endereco, SUM(CASE WHEN como_conheceu!='' AND como_conheceu IS NOT NULL THEN 1 ELSE 0 END) as com_como, SUM(CASE WHEN data_nascimento!='' AND data_nascimento IS NOT NULL THEN 1 ELSE 0 END) as com_nasc FROM pacientes")
