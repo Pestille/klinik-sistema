@@ -259,7 +259,7 @@ async function syncAgendamentos(client, dataInicio, dataFim) {
         var proc     = a.Procedures || a.procedureName || a.ProcedureName || ''
         var valor    = parseFloat(a.value || a.Value || a.amount || 0) || 0
         var obs      = a.Notes || a.observations || a.Observations || ''
-        var horaFim  = a.toTime || a.ToTime || ''
+        var horaFim  = a.toTime || a.ToTime || null
         var pacNome  = a.PatientName || a.Name || ''
         var pacTel   = a.MobilePhone || ''
         var profNome = '' // Resolve pelo profId
