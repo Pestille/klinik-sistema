@@ -683,6 +683,46 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: true, importados: stats, resultado_final: (finalStats && finalStats.rows) ? finalStats.rows[0] : {} })
         }
 
+        // ── IMPORTAR PACIENTES EM LOTE (do Excel) ────────────────────
+        if (route === 'importar-pacientes-lote') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var lote = req.body || []
+            if (!Array.isArray(lote)) lote = lote.pacientes || []
+            var at = 0, ins = 0, errs = 0
+            for (var li = 0; li < lote.length; li++) {
+                var lp = lote[li]; if (!lp.nome) continue
+                try {
+                    var ex = await client.execute({ sql: "SELECT id FROM pacientes WHERE nome=?", args: [lp.nome] })
+                    if (ex.rows.length) {
+                        // UPDATE: preenche campos vazios
+                        var s = [], a = []
+                        if (lp.data_nascimento) { s.push("data_nascimento=CASE WHEN data_nascimento IS NULL OR data_nascimento='' THEN ? ELSE data_nascimento END"); a.push(lp.data_nascimento) }
+                        if (lp.sexo) { s.push("sexo=CASE WHEN sexo IS NULL OR sexo='' THEN ? ELSE sexo END"); a.push(lp.sexo) }
+                        if (lp.estado_civil) { s.push("estado_civil=CASE WHEN estado_civil IS NULL OR estado_civil='' THEN ? ELSE estado_civil END"); a.push(lp.estado_civil) }
+                        if (lp.cpf) { s.push("cpf=CASE WHEN cpf IS NULL OR cpf='' THEN ? ELSE cpf END"); a.push(lp.cpf) }
+                        if (lp.telefone) { s.push("telefone=CASE WHEN telefone IS NULL OR telefone='' THEN ? ELSE telefone END"); a.push(lp.telefone) }
+                        if (lp.email) { s.push("email=CASE WHEN email IS NULL OR email='' THEN ? ELSE email END"); a.push(lp.email) }
+                        if (lp.endereco) { s.push("endereco=CASE WHEN endereco IS NULL OR endereco='' THEN ? ELSE endereco END"); a.push(lp.endereco) }
+                        if (lp.bairro) { s.push("bairro=CASE WHEN bairro IS NULL OR bairro='' THEN ? ELSE bairro END"); a.push(lp.bairro) }
+                        if (lp.cidade) { s.push("cidade=CASE WHEN cidade IS NULL OR cidade='' THEN ? ELSE cidade END"); a.push(lp.cidade) }
+                        if (lp.estado) { s.push("estado=CASE WHEN estado IS NULL OR estado='' THEN ? ELSE estado END"); a.push(lp.estado) }
+                        if (lp.cep) { s.push("cep=CASE WHEN cep IS NULL OR cep='' THEN ? ELSE cep END"); a.push(lp.cep) }
+                        if (lp.como_conheceu) { s.push("como_conheceu=CASE WHEN como_conheceu IS NULL OR como_conheceu='' THEN ? ELSE como_conheceu END"); a.push(lp.como_conheceu) }
+                        if (lp.convenio) { s.push("convenio=CASE WHEN convenio IS NULL OR convenio='' THEN ? ELSE convenio END"); a.push(lp.convenio) }
+                        if (lp.numero_convenio) { s.push("numero_convenio=CASE WHEN numero_convenio IS NULL OR numero_convenio='' THEN ? ELSE numero_convenio END"); a.push(lp.numero_convenio) }
+                        if (lp.observacoes) { s.push("observacoes=CASE WHEN observacoes IS NULL OR observacoes='' THEN ? ELSE observacoes END"); a.push(lp.observacoes) }
+                        if (s.length) { s.push("atualizado_em=datetime('now')"); a.push(lp.nome); await client.execute({ sql: "UPDATE pacientes SET " + s.join(',') + " WHERE nome=?", args: a }); at++ }
+                    } else {
+                        // INSERT novo paciente
+                        await client.execute({ sql: "INSERT INTO pacientes(nome,data_nascimento,sexo,estado_civil,cpf,telefone,email,endereco,bairro,cidade,estado,cep,como_conheceu,convenio,numero_convenio,observacoes,ativo,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,datetime('now'),datetime('now'))", args: [lp.nome, lp.data_nascimento||'', lp.sexo||'', lp.estado_civil||'', lp.cpf||'', lp.telefone||'', lp.email||'', lp.endereco||'', lp.bairro||'', lp.cidade||'', lp.estado||'', lp.cep||'', lp.como_conheceu||'', lp.convenio||'', lp.numero_convenio||'', lp.observacoes||''] })
+                        ins++
+                    }
+                } catch(el) { errs++ }
+            }
+            var fStats = await client.execute("SELECT COUNT(*) as total, SUM(CASE WHEN data_nascimento!='' AND data_nascimento IS NOT NULL THEN 1 ELSE 0 END) as com_nasc, SUM(CASE WHEN sexo!='' AND sexo IS NOT NULL THEN 1 ELSE 0 END) as com_sexo, SUM(CASE WHEN estado_civil!='' AND estado_civil IS NOT NULL THEN 1 ELSE 0 END) as com_civil, SUM(CASE WHEN cpf!='' AND cpf IS NOT NULL THEN 1 ELSE 0 END) as com_cpf, SUM(CASE WHEN endereco!='' AND endereco IS NOT NULL THEN 1 ELSE 0 END) as com_end, SUM(CASE WHEN como_conheceu!='' AND como_conheceu IS NOT NULL THEN 1 ELSE 0 END) as com_como, SUM(CASE WHEN convenio!='' AND convenio IS NOT NULL THEN 1 ELSE 0 END) as com_conv FROM pacientes")
+            return res.status(200).json({ success: true, recebidos: lote.length, atualizados: at, inseridos: ins, erros: errs, resultado: (fStats && fStats.rows) ? fStats.rows[0] : {} })
+        }
+
         // ── ENRIQUECER PACIENTES (preenche campos vazios com dados dos pagamentos) ──
         if (route === 'enriquecer-pacientes') {
             // Busca todos pagamentos com email ou CPF do titular
