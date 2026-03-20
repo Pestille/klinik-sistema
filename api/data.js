@@ -765,8 +765,37 @@ module.exports = async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var spe = req.body || {}
             if (!spe.id) return res.status(400).json({ success: false, error: 'ID obrigatório' })
-            await client.execute({ sql: "UPDATE pacientes SET nome=?,telefone=?,email=?,cpf=?,data_nascimento=?,cep=?,cidade=?,endereco=?,bairro=?,atualizado_em=datetime('now') WHERE id=?", args: [spe.nome||'', spe.telefone||'', spe.email||'', spe.cpf||'', spe.data_nascimento||'', spe.cep||'', spe.cidade||'', spe.endereco||'', spe.bairro||'', spe.id] })
+            try { await client.execute("ALTER TABLE pacientes ADD COLUMN rg TEXT") } catch(e) {}
+            await client.execute({ sql: "UPDATE pacientes SET nome=?,telefone=?,email=?,cpf=?,rg=?,data_nascimento=?,cep=?,cidade=?,endereco=?,bairro=?,atualizado_em=datetime('now') WHERE id=?", args: [spe.nome||'', spe.telefone||'', spe.email||'', spe.cpf||'', spe.rg||'', spe.data_nascimento||'', spe.cep||'', spe.cidade||'', spe.endereco||'', spe.bairro||'', spe.id] })
             return res.status(200).json({ success: true, msg: 'Paciente atualizado' })
+        }
+
+        // ── ATUALIZAR RG EM LOTE ──────────────────────────────────────
+        if (route === 'atualizar-rg-lote') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            // Garante coluna rg
+            try { await client.execute("ALTER TABLE pacientes ADD COLUMN rg TEXT") } catch(e) {}
+            var lista = req.body || []
+            if (!Array.isArray(lista)) lista = lista.pacientes || []
+            var at = 0, nf = 0, skip = 0
+            for (var ri = 0; ri < lista.length; ri++) {
+                var item = lista[ri]; if (!item.rg) { skip++; continue }
+                // Tenta match por CPF primeiro, depois por nome
+                var found = null
+                if (item.cpf) {
+                    var byCpf = await client.execute({ sql: "SELECT id,rg FROM pacientes WHERE cpf=?", args: [item.cpf] })
+                    if (byCpf.rows.length) found = byCpf.rows[0]
+                }
+                if (!found && item.nome) {
+                    var byNome = await client.execute({ sql: "SELECT id,rg FROM pacientes WHERE UPPER(nome)=UPPER(?)", args: [item.nome] })
+                    if (byNome.rows.length) found = byNome.rows[0]
+                }
+                if (found) {
+                    await client.execute({ sql: "UPDATE pacientes SET rg=?,atualizado_em=datetime('now') WHERE id=?", args: [item.rg, found.id] })
+                    at++
+                } else { nf++ }
+            }
+            return res.status(200).json({ success: true, recebidos: lista.length, atualizados: at, nao_encontrados: nf, sem_rg: skip })
         }
 
         // ── SALVAR ODONTOGRAMA (dente) ────────────────────────────────

@@ -2533,7 +2533,7 @@ function prontCadSecao(secao){
     el.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:24px"><span style="color:#E65100">👤</span><span style="font-size:16px;font-weight:500">Dados Cadastrais</span></div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Nome</label><input id="pc-nome" value="'+(p.nome||'')+'"></div><div class="pdt-field"><label>Apelido</label><input id="pc-apelido" value=""></div></div>'+
       '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Data de Nascimento</label><input type="date" id="pc-nasc" value="'+(p.data_nascimento||'')+'"></div><div class="pdt-field"><label>Idade</label><input value="'+(idade||'—')+'" readonly style="width:50px;color:#9e9e9e"></div><div class="pdt-field"><label>Sexo</label><div style="display:flex;gap:12px;padding:6px 0"><label style="display:flex;align-items:center;gap:4px;font-size:14px;cursor:pointer"><input type="radio" name="pc-sexo" style="accent-color:#E65100"> Masculino</label><label style="display:flex;align-items:center;gap:4px;font-size:14px;cursor:pointer"><input type="radio" name="pc-sexo" style="accent-color:#E65100"> Feminino</label></div></div></div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>CPF</label><input id="pc-cpf" value="'+(p.cpf||'')+'" oninput="mascaraCpf(this)" onblur="validarCpfField(this)"></div><div class="pdt-field"><label>RG</label><input id="pc-rg" value=""></div></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>CPF</label><input id="pc-cpf" value="'+(p.cpf||'')+'" oninput="mascaraCpf(this)" onblur="validarCpfField(this)"></div><div class="pdt-field"><label>RG</label><input id="pc-rg" value="'+(p.rg||'')+'"></div></div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Estado Civil</label><select id="pc-civil"><option value="">—</option><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option></select></div><div class="pdt-field"><label>Como conheceu?</label><select id="pc-como"><option value="">—</option><option>Indicação</option><option>Instagram</option><option>Google</option><option>Facebook</option><option>Plano/Convênio</option><option>Outro</option></select></div></div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Cadastrado em</label><input value="'+(p.criado_em||'—')+'" readonly style="color:#9e9e9e"></div><div class="pdt-field"><label>Última atualização</label><input value="'+(p.atualizado_em||'—')+'" readonly style="color:#9e9e9e"></div></div>'+
       '<div class="pdt-field" style="margin-bottom:24px"><label>Observações</label><input id="pc-obs" value="'+(p.observacoes||'')+'"></div>'+
@@ -2579,13 +2579,14 @@ async function salvarCadastroPaciente(){
   var cel=(document.getElementById('pc-cel')?document.getElementById('pc-cel').value:'').trim()
   var email=(document.getElementById('pc-email')?document.getElementById('pc-email').value:'').trim()
   var cpf=(document.getElementById('pc-cpf')?document.getElementById('pc-cpf').value:'').trim()
+  var rg=(document.getElementById('pc-rg')?document.getElementById('pc-rg').value:'').trim()
   var nasc=(document.getElementById('pc-nasc')?document.getElementById('pc-nasc').value:'')
   var cep=(document.getElementById('pc-cep')?document.getElementById('pc-cep').value:'').trim()
   var cidade=(document.getElementById('pc-cidade')?document.getElementById('pc-cidade').value:'').trim()
   var endereco=(document.getElementById('pc-endereco')?document.getElementById('pc-endereco').value:'').trim()
   var bairro=(document.getElementById('pc-bairro')?document.getElementById('pc-bairro').value:'').trim()
   try{
-    var r=await fetch('/api/data?r=salvar-paciente-edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,nome:nome||_prontData.paciente.nome,telefone:cel,email:email,cpf:cpf,data_nascimento:nasc,cep:cep,cidade:cidade,endereco:endereco,bairro:bairro})})
+    var r=await fetch('/api/data?r=salvar-paciente-edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,nome:nome||_prontData.paciente.nome,telefone:cel,email:email,cpf:cpf,rg:rg,data_nascimento:nasc,cep:cep,cidade:cidade,endereco:endereco,bairro:bairro})})
     var d=await r.json()
     if(d.success){alert('Cadastro salvo!');_prontData.paciente.nome=nome||_prontData.paciente.nome;_prontData.paciente.telefone=cel;_prontData.paciente.email=email}
     else alert(d.error||'Erro')
