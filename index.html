@@ -318,13 +318,51 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 .patient-acts{display:flex;gap:6px;align-items:flex-start;margin-top:4px}
 
 /* ── ODONTOGRAMA ── */
-.odont-row{display:grid;grid-template-columns:repeat(16,1fr);gap:3px;padding:12px}
-.tooth{background:var(--white);border:1px solid var(--border);border-radius:4px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text3);cursor:pointer;transition:all .12s;font-weight:500;box-shadow:var(--shadow)}
-.tooth:hover{border-color:var(--green);color:var(--green)}
-.tooth.ok{background:rgba(27,94,59,.08);border-color:rgba(27,94,59,.3);color:var(--green)}
-.tooth.treat{background:rgba(230,81,0,.08);border-color:rgba(230,81,0,.3);color:var(--orange)}
-.tooth.missing{opacity:.4}
-.tooth-num{font-size:8px;display:block;text-align:center;color:var(--text3);margin-top:1px}
+.odont-wrap{display:flex;gap:24px;height:100%}
+.odont-left{flex:1;min-width:0}
+.odont-right{width:420px;flex-shrink:0;border-left:1px solid var(--border);padding-left:24px}
+.odont-header{display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.odont-header-title{font-size:14px;font-weight:500;color:var(--text)}
+.odont-dentition{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:4px;padding:2px;margin-left:8px}
+.odont-dentition button{border:none;background:transparent;padding:4px 12px;font-size:12px;font-family:'Roboto',sans-serif;cursor:pointer;border-radius:3px;color:var(--text3);transition:all .12s}
+.odont-dentition button.active{background:var(--green);color:#fff}
+.odont-legend{display:flex;gap:14px;font-size:11px;color:var(--text3);margin-left:auto;align-items:center}
+.odont-legend-item{display:flex;align-items:center;gap:4px}
+.odont-legend-dot{width:10px;height:10px;border-radius:2px}
+.odont-actions{display:flex;gap:8px;margin-bottom:16px}
+.odont-chart{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:16px 8px}
+.odont-quadrant-label{font-size:10px;color:var(--text3);text-align:center;text-transform:uppercase;letter-spacing:.06em;margin:4px 0}
+.odont-row{display:flex;justify-content:center;gap:0;padding:0 4px}
+.odont-tooth-col{display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:2px 1px;border-radius:4px;transition:background .12s}
+.odont-tooth-col:hover{background:rgba(46,125,82,.06)}
+.odont-tooth-col.selected{background:rgba(230,81,0,.08)}
+.odont-tooth-svg{width:32px;height:56px;position:relative}
+.odont-tooth-svg svg{width:100%;height:100%}
+.odont-tooth-num{font-size:9px;font-weight:500;color:var(--text3);text-align:center;margin:2px 0}
+.odont-separator{width:1px;background:var(--border);margin:0 6px;align-self:stretch}
+/* Status colors on teeth */
+.odont-tooth-col[data-status="cariado"] .odont-tooth-svg svg path{fill:#E53935!important}
+.odont-tooth-col[data-status="restaurado"] .odont-tooth-svg svg path{fill:#1565C0!important}
+.odont-tooth-col[data-status="ausente"] .odont-tooth-svg svg path{fill:#BDBDBD!important;opacity:.4}
+.odont-tooth-col[data-status="implante"] .odont-tooth-svg svg path{fill:#7B1FA2!important}
+.odont-tooth-col[data-status="coroa"] .odont-tooth-svg svg path{fill:#00695C!important}
+.odont-tooth-col[data-status="tratamento"] .odont-tooth-svg svg path{fill:#E65100!important}
+.odont-tooth-col[data-status="saudavel"] .odont-tooth-svg svg path{fill:#4CAF50!important}
+/* Procedures table */
+.odont-proc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.odont-proc-title{font-size:13px;font-weight:500;color:var(--text)}
+.odont-proc-table{width:100%;border-collapse:collapse;font-size:12px}
+.odont-proc-table th{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);padding:8px 10px;border-bottom:2px solid var(--border);text-align:left}
+.odont-proc-table td{padding:10px;border-bottom:1px solid var(--border2);color:var(--text2)}
+.odont-proc-table tr:hover td{background:var(--gray1)}
+.odont-proc-page{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;font-size:12px;color:var(--text3)}
+.odont-proc-page button{background:none;border:1px solid var(--border);border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--text2);transition:all .12s}
+.odont-proc-page button:hover{border-color:var(--green);color:var(--green)}
+.odont-proc-page button:disabled{opacity:.4;cursor:default}
+/* Tooth status modal */
+.odont-status-menu{position:absolute;background:var(--white);border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:6px 0;z-index:200;min-width:160px}
+.odont-status-opt{padding:8px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .1s}
+.odont-status-opt:hover{background:var(--gray1)}
 
 /* ── PROF CARDS ── */
 .prof-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
@@ -2266,24 +2304,221 @@ function renderProntTab(){
       }).join(''):'<div style="text-align:center;padding:40px;color:#9e9e9e">Nenhum orçamento</div>')
   }
   else if(_prontTab==='odontograma'){
-    var ts=[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28]
-    var ti=[48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38]
-    el.innerHTML='<div style="display:flex;gap:24px"><div style="flex:1">'+
-      '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px"><span style="font-size:14px;font-weight:500">Dentição Permanente</span><div style="display:flex;gap:12px;font-size:12px"><span>■ <span style="color:#E91E63">A realizar</span></span><span>■ <span style="color:#4CAF50">Executado</span></span><span>■ <span style="color:#2196F3">Existente</span></span></div></div>'+
-      '<div style="text-align:center;font-size:10px;color:#9e9e9e;margin-bottom:4px">SUPERIOR</div>'+
-      '<div class="odont-row">'+ts.map(function(t){return '<div><div class="tooth" title="'+t+'">'+t+'</div></div>'}).join('')+'</div>'+
-      '<div class="odont-row">'+ti.map(function(t){return '<div><div class="tooth" title="'+t+'">'+t+'</div></div>'}).join('')+'</div>'+
-      '<div style="text-align:center;font-size:10px;color:#9e9e9e;margin-top:4px">INFERIOR</div>'+
-    '</div>'+
-    '<div style="width:350px;flex-shrink:0"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #e0e0e0;padding-bottom:8px"><span style="font-size:13px;font-weight:500">Procedimentos</span><button class="pdt-btn-outline" style="font-size:12px;padding:4px 10px">+ Adicionar</button></div>'+
-      (ag.filter(function(a){return a.procedimento||a.tipo}).length?ag.filter(function(a){return a.procedimento||a.tipo}).slice(0,20).map(function(a){return '<div style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span style="color:#9e9e9e">'+fmtDt((a.data_hora||'').slice(0,10))+'</span> — '+(a.procedimento||a.tipo||'—')+'</div>'}).join(''):'<div style="color:#9e9e9e;padding:20px;text-align:center">Sem procedimentos</div>')+
-    '</div></div>'
+    renderOdontograma(el,p,ag)
   }
   else{
     // Abas placeholder
     var nomes={'fotos':'Fotos','plano-clinico':'Plano e Ficha Clínica','fichas-esp':'Fichas Especialidades','anamnese':'Anamnese','documentos':'Documentos','exames':'Exames','recibos':'Recibos','indicacoes':'Indicações'}
     el.innerHTML='<div style="text-align:center;padding:60px;color:#9e9e9e"><div style="font-size:15px;font-weight:500;margin-bottom:8px">'+(nomes[_prontTab]||_prontTab)+'</div><div style="font-size:13px">Dados não encontrados.</div></div>'
   }
+}
+
+// ── ODONTOGRAMA ──────────────────────────────────────────────────
+var _odontPage=1,_odontPerPage=8,_odontSelected=null,_odontDenticao='permanente'
+
+function toothSvg(num,isUpper){
+  // Simplified anatomical SVG outlines per tooth type
+  var q=Math.floor(num/10),idx=num%10
+  // Determine tooth type: 1=central, 2=lateral, 3=canino, 4-5=premolar, 6-8=molar
+  var shapes={
+    1:'<path d="M8 2C6 2 4 6 4 14C4 18 5 22 6 26C7 30 8 34 9 38C10 42 11 46 12 48C13 50 14 52 16 52C18 52 19 50 20 48C21 46 22 42 23 38C24 34 25 30 26 26C27 22 28 18 28 14C28 6 26 2 24 2C20 2 12 2 8 2Z" fill="#E8E0D8" stroke="#B0A898" stroke-width="1"/>',
+    2:'<path d="M9 2C7 3 5 8 5 14C5 20 6 26 7 30C8 34 10 40 12 46C13 49 15 52 16 52C17 52 19 49 20 46C22 40 24 34 25 30C26 26 27 20 27 14C27 8 25 3 23 2C19 1 13 1 9 2Z" fill="#E8E0D8" stroke="#B0A898" stroke-width="1"/>',
+    3:'<path d="M12 1C9 2 6 6 5 12C4 18 5 24 6 30C7 34 9 40 11 46C12 49 14 52 16 52C18 52 20 49 21 46C23 40 25 34 26 30C27 24 28 18 27 12C26 6 23 2 20 1C18 0 14 0 12 1Z" fill="#E8E0D8" stroke="#B0A898" stroke-width="1"/>',
+    4:'<path d="M10 4C7 5 5 10 5 16C5 22 6 28 7 32C8 36 10 42 12 46C13 49 15 52 16 52C17 52 19 49 20 46C22 42 24 36 25 32C26 28 27 22 27 16C27 10 25 5 22 4C19 3 13 3 10 4Z" fill="#E8E0D8" stroke="#B0A898" stroke-width="1"/><path d="M11 4C12 2 14 1 16 1C18 1 20 2 21 4" fill="none" stroke="#B0A898" stroke-width="0.8"/>',
+    5:'<path d="M10 4C7 5 5 10 5 16C5 22 6 28 7 32C8 36 10 42 12 46C13 49 15 52 16 52C17 52 19 49 20 46C22 42 24 36 25 32C26 28 27 22 27 16C27 10 25 5 22 4C19 3 13 3 10 4Z" fill="#E8E0D8" stroke="#B0A898" stroke-width="1"/><path d="M10 5C12 3 14 2 16 2C18 2 20 3 22 5" fill="none" stroke="#B0A898" stroke-width="0.8"/>',
+    6:'<path d="M6 6C4 8 3 14 3 20C3 26 4 32 6 36C8 40 10 44 13 48C14 50 15 52 16 52C17 52 18 50 19 48C22 44 24 40 26 36C28 32 29 26 29 20C29 14 28 8 26 6C23 3 19 2 16 2C13 2 9 3 6 6Z" fill="#E8E0D8" stroke="#B0A898" stroke-width="1"/><path d="M8 7C10 5 13 4 16 4C19 4 22 5 24 7" fill="none" stroke="#B0A898" stroke-width="0.8"/><path d="M16 4L16 8" fill="none" stroke="#B0A898" stroke-width="0.6"/>',
+    7:'<path d="M5 6C3 9 2 15 2 21C2 27 3 33 5 37C7 41 10 45 13 48C14 50 15 52 16 52C17 52 18 50 19 48C22 45 25 41 27 37C29 33 30 27 30 21C30 15 29 9 27 6C24 2 20 1 16 1C12 1 8 2 5 6Z" fill="#E8E0D8" stroke="#B0A898" stroke-width="1"/><path d="M7 7C10 4 13 3 16 3C19 3 22 4 25 7" fill="none" stroke="#B0A898" stroke-width="0.8"/><path d="M12 3L12 8M20 3L20 8" fill="none" stroke="#B0A898" stroke-width="0.6"/>',
+    8:'<path d="M6 8C4 11 3 16 3 22C3 28 4 34 6 38C8 42 10 46 13 49C14 51 15 53 16 53C17 53 18 51 19 49C22 46 24 42 26 38C28 34 29 28 29 22C29 16 28 11 26 8C23 4 20 2 16 2C12 2 9 4 6 8Z" fill="#E8E0D8" stroke="#B0A898" stroke-width="1"/><path d="M8 9C10 6 13 5 16 5C19 5 22 6 24 9" fill="none" stroke="#B0A898" stroke-width="0.8"/><path d="M12 5L13 9M20 5L19 9" fill="none" stroke="#B0A898" stroke-width="0.6"/>'
+  }
+  var type=idx<=0?1:idx
+  var svg=shapes[type]||shapes[1]
+  // Flip vertically for lower teeth
+  var transform=isUpper?'':'transform="scale(1,-1) translate(0,-54)"'
+  return '<svg viewBox="0 0 32 54" xmlns="http://www.w3.org/2000/svg"><g '+transform+'>'+svg+'</g></svg>'
+}
+
+function renderOdontograma(el,p,ag){
+  var odData=(_prontData.odontograma||[])
+  var odMap={};odData.forEach(function(o){odMap[o.dente]=o})
+
+  // Tooth arrays — permanent
+  var supL=[18,17,16,15,14,13,12,11], supR=[21,22,23,24,25,26,27,28]
+  var infL=[48,47,46,45,44,43,42,41], infR=[31,32,33,34,35,36,37,38]
+  // Deciduous
+  var dsupL=[55,54,53,52,51], dsupR=[61,62,63,64,65]
+  var dinfL=[85,84,83,82,81], dinfR=[71,72,73,74,75]
+
+  var isPerm=_odontDenticao==='permanente'
+  var sL=isPerm?supL:dsupL, sR=isPerm?supR:dsupR
+  var iL=isPerm?infL:dinfL, iR=isPerm?infR:dinfR
+
+  function renderRow(teeth,isUpper){
+    return teeth.map(function(t){
+      var st=(odMap[t]||{}).status||''
+      var sel=_odontSelected===t?' selected':''
+      return '<div class="odont-tooth-col'+sel+'" data-status="'+st+'" data-tooth="'+t+'" onclick="odontSelectTooth('+t+')">'+
+        (isUpper?'<div class="odont-tooth-num">'+t+'</div>':'')+
+        '<div class="odont-tooth-svg">'+toothSvg(t,isUpper)+'</div>'+
+        (!isUpper?'<div class="odont-tooth-num">'+t+'</div>':'')+
+      '</div>'
+    }).join('')
+  }
+
+  // Procedures from agendamentos that have procedimento
+  var procs=ag.filter(function(a){return a.procedimento||a.tipo}).map(function(a){
+    return {data:(a.data_hora||'').slice(0,10),dente:'',proc:a.procedimento||a.tipo||'',id:a.id}
+  })
+  var totalPages=Math.max(1,Math.ceil(procs.length/_odontPerPage))
+  if(_odontPage>totalPages)_odontPage=totalPages
+  var pageProcs=procs.slice((_odontPage-1)*_odontPerPage,_odontPage*_odontPerPage)
+
+  var statusColors={
+    saudavel:{bg:'#4CAF50',label:'Saudável'},
+    cariado:{bg:'#E53935',label:'A realizar'},
+    restaurado:{bg:'#1565C0',label:'Executado'},
+    ausente:{bg:'#BDBDBD',label:'Ausente'},
+    implante:{bg:'#7B1FA2',label:'Implante'},
+    coroa:{bg:'#00695C',label:'Coroa'},
+    tratamento:{bg:'#E65100',label:'Existente'}
+  }
+
+  el.innerHTML='<div class="odont-wrap">'+
+    '<div class="odont-left">'+
+      // Header
+      '<div class="odont-header">'+
+        '<span class="odont-header-title">Dentição</span>'+
+        '<div class="odont-dentition">'+
+          '<button class="'+(isPerm?'active':'')+'" onclick="_odontDenticao=\'permanente\';renderProntTab()">Permanente</button>'+
+          '<button class="'+(!isPerm?'active':'')+'" onclick="_odontDenticao=\'decidua\';renderProntTab()">Decídua</button>'+
+        '</div>'+
+        '<div class="odont-legend">'+
+          '<span style="font-size:12px;font-weight:500;color:var(--text2)">Legenda</span>'+
+          '<div class="odont-legend-item"><div class="odont-legend-dot" style="background:#E53935"></div><span>A realizar</span></div>'+
+          '<div class="odont-legend-item"><div class="odont-legend-dot" style="background:#4CAF50"></div><span>Executado</span></div>'+
+          '<div class="odont-legend-item"><div class="odont-legend-dot" style="background:#1565C0"></div><span>Existente</span></div>'+
+        '</div>'+
+      '</div>'+
+      // Chart
+      '<div class="odont-chart">'+
+        '<div style="display:flex;align-items:center;margin-bottom:2px">'+
+          '<div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:9px;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;padding-right:6px">Vestibular</div>'+
+          '<div style="flex:1">'+
+            '<div class="odont-row">'+renderRow(sL,true)+'<div class="odont-separator"></div>'+renderRow(sR,true)+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="border-top:1px solid var(--border);margin:8px 20px"></div>'+
+        '<div style="display:flex;align-items:center;margin-top:2px">'+
+          '<div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:9px;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;padding-right:6px">Vestibular</div>'+
+          '<div style="flex:1">'+
+            '<div class="odont-row">'+renderRow(iL,false)+'<div class="odont-separator"></div>'+renderRow(iR,false)+'</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      // Selected tooth info
+      '<div id="odont-tooth-info" style="margin-top:12px"></div>'+
+    '</div>'+
+    // Right: procedures table
+    '<div class="odont-right">'+
+      '<div class="odont-proc-header">'+
+        '<span class="odont-proc-title">Procedimentos</span>'+
+        '<button class="pdt-btn-outline" style="font-size:12px;padding:5px 12px" onclick="odontAddProc()">+ Adicionar procedimento</button>'+
+      '</div>'+
+      '<table class="odont-proc-table"><thead><tr><th>Data</th><th>Dente</th><th>Procedimento</th></tr></thead><tbody>'+
+        (pageProcs.length?pageProcs.map(function(pr){
+          return '<tr><td>'+fmtDt(pr.data)+'</td><td>'+(pr.dente||'—')+'</td><td>'+pr.proc+'</td></tr>'
+        }).join(''):'<tr><td colspan="3" style="text-align:center;padding:30px;color:var(--text3)">Nenhum procedimento registrado</td></tr>')+
+      '</tbody></table>'+
+      (procs.length>_odontPerPage?'<div class="odont-proc-page">'+
+        '<button onclick="_odontPage=Math.max(1,_odontPage-1);renderProntTab()" '+((_odontPage<=1)?'disabled':'')+'>‹</button>'+
+        '<span>Página '+_odontPage+' / '+totalPages+'</span>'+
+        '<button onclick="_odontPage=Math.min('+totalPages+',_odontPage+1);renderProntTab()" '+((_odontPage>=totalPages)?'disabled':'')+'>›</button>'+
+      '</div>':'')+
+    '</div>'+
+  '</div>'
+
+  // If a tooth is selected show the info panel
+  if(_odontSelected) odontShowInfo(_odontSelected)
+}
+
+function odontSelectTooth(num){
+  _odontSelected=(_odontSelected===num)?null:num
+  renderProntTab()
+}
+
+function odontShowInfo(num){
+  var infoEl=document.getElementById('odont-tooth-info')
+  if(!infoEl)return
+  var odData=(_prontData.odontograma||[])
+  var od=null;odData.forEach(function(o){if(o.dente===num)od=o})
+  var st=(od||{}).status||'saudavel'
+  var obs=(od||{}).observacao||''
+
+  var statuses=[
+    {val:'saudavel',label:'Saudável',color:'#4CAF50'},
+    {val:'cariado',label:'Cariado',color:'#E53935'},
+    {val:'restaurado',label:'Restaurado',color:'#1565C0'},
+    {val:'ausente',label:'Ausente',color:'#BDBDBD'},
+    {val:'implante',label:'Implante',color:'#7B1FA2'},
+    {val:'coroa',label:'Coroa',color:'#00695C'},
+    {val:'tratamento',label:'Em tratamento',color:'#E65100'}
+  ]
+
+  infoEl.innerHTML='<div style="border:1px solid var(--border);border-radius:6px;padding:16px;background:var(--white)">'+
+    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+
+      '<span style="font-size:20px;font-weight:500;color:var(--text)">Dente '+num+'</span>'+
+      '<span style="font-size:12px;padding:3px 10px;border-radius:4px;background:'+statuses.find(function(s){return s.val===st}).color+'20;color:'+statuses.find(function(s){return s.val===st}).color+';font-weight:500">'+statuses.find(function(s){return s.val===st}).label+'</span>'+
+    '</div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+
+      statuses.map(function(s){
+        return '<button onclick="odontSetStatus('+num+',\''+s.val+'\')" style="border:1px solid '+(st===s.val?s.color:'var(--border)')+';background:'+(st===s.val?s.color+'15':'var(--white)')+';color:'+(st===s.val?s.color:'var(--text2)')+';border-radius:4px;padding:5px 10px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif;transition:all .12s">'+
+          '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+s.color+';margin-right:4px"></span>'+s.label+'</button>'
+      }).join('')+
+    '</div>'+
+    '<div style="margin-bottom:8px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Observação</label>'+
+      '<input id="odont-obs-input" value="'+obs.replace(/"/g,'&quot;')+'" placeholder="Observação sobre o dente..." style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;font-family:Roboto,sans-serif;color:var(--text);outline:none" onfocus="this.style.borderColor=\'var(--green3)\'" onblur="this.style.borderColor=\'var(--border)\'">'+
+    '</div>'+
+    '<div style="display:flex;justify-content:flex-end;gap:8px">'+
+      '<button onclick="_odontSelected=null;renderProntTab()" style="border:1px solid var(--border);background:var(--white);color:var(--text2);border-radius:6px;padding:6px 16px;font-size:12px;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+      '<button onclick="odontSave('+num+')" style="border:none;background:var(--orange);color:#fff;border-radius:6px;padding:6px 16px;font-size:12px;cursor:pointer;font-family:Roboto,sans-serif">Salvar</button>'+
+    '</div>'+
+  '</div>'
+}
+
+async function odontSetStatus(dente,status){
+  if(!_prontData||!_prontData.paciente)return
+  try{
+    await fetch('/api/data?r=salvar-odontograma',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      paciente_id:_prontData.paciente.id,dente:dente,status:status,
+      observacao:(document.getElementById('odont-obs-input')?document.getElementById('odont-obs-input').value:'')
+    })})
+    // Update local data
+    var found=false
+    _prontData.odontograma=(_prontData.odontograma||[]).map(function(o){if(o.dente===dente){found=true;return Object.assign({},o,{status:status})}return o})
+    if(!found)_prontData.odontograma.push({dente:dente,status:status,observacao:''})
+    renderProntTab()
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function odontSave(dente){
+  if(!_prontData||!_prontData.paciente)return
+  var obs=(document.getElementById('odont-obs-input')?document.getElementById('odont-obs-input').value:'')
+  var odData=(_prontData.odontograma||[])
+  var od=null;odData.forEach(function(o){if(o.dente===dente)od=o})
+  var st=(od||{}).status||'saudavel'
+  try{
+    await fetch('/api/data?r=salvar-odontograma',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      paciente_id:_prontData.paciente.id,dente:dente,status:st,observacao:obs
+    })})
+    var found=false
+    _prontData.odontograma=(_prontData.odontograma||[]).map(function(o){if(o.dente===dente){found=true;return Object.assign({},o,{observacao:obs})}return o})
+    if(!found)_prontData.odontograma.push({dente:dente,status:st,observacao:obs})
+    _odontSelected=null
+    renderProntTab()
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+function odontAddProc(){
+  alert('Funcionalidade em desenvolvimento: Adicionar procedimento ao odontograma')
 }
 
 function prontCadSecao(secao){

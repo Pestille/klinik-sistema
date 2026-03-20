@@ -96,7 +96,14 @@ module.exports = async function handler(req, res) {
                 client.execute({ sql: "SELECT * FROM pagamentos WHERE paciente_id=? OR paciente_nome LIKE ? ORDER BY data_pagamento DESC LIMIT 100", args: [rpId, '%'+pac.nome+'%'] }),
                 client.execute({ sql: "SELECT * FROM financeiro WHERE paciente_id=? ORDER BY data_pagamento DESC LIMIT 50", args: [rpId] }),
             ])
-            return res.status(200).json({ success: true, paciente: pac, agendamentos: rs5[0].rows, pagamentos: rs5[1].rows, financeiro: rs5[2].rows })
+            // Odontograma — tabela pode não existir ainda
+            var odontRows = []
+            try {
+                await client.execute("CREATE TABLE IF NOT EXISTS odontograma (id INTEGER PRIMARY KEY AUTOINCREMENT, paciente_id INTEGER REFERENCES pacientes(id), dente INTEGER NOT NULL, status TEXT DEFAULT 'saudavel', cor TEXT, observacao TEXT, updated_at TEXT DEFAULT (datetime('now')))")
+                var odR = await client.execute({ sql: "SELECT * FROM odontograma WHERE paciente_id=? ORDER BY dente", args: [rpId] })
+                odontRows = odR.rows
+            } catch(e) { /* tabela não existe, retorna vazio */ }
+            return res.status(200).json({ success: true, paciente: pac, agendamentos: rs5[0].rows, pagamentos: rs5[1].rows, financeiro: rs5[2].rows, odontograma: odontRows })
         }
 
         if (route === 'pacientes') {
@@ -760,6 +767,22 @@ module.exports = async function handler(req, res) {
             if (!spe.id) return res.status(400).json({ success: false, error: 'ID obrigatório' })
             await client.execute({ sql: "UPDATE pacientes SET nome=?,telefone=?,email=?,cpf=?,data_nascimento=?,cep=?,cidade=?,endereco=?,bairro=?,atualizado_em=datetime('now') WHERE id=?", args: [spe.nome||'', spe.telefone||'', spe.email||'', spe.cpf||'', spe.data_nascimento||'', spe.cep||'', spe.cidade||'', spe.endereco||'', spe.bairro||'', spe.id] })
             return res.status(200).json({ success: true, msg: 'Paciente atualizado' })
+        }
+
+        // ── SALVAR ODONTOGRAMA (dente) ────────────────────────────────
+        if (route === 'salvar-odontograma') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var od = req.body || {}
+            if (!od.paciente_id || !od.dente) return res.status(400).json({ success: false, error: 'paciente_id e dente obrigatórios' })
+            await client.execute("CREATE TABLE IF NOT EXISTS odontograma (id INTEGER PRIMARY KEY AUTOINCREMENT, paciente_id INTEGER REFERENCES pacientes(id), dente INTEGER NOT NULL, status TEXT DEFAULT 'saudavel', cor TEXT, observacao TEXT, updated_at TEXT DEFAULT (datetime('now')))")
+            // Upsert: check if exists
+            var existing = await client.execute({ sql: "SELECT id FROM odontograma WHERE paciente_id=? AND dente=?", args: [od.paciente_id, od.dente] })
+            if (existing.rows.length) {
+                await client.execute({ sql: "UPDATE odontograma SET status=?,cor=?,observacao=?,updated_at=datetime('now') WHERE paciente_id=? AND dente=?", args: [od.status||'saudavel', od.cor||null, od.observacao||null, od.paciente_id, od.dente] })
+            } else {
+                await client.execute({ sql: "INSERT INTO odontograma (paciente_id,dente,status,cor,observacao) VALUES (?,?,?,?,?)", args: [od.paciente_id, od.dente, od.status||'saudavel', od.cor||null, od.observacao||null] })
+            }
+            return res.status(200).json({ success: true })
         }
 
         // ── SALVAR PROFISSIONAL ─────────────────────────────────────
