@@ -2273,46 +2273,40 @@ function renderProfDados(p,cor){
   document.getElementById('pdt-dados').innerHTML=
     '<div style="display:flex;gap:24px">'+
     '<div style="width:240px;flex-shrink:0">'+
-      '<div class="pdt-sidebar-item active" id="pdt-sb-cadastro" onclick="profDadosSecao(\'cadastro\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:#E65100"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Dados Cadastrais</div>'+
-      '<div class="pdt-sidebar-item" id="pdt-sb-contato" onclick="profDadosSecao(\'contato\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:#757575"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>Contato</div>'+
+      '<div class="pdt-sidebar-item active"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:#E65100"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Dados Cadastrais</div>'+
+      '<div class="pdt-sidebar-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:#757575"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>Contato</div>'+
     '</div>'+
     '<div style="flex:1">'+
-      // === SEÇÃO DADOS CADASTRAIS ===
-      '<div id="pdt-sec-cadastro">'+
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:24px"><svg width="20" height="20" viewBox="0 0 24 24" fill="#E65100"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg><span style="font-size:16px;font-weight:500;color:#212121">Dados Cadastrais</span></div>'+
-      '<div style="display:flex;gap:24px;margin-bottom:24px"><div class="pdt-field" style="flex:1"><label>Nome *</label><input id="prof-f-nome" value="'+nome+'"></div><div class="pdt-field" style="width:200px"><label>Cor na Agenda</label><div style="display:flex;flex-wrap:wrap;gap:6px;padding:8px 0" id="prof-paleta">'+paletaHtml+'</div></div></div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Nascimento</label><div style="display:flex;gap:8px;padding:4px 0"><select id="prof-f-nasc-dia" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;color:#212121;padding:4px 0">'+diasOpts+'</select><select id="prof-f-nasc-mes" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;color:#212121;padding:4px 0">'+mesesOpts+'</select><select id="prof-f-nasc-ano" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;color:#212121;padding:4px 0">'+anosOpts+'</select></div></div><div class="pdt-field"><label>Sexo</label><div style="display:flex;gap:16px;padding:8px 0;font-size:14px"><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" value="M" style="accent-color:#E65100"> Masculino</label><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" value="F" style="accent-color:#E65100"> Feminino</label><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" value="O" style="accent-color:#E65100"> Outro</label></div></div><div class="pdt-field"><label>Estado Civil</label><select id="prof-f-civil"><option value="">—</option><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option></select></div></div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>CRO Estado</label><select id="prof-f-cro-uf"><option>MS</option><option>SP</option><option>RJ</option><option>MG</option><option>PR</option><option>GO</option><option>MT</option><option>SC</option><option>RS</option><option>BA</option><option>CE</option><option>PE</option><option>PA</option><option>AM</option><option>DF</option><option>ES</option><option>MA</option><option>PI</option><option>RN</option><option>PB</option><option>SE</option><option>AL</option><option>AC</option><option>AP</option><option>RO</option><option>RR</option><option>TO</option></select></div><div class="pdt-field"><label>CRO Número</label><input id="prof-f-cro" value="'+(cro||'')+'" placeholder="Número CRO"></div><div class="pdt-field"><label>Usuário</label><input id="prof-f-usuario" value="" placeholder="Usuário do sistema"></div></div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>RG</label><input id="prof-f-rg" value="" placeholder="RG"></div><div class="pdt-field"><label>CPF</label><input id="prof-f-cpf" value="'+(cpf||'')+'" placeholder="000.000.000-00"></div></div>'+
+      // Nome + Cor
+      '<div style="display:flex;gap:24px;margin-bottom:24px">'+
+        '<div class="pdt-field" style="flex:1"><label>Nome *</label><input id="prof-f-nome" value="'+nome+'"></div>'+
+        '<div class="pdt-field" style="width:200px"><label>Cor na Agenda</label><div style="display:flex;flex-wrap:wrap;gap:6px;padding:8px 0" id="prof-paleta">'+paletaHtml+'</div></div>'+
+      '</div>'+
+      // Nascimento | Sexo | Estado Civil
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:24px">'+
+        '<div class="pdt-field"><label>Nascimento</label><div style="display:flex;gap:8px;padding:4px 0"><select id="prof-f-nasc-dia" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;color:#212121;padding:4px 0">'+diasOpts+'</select><select id="prof-f-nasc-mes" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;color:#212121;padding:4px 0">'+mesesOpts+'</select><select id="prof-f-nasc-ano" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;color:#212121;padding:4px 0">'+anosOpts+'</select></div></div>'+
+        '<div class="pdt-field"><label>Sexo</label><div style="display:flex;gap:16px;padding:8px 0;font-size:14px"><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" value="M" style="accent-color:#E65100"> Masculino</label><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" value="F" style="accent-color:#E65100"> Feminino</label><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" value="O" style="accent-color:#E65100"> Outro</label></div></div>'+
+        '<div class="pdt-field"><label>Estado Civil</label><select id="prof-f-civil"><option value="">—</option><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option></select></div>'+
+      '</div>'+
+      // CRO | Número | Usuário
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:24px">'+
+        '<div class="pdt-field"><label>CRO Estado</label><select id="prof-f-cro-uf"><option>MS</option><option>SP</option><option>RJ</option><option>MG</option><option>PR</option><option>GO</option><option>MT</option><option>SC</option><option>RS</option><option>BA</option></select></div>'+
+        '<div class="pdt-field"><label>CRO Número</label><input id="prof-f-cro" value="'+(cro||'')+'" placeholder="Número CRO"></div>'+
+        '<div class="pdt-field"><label>Usuário</label><input id="prof-f-usuario" value="" placeholder="Usuário do sistema"></div>'+
+      '</div>'+
+      // RG | CPF
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">'+
+        '<div class="pdt-field"><label>RG</label><input id="prof-f-rg" value="" placeholder="RG"></div>'+
+        '<div class="pdt-field"><label>CPF</label><input id="prof-f-cpf" value="'+(cpf||'')+'" placeholder="000.000.000-00"></div>'+
+      '</div>'+
+      // Especialidades
       '<div class="pdt-field" style="margin-bottom:24px"><label>Especialidades</label><input id="prof-f-esp" value="'+(esp||'')+'" placeholder="Especialidades"></div>'+
-      '</div>'+
-      // === SEÇÃO CONTATO ===
-      '<div id="pdt-sec-contato" style="display:none">'+
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:24px"><svg width="20" height="20" viewBox="0 0 24 24" fill="#E65100"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg><span style="font-size:16px;font-weight:500;color:#212121">Contato</span></div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Celular</label><input id="prof-f-celular" value="'+(tel||'')+'" placeholder="(67) 99999-9999"></div><div class="pdt-field"><label>Email</label><input id="prof-f-email2" value="'+(email||'')+'" placeholder="email@email.com"></div></div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>CEP</label><input id="prof-f-cep" value="" placeholder="79000-000"></div><div class="pdt-field"><label>Cidade</label><input id="prof-f-cidade" value="" placeholder="Campo Grande"></div><div class="pdt-field"><label>UF</label><select id="prof-f-uf"><option value="">—</option><option>AC</option><option>AL</option><option>AM</option><option>AP</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option><option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option><option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option><option>SP</option><option>TO</option></select></div></div>'+
-      '<div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Endereço</label><input id="prof-f-endereco" value="" placeholder="Rua, Avenida..."></div><div class="pdt-field"><label>Número</label><input id="prof-f-numero" value="" placeholder="Nº"></div></div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Bairro</label><input id="prof-f-bairro" value="" placeholder="Bairro"></div><div class="pdt-field"><label>Complemento</label><input id="prof-f-complemento" value="" placeholder="Sala, Andar..."></div></div>'+
-      '</div>'+
-      // Botão Salvar (sempre visível)
-      '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:24px"><button class="pdt-btn-outline" onclick="nav(\'profissionais\')">Cancelar</button><button class="pdt-btn-fill" onclick="salvarProfissional()">Salvar Alterações</button></div>'+
+      // Botão Salvar
+      '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="pdt-btn-outline" onclick="nav(\'profissionais\')">Cancelar</button><button class="pdt-btn-fill" onclick="salvarProfissional()">Salvar Alterações</button></div>'+
     '</div></div>'
+  // Guarda cor selecionada
   if(!p._corSelecionada)p._corSelecionada=cor
-}
-
-function profDadosSecao(secao){
-  var sb1=document.getElementById('pdt-sb-cadastro')
-  var sb2=document.getElementById('pdt-sb-contato')
-  var sec1=document.getElementById('pdt-sec-cadastro')
-  var sec2=document.getElementById('pdt-sec-contato')
-  if(!sb1||!sb2||!sec1||!sec2)return
-  if(secao==='cadastro'){
-    sb1.classList.add('active');sb2.classList.remove('active')
-    sec1.style.display='block';sec2.style.display='none'
-  }else{
-    sb1.classList.remove('active');sb2.classList.add('active')
-    sec1.style.display='none';sec2.style.display='block'
-  }
 }
 
 var _profCorSelecionada=null
