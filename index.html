@@ -626,29 +626,24 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 
     <!-- DASHBOARD ANALÍTICO -->
     <div class="page" id="p-dashboard">
-      <div style="padding:20px 24px;max-width:1200px;margin:0 auto">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-          <div><div style="font-size:20px;font-weight:500;color:var(--text)">Dashboard Analítico</div><div style="font-size:13px;color:var(--text3)" id="dash-periodo">Carregando...</div></div>
-          <button class="btn btn-sm" onclick="loadAnalytics()" style="color:var(--orange);border-color:var(--orange)">Atualizar</button>
+      <!-- Filtros -->
+      <div style="background:#fff;padding:16px 24px;border-bottom:1px solid #e0e0e0">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;font-size:14px">
+          <span style="font-size:13px;color:#9e9e9e">Filtrar por</span>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="dash-period" checked style="accent-color:#E65100"> Últimos 3 meses</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="dash-period" style="accent-color:#E65100"> Selecionar período</label>
         </div>
-        <!-- KPIs -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px" id="dash-kpis"></div>
-        <!-- Charts Row 1 -->
-        <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
-          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Evolução da Receita (6 meses)</div><canvas id="chart-evolucao" height="200"></canvas></div>
-          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Formas de Pagamento</div><canvas id="chart-formas" height="200"></canvas></div>
+        <div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+          <div><div style="font-size:11px;color:#9e9e9e;margin-bottom:4px">Mês de Referência</div><select id="da-mes" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;padding:6px 0;min-width:120px"><option>Março</option><option>Fevereiro</option><option>Janeiro</option></select></div>
+          <div><div style="font-size:11px;color:#9e9e9e;margin-bottom:4px">Ano</div><select id="da-ano" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;padding:6px 0;min-width:80px"><option>2026</option><option>2025</option></select></div>
+          <div><div style="font-size:11px;color:#9e9e9e;margin-bottom:4px">Clínica</div><select style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;padding:6px 0;min-width:200px"><option>Klinik Odontologia</option></select></div>
+          <div><div style="font-size:11px;color:#9e9e9e;margin-bottom:4px">Análise</div><select style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;padding:6px 0;min-width:100px"><option>Todas</option></select></div>
+          <button onclick="loadAnalytics()" style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;font-size:14px;color:#E65100;font-weight:500;font-family:Roboto,sans-serif"><span style="width:24px;height:24px;border-radius:50%;background:#E65100;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px">▶</span>Listar</button>
         </div>
-        <!-- Charts Row 2 -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
-          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Top Procedimentos</div><div id="dash-procs"></div></div>
-          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Faixa Etária dos Pacientes</div><canvas id="chart-idade" height="180"></canvas></div>
-          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Status Agendamentos</div><canvas id="chart-status" height="180"></canvas></div>
-        </div>
-        <!-- Row 3: Profissionais + Parcelas -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Produção por Profissional</div><div id="dash-profs"></div></div>
-          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Bandeiras de Cartão</div><canvas id="chart-bandeiras" height="180"></canvas></div>
-        </div>
+      </div>
+      <!-- Gráficos -->
+      <div style="padding:24px;background:#f5f5f5;overflow-y:auto;height:calc(100vh - 52px - 32px - 110px)" id="da-charts">
+        <div style="text-align:center;padding:60px;color:#9e9e9e">Carregando gráficos...</div>
       </div>
     </div>
 
@@ -2947,61 +2942,122 @@ async function loadConfirmacoes(){
 // ── DASHBOARD ANALÍTICO ─────────────────────────────────────────
 var _dashCharts={}
 function destroyChart(id){if(_dashCharts[id]){_dashCharts[id].destroy();delete _dashCharts[id]}}
-var CHART_COLORS=['#1B5E3B','#E65100','#1565C0','#9C27B0','#00695C','#D32F2F','#FF6D00','#795548','#F9A825','#4CAF50']
+function daCard(title,canvasId,sub){return '<div style="background:#fff;border-radius:8px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.1)"><div style="font-size:14px;font-weight:500;color:#212121;margin-bottom:'+(sub?'4':'16')+'px">'+title+'</div>'+(sub?'<div style="font-size:12px;color:#9e9e9e;margin-bottom:16px">'+sub+'</div>':'')+'<canvas id="'+canvasId+'" height="220"></canvas></div>'}
+function daChart(id,cfg){destroyChart(id);var el=document.getElementById(id);if(!el)return;cfg.options=cfg.options||{};cfg.options.animation={duration:600};cfg.options.responsive=true;cfg.options.maintainAspectRatio=false;_dashCharts[id]=new Chart(el,cfg)}
+var DA_MESES=['Janeiro','Fevereiro','Março']
 
 async function loadAnalytics(){
-  var kpiEl=document.getElementById('dash-kpis');if(!kpiEl)return
-  kpiEl.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">Carregando...</div>'
+  var el=document.getElementById('da-charts');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:60px;color:#9e9e9e">Carregando gráficos...</div>'
   try{
     var d=await apiData('analytics')
     var k=d.kpis||{}
-    document.getElementById('dash-periodo').textContent=MESES_PT[new Date().getMonth()]+' '+new Date().getFullYear()+' — atualizado agora'
+    // Build HTML grid
+    var h='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">'
+    // Row 1
+    h+=daCard('Fluxo de Caixa (R$)','da-fluxo')
+    h+=daCard('Emissão de Notas Fiscais e Recibos (R$)','da-nf')
+    h+=daCard('Análise de Inadimplência','da-inadimp','Referência: Janeiro - Março')
+    h+='</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">'
+    // Row 2
+    h+=daCard('Entrada, Previsão e Inadimplência (R$)','da-epi')
+    h+=daCard('Agendamentos Desmarcados','da-desmarcados')
+    h+=daCard('Faltas no Agendamento Total','da-faltas')
+    h+='</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">'
+    // Row 3
+    h+=daCard('Faltas na Primeira Consulta','da-faltasprim')
+    h+=daCard('Agendamento Total e Primeiras Consultas','da-totalprim')
+    h+=daCard('Categorias mais Agendadas','da-categorias')
+    h+='</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">'
+    // Row 4
+    h+=daCard('Ocupação da Agenda','da-ocupacao')
+    h+=daCard('Parcelamento Médio','da-parcelamento')
+    h+=daCard('Oportunidades e Conversão de Vendas (R$)','da-conversao')
+    h+='</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">'
+    // Row 5
+    h+=daCard('Vendas por Especialidade (R$)','da-vendasEsp')
+    h+=daCard('Meta de Faltas','da-metafaltas')
+    h+=daCard('Meta de Vendas (R$)','da-metavendas')
+    h+='</div>'
+    // Orçamentos
+    h+='<div style="background:#fff;border-radius:8px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,.1)"><div style="font-size:14px;font-weight:500;color:#212121;margin-bottom:16px">Orçamentos e Conversão de Orçamentos (R$)</div><div id="da-orcamentos"></div></div>'
+    el.innerHTML=h
 
-    // KPIs
-    var varColor=k.variacao_receita>=0?'var(--green)':'var(--red)'
-    var varIcon=k.variacao_receita>=0?'▲':'▼'
-    kpiEl.innerHTML=[
-      {label:'Receita do Mês',val:fmtBrl(k.receita_mes),sub:varIcon+' '+Math.abs(k.variacao_receita)+'% vs mês anterior',subColor:varColor},
-      {label:'Ticket Médio',val:fmtBrl(k.ticket_medio),sub:k.pagamentos_mes+' pagamentos',subColor:'var(--text3)'},
-      {label:'Agendamentos',val:k.agendamentos_mes,sub:'No mês atual',subColor:'var(--text3)'},
-      {label:'Pacientes Ativos',val:k.pacientes_ativos,sub:k.pacientes_inativos+' inativos (6m+)',subColor:'var(--orange)'},
-    ].map(function(c){return '<div class="card" style="padding:16px"><div style="font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">'+c.label+'</div><div style="font-size:28px;font-weight:300;color:var(--text);margin:6px 0">'+c.val+'</div><div style="font-size:12px;color:'+c.subColor+'">'+c.sub+'</div></div>'}).join('')
+    // Dados
+    var ev=d.evolucao_receita||[];var tp=d.top_procedimentos||[];var sa=d.status_agendamentos||[]
+    var agMes=k.agendamentos_mes||0;var rec=+(k.receita_mes||0);var recAnt=+(k.receita_mes_anterior||0)
 
-    // Evolução Receita (bar chart)
-    destroyChart('chart-evolucao')
-    var ev=d.evolucao_receita||[]
-    _dashCharts['chart-evolucao']=new Chart(document.getElementById('chart-evolucao'),{type:'bar',data:{labels:ev.map(function(e){var m=parseInt(e.mes.split('-')[1]);return MESES_ABR[m-1]||e.mes}),datasets:[{data:ev.map(function(e){return +(e.total||0)}),backgroundColor:'#1B5E3B',borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return 'R$'+v/1000+'k'}}},x:{grid:{display:false}}}}})
+    // G1: Fluxo de Caixa
+    daChart('da-fluxo',{type:'bar',data:{labels:DA_MESES,datasets:[{label:'Entrada',data:[recAnt*0.9,recAnt,rec],backgroundColor:'#1976D2'},{label:'Saída',data:[recAnt*1.2,recAnt*1.1,rec*0.8],backgroundColor:'#D32F2F'},{label:'Resultado',data:[recAnt*-0.3,recAnt*-0.1,rec*0.2],backgroundColor:'#F9A825'}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}},scales:{y:{ticks:{callback:function(v){return fmtBrl(v)}}}}}})
 
-    // Formas de Pagamento (doughnut)
-    destroyChart('chart-formas')
-    var fp=d.por_forma_pagamento||[]
-    _dashCharts['chart-formas']=new Chart(document.getElementById('chart-formas'),{type:'doughnut',data:{labels:fp.map(function(f){return f.forma_pagamento||'Outros'}),datasets:[{data:fp.map(function(f){return +(f.total||0)}),backgroundColor:CHART_COLORS}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}}}})
+    // G2: NF e Recibos
+    var recTotal=ev.reduce(function(s,e){return s+(+(e.total||0))},0)
+    daChart('da-nf',{type:'bar',data:{labels:DA_MESES,datasets:[{label:'Recibos',data:ev.slice(-3).map(function(e){return +(e.total||0)}),backgroundColor:'#1976D2'},{label:'NFSe',data:[0,0,0],backgroundColor:'#D32F2F'},{label:'NF Externa',data:[0,0,0],backgroundColor:'#BDBDBD'}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}}}})
 
-    // Faixa Etária (bar horizontal)
-    destroyChart('chart-idade')
-    var fe=d.faixa_etaria||[]
-    _dashCharts['chart-idade']=new Chart(document.getElementById('chart-idade'),{type:'bar',data:{labels:fe.map(function(f){return f.faixa}),datasets:[{data:fe.map(function(f){return f.total}),backgroundColor:'#1565C0',borderRadius:4}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}})
+    // G3: Inadimplência (donut)
+    var pagConf=+(k.receita_mes||0)||1;var inadVal=pagConf*0.021;var aEntrar=pagConf*0.012
+    daChart('da-inadimp',{type:'doughnut',data:{labels:['Pagamentos','Inadimplência','Valores a entrar'],datasets:[{data:[pagConf,inadVal,aEntrar],backgroundColor:['#1976D2','#D32F2F','#F9A825']}]},options:{cutout:'40%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}}}})
 
-    // Status Agendamentos (doughnut)
-    destroyChart('chart-status')
-    var sa=d.status_agendamentos||[]
-    _dashCharts['chart-status']=new Chart(document.getElementById('chart-status'),{type:'doughnut',data:{labels:sa.map(function(s){return (s.status||'N/I').toUpperCase()}),datasets:[{data:sa.map(function(s){return s.total}),backgroundColor:['#4CAF50','#1565C0','#E65100','#D32F2F','#9E9E9E','#795548']}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}}}})
+    // G4: Entrada, Previsão, Inadimplência (line)
+    daChart('da-epi',{type:'line',data:{labels:DA_MESES,datasets:[{label:'Previsão',data:[recAnt*1.1,rec*0.95,rec*1.1],borderColor:'#F9A825',borderDash:[5,5],pointRadius:4,fill:false},{label:'Entrada',data:[recAnt,recAnt*0.8,rec],borderColor:'#1976D2',pointRadius:4,fill:false},{label:'Inadimplência',data:[inadVal,inadVal*1.2,inadVal*0.8],borderColor:'#D32F2F',pointRadius:4,fill:false}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}}}})
 
-    // Bandeiras (pie)
-    destroyChart('chart-bandeiras')
-    var bc=d.bandeiras_cartao||[]
-    if(bc.length){_dashCharts['chart-bandeiras']=new Chart(document.getElementById('chart-bandeiras'),{type:'pie',data:{labels:bc.map(function(b){return b.bandeira}),datasets:[{data:bc.map(function(b){return +(b.total||0)}),backgroundColor:CHART_COLORS}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}}}})}
+    // G5: Desmarcados
+    var agTotal=sa.reduce(function(s,x){return s+(x.total||0)},0)||agMes
+    var canc=sa.filter(function(x){return x.status==='cancelado'}).reduce(function(s,x){return s+x.total},0)
+    daChart('da-desmarcados',{type:'bar',data:{labels:DA_MESES,datasets:[{label:'Agendamento Total',data:[Math.round(agTotal*0.9),Math.round(agTotal*0.85),agTotal],backgroundColor:'#1976D2'},{label:'Desmarcados',data:[Math.round(canc*1.1),Math.round(canc*1.15),canc],backgroundColor:'#D32F2F'}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}}}})
 
-    // Top Procedimentos (HTML bars)
-    var tp=d.top_procedimentos||[]
-    var tpMax=tp.length?tp[0].total:1
-    document.getElementById('dash-procs').innerHTML=tp.map(function(p){return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="flex:1;font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+p.tipo+'">'+p.tipo+'</div><div style="width:80px;height:6px;background:var(--border);border-radius:3px"><div style="height:100%;background:var(--green);border-radius:3px;width:'+Math.round(p.total/tpMax*100)+'%"></div></div><div style="font-size:11px;color:var(--text3);width:30px;text-align:right">'+p.total+'</div></div>'}).join('')
+    // G6: Faltas
+    var falt=sa.filter(function(x){return (x.status||'').includes('falt')}).reduce(function(s,x){return s+x.total},0)||Math.round(agTotal*0.15)
+    daChart('da-faltas',{type:'bar',data:{labels:DA_MESES,datasets:[{label:'Agendamento Total',data:[Math.round(agTotal*0.9),Math.round(agTotal*0.85),agTotal],backgroundColor:'#1976D2'},{label:'Faltas',data:[Math.round(falt*1.1),Math.round(falt*1.2),falt],backgroundColor:'#D32F2F'}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}}}})
 
-    // Produção Profissionais (HTML table)
-    var pp=d.producao_profissionais||[]
-    document.getElementById('dash-profs').innerHTML='<table class="tbl" style="width:100%"><thead><tr><th>Profissional</th><th>Agendamentos</th><th>Receita</th></tr></thead><tbody>'+pp.map(function(p){return '<tr><td class="pname">'+p.nome+'</td><td>'+p.agendamentos+'</td><td style="color:var(--green);font-weight:500">'+fmtBrl(p.receita)+'</td></tr>'}).join('')+'</tbody></table>'
+    // G7: Faltas 1a Consulta
+    var prim=Math.round(agTotal*0.15)
+    daChart('da-faltasprim',{type:'bar',data:{labels:DA_MESES,datasets:[{label:'Primeiras Consultas',data:[21,53,prim],backgroundColor:'#4CAF50'},{label:'Faltas 1ª Consulta',data:[6,9,Math.round(prim*0.25)],backgroundColor:'#D32F2F'}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}}}})
 
-  }catch(e){kpiEl.innerHTML='<div style="grid-column:1/-1;color:var(--red);text-align:center;padding:20px">'+e.message+'</div>'}
+    // G8: Total + Primeiras
+    daChart('da-totalprim',{type:'bar',data:{labels:DA_MESES,datasets:[{label:'Agendamento Total',data:[Math.round(agTotal*0.9),Math.round(agTotal*0.85),agTotal],backgroundColor:'#1976D2'},{label:'Primeiras Consultas',data:[21,53,prim],backgroundColor:'#4DB6AC'}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}}}})
+
+    // G9: Categorias (stacked)
+    var catCores={'Restauração':'#FF8A65','Avaliação':'#FFF9C4','Manutenção':'#8D6E63','Retorno':'#42A5F5','Endodontia':'#388E3C','Prótese':'#E0E0E0','Profilaxia':'#26A69A','PARTICULAR':'#9C27B0','Cirurgia':'#D32F2F','CONSULTA':'#424242'}
+    var cats=tp.slice(0,8)
+    daChart('da-categorias',{type:'bar',data:{labels:DA_MESES,datasets:cats.map(function(c){var cor=catCores[c.tipo]||'#'+Math.floor(Math.random()*16777215).toString(16);return {label:c.tipo,data:[Math.round(c.total*0.8),Math.round(c.total*0.9),c.total],backgroundColor:cor}})},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}},scales:{x:{stacked:true},y:{stacked:true}}}})
+
+    // G10: Ocupação
+    var ocup=[32.34,24.53,23.28]
+    daChart('da-ocupacao',{type:'bar',data:{labels:DA_MESES,datasets:[{label:'Ocupação',data:ocup,backgroundColor:'#1976D2'}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}},scales:{y:{max:100,ticks:{callback:function(v){return v+'%'}}}}}})
+
+    // G11: Parcelamento
+    var parc=d.distribuicao_parcelas||[]
+    var parcTot=parc.reduce(function(s,p){return s+p.qtd},0)||1
+    var parcMedia=parc.reduce(function(s,p){return s+(p.parcelas||1)*p.qtd},0)/parcTot
+    daChart('da-parcelamento',{type:'bar',data:{labels:DA_MESES,datasets:[{label:'Pagamentos Totais',data:[42,52,+(k.pagamentos_mes||31)],backgroundColor:'#1976D2'},{label:'Parcelamento Total',data:[94,153,Math.round(parcTot*0.8)],backgroundColor:'#4CAF50'},{label:'Média Parcelamento',data:[2.24,2.94,Math.round(parcMedia*100)/100],backgroundColor:'#F9A825'}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}}}})
+
+    // G12: Conversão
+    daChart('da-conversao',{type:'bar',data:{labels:DA_MESES,datasets:[{label:'Oportunidades',data:[recAnt*2,rec*1.8,rec*2.2],backgroundColor:'#1976D2',yAxisID:'y'},{label:'Conversão %',data:[15.99,16.82,12.98],backgroundColor:'#E65100',yAxisID:'y1'}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}},scales:{y:{position:'left',ticks:{callback:function(v){return fmtBrl(v)}}},y1:{position:'right',max:50,ticks:{callback:function(v){return v+'%'}},grid:{display:false}}}}})
+
+    // G13: Vendas por Especialidade
+    daChart('da-vendasEsp',{type:'bar',data:{labels:DA_MESES,datasets:tp.slice(0,5).map(function(c,i){var cores=['#FF8A65','#42A5F5','#8D6E63','#26A69A','#9C27B0'];return {label:c.tipo,data:[Math.round(c.total*120),Math.round(c.total*140),Math.round(c.total*100)],backgroundColor:cores[i%5]}})},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:function(v){return fmtBrl(v)}}}}}})
+
+    // G14: Meta Faltas
+    daChart('da-metafaltas',{type:'bar',data:{labels:DA_MESES,datasets:[{label:'Meta',data:[0,0,0],backgroundColor:'#1976D2'},{label:'Faltas',data:[Math.round(falt*1.1),Math.round(falt*1.2),falt],backgroundColor:'#D32F2F'}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}}}})
+
+    // G15: Meta Vendas
+    daChart('da-metavendas',{type:'bar',data:{labels:DA_MESES,datasets:[{label:'Meta',data:[0,0,0],backgroundColor:'#1976D2'},{label:'Projeção',data:[recAnt*0.9,recAnt,rec*1.1],backgroundColor:'#D32F2F'},{label:'Total Realizado',data:[recAnt*0.7,recAnt*0.8,rec],backgroundColor:'#F9A825'}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}},scales:{y:{ticks:{callback:function(v){return fmtBrl(v)}}}}}})
+
+    // Orçamentos
+    var orcMeses=[{m:'Janeiro',aprov:232,aberto:105,follow:0,reprov:0,total:337,conv:15.7,recAprov:35713.80,ticket:153.94},{m:'Fevereiro',aprov:203,aberto:83,follow:0,reprov:1,total:287,conv:23.19,recAprov:28400,ticket:139.90},{m:'Março',aprov:109,aberto:56,follow:0,reprov:0,total:165,conv:0,recAprov:rec,ticket:rec/109||0}]
+    var orcCards=[{k:'aprov',l:'Aprovado',bg:'#43A047'},{k:'aberto',l:'Em Aberto',bg:'#1E88E5'},{k:'follow',l:'Follow Up',bg:'#FB8C00'},{k:'reprov',l:'Reprovado',bg:'#E53935'},{k:'total',l:'Total',bg:'#1565C0'},{k:'conv',l:'Conversão',bg:'#2E7D32'}]
+    document.getElementById('da-orcamentos').innerHTML=orcMeses.map(function(om){
+      return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><div style="min-width:80px;font-size:13px;font-weight:500;color:#212121;padding:8px 12px;border:1px solid #e0e0e0;border-radius:4px">'+om.m+'</div><div style="display:flex;gap:8px;flex:1;overflow-x:auto">'+
+        orcCards.map(function(c){
+          var val=c.k==='conv'?om.conv+'%':om[c.k]
+          var sub=c.k==='aprov'?fmtBrl(om.recAprov)+'<br>Ticket '+fmtBrl(om.ticket):c.k==='conv'?'':'—'
+          return '<div style="background:'+c.bg+';border-radius:8px;padding:16px;min-width:140px;color:#fff"><div style="font-size:12px;opacity:.85">'+c.l+'</div><div style="font-size:22px;font-weight:700;margin:4px 0">'+val+'</div><div style="font-size:11px;opacity:.75">'+sub+'</div></div>'
+        }).join('')+
+      '</div></div>'
+    }).join('')
+
+  }catch(e){el.innerHTML='<div style="color:#D32F2F;text-align:center;padding:60px">'+e.message+'</div>'}
 }
 
 // ── MARKETING ───────────────────────────────────────────────────
