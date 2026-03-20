@@ -610,6 +610,75 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: true, msg: 'Lançamento salvo' })
         }
 
+        // ── IMPORTAR DADOS CLINICORP (varredura completa) ──────────
+        if (route === 'importar-clinicorp') {
+            var https2 = require('https')
+            var USUARIO2 = process.env.CLINICORP_USUARIO || 'klinik'
+            var TOKEN2 = process.env.CLINICORP_TOKEN || '23b73dd0-f3a9-4aef-97ff-9db567d283b5'
+            var auth2 = 'Basic ' + Buffer.from(USUARIO2 + ':' + TOKEN2).toString('base64')
+            function fetchClinicorp(ep, params2) {
+                return new Promise(function(resolve2) {
+                    var qs2 = '?' + Object.entries(Object.assign({ subscriber_id: 'klinik', businessId: '5073030694043648' }, params2)).map(function(kv) { return encodeURIComponent(kv[0]) + '=' + encodeURIComponent(kv[1]) }).join('&')
+                    var req2 = https2.request({ hostname: 'api.clinicorp.com', path: '/rest/v1/' + ep + qs2, method: 'GET', headers: { 'Authorization': auth2, 'accept': 'application/json' } }, function(r2) {
+                        var body2 = ''; r2.on('data', function(c) { body2 += c }); r2.on('end', function() { try { resolve2(JSON.parse(body2)) } catch(e2) { resolve2([]) } })
+                    }); req2.on('error', function() { resolve2([]) }); req2.setTimeout(8000, function() { req2.destroy(); resolve2([]) }); req2.end()
+                })
+            }
+
+            var stats = { enderecos: 0, como_conheceu: 0, nascimento: 0, telefone: 0, email: 0, cpf: 0 }
+
+            // 1. Importar endereços + CPF + telefone dos pagamentos (boletos)
+            var h2 = new Date(); var d365 = new Date(); d365.setDate(d365.getDate() - 365)
+            var pgRaw = await fetchClinicorp('payment/list', { from: d365.toISOString().slice(0, 10), to: h2.toISOString().slice(0, 10), limit: 2000 })
+            var pgData = Array.isArray(pgRaw) ? pgRaw : (pgRaw.data || pgRaw.items || [])
+            // Agrupar por paciente
+            var pacMap = {}
+            pgData.forEach(function(pg) {
+                var nome = pg.PatientName || ''; if (!nome) return
+                if (!pacMap[nome]) pacMap[nome] = {}
+                if (pg.PayerAddressStreet && !pacMap[nome].endereco) { pacMap[nome].endereco = pg.PayerAddressStreet; pacMap[nome].numero = pg.PayerAddressNumber || ''; pacMap[nome].bairro = pg.PayerAddressDistrict || ''; pacMap[nome].cidade = pg.PayerAddressCity || ''; pacMap[nome].estado = pg.PayerAddressState || ''; pacMap[nome].cep = pg.PayerAddressZip || ''; pacMap[nome].complemento = pg.PayerAddressComplement || '' }
+                if (pg.PayerEmail && !pacMap[nome].email) pacMap[nome].email = pg.PayerEmail
+                if (pg.OwnerCPF && !pacMap[nome].cpf) pacMap[nome].cpf = pg.OwnerCPF
+                if (pg.PayerDocumentNumber && !pacMap[nome].cpf) pacMap[nome].cpf = pg.PayerDocumentNumber
+                if (pg.PayerPhone && !pacMap[nome].telefone) pacMap[nome].telefone = pg.PayerPhone
+            })
+            // Aplicar endereços e dados
+            for (var pNome in pacMap) {
+                var pd = pacMap[pNome]; var sets = []; var args3 = []
+                if (pd.endereco) { sets.push("endereco=CASE WHEN endereco IS NULL OR endereco='' THEN ? ELSE endereco END"); args3.push(pd.endereco); stats.enderecos++ }
+                if (pd.bairro) { sets.push("bairro=CASE WHEN bairro IS NULL OR bairro='' THEN ? ELSE bairro END"); args3.push(pd.bairro) }
+                if (pd.cidade) { sets.push("cidade=CASE WHEN cidade IS NULL OR cidade='' THEN ? ELSE cidade END"); args3.push(pd.cidade) }
+                if (pd.estado) { sets.push("estado=CASE WHEN estado IS NULL OR estado='' THEN ? ELSE estado END"); args3.push(pd.estado) }
+                if (pd.cep) { sets.push("cep=CASE WHEN cep IS NULL OR cep='' THEN ? ELSE cep END"); args3.push(pd.cep) }
+                if (pd.email) { sets.push("email=CASE WHEN email IS NULL OR email='' THEN ? ELSE email END"); args3.push(pd.email); stats.email++ }
+                if (pd.cpf) { sets.push("cpf=CASE WHEN cpf IS NULL OR cpf='' THEN ? ELSE cpf END"); args3.push(pd.cpf); stats.cpf++ }
+                if (pd.telefone) { sets.push("telefone=CASE WHEN telefone IS NULL OR telefone='' THEN ? ELSE telefone END"); args3.push(pd.telefone); stats.telefone++ }
+                if (sets.length) { sets.push("atualizado_em=datetime('now')"); args3.push(pNome); await client.execute({ sql: "UPDATE pacientes SET " + sets.join(',') + " WHERE nome=?", args: args3 }) }
+            }
+
+            // 2. Importar HowDidMeet dos agendamentos
+            var agRaw = await fetchClinicorp('appointment/list', { from: d365.toISOString().slice(0, 10), to: h2.toISOString().slice(0, 10), limit: 100, page: 1 })
+            var agData = Array.isArray(agRaw) ? agRaw : (agRaw.data || agRaw.items || [])
+            var comoMap = {}
+            agData.forEach(function(ag) {
+                var nome2 = ag.PatientName || ''; var como = ag.HowDidMeet || ''; var email2 = ag.Email || ''; var tel2 = ag.MobilePhone || ''
+                if (!nome2) return
+                if (como && !comoMap[nome2]) comoMap[nome2] = { como: como, email: email2, telefone: tel2 }
+                else if (!comoMap[nome2]) comoMap[nome2] = { email: email2, telefone: tel2 }
+            })
+            for (var cNome in comoMap) {
+                var cd = comoMap[cNome]; var sets2 = []; var args4 = []
+                if (cd.como) { sets2.push("como_conheceu=CASE WHEN como_conheceu IS NULL OR como_conheceu='' THEN ? ELSE como_conheceu END"); args4.push(cd.como); stats.como_conheceu++ }
+                if (cd.email) { sets2.push("email=CASE WHEN email IS NULL OR email='' THEN ? ELSE email END"); args4.push(cd.email) }
+                if (cd.telefone) { sets2.push("telefone=CASE WHEN telefone IS NULL OR telefone='' THEN ? ELSE telefone END"); args4.push(cd.telefone) }
+                if (sets2.length) { sets2.push("atualizado_em=datetime('now')"); args4.push(cNome); await client.execute({ sql: "UPDATE pacientes SET " + sets2.join(',') + " WHERE nome=?", args: args4 }) }
+            }
+
+            // 3. Contar resultado final
+            var finalStats = await client.execute("SELECT COUNT(*) as total, SUM(CASE WHEN email!='' AND email IS NOT NULL THEN 1 ELSE 0 END) as com_email, SUM(CASE WHEN cpf!='' AND cpf IS NOT NULL THEN 1 ELSE 0 END) as com_cpf, SUM(CASE WHEN telefone!='' AND telefone IS NOT NULL THEN 1 ELSE 0 END) as com_tel, SUM(CASE WHEN endereco!='' AND endereco IS NOT NULL THEN 1 ELSE 0 END) as com_endereco, SUM(CASE WHEN como_conheceu!='' AND como_conheceu IS NOT NULL THEN 1 ELSE 0 END) as com_como, SUM(CASE WHEN data_nascimento!='' AND data_nascimento IS NOT NULL THEN 1 ELSE 0 END) as com_nasc FROM pacientes")
+            return res.status(200).json({ success: true, importados: stats, pagamentos_processados: pgData.length, agendamentos_processados: agData.length, resultado_final: finalStats.rows[0] })
+        }
+
         // ── ENRIQUECER PACIENTES (preenche campos vazios com dados dos pagamentos) ──
         if (route === 'enriquecer-pacientes') {
             // Busca todos pagamentos com email ou CPF do titular
