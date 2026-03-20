@@ -610,6 +610,36 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: true, msg: 'Lançamento salvo' })
         }
 
+        // ── ENRIQUECER PACIENTES (preenche campos vazios com dados dos pagamentos) ──
+        if (route === 'enriquecer-pacientes') {
+            // Busca todos pagamentos com email ou CPF do titular
+            var pgAll = await client.execute("SELECT DISTINCT paciente_nome, pagador_email, titular_cpf FROM pagamentos WHERE (pagador_email IS NOT NULL AND pagador_email!='') OR (titular_cpf IS NOT NULL AND titular_cpf!='')")
+            var atualiz = 0
+            for (var ei = 0; ei < pgAll.rows.length; ei++) {
+                var pg = pgAll.rows[ei]
+                if (!pg.paciente_nome) continue
+                var updates = [], args2 = []
+                if (pg.pagador_email) { updates.push("email=CASE WHEN email IS NULL OR email='' THEN ? ELSE email END"); args2.push(pg.pagador_email) }
+                if (pg.titular_cpf) { updates.push("cpf=CASE WHEN cpf IS NULL OR cpf='' THEN ? ELSE cpf END"); args2.push(pg.titular_cpf) }
+                if (updates.length) {
+                    updates.push("atualizado_em=datetime('now')")
+                    args2.push(pg.paciente_nome)
+                    await client.execute({ sql: "UPDATE pacientes SET " + updates.join(',') + " WHERE nome=?", args: args2 })
+                    atualiz++
+                }
+            }
+            // Também preenche telefone dos agendamentos
+            var agTel = await client.execute("SELECT DISTINCT paciente_nome, paciente_telefone FROM agendamentos WHERE paciente_telefone IS NOT NULL AND paciente_telefone!=''")
+            for (var ti = 0; ti < agTel.rows.length; ti++) {
+                var at = agTel.rows[ti]
+                if (!at.paciente_nome || !at.paciente_telefone) continue
+                await client.execute({ sql: "UPDATE pacientes SET telefone=CASE WHEN telefone IS NULL OR telefone='' THEN ? ELSE telefone END, atualizado_em=datetime('now') WHERE nome=?", args: [at.paciente_telefone, at.paciente_nome] })
+            }
+            // Conta resultado
+            var stats = await client.execute("SELECT COUNT(*) as total, SUM(CASE WHEN email!='' AND email IS NOT NULL THEN 1 ELSE 0 END) as com_email, SUM(CASE WHEN cpf!='' AND cpf IS NOT NULL THEN 1 ELSE 0 END) as com_cpf, SUM(CASE WHEN telefone!='' AND telefone IS NOT NULL THEN 1 ELSE 0 END) as com_tel FROM pacientes")
+            return res.status(200).json({ success: true, pacientes_processados: atualiz, telefones_atualizados: agTel.rows.length, stats: stats.rows[0] })
+        }
+
         // ── EDITAR PACIENTE ───────────────────────────────────────────
         if (route === 'salvar-paciente-edit') {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
