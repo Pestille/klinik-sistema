@@ -630,7 +630,7 @@ module.exports = async function handler(req, res) {
             // 1. Importar endereços + CPF + telefone dos pagamentos (boletos)
             var h2 = new Date(); var d365 = new Date(); d365.setDate(d365.getDate() - 365)
             var pgRaw = await fetchClinicorp('payment/list', { from: d365.toISOString().slice(0, 10), to: h2.toISOString().slice(0, 10), limit: 2000 })
-            var pgData = Array.isArray(pgRaw) ? pgRaw : (pgRaw.data || pgRaw.items || [])
+            var pgData = Array.isArray(pgRaw) ? pgRaw : (pgRaw && typeof pgRaw === 'object' ? (pgRaw.data || pgRaw.items || []) : [])
             // Agrupar por paciente
             var pacMap = {}
             pgData.forEach(function(pg) {
@@ -659,7 +659,7 @@ module.exports = async function handler(req, res) {
             // 2. Importar HowDidMeet dos agendamentos (só se etapa=2)
             if (q.etapa === '2') {
             var agRaw = await fetchClinicorp('appointment/list', { from: d365.toISOString().slice(0, 10), to: h2.toISOString().slice(0, 10), limit: 100, page: 1 })
-            var agData = Array.isArray(agRaw) ? agRaw : (agRaw.data || agRaw.items || [])
+            var agData = Array.isArray(agRaw) ? agRaw : (agRaw && typeof agRaw === 'object' ? (agRaw.data || agRaw.items || []) : [])
             var comoMap = {}
             agData.forEach(function(ag) {
                 var nome2 = ag.PatientName || ''; var como = ag.HowDidMeet || ''; var email2 = ag.Email || ''; var tel2 = ag.MobilePhone || ''
