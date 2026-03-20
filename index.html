@@ -781,7 +781,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         <div style="font-size:14px;color:#616161;margin-bottom:24px">Digite o nome do paciente e pressione ENTER, para pesquisar pelo sobrenome digite % antes.</div>
         <!-- Barra de busca -->
         <div style="position:relative;width:100%;max-width:560px">
-          <input id="pac-busca-input" type="text" placeholder="Pesquisar por nome ou sobrenome de pacientes..." style="width:100%;border:1px solid #e0e0e0;border-radius:4px;padding:12px 44px 12px 16px;font-size:15px;font-family:Roboto,sans-serif;color:#212121;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='#E65100'" onblur="this.style.borderColor='#e0e0e0'" onkeydown="if(event.key==='Enter')buscarPacientes()">
+          <input id="pac-busca-input" type="text" placeholder="Pesquisar por nome ou sobrenome de pacientes..." autocomplete="off" style="width:100%;border:1px solid #e0e0e0;border-radius:4px;padding:12px 44px 12px 16px;font-size:15px;font-family:Roboto,sans-serif;color:#212121;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='#E65100'" onblur="this.style.borderColor='#e0e0e0'" oninput="buscarPacientesAuto(this.value)">
           <svg onclick="buscarPacientes()" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;color:#E65100" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
         </div>
         <!-- Resultados -->
@@ -2092,6 +2092,12 @@ function renderAgendaGrid() {
 }
 
 // ── PACIENTES ──────────────────────────────────────────────────
+var _pacBuscaTimer=null
+function buscarPacientesAuto(q){
+  clearTimeout(_pacBuscaTimer)
+  if(!q||q.length<2){document.getElementById('pac-resultados').innerHTML='';return}
+  _pacBuscaTimer=setTimeout(function(){buscarPacientes()},250)
+}
 async function buscarPacientes(){
   var q=(document.getElementById('pac-busca-input').value||'').trim()
   if(!q||q.length<2){document.getElementById('pac-resultados').innerHTML='';return}
