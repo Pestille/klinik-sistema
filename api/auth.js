@@ -1,7 +1,8 @@
 // api/auth.js — Autenticação de usuários (Turso)
-// Rotas: login, logout, me, criar-usuario, listar-usuarios, alterar-senha
+// Rotas: login, logout, me, criar-usuario, listar-usuarios, alterar-senha, redefinir-senha
 
 var crypto = require('crypto')
+var https = require('https')
 var { getClient } = require('./db')
 
 function hashSenha(senha) {
@@ -10,6 +11,43 @@ function hashSenha(senha) {
 
 function gerarToken() {
     return crypto.randomBytes(32).toString('hex')
+}
+
+// Validação de senha forte: min 8 chars, 1 número, 1 especial
+function validarSenha(senha) {
+    if (!senha || senha.length < 8) return 'Senha deve ter no mínimo 8 caracteres'
+    if (!/[0-9]/.test(senha)) return 'Senha deve conter pelo menos 1 número'
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(senha)) return 'Senha deve conter pelo menos 1 caractere especial (!@#$%...)'
+    return null
+}
+
+// Envio de email via Resend API (gratuito até 100/dia)
+async function enviarEmail(para, assunto, html) {
+    var apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) { console.log('[auth] RESEND_API_KEY não configurada — email não enviado'); return false }
+    return new Promise(function(resolve) {
+        var body = JSON.stringify({
+            from: 'Klinik Sistema <onboarding@resend.dev>',
+            to: [para],
+            subject: assunto,
+            html: html
+        })
+        var opts = {
+            hostname: 'api.resend.com',
+            path: '/emails',
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+        }
+        var req = https.request(opts, function(res) {
+            var data = ''
+            res.on('data', function(c) { data += c })
+            res.on('end', function() { resolve(res.statusCode < 300) })
+        })
+        req.on('error', function() { resolve(false) })
+        req.setTimeout(8000, function() { req.destroy(); resolve(false) })
+        req.write(body)
+        req.end()
+    })
 }
 
 module.exports = async function handler(req, res) {
@@ -24,8 +62,9 @@ module.exports = async function handler(req, res) {
 
     // Garante que tabelas existem
     try {
-        await client.execute("CREATE TABLE IF NOT EXISTS usuarios (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, email TEXT UNIQUE NOT NULL, senha_hash TEXT, perfil TEXT DEFAULT 'recepcionista', ativo INTEGER DEFAULT 1, criado_em TEXT DEFAULT (datetime('now')), ultimo_login TEXT)")
+        await client.execute("CREATE TABLE IF NOT EXISTS usuarios (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, email TEXT UNIQUE NOT NULL, senha_hash TEXT, perfil TEXT DEFAULT 'recepcionista', ativo INTEGER DEFAULT 1, deve_redefinir INTEGER DEFAULT 0, criado_em TEXT DEFAULT (datetime('now')), ultimo_login TEXT)")
         await client.execute("CREATE TABLE IF NOT EXISTS sessoes (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER, token TEXT UNIQUE NOT NULL, criado_em TEXT DEFAULT (datetime('now')), expira_em TEXT)")
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN deve_redefinir INTEGER DEFAULT 0") } catch(e) {}
     } catch(e) {}
 
     // ── LOGIN ──────────────────────────────────────────────────
@@ -35,11 +74,16 @@ module.exports = async function handler(req, res) {
         if (!b.email || !b.senha) return res.status(400).json({ success: false, error: 'Email e senha obrigatórios' })
 
         var hash = hashSenha(b.senha)
-        var r = await client.execute({ sql: "SELECT id,nome,email,perfil,ativo FROM usuarios WHERE email=? AND senha_hash=?", args: [b.email.toLowerCase().trim(), hash] })
+        var r = await client.execute({ sql: "SELECT id,nome,email,perfil,ativo,deve_redefinir FROM usuarios WHERE email=? AND senha_hash=?", args: [b.email.toLowerCase().trim(), hash] })
         if (!r.rows.length) return res.status(401).json({ success: false, error: 'Email ou senha inválidos' })
 
         var user = r.rows[0]
         if (!user.ativo) return res.status(403).json({ success: false, error: 'Usuário desativado' })
+
+        // Se deve redefinir, retorna flag (frontend mostrará tela de redefinição)
+        if (user.deve_redefinir) {
+            return res.status(200).json({ success: true, deve_redefinir: true, usuario_id: user.id, nome: user.nome })
+        }
 
         // Cria sessão (expira em 7 dias)
         var token = gerarToken()
@@ -48,6 +92,31 @@ module.exports = async function handler(req, res) {
         await client.execute({ sql: "UPDATE usuarios SET ultimo_login=datetime('now') WHERE id=?", args: [user.id] })
 
         return res.status(200).json({ success: true, token: token, usuario: { id: user.id, nome: user.nome, email: user.email, perfil: user.perfil } })
+    }
+
+    // ── REDEFINIR SENHA (primeiro acesso) ─────────────────────
+    if (action === 'redefinir-senha') {
+        if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+        var br = req.body || {}
+        if (!br.usuario_id || !br.nova_senha) return res.status(400).json({ success: false, error: 'usuario_id e nova_senha obrigatórios' })
+
+        var erroSenha = validarSenha(br.nova_senha)
+        if (erroSenha) return res.status(400).json({ success: false, error: erroSenha })
+
+        var hashR = hashSenha(br.nova_senha)
+        await client.execute({ sql: "UPDATE usuarios SET senha_hash=?, deve_redefinir=0 WHERE id=?", args: [hashR, br.usuario_id] })
+        await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=?", args: [br.usuario_id] })
+
+        // Cria nova sessão
+        var tokenR = gerarToken()
+        var expiraR = new Date(); expiraR.setDate(expiraR.getDate() + 7)
+        await client.execute({ sql: "INSERT INTO sessoes(usuario_id,token,expira_em) VALUES(?,?,?)", args: [br.usuario_id, tokenR, expiraR.toISOString()] })
+        await client.execute({ sql: "UPDATE usuarios SET ultimo_login=datetime('now') WHERE id=?", args: [br.usuario_id] })
+
+        var udata = await client.execute({ sql: "SELECT id,nome,email,perfil FROM usuarios WHERE id=?", args: [br.usuario_id] })
+        var urow = udata.rows[0] || {}
+
+        return res.status(200).json({ success: true, token: tokenR, usuario: { id: urow.id, nome: urow.nome, email: urow.email, perfil: urow.perfil } })
     }
 
     // ── ME (verificar sessão) ──────────────────────────────────
@@ -79,24 +148,46 @@ module.exports = async function handler(req, res) {
     if (action === 'criar-usuario') {
         if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
         var b2 = req.body || {}
-        if (!b2.nome || !b2.email || !b2.senha) return res.status(400).json({ success: false, error: 'Nome, email e senha obrigatórios' })
-        if (b2.senha.length < 4) return res.status(400).json({ success: false, error: 'Senha deve ter no mínimo 4 caracteres' })
+        if (!b2.nome || !b2.email) return res.status(400).json({ success: false, error: 'Nome e email obrigatórios' })
 
         var existe = await client.execute({ sql: "SELECT id FROM usuarios WHERE email=?", args: [b2.email.toLowerCase().trim()] })
         if (existe.rows.length) return res.status(409).json({ success: false, error: 'Email já cadastrado' })
 
-        var hash2 = hashSenha(b2.senha)
+        // Gera senha temporária
+        var senhaTemp = crypto.randomBytes(4).toString('hex') // 8 chars hex
+        var hash2 = hashSenha(senhaTemp)
         var perfil = b2.perfil || 'recepcionista'
         var validos = ['admin', 'dentista', 'recepcionista']
         if (validos.indexOf(perfil) === -1) perfil = 'recepcionista'
 
-        await client.execute({ sql: "INSERT INTO usuarios(nome,email,senha_hash,perfil) VALUES(?,?,?,?)", args: [b2.nome.trim(), b2.email.toLowerCase().trim(), hash2, perfil] })
-        return res.status(200).json({ success: true, msg: 'Usuário criado' })
+        await client.execute({ sql: "INSERT INTO usuarios(nome,email,senha_hash,perfil,deve_redefinir) VALUES(?,?,?,?,1)", args: [b2.nome.trim(), b2.email.toLowerCase().trim(), hash2, perfil] })
+
+        // Envia email com senha temporária
+        var siteUrl = 'https://klinik-sistema.vercel.app'
+        var emailHtml = '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;padding:20px;background:#f5f5f5">' +
+            '<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.1)">' +
+            '<div style="text-align:center;margin-bottom:24px"><span style="font-size:22px;font-weight:700;color:#1B5E3B">KLINIK SISTEMA</span></div>' +
+            '<p style="color:#333;font-size:15px">Olá <strong>' + b2.nome.trim() + '</strong>,</p>' +
+            '<p style="color:#555;font-size:14px">Sua conta foi criada no Klinik Sistema com o perfil <strong>' + perfil.toUpperCase() + '</strong>.</p>' +
+            '<div style="background:#f8f8f8;border-radius:6px;padding:16px;margin:20px 0;border-left:4px solid #E65100">' +
+            '<p style="margin:0 0 8px;font-size:13px;color:#666">Seus dados de acesso:</p>' +
+            '<p style="margin:0;font-size:14px"><strong>Email:</strong> ' + b2.email.toLowerCase().trim() + '</p>' +
+            '<p style="margin:4px 0 0;font-size:14px"><strong>Senha temporária:</strong> <code style="background:#eee;padding:2px 8px;border-radius:4px;font-size:16px;letter-spacing:1px">' + senhaTemp + '</code></p>' +
+            '</div>' +
+            '<p style="color:#D32F2F;font-size:13px;font-weight:500">Ao fazer o primeiro login, você será obrigado a redefinir sua senha.</p>' +
+            '<p style="color:#555;font-size:13px">Requisitos da nova senha: mínimo 8 caracteres, pelo menos 1 número e 1 caractere especial (!@#$%...).</p>' +
+            '<div style="text-align:center;margin-top:24px"><a href="' + siteUrl + '" style="display:inline-block;background:#E65100;color:#fff;text-decoration:none;padding:12px 32px;border-radius:6px;font-weight:500;font-size:14px">Acessar o Sistema</a></div>' +
+            '<p style="color:#999;font-size:11px;text-align:center;margin-top:24px">Klinik Odontologia — Campo Grande, MS</p>' +
+            '</div></body></html>'
+
+        var emailEnviado = await enviarEmail(b2.email.toLowerCase().trim(), 'Bem-vindo ao Klinik Sistema — Seus dados de acesso', emailHtml)
+
+        return res.status(200).json({ success: true, msg: 'Usuário criado', email_enviado: emailEnviado, senha_temp: emailEnviado ? undefined : senhaTemp })
     }
 
     // ── LISTAR USUÁRIOS ────────────────────────────────────────
     if (action === 'listar-usuarios') {
-        var us = await client.execute("SELECT id,nome,email,perfil,ativo,criado_em,ultimo_login FROM usuarios ORDER BY nome")
+        var us = await client.execute("SELECT id,nome,email,perfil,ativo,deve_redefinir,criado_em,ultimo_login FROM usuarios ORDER BY nome")
         return res.status(200).json({ success: true, data: us.rows, total: us.rows.length })
     }
 
@@ -105,11 +196,12 @@ module.exports = async function handler(req, res) {
         if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
         var b3 = req.body || {}
         if (!b3.usuario_id || !b3.nova_senha) return res.status(400).json({ success: false, error: 'usuario_id e nova_senha obrigatórios' })
-        if (b3.nova_senha.length < 4) return res.status(400).json({ success: false, error: 'Senha deve ter no mínimo 4 caracteres' })
+
+        var erroSenha2 = validarSenha(b3.nova_senha)
+        if (erroSenha2) return res.status(400).json({ success: false, error: erroSenha2 })
 
         var hash3 = hashSenha(b3.nova_senha)
-        await client.execute({ sql: "UPDATE usuarios SET senha_hash=? WHERE id=?", args: [hash3, b3.usuario_id] })
-        // Invalida sessões existentes
+        await client.execute({ sql: "UPDATE usuarios SET senha_hash=?, deve_redefinir=0 WHERE id=?", args: [hash3, b3.usuario_id] })
         await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=?", args: [b3.usuario_id] })
         return res.status(200).json({ success: true, msg: 'Senha alterada' })
     }
@@ -123,5 +215,5 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ success: true })
     }
 
-    return res.status(400).json({ success: false, error: 'Action inválida', actions: ['login', 'me', 'logout', 'criar-usuario', 'listar-usuarios', 'alterar-senha', 'toggle-usuario'] })
+    return res.status(400).json({ success: false, error: 'Action inválida', actions: ['login', 'me', 'logout', 'criar-usuario', 'listar-usuarios', 'alterar-senha', 'redefinir-senha', 'toggle-usuario'] })
 }

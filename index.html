@@ -435,16 +435,37 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 2C12 2 7 6 7 11a5 5 0 0010 0c0-5-5-9-5-9z" stroke="currentColor" stroke-width="1.5" fill="rgba(27,94,59,.2)"/></svg>
       <span>KLINIK SISTEMA</span>
     </div>
-    <div class="login-field">
-      <label>Email</label>
-      <input type="email" id="login-email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doLogin()">
+    <!-- Login normal -->
+    <div id="login-form">
+      <div class="login-field">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="login-field">
+        <label>Senha</label>
+        <input type="password" id="login-senha" placeholder="Sua senha" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar</button>
+      <div class="login-error" id="login-error"></div>
     </div>
-    <div class="login-field">
-      <label>Senha</label>
-      <input type="password" id="login-senha" placeholder="Sua senha" onkeydown="if(event.key==='Enter')doLogin()">
+    <!-- Redefinir senha (primeiro acesso) -->
+    <div id="redefine-form" style="display:none">
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:14px;font-weight:500;color:var(--text)" id="redefine-nome"></div>
+        <div style="font-size:12px;color:var(--orange);margin-top:4px">Primeiro acesso — redefina sua senha</div>
+      </div>
+      <div class="login-field">
+        <label>Nova Senha</label>
+        <input type="password" id="redefine-senha" placeholder="Mínimo 8 chars, 1 número, 1 especial" onkeydown="if(event.key==='Enter')doRedefinir()">
+      </div>
+      <div class="login-field">
+        <label>Confirmar Senha</label>
+        <input type="password" id="redefine-confirma" placeholder="Repita a nova senha" onkeydown="if(event.key==='Enter')doRedefinir()">
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5">Requisitos: mínimo 8 caracteres, pelo menos 1 número e 1 caractere especial (!@#$%...)</div>
+      <button class="login-btn" id="redefine-btn" onclick="doRedefinir()">Redefinir Senha</button>
+      <div class="login-error" id="redefine-error"></div>
     </div>
-    <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar</button>
-    <div class="login-error" id="login-error"></div>
   </div>
 </div>
 
@@ -1225,7 +1246,8 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         <div class="modal-head"><div class="modal-title">Novo Usuário</div><button class="modal-close" onclick="closeModal('novo-usuario')">✕</button></div>
         <div class="modal-body">
           <div class="form-row c2"><div class="form-group"><label class="form-label">Nome Completo *</label><input class="form-input" id="usr-f-nome" placeholder="Nome completo"></div><div class="form-group"><label class="form-label">Email *</label><input class="form-input" id="usr-f-email" type="email" placeholder="email@klinik.com"></div></div>
-          <div class="form-row c2"><div class="form-group"><label class="form-label">Senha *</label><input class="form-input" id="usr-f-senha" type="password" placeholder="Mínimo 4 caracteres"></div><div class="form-group"><label class="form-label">Perfil *</label><select class="form-input" id="usr-f-perfil"><option value="recepcionista">Recepcionista</option><option value="dentista">Dentista</option><option value="admin">Administrador</option></select></div></div>
+          <div class="form-group"><label class="form-label">Perfil *</label><select class="form-input" id="usr-f-perfil"><option value="recepcionista">Recepcionista</option><option value="dentista">Dentista</option><option value="admin">Administrador</option></select></div>
+          <div style="background:var(--gray1);border-radius:6px;padding:12px;font-size:12px;color:var(--text3);line-height:1.5">Uma senha temporária será gerada e enviada por email. No primeiro login, o usuário será obrigado a criar uma senha forte (mín. 8 chars, 1 número, 1 especial).</div>
         </div>
         <div class="modal-foot"><button class="btn btn-primary" onclick="salvarUsuario()">Criar Usuário</button><button class="btn" onclick="closeModal('novo-usuario')">Cancelar</button></div>
       </div>
@@ -1616,6 +1638,8 @@ async function checkAuth() {
   showLogin()
 }
 
+var _redefineUserId = null
+
 async function doLogin() {
   var email = document.getElementById('login-email').value.trim()
   var senha = document.getElementById('login-senha').value
@@ -1627,7 +1651,12 @@ async function doLogin() {
   try {
     var r = await fetch('/api/auth?action=login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, senha: senha }) })
     var d = await r.json()
-    if (d.success) {
+    if (d.success && d.deve_redefinir) {
+      _redefineUserId = d.usuario_id
+      document.getElementById('redefine-nome').textContent = 'Olá, ' + d.nome
+      document.getElementById('login-form').style.display = 'none'
+      document.getElementById('redefine-form').style.display = 'block'
+    } else if (d.success) {
       localStorage.setItem('klinik_token', d.token)
       KLINIK_USER = d.usuario
       hideLogin()
@@ -1635,6 +1664,33 @@ async function doLogin() {
     } else { errEl.textContent = d.error || 'Erro no login' }
   } catch(e) { errEl.textContent = 'Erro de conexão' }
   btn.disabled = false; btn.textContent = 'Entrar'
+}
+
+async function doRedefinir() {
+  var senha = document.getElementById('redefine-senha').value
+  var confirma = document.getElementById('redefine-confirma').value
+  var errEl = document.getElementById('redefine-error')
+  var btn = document.getElementById('redefine-btn')
+  errEl.textContent = ''
+  if (!senha) { errEl.textContent = 'Digite a nova senha'; return }
+  if (senha !== confirma) { errEl.textContent = 'As senhas não coincidem'; return }
+  if (senha.length < 8) { errEl.textContent = 'Mínimo 8 caracteres'; return }
+  if (!/[0-9]/.test(senha)) { errEl.textContent = 'Deve conter pelo menos 1 número'; return }
+  if (!/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?`~]/.test(senha)) { errEl.textContent = 'Deve conter pelo menos 1 caractere especial (!@#$%...)'; return }
+  btn.disabled = true; btn.textContent = 'Salvando...'
+  try {
+    var r = await fetch('/api/auth?action=redefinir-senha', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario_id: _redefineUserId, nova_senha: senha }) })
+    var d = await r.json()
+    if (d.success) {
+      localStorage.setItem('klinik_token', d.token)
+      KLINIK_USER = d.usuario
+      hideLogin()
+      updateUserInfo()
+      document.getElementById('login-form').style.display = 'block'
+      document.getElementById('redefine-form').style.display = 'none'
+    } else { errEl.textContent = d.error || 'Erro ao redefinir' }
+  } catch(e) { errEl.textContent = 'Erro de conexão' }
+  btn.disabled = false; btn.textContent = 'Redefinir Senha'
 }
 
 function doLogout() {
@@ -2337,14 +2393,17 @@ async function loadUsuarios(){
 async function salvarUsuario(){
   var nome=document.getElementById('usr-f-nome').value.trim()
   var email=document.getElementById('usr-f-email').value.trim()
-  var senha=document.getElementById('usr-f-senha').value
   var perfil=document.getElementById('usr-f-perfil').value
-  if(!nome||!email||!senha){alert('Preencha todos os campos');return}
-  if(senha.length<4){alert('Senha deve ter no mínimo 4 caracteres');return}
+  if(!nome||!email){alert('Preencha nome e email');return}
   try{
-    var r=await fetch('/api/auth?action=criar-usuario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:nome,email:email,senha:senha,perfil:perfil})})
+    var r=await fetch('/api/auth?action=criar-usuario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:nome,email:email,perfil:perfil})})
     var d=await r.json()
-    if(d.success){closeModal('novo-usuario');loadUsuarios();document.getElementById('usr-f-nome').value='';document.getElementById('usr-f-email').value='';document.getElementById('usr-f-senha').value=''}
+    if(d.success){
+      closeModal('novo-usuario');loadUsuarios()
+      document.getElementById('usr-f-nome').value='';document.getElementById('usr-f-email').value=''
+      if(d.senha_temp){alert('Usuário criado!\n\nSenha temporária: '+d.senha_temp+'\n\n(Email não enviado — RESEND_API_KEY não configurada.\nInforme a senha acima ao usuário.)')}
+      else{alert('Usuário criado! Email enviado com os dados de acesso.')}
+    }
     else{alert(d.error||'Erro ao criar')}
   }catch(e){alert('Erro: '+e.message)}
 }
@@ -2359,7 +2418,9 @@ function abrirAlterarSenha(id,nome){
 async function alterarSenhaUsuario(){
   var id=document.getElementById('usr-s-id').value
   var senha=document.getElementById('usr-s-senha').value
-  if(!senha||senha.length<4){alert('Senha deve ter no mínimo 4 caracteres');return}
+  if(!senha||senha.length<8){alert('Senha deve ter no mínimo 8 caracteres');return}
+  if(!/[0-9]/.test(senha)){alert('Senha deve conter pelo menos 1 número');return}
+  if(!/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?`~]/.test(senha)){alert('Senha deve conter pelo menos 1 caractere especial');return}
   try{
     var r=await fetch('/api/auth?action=alterar-senha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario_id:parseInt(id),nova_senha:senha})})
     var d=await r.json()
