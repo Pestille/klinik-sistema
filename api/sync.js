@@ -443,10 +443,10 @@ async function syncPagamentos(client) {
         try { await client.execute("ALTER TABLE pagamentos ADD COLUMN tipo_pessoa TEXT") } catch(e) {}
     } catch(e) {}
 
-    // Busca pagamentos: mês atual apenas, max 1500 registros
+    // Busca pagamentos: 60 dias (captura checkouts do mês com pagamento anterior)
     var h = new Date()
-    var dMes = new Date(h.getFullYear(), h.getMonth(), 1)
-    var lista = await fetchAll('payment/list', { from: dMes.toISOString().slice(0,10), to: h.toISOString().slice(0,10), limit: 500 }, 3)
+    var d60 = new Date(); d60.setDate(d60.getDate() - 60)
+    var lista = await fetchAll('payment/list', { from: d60.toISOString().slice(0,10), to: h.toISOString().slice(0,10), limit: 500 }, 3)
     var inseridos = 0, atualizados = 0, ignorados = 0
 
     for (var i = 0; i < lista.length; i++) {
