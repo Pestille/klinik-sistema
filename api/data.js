@@ -376,6 +376,36 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: true, ...result })
         }
 
+        // ── RELATÓRIO PRODUTIVIDADE PROFISSIONAIS ─────────────────────
+        if (route === 'relatorio-profissionais') {
+            var rmeses = parseInt(q.meses) || 3
+            var rdata = "a.data_hora >= date('now','-" + rmeses + " months')"
+            var rs4 = await Promise.all([
+                // Produtividade: valor por profissional
+                client.execute("SELECT pr.id,pr.nome,pr.especialidade,COUNT(a.id) as atendimentos,COALESCE(SUM(a.valor),0) as valor_total,COUNT(DISTINCT DATE(a.data_hora)) as dias_trabalhados FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id AND " + rdata + " WHERE pr.ativo=1 GROUP BY pr.id ORDER BY valor_total DESC"),
+                // Procedimentos por profissional
+                client.execute("SELECT pr.nome as profissional,a.tipo as procedimento,COUNT(*) as qtd,COALESCE(SUM(a.valor),0) as valor FROM agendamentos a INNER JOIN profissionais pr ON pr.id=a.profissional_id WHERE " + rdata + " AND a.tipo IS NOT NULL AND a.tipo!='' GROUP BY pr.id,a.tipo ORDER BY pr.nome,qtd DESC"),
+                // Orçamentos aprovados por profissional
+                client.execute("SELECT pr.nome as profissional,COUNT(a.id) as orcamentos,COALESCE(SUM(a.valor),0) as valor_orcamentos FROM agendamentos a INNER JOIN profissionais pr ON pr.id=a.profissional_id WHERE " + rdata + " AND a.valor>0 AND a.status NOT IN ('cancelado','faltou') GROUP BY pr.id ORDER BY valor_orcamentos DESC"),
+                // Totais gerais
+                client.execute("SELECT COUNT(*) as total_atendimentos,COALESCE(SUM(valor),0) as total_valor,COUNT(DISTINCT profissional_id) as total_profissionais FROM agendamentos WHERE " + rdata),
+            ])
+            // Agrupar procedimentos por profissional
+            var procsPorProf = {}
+            rs4[1].rows.forEach(function(r) {
+                if (!procsPorProf[r.profissional]) procsPorProf[r.profissional] = []
+                procsPorProf[r.profissional].push({ procedimento: r.procedimento, qtd: r.qtd, valor: r.valor })
+            })
+            return res.status(200).json({
+                success: true,
+                meses: rmeses,
+                produtividade: rs4[0].rows,
+                procedimentos_por_profissional: procsPorProf,
+                orcamentos_por_profissional: rs4[2].rows,
+                totais: rs4[3].rows[0]
+            })
+        }
+
         // ── ANALYTICS (Dashboard completo) ────────────────────────────
         if (route === 'analytics') {
             var mesAtual = new Date().toISOString().slice(0, 7)

@@ -1258,6 +1258,9 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
           <div class="tab active" onclick="relTab('producao',this)">Produção</div>
           <div class="tab" onclick="relTab('procedimentos',this)">Procedimentos</div>
           <div class="tab" onclick="relTab('profissionais',this)">Profissionais</div>
+          <div class="tab" onclick="relTab('produtividade',this)">Produtividade</div>
+          <div class="tab" onclick="relTab('atendimentos',this)">Atendimentos</div>
+          <div class="tab" onclick="relTab('orcamentos',this)">Orçamentos</div>
           <div class="tab" onclick="relTab('inativos',this)">Inativos</div>
         </div>
         <div class="tab-panel active" id="rel-producao">
@@ -1273,6 +1276,30 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         </div>
         <div class="tab-panel" id="rel-profissionais">
           <div class="card"><div class="card-header"><div class="card-title">Produção por Profissional</div></div><div class="card-body p0"><table class="tbl"><thead><tr><th>Profissional</th><th>Agendamentos</th></tr></thead><tbody id="rel-profs"></tbody></table></div></div>
+        </div>
+        <!-- Produtividade por Profissional -->
+        <div class="tab-panel" id="rel-produtividade">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+            <select id="rel-prod-meses" style="border:1px solid #e0e0e0;border-radius:4px;padding:7px 12px;font-size:13px"><option value="1">Último mês</option><option value="3" selected>Últimos 3 meses</option><option value="6">Últimos 6 meses</option><option value="12">Último ano</option></select>
+            <button class="btn btn-sm" style="color:#E65100;border-color:#E65100" onclick="loadRelProdutividade()">Atualizar</button>
+          </div>
+          <div id="rel-produtividade-content" style="color:#9e9e9e;text-align:center;padding:30px">Clique Atualizar para carregar</div>
+        </div>
+        <!-- Atendimentos por Profissional -->
+        <div class="tab-panel" id="rel-atendimentos">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+            <select id="rel-atend-meses" style="border:1px solid #e0e0e0;border-radius:4px;padding:7px 12px;font-size:13px"><option value="1">Último mês</option><option value="3" selected>Últimos 3 meses</option><option value="6">Últimos 6 meses</option><option value="12">Último ano</option></select>
+            <button class="btn btn-sm" style="color:#E65100;border-color:#E65100" onclick="loadRelAtendimentos()">Atualizar</button>
+          </div>
+          <div id="rel-atendimentos-content" style="color:#9e9e9e;text-align:center;padding:30px">Clique Atualizar para carregar</div>
+        </div>
+        <!-- Orçamentos por Profissional -->
+        <div class="tab-panel" id="rel-orcamentos">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+            <select id="rel-orc-meses" style="border:1px solid #e0e0e0;border-radius:4px;padding:7px 12px;font-size:13px"><option value="1">Último mês</option><option value="3" selected>Últimos 3 meses</option><option value="6">Últimos 6 meses</option><option value="12">Último ano</option></select>
+            <button class="btn btn-sm" style="color:#E65100;border-color:#E65100" onclick="loadRelOrcamentos()">Atualizar</button>
+          </div>
+          <div id="rel-orcamentos-content" style="color:#9e9e9e;text-align:center;padding:30px">Clique Atualizar para carregar</div>
         </div>
         <div class="tab-panel" id="rel-inativos">
           <div class="kpi-row c3">
@@ -2634,8 +2661,93 @@ function relTab(id,el) {
   document.querySelectorAll('#p-relatorios .tab-panel').forEach(t=>t.classList.remove('active'))
   el.classList.add('active')
   document.getElementById('rel-'+id).classList.add('active')
+  if(id==='produtividade')loadRelProdutividade()
+  if(id==='atendimentos')loadRelAtendimentos()
+  if(id==='orcamentos')loadRelOrcamentos()
 }
 
+async function loadRelProdutividade(){
+  var el=document.getElementById('rel-produtividade-content');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:#9e9e9e">Carregando...</div>'
+  try{
+    var meses=document.getElementById('rel-prod-meses').value||3
+    var d=await apiData('relatorio-profissionais',{meses:meses})
+    var prods=d.produtividade||[];var totais=d.totais||{}
+    var maxVal=prods.reduce(function(m,p){return Math.max(m,+(p.valor_total||0))},1)
+    el.innerHTML=
+      '<div class="kpi-row c3" style="margin-bottom:20px">'+
+        '<div class="kpi green"><div class="kpi-label">Valor Total Produzido</div><div class="kpi-val sm">'+fmtBrl(totais.total_valor||0)+'</div></div>'+
+        '<div class="kpi blue"><div class="kpi-label">Total de Atendimentos</div><div class="kpi-val">'+(totais.total_atendimentos||0)+'</div></div>'+
+        '<div class="kpi orange"><div class="kpi-label">Profissionais Ativos</div><div class="kpi-val">'+(totais.total_profissionais||0)+'</div></div>'+
+      '</div>'+
+      '<div class="card"><div class="card-header"><div class="card-title">Produtividade por Profissional (Valor Monetário)</div></div><div class="card-body p0">'+
+      prods.map(function(p){
+        var pct=maxVal>0?Math.round(+(p.valor_total||0)/maxVal*100):0
+        return '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #f0f0f0">'+
+          '<div style="width:180px;font-size:13px;font-weight:500;color:#212121;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.nome+'</div>'+
+          '<div style="flex:1;height:8px;background:#f0f0f0;border-radius:4px"><div style="height:100%;background:#1B5E3B;border-radius:4px;width:'+pct+'%"></div></div>'+
+          '<div style="width:120px;text-align:right;font-size:14px;font-weight:500;color:#1B5E3B">'+fmtBrl(p.valor_total||0)+'</div>'+
+          '<div style="width:80px;text-align:right;font-size:12px;color:#9e9e9e">'+(p.atendimentos||0)+' atend.</div>'+
+        '</div>'
+      }).join('')+
+      '</div></div>'
+  }catch(e){el.innerHTML='<div style="color:#D32F2F;padding:20px">'+e.message+'</div>'}
+}
+
+async function loadRelAtendimentos(){
+  var el=document.getElementById('rel-atendimentos-content');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:#9e9e9e">Carregando...</div>'
+  try{
+    var meses=document.getElementById('rel-atend-meses').value||3
+    var d=await apiData('relatorio-profissionais',{meses:meses})
+    var prods=d.produtividade||[];var procsMap=d.procedimentos_por_profissional||{}
+    var html=''
+    prods.forEach(function(p,i){
+      var procs=procsMap[p.nome]||[]
+      var cor=PROF_CORES[i%PROF_CORES.length]
+      html+='<div class="card" style="margin-bottom:16px"><div class="card-header" style="cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\'">'+
+        '<div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:50%;background:'+cor+'22;color:'+cor+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">'+p.nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')+'</div>'+
+        '<div><div class="card-title" style="margin:0">'+p.nome+'</div><div style="font-size:12px;color:#9e9e9e">'+(p.especialidade||'Clínico Geral')+' — '+(p.atendimentos||0)+' atendimentos — '+fmtBrl(p.valor_total||0)+'</div></div></div>'+
+        '<span style="font-size:18px;color:#9e9e9e">▾</span>'+
+      '</div><div class="card-body p0">'
+      if(procs.length){
+        html+='<table class="tbl" style="width:100%"><thead><tr><th>Procedimento</th><th>Quantidade</th><th>Valor Total</th><th>% do Total</th></tr></thead><tbody>'
+        var totalProc=procs.reduce(function(s,pr){return s+(pr.qtd||0)},0)||1
+        procs.forEach(function(pr){
+          html+='<tr><td class="pname">'+(pr.procedimento||'—')+'</td><td>'+(pr.qtd||0)+'</td><td style="color:#1B5E3B;font-weight:500">'+fmtBrl(pr.valor||0)+'</td><td style="color:#9e9e9e">'+Math.round((pr.qtd||0)/totalProc*100)+'%</td></tr>'
+        })
+        html+='</tbody></table>'
+      }else{html+='<div style="padding:16px;color:#9e9e9e;text-align:center">Sem procedimentos registrados</div>'}
+      html+='</div></div>'
+    })
+    el.innerHTML=html||'<div style="text-align:center;padding:40px;color:#9e9e9e">Nenhum dado encontrado</div>'
+  }catch(e){el.innerHTML='<div style="color:#D32F2F;padding:20px">'+e.message+'</div>'}
+}
+
+async function loadRelOrcamentos(){
+  var el=document.getElementById('rel-orcamentos-content');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:#9e9e9e">Carregando...</div>'
+  try{
+    var meses=document.getElementById('rel-orc-meses').value||3
+    var d=await apiData('relatorio-profissionais',{meses:meses})
+    var orcs=d.orcamentos_por_profissional||[];var totais=d.totais||{}
+    var totalOrc=orcs.reduce(function(s,o){return s+(+(o.valor_orcamentos||0))},0)
+    var totalQtd=orcs.reduce(function(s,o){return s+(o.orcamentos||0)},0)
+    el.innerHTML=
+      '<div class="kpi-row c3" style="margin-bottom:20px">'+
+        '<div class="kpi green"><div class="kpi-label">Total Aprovado em Orçamentos</div><div class="kpi-val sm">'+fmtBrl(totalOrc)+'</div></div>'+
+        '<div class="kpi blue"><div class="kpi-label">Quantidade de Orçamentos</div><div class="kpi-val">'+totalQtd+'</div></div>'+
+        '<div class="kpi orange"><div class="kpi-label">Ticket Médio</div><div class="kpi-val sm">'+fmtBrl(totalQtd>0?totalOrc/totalQtd:0)+'</div></div>'+
+      '</div>'+
+      '<div class="card"><div class="card-header"><div class="card-title">Orçamentos Aprovados por Profissional</div></div><div class="card-body p0"><table class="tbl" style="width:100%"><thead><tr><th>Profissional</th><th>Orçamentos</th><th>Valor Total</th><th>Ticket Médio</th><th>% do Total</th></tr></thead><tbody>'+
+      orcs.map(function(o){
+        var ticket=o.orcamentos>0?+(o.valor_orcamentos||0)/o.orcamentos:0
+        var pct=totalOrc>0?Math.round(+(o.valor_orcamentos||0)/totalOrc*100):0
+        return '<tr><td class="pname">'+o.profissional+'</td><td>'+(o.orcamentos||0)+'</td><td style="color:#1B5E3B;font-weight:500">'+fmtBrl(o.valor_orcamentos||0)+'</td><td>'+fmtBrl(ticket)+'</td><td><div style="display:flex;align-items:center;gap:8px"><div style="width:60px;height:6px;background:#f0f0f0;border-radius:3px"><div style="height:100%;background:#E65100;border-radius:3px;width:'+pct+'%"></div></div><span style="color:#9e9e9e;font-size:12px">'+pct+'%</span></div></td></tr>'
+      }).join('')+
+      '</tbody></table></div></div>'
+  }catch(e){el.innerHTML='<div style="color:#D32F2F;padding:20px">'+e.message+'</div>'}
+}
 
 // ── CONFIGURAÇÕES ──────────────────────────────────────────────
 function renderConfiguracoes() {
