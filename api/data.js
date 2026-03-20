@@ -376,6 +376,19 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: true, ...result })
         }
 
+        // ── ORÇAMENTOS APROVADOS (query direta) ──────────────────────
+        if (route === 'orcamentos-aprovados') {
+            var omRef = q.mes || new Date().toISOString().slice(0, 7)
+            var orc = await client.execute({ sql: "SELECT treatment_id, paciente_nome, valor, parcelas, forma_pagamento, data_checkout FROM pagamentos WHERE strftime('%Y-%m',data_checkout)=? AND cancelado=0 AND treatment_id IS NOT NULL AND treatment_id!='' GROUP BY treatment_id", args: [omRef] })
+            var total = 0
+            var items = orc.rows.map(function(r) {
+                var vt = (+(r.valor||0)) * Math.max(+(r.parcelas||1), 1)
+                total += vt
+                return { treatment_id: r.treatment_id, paciente: r.paciente_nome, valor_parcela: r.valor, parcelas: r.parcelas, valor_total: vt, forma: r.forma_pagamento, checkout: r.data_checkout }
+            })
+            return res.status(200).json({ success: true, mes: omRef, orcamentos: items, total_orcamentos: items.length, valor_total: total })
+        }
+
         // ── RELATÓRIO PRODUTIVIDADE PROFISSIONAIS ─────────────────────
         if (route === 'relatorio-profissionais') {
             var rmeses = parseInt(q.meses) || 3
