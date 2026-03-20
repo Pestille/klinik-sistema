@@ -2274,7 +2274,7 @@ function renderProfDados(p,cor){
     '<div style="display:flex;gap:24px">'+
     '<div style="width:240px;flex-shrink:0">'+
       '<div class="pdt-sidebar-item active"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:#E65100"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Dados Cadastrais</div>'+
-      '<div class="pdt-sidebar-item" onclick="profToggleContato()" id="pdt-sb-contato"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:#757575"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>Contato</div>'+
+      '<div class="pdt-sidebar-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:#757575"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>Contato</div>'+
     '</div>'+
     '<div style="flex:1">'+
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:24px"><svg width="20" height="20" viewBox="0 0 24 24" fill="#E65100"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg><span style="font-size:16px;font-weight:500;color:#212121">Dados Cadastrais</span></div>'+
@@ -2302,30 +2302,11 @@ function renderProfDados(p,cor){
       '</div>'+
       // Especialidades
       '<div class="pdt-field" style="margin-bottom:24px"><label>Especialidades</label><input id="prof-f-esp" value="'+(esp||'')+'" placeholder="Especialidades"></div>'+
-      // Seção Contato (escondida, abre ao clicar no botão Contato da sidebar)
-      '<div id="pdt-contato-section" style="display:none">'+
-        '<div style="height:1px;background:#e0e0e0;margin:8px 0 24px"></div>'+
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:24px"><svg width="20" height="20" viewBox="0 0 24 24" fill="#E65100"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg><span style="font-size:16px;font-weight:500;color:#212121">Contato</span></div>'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Celular</label><input id="prof-f-celular" value="'+(tel||'')+'" placeholder="(67) 99999-9999"></div><div class="pdt-field"><label>Email</label><input id="prof-f-email2" value="'+(email||'')+'" placeholder="email@email.com"></div></div>'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>CEP</label><input id="prof-f-cep" placeholder="79000-000"></div><div class="pdt-field"><label>Cidade</label><input id="prof-f-cidade" placeholder="Campo Grande"></div><div class="pdt-field"><label>UF</label><select id="prof-f-uf"><option value="">—</option><option>AC</option><option>AL</option><option>AM</option><option>AP</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option><option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option><option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option><option>SP</option><option>TO</option></select></div></div>'+
-        '<div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Endereço</label><input id="prof-f-endereco" placeholder="Rua, Avenida..."></div><div class="pdt-field"><label>Número</label><input id="prof-f-numero" placeholder="Nº"></div></div>'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Bairro</label><input id="prof-f-bairro" placeholder="Bairro"></div><div class="pdt-field"><label>Complemento</label><input id="prof-f-complemento" placeholder="Sala, Andar..."></div></div>'+
-      '</div>'+
       // Botão Salvar
-      '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button class="pdt-btn-outline" onclick="nav(\'profissionais\')">Cancelar</button><button class="pdt-btn-fill" onclick="salvarProfissional()">Salvar Alterações</button></div>'+
+      '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="pdt-btn-outline" onclick="nav(\'profissionais\')">Cancelar</button><button class="pdt-btn-fill" onclick="salvarProfissional()">Salvar Alterações</button></div>'+
     '</div></div>'
   // Guarda cor selecionada
   if(!p._corSelecionada)p._corSelecionada=cor
-}
-
-function profToggleContato(){
-  var sec=document.getElementById('pdt-contato-section')
-  var btn=document.getElementById('pdt-sb-contato')
-  if(!sec)return
-  var show=sec.style.display==='none'
-  sec.style.display=show?'block':'none'
-  if(btn)btn.classList.toggle('active',show)
-  if(show)sec.scrollIntoView({behavior:'smooth',block:'start'})
 }
 
 var _profCorSelecionada=null
