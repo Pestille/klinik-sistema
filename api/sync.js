@@ -135,6 +135,12 @@ async function explorar() {
 
 // ── SYNC PROFISSIONAIS ────────────────────────────────────────────────────────
 async function syncProfissionais(client) {
+    // Garante colunas extras
+    try { await client.execute("ALTER TABLE profissionais ADD COLUMN cpf TEXT") } catch(e) {}
+    try { await client.execute("ALTER TABLE profissionais ADD COLUMN email TEXT") } catch(e) {}
+    try { await client.execute("ALTER TABLE profissionais ADD COLUMN telefone TEXT") } catch(e) {}
+    try { await client.execute("ALTER TABLE profissionais ADD COLUMN cro TEXT") } catch(e) {}
+
     var lista = await fetchAll('professional/list_all_professionals', {}, 3)
     var inseridos = 0, atualizados = 0
     for (var i = 0; i < lista.length; i++) {
@@ -150,10 +156,10 @@ async function syncProfissionais(client) {
         var ativo = (p.active === false || p.Active === false) ? 0 : 1
         var existe = await client.execute({ sql: 'SELECT id FROM profissionais WHERE clinicorp_id=?', args: [cid] })
         if (existe.rows.length > 0) {
-            await client.execute({ sql: "UPDATE profissionais SET nome=?,especialidade=?,ativo=?,atualizado_em=datetime('now') WHERE clinicorp_id=?", args: [nome, esp, ativo, cid] })
+            await client.execute({ sql: "UPDATE profissionais SET nome=?,especialidade=?,cpf=?,email=?,telefone=?,cro=?,ativo=?,atualizado_em=datetime('now') WHERE clinicorp_id=?", args: [nome, esp, cpf, email, tel, cro, ativo, cid] })
             atualizados++
         } else {
-            await client.execute({ sql: "INSERT INTO profissionais(clinicorp_id,nome,especialidade,ativo,criado_em,atualizado_em) VALUES(?,?,?,?,datetime('now'),datetime('now'))", args: [cid, nome, esp, ativo] })
+            await client.execute({ sql: "INSERT INTO profissionais(clinicorp_id,nome,especialidade,cpf,email,telefone,cro,ativo,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))", args: [cid, nome, esp, cpf, email, tel, cro, ativo] })
             inseridos++
         }
     }
@@ -209,8 +215,13 @@ async function syncPacientes(client, pagina) {
 }
 
 // ── SYNC AGENDAMENTOS ─────────────────────────────────────────────────────────
-// Padrão: últimos 365 dias, até 15 páginas (1500 registros)
 async function syncAgendamentos(client, dataInicio, dataFim) {
+    // Garante colunas extras
+    try { await client.execute("ALTER TABLE agendamentos ADD COLUMN hora_fim TEXT") } catch(e) {}
+    try { await client.execute("ALTER TABLE agendamentos ADD COLUMN paciente_nome TEXT") } catch(e) {}
+    try { await client.execute("ALTER TABLE agendamentos ADD COLUMN paciente_telefone TEXT") } catch(e) {}
+    try { await client.execute("ALTER TABLE agendamentos ADD COLUMN profissional_nome TEXT") } catch(e) {}
+
     var h = new Date()
     var d7 = new Date(); d7.setDate(d7.getDate() - 7)
     var inicio = dataInicio || d7.toISOString().slice(0,10)
@@ -247,13 +258,17 @@ async function syncAgendamentos(client, dataInicio, dataFim) {
         var proc     = a.procedureName || a.ProcedureName || a.procedure || ''
         var valor    = parseFloat(a.value || a.Value || a.amount || 0) || 0
         var obs      = a.observations || a.Observations || a.observacoes || ''
+        var horaFim  = a.toTime || a.ToTime || a.endTime || ''
+        var pacNome  = a.PatientName || a.patientName || ''
+        var pacTel   = a.MobilePhone || a.mobilePhone || a.Phone || ''
+        var profNome = a.ProfessionalName || a.professionalName || ''
 
         var existe = await client.execute({ sql: 'SELECT id FROM agendamentos WHERE clinicorp_id=?', args: [cid] })
         if (existe.rows.length > 0) {
-            await client.execute({ sql: "UPDATE agendamentos SET paciente_id=?,profissional_id=?,data_hora=?,tipo=?,status=?,procedimento=?,valor=?,observacoes=?,atualizado_em=datetime('now') WHERE clinicorp_id=?", args: [pacienteId, profId, dataHora, tipo, status, proc, valor, obs, cid] })
+            await client.execute({ sql: "UPDATE agendamentos SET paciente_id=?,profissional_id=?,data_hora=?,hora_fim=?,tipo=?,status=?,procedimento=?,valor=?,observacoes=?,paciente_nome=?,paciente_telefone=?,profissional_nome=?,atualizado_em=datetime('now') WHERE clinicorp_id=?", args: [pacienteId, profId, dataHora, horaFim, tipo, status, proc, valor, obs, pacNome, pacTel, profNome, cid] })
             atualizados++
         } else {
-            await client.execute({ sql: "INSERT INTO agendamentos(clinicorp_id,paciente_id,profissional_id,data_hora,tipo,status,procedimento,valor,observacoes,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))", args: [cid, pacienteId, profId, dataHora, tipo, status, proc, valor, obs] })
+            await client.execute({ sql: "INSERT INTO agendamentos(clinicorp_id,paciente_id,profissional_id,data_hora,hora_fim,tipo,status,procedimento,valor,observacoes,paciente_nome,paciente_telefone,profissional_nome,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))", args: [cid, pacienteId, profId, dataHora, horaFim, tipo, status, proc, valor, obs, pacNome, pacTel, profNome] })
             inseridos++
         }
     }

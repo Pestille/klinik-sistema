@@ -1767,35 +1767,54 @@ async function api(ep) {
 // ── DASHBOARD (carrega tudo em paralelo) ──────────────────────
 async function loadDashboard() {
   try {
-    const d = await api('dashboard')
+    // Busca do Turso (rápido, dados locais)
+    var d = await apiData('dashboard')
     ST.dashboard = d
-    ST.inativos = d.inativos
-    renderCRMCounts(d.inativos)
+    ST.inativos = d.inativos || []
+    // Converte profissionais para formato compatível
+    if (d.profissionais) {
+      ST.dashboard.profissionais = d.profissionais.map(function(p){ return { id: p.id, name: p.nome, Name: p.nome, specialty: p.especialidade, total_agendamentos: p.total_agendamentos } })
+    }
+    renderCRMCounts(d.inativos || [])
     if (curPage==='crm') renderCRM()
     if (curPage==='relatorios') renderRelatorios()
     if (curPage==='agenda') renderAgendaGrid()
     if (curPage==='pacientes') renderPacientes()
     if (curPage==='prontuario') filterProntList()
-    renderRelCounts(d)
-  } catch(e) { console.error(e) }
+  } catch(e) { console.error('[loadDashboard]', e) }
 }
 
 // ── AGENDA ──────────────────────────────────────────────────────
 async function loadAgenda() {
-  document.getElementById('agenda-loading').classList.remove('hidden')
-  document.getElementById('agenda-grid').classList.add('hidden')
+  var loadEl = document.getElementById('agenda-loading')
+  var gridEl = document.getElementById('agenda-grid')
+  if (loadEl) loadEl.classList.remove('hidden')
+  if (gridEl) gridEl.classList.add('hidden')
   try {
-    const data = await api('agendamentos')
-    ST.agendamentos = data
+    // Busca agendamentos do Turso
+    var d = await apiData('agendamentos')
+    var rows = d.agendamentos || []
+    // Converte para formato compatível com renderAgendaGrid
+    ST.agendamentos = rows.map(function(a) {
+      var dh = a.data_hora || ''
+      return {
+        id: a.id, date: dh.slice(0,10), fromTime: dh.slice(11,16) || '',
+        toTime: a.hora_fim || '', PatientName: a.paciente_nome || '', patientName: a.paciente_nome || '',
+        MobilePhone: a.paciente_telefone || '', ProfessionalId: a.profissional_id,
+        ProfessionalName: a.profissional_nome || '', professionalId: a.profissional_id,
+        CategoryDescription: a.tipo || '', status: a.status || 'agendado',
+        procedureName: a.procedimento || '', value: a.valor || 0, observations: a.observacoes || ''
+      }
+    })
     renderMiniCal()
     renderProfsList()
     renderAgendaGrid()
     renderPacientes()
     filterProntList()
-    document.getElementById('agenda-loading').classList.add('hidden')
-    document.getElementById('agenda-grid').classList.remove('hidden')
+    if (loadEl) loadEl.classList.add('hidden')
+    if (gridEl) gridEl.classList.remove('hidden')
   } catch(e) {
-    document.getElementById('agenda-loading').innerHTML=`<div style="color:var(--red);text-align:center">${e.message}<br><br><button class="btn" onclick="loadAgenda()">Tentar novamente</button></div>`
+    if (loadEl) loadEl.innerHTML='<div style="color:var(--red);text-align:center">'+e.message+'<br><br><button class="btn" onclick="loadAgenda()">Tentar novamente</button></div>'
   }
 }
 
@@ -2069,52 +2088,52 @@ function filterFin(q) {
 
 // ── PROFISSIONAIS ──────────────────────────────────────────────
 async function loadProfissionais() {
-  document.getElementById('prof-loading').classList.remove('hidden')
-  document.getElementById('prof-data').classList.add('hidden')
+  var loadEl=document.getElementById('prof-loading')
+  var dataEl=document.getElementById('prof-data')
+  if(loadEl)loadEl.classList.remove('hidden')
+  if(dataEl)dataEl.classList.add('hidden')
   try {
-    const data=await api('profissionais')
-    ST.profissionais=data
-    document.getElementById('prof-sub').textContent=`${data.length} profissionais cadastrados`
-    document.getElementById('prof-grid').innerHTML=data.map((p,i)=>{
-      const nome=p.name||p.Name||'Profissional'
-      const esp=p.specialty||p.especialidade||''
-      const ini=nome.split(' ').slice(0,2).map(x=>x[0]).join('')
-      const cor=PROF_CORES[i%PROF_CORES.length]
-      return`<div class="prof-card"><div class="prof-av" style="background:${cor}22;color:${cor}">${ini}</div><div class="prof-name">${nome.split(' ').slice(0,3).join(' ')}</div><div class="prof-esp">${esp}</div><span class="badge badge-green" style="margin-top:8px">Ativo</span></div>`
+    var d=await apiData('profissionais')
+    var data=d.data||[]
+    // Converte para formato compatível
+    ST.profissionais=data.map(function(p){return {id:p.id,name:p.nome,Name:p.nome,specialty:p.especialidade,especialidade:p.especialidade,cpf:p.cpf||'',email:p.email||'',telefone:p.telefone||'',cro:p.cro||'',total_agendamentos:p.total_agendamentos||0}})
+    document.getElementById('prof-sub').textContent=data.length+' profissionais cadastrados'
+    document.getElementById('prof-grid').innerHTML=data.map(function(p,i){
+      var nome=p.nome||'Profissional'
+      var esp=p.especialidade||''
+      var ini=nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
+      var cor=PROF_CORES[i%PROF_CORES.length]
+      return '<div class="prof-card"><div class="prof-av" style="background:'+cor+'22;color:'+cor+'">'+ini+'</div><div class="prof-name">'+nome.split(' ').slice(0,3).join(' ')+'</div><div class="prof-esp">'+esp+'</div><div style="font-size:11px;color:var(--text3);margin-top:4px">'+(p.total_agendamentos||0)+' agendamentos</div><span class="badge badge-green" style="margin-top:6px">Ativo</span></div>'
     }).join('')
     renderProfsList()
-    document.getElementById('prof-loading').classList.add('hidden')
-    document.getElementById('prof-data').classList.remove('hidden')
+    if(loadEl)loadEl.classList.add('hidden')
+    if(dataEl)dataEl.classList.remove('hidden')
   } catch(e) {
-    document.getElementById('prof-loading').innerHTML=`<div style="color:var(--red);text-align:center;padding:40px">${e.message}</div>`
+    if(loadEl)loadEl.innerHTML='<div style="color:var(--red);text-align:center;padding:40px">'+e.message+'</div>'
   }
 }
 
 // ── ANIVERSARIANTES ──────────────────────────────────────────────
 async function loadAniversariantes() {
-  document.getElementById('aniv-loading').classList.remove('hidden')
-  document.getElementById('aniv-data').classList.add('hidden')
+  var loadEl=document.getElementById('aniv-loading')
+  var dataEl=document.getElementById('aniv-data')
+  if(loadEl)loadEl.classList.remove('hidden')
+  if(dataEl)dataEl.classList.add('hidden')
   try {
-    const data=await api('aniversariantes')
+    var d=await apiData('aniversariantes')
+    var data=d.data||[]
     ST.aniversariantes=data
-    const MMS=['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ']
-    document.getElementById('aniv-list').innerHTML=data.length?data.map(a=>{
-      const nome=a.Name||a.PatientName||'Paciente'
-      const tel=a.MobilePhone||a.phone||''
-      const dt=a.BirthDate||a.birthDate||''
-      const d=dt?new Date(dt):'';const dia=d?d.getUTCDate()+1:'—';const mes=d?MMS[d.getUTCMonth()+1]:'—'
-      const nome1=nome.split(' ')[0]
-      const wa=`https://wa.me/55${tel.replace(/\D/g,'')}?text=${encodeURIComponent('Feliz aniversário, '+nome1+'! 🎂 A equipe Klinik te deseja um dia incrível!')}`
-      return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
-        <div style="width:40px;text-align:center;background:rgba(27,94,59,.08);border-radius:6px;padding:4px">
-          <div style="font-size:18px;font-weight:300;color:var(--green)">${dia}</div>
-          <div style="font-size:9px;color:var(--text3);text-transform:uppercase">${mes}</div>
-        </div>
-        <div style="flex:1"><div style="font-weight:500;font-size:13px">${nome}</div><div style="font-size:12px;color:var(--text3)">${tel||'—'}</div></div>
-        <a href="${wa}" target="_blank" class="wa-btn">Parabenizar</a>
-      </div>`
+    var MMS=['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ']
+    document.getElementById('aniv-list').innerHTML=data.length?data.map(function(a){
+      var nome=a.nome||'Paciente'
+      var tel=a.telefone||''
+      var dt=a.data_nascimento||''
+      var dd=dt?new Date(dt+'T12:00:00'):null;var dia=dd?dd.getDate():'—';var mes=dd?MMS[dd.getMonth()+1]:'—'
+      var nome1=nome.split(' ')[0]
+      var wa='https://wa.me/55'+tel.replace(/\D/g,'')+'?text='+encodeURIComponent('Feliz aniversário, '+nome1+'! A equipe Klinik te deseja um dia incrível!')
+      return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)"><div style="width:40px;text-align:center;background:rgba(27,94,59,.08);border-radius:6px;padding:4px"><div style="font-size:18px;font-weight:300;color:var(--green)">'+dia+'</div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">'+mes+'</div></div><div style="flex:1"><div style="font-weight:500;font-size:13px">'+nome+'</div><div style="font-size:12px;color:var(--text3)">'+(tel||'—')+'</div></div>'+(tel?'<a href="'+wa+'" target="_blank" class="wa-btn">Parabenizar</a>':'')+'</div>'
     }).join(''):'<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum aniversariante nos próximos 60 dias</div>'
-    document.getElementById('aniv-loading').classList.add('hidden')
+    if(loadEl)loadEl.classList.add('hidden')
     document.getElementById('aniv-data').classList.remove('hidden')
   } catch(e) {
     document.getElementById('aniv-loading').innerHTML=`<div style="color:var(--red);text-align:center;padding:40px">${e.message}</div>`
