@@ -4,6 +4,22 @@
 HTML estático + CSS inline no `index.html` + Vercel Serverless Node.js + Turso DB (libSQL).
 Sem bundler, sem framework JS. Tudo em um único `index.html`.
 
+## Banco de Dados (Turso) — Backup 20/03/2026
+Dados importados do Clinicorp e agora autônomos. O sistema opera 100% a partir do Turso.
+
+| Tabela | Registros | Descrição |
+|---|---|---|
+| pacientes | 1.112 | Cadastro completo com nome, CPF, telefone, email, nascimento |
+| agendamentos | 4.845 | Com profissional_id, paciente_nome, hora_fim, status |
+| pagamentos | 1.104 | Formas, bandeiras, parcelas, treatment_id, titular, checkout |
+| procedimentos | 688 | 5 tabelas de preço (PARTICULAR, PREVIDENT, etc.) |
+| financeiro | 71 | Recibos com valor e data_pagamento |
+| profissionais | 8 | Com CPF, email, telefone, CRO, especialidade |
+| usuarios | 1 | Sistema de autenticação próprio |
+
+**API Clinicorp desconectada.** Dados do Clinicorp servem apenas como base histórica.
+Todas as novas operações (cadastros, agendamentos, financeiro) são feitas diretamente no Turso.
+
 ---
 
 ## Paleta de cores
