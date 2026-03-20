@@ -80,6 +80,24 @@ module.exports = async function handler(req, res) {
         }
 
         // ── PACIENTES ───────────────────────────────────────────────────────
+        // ── PACIENTE COMPLETO (prontuário) ─────────────────────────
+        if (route === 'paciente') {
+            var pid = parseInt(q.id) || 0
+            var pnome = q.nome || ''
+            var sqlP = pid ? "SELECT * FROM pacientes WHERE id=?" : "SELECT * FROM pacientes WHERE nome=? LIMIT 1"
+            var argP = pid ? [pid] : [pnome]
+            var rp = await client.execute({ sql: sqlP, args: argP })
+            if (!rp.rows.length) return res.status(404).json({ success: false, error: 'Paciente não encontrado' })
+            var pac = rp.rows[0]
+            var rpId = pac.id
+            var rs5 = await Promise.all([
+                client.execute({ sql: "SELECT a.*,COALESCE(pr.nome,a.profissional_nome) as prof_nome FROM agendamentos a LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE a.paciente_id=? OR a.paciente_nome=? ORDER BY a.data_hora DESC LIMIT 100", args: [rpId, pac.nome] }),
+                client.execute({ sql: "SELECT * FROM pagamentos WHERE paciente_id=? OR paciente_nome=? ORDER BY data_pagamento DESC LIMIT 100", args: [rpId, pac.nome] }),
+                client.execute({ sql: "SELECT * FROM financeiro WHERE paciente_id=? ORDER BY data_pagamento DESC LIMIT 50", args: [rpId] }),
+            ])
+            return res.status(200).json({ success: true, paciente: pac, agendamentos: rs5[0].rows, pagamentos: rs5[1].rows, financeiro: rs5[2].rows })
+        }
+
         if (route === 'pacientes') {
             var page = parseInt(q.page) || 1
             var lim = Math.min(parseInt(q.limit) || 50, 200)
@@ -589,6 +607,15 @@ module.exports = async function handler(req, res) {
             if (!lb.data_pagamento || !lb.valor) return res.status(400).json({ success: false, error: 'Data e valor obrigatórios' })
             await client.execute({ sql: "INSERT INTO financeiro(tipo,descricao,valor,data_pagamento,forma_pagamento,status,criado_em,atualizado_em) VALUES(?,?,?,?,?,'manual',datetime('now'),datetime('now'))", args: [lb.tipo||'entrada', lb.descricao||'', lb.valor, lb.data_pagamento, lb.forma_pagamento||''] })
             return res.status(200).json({ success: true, msg: 'Lançamento salvo' })
+        }
+
+        // ── EDITAR PACIENTE ───────────────────────────────────────────
+        if (route === 'salvar-paciente-edit') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var spe = req.body || {}
+            if (!spe.id) return res.status(400).json({ success: false, error: 'ID obrigatório' })
+            await client.execute({ sql: "UPDATE pacientes SET nome=?,telefone=?,email=?,cpf=?,data_nascimento=?,cep=?,cidade=?,endereco=?,bairro=?,atualizado_em=datetime('now') WHERE id=?", args: [spe.nome||'', spe.telefone||'', spe.email||'', spe.cpf||'', spe.data_nascimento||'', spe.cep||'', spe.cidade||'', spe.endereco||'', spe.bairro||'', spe.id] })
+            return res.status(200).json({ success: true, msg: 'Paciente atualizado' })
         }
 
         // ── SALVAR PROFISSIONAL ─────────────────────────────────────

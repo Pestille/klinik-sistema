@@ -770,15 +770,27 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     </div>
 
     <!-- PRONTUÁRIO -->
-    <div class="page gpage" id="p-prontuario">
-      <div class="gpage-header"><div><div class="gpage-title">Prontuário</div></div></div>
-      <div class="gpage-body" style="display:flex;gap:16px;padding-top:14px">
-        <div style="width:260px;flex-shrink:0">
-          <div class="search-wrap" style="width:100%;margin-bottom:10px"><svg class="search-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input class="search-input" style="width:100%" placeholder="Buscar..." id="pront-search" oninput="filterProntList()"></div>
-          <div id="pront-list" style="max-height:calc(100vh-200px);overflow-y:auto"></div>
-        </div>
-        <div style="flex:1" id="pront-detail"><div class="card"><div class="card-body" style="text-align:center;padding:50px;color:var(--text3)">Selecione um paciente para visualizar o prontuário</div></div></div>
+    <div class="page" id="p-prontuario" style="display:none;flex-direction:column;height:calc(100vh - 52px - 32px)">
+      <!-- Header paciente -->
+      <div style="background:#fff;border-bottom:1px solid #e0e0e0;padding:16px 24px" id="pront-header"></div>
+      <!-- Tabs -->
+      <div style="background:#fff;border-bottom:1px solid #e0e0e0;display:flex;padding:0 24px;overflow-x:auto;scrollbar-width:none" id="pront-tabs">
+        <div class="pdt-tab active" onclick="prontTab('cadastro',this)">Cadastro</div>
+        <div class="pdt-tab" onclick="prontTab('orcamentos',this)">Orçamentos</div>
+        <div class="pdt-tab" onclick="prontTab('financeiro-pac',this)">Financeiro</div>
+        <div class="pdt-tab" onclick="prontTab('fotos',this)">Fotos</div>
+        <div class="pdt-tab" onclick="prontTab('plano-clinico',this)">Plano e Ficha Clínica</div>
+        <div class="pdt-tab" onclick="prontTab('fichas-esp',this)">Fichas Especialidades</div>
+        <div class="pdt-tab" onclick="prontTab('odontograma',this)">Odontograma</div>
+        <div class="pdt-tab" onclick="prontTab('anamnese',this)">Anamnese</div>
+        <div class="pdt-tab" onclick="prontTab('documentos',this)">Documentos</div>
+        <div class="pdt-tab" onclick="prontTab('exames',this)">Exames</div>
+        <div class="pdt-tab" onclick="prontTab('recibos',this)">Recibos</div>
+        <div class="pdt-tab" onclick="prontTab('agendamentos-pac',this)">Agendamentos</div>
+        <div class="pdt-tab" onclick="prontTab('indicacoes',this)">Indicações</div>
       </div>
+      <!-- Content -->
+      <div style="flex:1;overflow-y:auto;background:#fff;padding:24px" id="pront-content"></div>
     </div>
 
     <!-- CRC / INATIVOS -->
@@ -2107,38 +2119,185 @@ function filterPac() {
 
 // ── PRONTUÁRIO ──────────────────────────────────────────────────
 function filterProntList() {
-  const q=(document.getElementById('pront-search').value||'').toLowerCase()
-  const lista=(ST.pacientesLista||[]).filter(p=>p.nome.toLowerCase().includes(q)).slice(0,30)
-  document.getElementById('pront-list').innerHTML=lista.map(p=>`
-    <div class="patient-row" style="padding:10px 12px;cursor:pointer" onclick="abrirProntuario('${p.nome.replace(/'/g,"\\'")}')">
-      <div class="patient-av" style="width:32px;height:32px;font-size:12px">${p.nome.split(' ').slice(0,2).map(x=>x[0]).join('')}</div>
-      <div class="patient-info"><div class="patient-name" style="font-size:12px">${p.nome.split(' ').slice(0,3).join(' ')}</div><div style="font-size:11px;color:var(--text3)">${p.tel||'—'}</div></div>
-    </div>`).join('')
+  var el=document.getElementById('pront-list');if(!el)return
+  var q=(document.getElementById('pront-search')?document.getElementById('pront-search').value:'').toLowerCase()
+  var lista=(ST.pacientesLista||[]).filter(function(p){return p.nome.toLowerCase().includes(q)}).slice(0,30)
+  el.innerHTML=lista.map(function(p){
+    return '<div class="patient-row" style="padding:10px 12px;cursor:pointer" onclick="abrirProntuario(\''+p.nome.replace(/'/g,"\\'")+'\')">'+'<div class="patient-av" style="width:32px;height:32px;font-size:12px">'+p.nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')+'</div>'+'<div class="patient-info"><div class="patient-name" style="font-size:12px">'+p.nome.split(' ').slice(0,3).join(' ')+'</div><div style="font-size:11px;color:var(--text3)">'+(p.tel||'—')+'</div></div></div>'
+  }).join('')
 }
 
-function abrirProntuario(nome) {
-  nav('prontuario')
-  const ag=(ST.agendamentos||[]).filter(a=>a.PatientName===nome&&!a.Deleted).sort((a,b)=>new Date(b.date)-new Date(a.date))
-  const teeth_sup=[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28]
-  const teeth_inf=[48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38]
-  document.getElementById('pront-detail').innerHTML=`
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-header"><div class="card-title">${nome}</div><button class="btn btn-sm btn-primary">Editar Cadastro</button></div>
-      <div class="card-body"><span class="badge badge-blue">${ag.length} consultas</span></div>
-    </div>
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-header"><div class="card-title">Odontograma</div></div>
-      <div style="padding:4px 8px;font-size:10px;text-align:center;color:var(--text3);letter-spacing:1px">SUPERIOR</div>
-      <div class="odont-row">${teeth_sup.map(t=>`<div><div class="tooth" title="${t}">${t}</div></div>`).join('')}</div>
-      <div class="odont-row">${teeth_inf.map(t=>`<div><div class="tooth" title="${t}">${t}</div></div>`).join('')}</div>
-      <div style="padding:4px 8px;font-size:10px;text-align:center;color:var(--text3);letter-spacing:1px">INFERIOR</div>
-    </div>
-    <div class="card">
-      <div class="card-header"><div class="card-title">Histórico de Consultas</div></div>
-      <div class="card-body p0"><table class="tbl"><thead><tr><th>Data</th><th>Categoria</th><th>Horário</th></tr></thead>
-      <tbody>${ag.slice(0,15).map(a=>`<tr><td>${new Date(a.date).toLocaleDateString('pt-BR')}</td><td><span class="badge badge-blue">${a.CategoryDescription||'Geral'}</span></td><td class="text-muted">${a.fromTime||'—'}</td></tr>`).join('')}</tbody></table></div>
-    </div>`
-  filterProntList()
+var _prontData=null,_prontTab='cadastro'
+
+async function abrirProntuario(nome) {
+  document.querySelectorAll('.page').forEach(function(pg){pg.classList.remove('active')})
+  var pg=document.getElementById('p-prontuario');pg.style.display='flex';pg.classList.add('active')
+  document.getElementById('pront-header').innerHTML='<div style="text-align:center;padding:20px;color:#9e9e9e">Carregando...</div>'
+  document.getElementById('pront-content').innerHTML=''
+  try{
+    var d=await apiData('paciente',{nome:nome})
+    _prontData=d
+    var p=d.paciente||{}
+    var ag=d.agendamentos||[]
+    var ini=p.nome?p.nome.split(' ').slice(0,2).map(function(x){return x[0]}).join(''):''
+    var tel=p.telefone||'';var email=p.email||''
+
+    // Header
+    document.getElementById('pront-header').innerHTML=
+      '<div style="display:flex;align-items:flex-start;gap:16px">'+
+        '<div style="width:72px;height:72px;border-radius:50%;border:2px solid #e0e0e0;background:#E8F5E9;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#1B5E3B;flex-shrink:0">'+ini+'</div>'+
+        '<div style="flex:1">'+
+          '<div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px;font-weight:700;color:#212121">'+p.nome+'</span><span style="background:#E8F5E9;color:#2E7D32;border-radius:20px;padding:3px 10px;font-size:12px">● Ativo</span></div>'+
+          '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;font-size:13px;color:#616161">'+
+            '<div>☎ '+(tel||'Não informado')+'</div>'+
+            '<div>📱 '+(tel||'Não informado')+'</div>'+
+            '<div>✉ '+(email||'Não informado')+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">'+
+          '<div style="display:flex;gap:8px"><button class="pdt-icon-btn" title="Excluir">🗑</button><button class="pdt-icon-btn" title="Inativar">🚫</button><button class="pdt-icon-btn" title="Imprimir">🖨</button><button class="pdt-icon-btn" title="WhatsApp" onclick="window.open(\'https://wa.me/55'+(tel||'').replace(/\\D/g,'')+'\')">💬</button><button class="pdt-btn-outline" onclick="openModal(\'paciente\')">+ Novo Paciente</button></div>'+
+          '<div style="display:flex;gap:8px"><div style="border:1px solid #e0e0e0;border-radius:4px;padding:8px 14px;font-size:12px;color:#616161"><span>🕐 Alerta de retorno</span><div style="color:#E65100;cursor:pointer;margin-top:2px">Criar alerta</div></div></div>'+
+        '</div>'+
+      '</div>'
+
+    // Reset tabs
+    document.querySelectorAll('#pront-tabs .pdt-tab').forEach(function(t,i){t.classList.toggle('active',i===0)})
+    _prontTab='cadastro'
+    renderProntTab()
+  }catch(e){document.getElementById('pront-header').innerHTML='<div style="color:#D32F2F;padding:20px">'+e.message+'</div>'}
+}
+
+function prontTab(id,el){
+  document.querySelectorAll('#pront-tabs .pdt-tab').forEach(function(t){t.classList.remove('active')})
+  el.classList.add('active');_prontTab=id;renderProntTab()
+}
+
+function renderProntTab(){
+  var el=document.getElementById('pront-content');if(!el||!_prontData)return
+  var p=_prontData.paciente||{};var ag=_prontData.agendamentos||[];var pgs=_prontData.pagamentos||[];var fin=_prontData.financeiro||[]
+  var UFS='<option value="">—</option><option>AC</option><option>AL</option><option>AM</option><option>AP</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option><option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option><option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option><option>SP</option><option>TO</option>'
+
+  if(_prontTab==='cadastro'){
+    el.innerHTML=
+      '<div style="display:flex;gap:24px">'+
+      '<div style="width:260px;flex-shrink:0">'+
+        '<div class="pdt-sidebar-item active" onclick="prontCadSecao(\'dados\')">👤 Dados Cadastrais</div>'+
+        '<div class="pdt-sidebar-item" onclick="prontCadSecao(\'contato\')">📞 Contato</div>'+
+        '<div class="pdt-sidebar-item" onclick="prontCadSecao(\'complementar\')">📄 Dados Complementares</div>'+
+      '</div>'+
+      '<div style="flex:1" id="pront-cad-area"></div></div>'
+    prontCadSecao('dados')
+  }
+  else if(_prontTab==='agendamentos-pac'){
+    el.innerHTML='<table class="tbl" style="width:100%"><thead><tr><th>Data</th><th>Horário</th><th>Profissional</th><th>Procedimento</th><th>Obs</th><th>Status</th></tr></thead><tbody>'+
+      (ag.length?ag.map(function(a){
+        var dt=(a.data_hora||'').slice(0,10);var hr=(a.data_hora||'').slice(11,16)
+        var stCor=(a.status||'')==='confirmado'?'green':(a.status||'')==='cancelado'?'red':'orange'
+        return '<tr><td>'+fmtDt(dt)+'</td><td>'+hr+(a.hora_fim?' até '+a.hora_fim:'')+'</td><td>'+(a.prof_nome||'—')+'</td><td>'+(a.procedimento||a.tipo||'—')+'</td><td style="color:#9e9e9e;max-width:200px;overflow:hidden;text-overflow:ellipsis">'+(a.observacoes||'—')+'</td><td><span class="badge badge-'+stCor+'">'+((a.status||'agendado').toUpperCase())+'</span></td></tr>'
+      }).join(''):'<tr><td colspan="6" style="text-align:center;padding:30px;color:#9e9e9e">Nenhum agendamento</td></tr>')+
+      '</tbody></table>'
+  }
+  else if(_prontTab==='financeiro-pac'){
+    var allFin=pgs.concat(fin)
+    el.innerHTML='<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px"><button class="pdt-btn-outline" onclick="openModal(\'lancamento\')">+ Adicionar Lançamento</button></div>'+
+      '<table class="tbl" style="width:100%"><thead><tr><th>Data</th><th>Descrição</th><th>Forma</th><th>Parcelas</th><th>Valor</th><th>Status</th></tr></thead><tbody>'+
+      (allFin.length?allFin.map(function(f){
+        var v=+(f.valor||0);var conf=f.confirmado
+        return '<tr><td>'+fmtDt(f.data_pagamento)+'</td><td>'+(f.descricao||f.forma_pagamento||'Pagamento')+'</td><td>'+(f.forma_pagamento||'—')+'</td><td>'+(f.parcelas||1)+'</td><td style="color:#1B5E3B;font-weight:500">'+fmtBrl(v)+'</td><td>'+(conf?'<span class="badge badge-green">PAGO</span>':'<span class="badge badge-orange">PENDENTE</span>')+'</td></tr>'
+      }).join(''):'<tr><td colspan="6" style="text-align:center;padding:30px;color:#9e9e9e">Nenhum lançamento</td></tr>')+
+      '</tbody></table>'+
+      '<div style="text-align:right;padding:12px 0;font-weight:700;border-top:1px solid #e0e0e0;margin-top:8px">Saldo: '+fmtBrl(allFin.reduce(function(s,f){return s+(+(f.valor||0))},0))+'</div>'
+  }
+  else if(_prontTab==='orcamentos'){
+    el.innerHTML='<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px"><button class="pdt-btn-outline">+ Novo Orçamento</button></div>'+
+      (pgs.length?pgs.filter(function(pg2){return pg2.treatment_id}).map(function(pg2){
+        var v=+(pg2.valor||0)*(Math.max(+(pg2.parcelas||1),1))
+        return '<div style="border:1px solid #e0e0e0;border-radius:4px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px">'+
+          '<span class="badge badge-green">Aprovado</span>'+
+          '<span style="font-size:13px;color:#424242">'+fmtDt(pg2.data_checkout||pg2.data_pagamento)+'</span>'+
+          '<span style="flex:1;font-size:13px;color:#757575;font-style:italic">'+(pg2.descricao||'Tratamento Odontológico')+'</span>'+
+          '<span style="font-size:15px;font-weight:600;color:#2E7D32">'+fmtBrl(v)+'</span></div>'
+      }).join(''):'<div style="text-align:center;padding:40px;color:#9e9e9e">Nenhum orçamento</div>')
+  }
+  else if(_prontTab==='odontograma'){
+    var ts=[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28]
+    var ti=[48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38]
+    el.innerHTML='<div style="display:flex;gap:24px"><div style="flex:1">'+
+      '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px"><span style="font-size:14px;font-weight:500">Dentição Permanente</span><div style="display:flex;gap:12px;font-size:12px"><span>■ <span style="color:#E91E63">A realizar</span></span><span>■ <span style="color:#4CAF50">Executado</span></span><span>■ <span style="color:#2196F3">Existente</span></span></div></div>'+
+      '<div style="text-align:center;font-size:10px;color:#9e9e9e;margin-bottom:4px">SUPERIOR</div>'+
+      '<div class="odont-row">'+ts.map(function(t){return '<div><div class="tooth" title="'+t+'">'+t+'</div></div>'}).join('')+'</div>'+
+      '<div class="odont-row">'+ti.map(function(t){return '<div><div class="tooth" title="'+t+'">'+t+'</div></div>'}).join('')+'</div>'+
+      '<div style="text-align:center;font-size:10px;color:#9e9e9e;margin-top:4px">INFERIOR</div>'+
+    '</div>'+
+    '<div style="width:350px;flex-shrink:0"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #e0e0e0;padding-bottom:8px"><span style="font-size:13px;font-weight:500">Procedimentos</span><button class="pdt-btn-outline" style="font-size:12px;padding:4px 10px">+ Adicionar</button></div>'+
+      (ag.filter(function(a){return a.procedimento||a.tipo}).length?ag.filter(function(a){return a.procedimento||a.tipo}).slice(0,20).map(function(a){return '<div style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span style="color:#9e9e9e">'+fmtDt((a.data_hora||'').slice(0,10))+'</span> — '+(a.procedimento||a.tipo||'—')+'</div>'}).join(''):'<div style="color:#9e9e9e;padding:20px;text-align:center">Sem procedimentos</div>')+
+    '</div></div>'
+  }
+  else{
+    // Abas placeholder
+    var nomes={'fotos':'Fotos','plano-clinico':'Plano e Ficha Clínica','fichas-esp':'Fichas Especialidades','anamnese':'Anamnese','documentos':'Documentos','exames':'Exames','recibos':'Recibos','indicacoes':'Indicações'}
+    el.innerHTML='<div style="text-align:center;padding:60px;color:#9e9e9e"><div style="font-size:15px;font-weight:500;margin-bottom:8px">'+(nomes[_prontTab]||_prontTab)+'</div><div style="font-size:13px">Dados não encontrados.</div></div>'
+  }
+}
+
+function prontCadSecao(secao){
+  var el=document.getElementById('pront-cad-area');if(!el||!_prontData)return
+  var p=_prontData.paciente||{}
+  var UFS='<option value="">—</option><option>AC</option><option>AL</option><option>AM</option><option>AP</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option><option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option><option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option><option>SP</option><option>TO</option>'
+  // Toggle sidebar active
+  document.querySelectorAll('#pront-content .pdt-sidebar-item').forEach(function(s,i){s.classList.toggle('active',['dados','contato','complementar'][i]===secao)})
+
+  if(secao==='dados'){
+    var idade='';if(p.data_nascimento){try{var bn=new Date(p.data_nascimento+'T12:00:00');idade=Math.floor((Date.now()-bn.getTime())/31557600000)}catch(e){}}
+    el.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:24px"><span style="color:#E65100">👤</span><span style="font-size:16px;font-weight:500">Dados Cadastrais</span></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Nome</label><input id="pc-nome" value="'+(p.nome||'')+'"></div><div class="pdt-field"><label>Apelido</label><input id="pc-apelido" value=""></div></div>'+
+      '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Data de Nascimento</label><input type="date" id="pc-nasc" value="'+(p.data_nascimento||'')+'"></div><div class="pdt-field"><label>Idade</label><input value="'+(idade||'—')+'" readonly style="width:50px;color:#9e9e9e"></div><div class="pdt-field"><label>Sexo</label><div style="display:flex;gap:12px;padding:6px 0"><label style="display:flex;align-items:center;gap:4px;font-size:14px;cursor:pointer"><input type="radio" name="pc-sexo" style="accent-color:#E65100"> Masculino</label><label style="display:flex;align-items:center;gap:4px;font-size:14px;cursor:pointer"><input type="radio" name="pc-sexo" style="accent-color:#E65100"> Feminino</label></div></div></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>CPF</label><input id="pc-cpf" value="'+(p.cpf||'')+'" oninput="mascaraCpf(this)" onblur="validarCpfField(this)"></div><div class="pdt-field"><label>RG</label><input id="pc-rg" value=""></div></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Estado Civil</label><select id="pc-civil"><option value="">—</option><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option></select></div><div class="pdt-field"><label>Como conheceu?</label><select id="pc-como"><option value="">—</option><option>Indicação</option><option>Instagram</option><option>Google</option><option>Facebook</option><option>Plano/Convênio</option><option>Outro</option></select></div></div>'+
+      '<div class="pdt-field" style="margin-bottom:24px"><label>Observações</label><input id="pc-obs" value="'+(p.observacoes||'')+'"></div>'+
+      '<div style="display:flex;justify-content:flex-end"><button class="pdt-btn-fill" onclick="salvarCadastroPaciente()">Salvar</button></div>'
+  }
+  else if(secao==='contato'){
+    el.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:24px"><span style="color:#E65100">📞</span><span style="font-size:16px;font-weight:500">Contato</span></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Fone Fixo</label><input id="pc-fone" value=""></div><div class="pdt-field"><label>Celular</label><input id="pc-cel" value="'+(p.telefone||'')+'"></div><div class="pdt-field"><label>Outros Telefones</label><input id="pc-outros-tel" value=""></div></div>'+
+      '<div style="display:grid;grid-template-columns:1fr auto;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Email</label><input id="pc-email" value="'+(p.email||'')+'"></div><label style="display:flex;align-items:center;gap:4px;padding-top:20px;font-size:13px;cursor:pointer"><input type="checkbox"> Não possui Email</label></div>'+
+      '<div style="font-size:16px;font-weight:500;margin:24px 0 16px;padding-bottom:8px;border-bottom:1px solid #e0e0e0">Endereço</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>CEP</label><input id="pc-cep" value="'+(p.cep||'')+'" oninput="buscarCep(this.value,\'pc\')"></div><div class="pdt-field"><label>Cidade</label><input id="pc-cidade" value="'+(p.cidade||'')+'"></div><div class="pdt-field"><label>Estado</label><select id="pc-uf">'+UFS+'</select></div></div>'+
+      '<div class="pdt-field" style="margin-bottom:24px"><label>Endereço</label><input id="pc-endereco" value="'+(p.endereco||'')+'"></div>'+
+      '<div style="display:grid;grid-template-columns:100px 1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Número</label><input id="pc-numero" value=""></div><div class="pdt-field"><label>Bairro</label><input id="pc-bairro" value="'+(p.bairro||'')+'"></div><div class="pdt-field"><label>Complemento</label><input id="pc-complemento" value=""></div></div>'+
+      '<div style="display:flex;justify-content:flex-end"><button class="pdt-btn-fill" onclick="salvarCadastroPaciente()">Salvar</button></div>'
+  }
+  else if(secao==='complementar'){
+    el.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:24px"><span style="color:#E65100">📄</span><span style="font-size:16px;font-weight:500">Dados Complementares</span></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Profissão</label><input value=""></div><div class="pdt-field"><label>Núm. Prontuário</label><input value="'+(p.id||'')+'"></div></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Nome do plano</label><input value="'+(p.convenio||'')+'"></div><div class="pdt-field"><label>Número do plano</label><input value=""></div></div>'+
+      '<div style="font-size:16px;font-weight:500;margin:24px 0 16px;padding-bottom:8px;border-bottom:1px solid #e0e0e0">Filiação</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Nome do Pai</label><input></div><div class="pdt-field"><label>CPF do Pai</label><input></div></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Nome da Mãe</label><input></div><div class="pdt-field"><label>CPF da Mãe</label><input></div></div>'+
+      '<div style="font-size:16px;font-weight:500;margin:24px 0 16px;padding-bottom:8px;border-bottom:1px solid #e0e0e0">Representante Legal</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Nome do Representante</label><input></div><div class="pdt-field"><label>CPF do Representante</label><input></div></div>'+
+      '<div style="display:flex;justify-content:flex-end"><button class="pdt-btn-fill" onclick="salvarCadastroPaciente()">Salvar</button></div>'
+  }
+}
+
+async function salvarCadastroPaciente(){
+  if(!_prontData||!_prontData.paciente)return
+  var id=_prontData.paciente.id
+  var nome=(document.getElementById('pc-nome')?document.getElementById('pc-nome').value:'').trim()
+  var cel=(document.getElementById('pc-cel')?document.getElementById('pc-cel').value:'').trim()
+  var email=(document.getElementById('pc-email')?document.getElementById('pc-email').value:'').trim()
+  var cpf=(document.getElementById('pc-cpf')?document.getElementById('pc-cpf').value:'').trim()
+  var nasc=(document.getElementById('pc-nasc')?document.getElementById('pc-nasc').value:'')
+  var cep=(document.getElementById('pc-cep')?document.getElementById('pc-cep').value:'').trim()
+  var cidade=(document.getElementById('pc-cidade')?document.getElementById('pc-cidade').value:'').trim()
+  var endereco=(document.getElementById('pc-endereco')?document.getElementById('pc-endereco').value:'').trim()
+  var bairro=(document.getElementById('pc-bairro')?document.getElementById('pc-bairro').value:'').trim()
+  try{
+    var r=await fetch('/api/data?r=salvar-paciente-edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,nome:nome||_prontData.paciente.nome,telefone:cel,email:email,cpf:cpf,data_nascimento:nasc,cep:cep,cidade:cidade,endereco:endereco,bairro:bairro})})
+    var d=await r.json()
+    if(d.success){alert('Cadastro salvo!');_prontData.paciente.nome=nome||_prontData.paciente.nome;_prontData.paciente.telefone=cel;_prontData.paciente.email=email}
+    else alert(d.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
 }
 
 // ── CRM ──────────────────────────────────────────────────────────
