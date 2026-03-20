@@ -591,6 +591,52 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: true, msg: 'Lançamento salvo' })
         }
 
+        // ── SALVAR PROFISSIONAL ─────────────────────────────────────
+        if (route === 'salvar-profissional') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var sp = req.body || {}
+            if (!sp.id) return res.status(400).json({ success: false, error: 'ID obrigatório' })
+            await client.execute({ sql: "UPDATE profissionais SET nome=?,especialidade=?,cpf=?,email=?,telefone=?,cro=?,atualizado_em=datetime('now') WHERE id=?", args: [sp.nome||'', sp.especialidade||'', sp.cpf||'', sp.email||'', sp.telefone||'', sp.cro||'', sp.id] })
+            return res.status(200).json({ success: true, msg: 'Profissional atualizado' })
+        }
+
+        // ── SALVAR AGENDAMENTO ────────────────────────────────────────
+        if (route === 'salvar-agendamento') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var sa2 = req.body || {}
+            if (!sa2.paciente_nome || !sa2.data || !sa2.hora) return res.status(400).json({ success: false, error: 'Paciente, data e hora obrigatórios' })
+            var dataHora2 = sa2.data + ' ' + sa2.hora
+            var horaFim2 = sa2.hora_fim || ''
+            // Resolve paciente_id pelo nome
+            var pacId2 = null
+            if (sa2.paciente_nome) {
+                var rPac = await client.execute({ sql: "SELECT id FROM pacientes WHERE nome=? LIMIT 1", args: [sa2.paciente_nome] })
+                if (rPac.rows.length) pacId2 = rPac.rows[0].id
+            }
+            // Resolve profissional_id pelo nome
+            var profId2 = sa2.profissional_id || null
+            if (!profId2 && sa2.profissional_nome) {
+                var rProf = await client.execute({ sql: "SELECT id FROM profissionais WHERE nome=? LIMIT 1", args: [sa2.profissional_nome] })
+                if (rProf.rows.length) profId2 = rProf.rows[0].id
+            }
+            await client.execute({ sql: "INSERT INTO agendamentos(paciente_id,profissional_id,data_hora,hora_fim,tipo,status,procedimento,observacoes,paciente_nome,profissional_nome,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))", args: [pacId2, profId2, dataHora2, horaFim2, sa2.tipo||'', sa2.status||'agendado', sa2.procedimento||'', sa2.observacoes||'', sa2.paciente_nome||'', sa2.profissional_nome||''] })
+            return res.status(200).json({ success: true, msg: 'Agendamento salvo' })
+        }
+
+        // ── SALVAR PAGAMENTO ──────────────────────────────────────────
+        if (route === 'salvar-pagamento') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var spg = req.body || {}
+            if (!spg.valor) return res.status(400).json({ success: false, error: 'Valor obrigatório' })
+            var pacIdPg = null
+            if (spg.paciente_nome) {
+                var rPacPg = await client.execute({ sql: "SELECT id FROM pacientes WHERE nome=? LIMIT 1", args: [spg.paciente_nome] })
+                if (rPacPg.rows.length) pacIdPg = rPacPg.rows[0].id
+            }
+            await client.execute({ sql: "INSERT INTO pagamentos(paciente_id,paciente_nome,valor,forma_pagamento,tipo,bandeira,parcelas,data_pagamento,data_vencimento,confirmado,cancelado,descricao,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,?,?,?,?,0,?,datetime('now'),datetime('now'))", args: [pacIdPg, spg.paciente_nome||'', spg.valor, spg.forma_pagamento||'', spg.tipo||'entrada', spg.bandeira||'', spg.parcelas||1, spg.data_pagamento||new Date().toISOString().slice(0,10), spg.data_vencimento||'', spg.confirmado||0, spg.descricao||''] })
+            return res.status(200).json({ success: true, msg: 'Pagamento salvo' })
+        }
+
         return res.status(400).json({ success: false, error: 'Rota inválida: r=' + route })
 
     } catch (error) {

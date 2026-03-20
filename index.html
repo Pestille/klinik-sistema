@@ -1668,7 +1668,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     </div>
     <div class="nc-footer">
       <button class="btn" onclick="closeNovaConsulta()">Cancelar</button>
-      <button class="btn-confirm-consulta" id="nc-confirmar" disabled>Confirmar consulta</button>
+      <button class="btn-confirm-consulta" id="nc-confirmar" disabled onclick="confirmarConsulta()">Confirmar consulta</button>
     </div>
   </div>
 </div>
@@ -2438,11 +2438,15 @@ async function salvarProfissional(){
   var cpf=(document.getElementById('prof-f-cpf').value||'').trim()
   var cro=(document.getElementById('prof-f-cro').value||'').trim()
   var esp=(document.getElementById('prof-f-esp').value||'').trim()
-  // Atualiza local
-  p.nome=nome;p.name=nome;p.Name=nome
-  p.telefone=tel;p.email=email;p.cpf=cpf;p.cro=cro;p.especialidade=esp;p.specialty=esp
-  alert('Dados atualizados localmente.\nPara persistir, os dados serão salvos no próximo sync.')
-  nav('profissionais')
+  try{
+    var r=await fetch('/api/data?r=salvar-profissional',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.id,nome:nome,especialidade:esp,cpf:cpf,email:email,telefone:tel,cro:cro})})
+    var d=await r.json()
+    if(d.success){
+      p.nome=nome;p.name=nome;p.Name=nome;p.telefone=tel;p.email=email;p.cpf=cpf;p.cro=cro;p.especialidade=esp;p.specialty=esp
+      alert('Profissional salvo!')
+      nav('profissionais')
+    }else{alert(d.error||'Erro ao salvar')}
+  }catch(e){alert('Erro: '+e.message)}
 }
 
 function renderProfAgendaTrabalho(){
@@ -4022,6 +4026,42 @@ function renderNcHorarios(){
   }).join('')
 }
 function ncSelectHora(h){ncSelectedHora=h;renderNcHorarios()}
+
+async function confirmarConsulta(){
+  if(!ncSelectedPac||!ncSelectedHora){alert('Selecione paciente e horário');return}
+  var btn=document.getElementById('nc-confirmar');btn.disabled=true;btn.textContent='Salvando...'
+  try{
+    var dataTxt=document.getElementById('nc-data-txt').textContent||''
+    // Extrai data do texto "14 mar, 2026"
+    var hoje=agendaDate.toISOString().slice(0,10)
+    var profSel=document.getElementById('nc-prof-sel')
+    var profNome='';var profIdx=profSel?profSel.selectedIndex-1:-1
+    if(profIdx>=0&&ST.profissionais&&ST.profissionais[profIdx])profNome=ST.profissionais[profIdx].name||ST.profissionais[profIdx].Name||ST.profissionais[profIdx].nome||''
+    var profId=profIdx>=0&&ST.profissionais&&ST.profissionais[profIdx]?ST.profissionais[profIdx].id:null
+    var catSel=document.getElementById('nc-cat-sel')
+    var tipo=catSel?catSel.options[catSel.selectedIndex].text:''
+    var obs=document.getElementById('nc-obs').value||''
+    var body={
+      paciente_nome:ncSelectedPac.nome,
+      data:hoje,
+      hora:ncSelectedHora,
+      hora_fim:'',
+      profissional_id:profId,
+      profissional_nome:profNome,
+      tipo:tipo,
+      observacoes:obs,
+      status:'agendado'
+    }
+    var r=await fetch('/api/data?r=salvar-agendamento',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    var d=await r.json()
+    if(d.success){
+      closeNovaConsulta()
+      alert('Consulta agendada!')
+      loadAgenda() // Recarrega agenda
+    }else{alert(d.error||'Erro ao agendar')}
+  }catch(e){alert('Erro: '+e.message)}
+  btn.disabled=false;btn.textContent='Confirmar consulta'
+}
 function toggleSendVia(){const d=document.getElementById('send-via-drop');if(d)d.classList.toggle('open')}
 
 // ══════════════════════════════════════════════════════
