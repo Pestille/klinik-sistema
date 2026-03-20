@@ -423,13 +423,10 @@ async function syncPagamentos(client) {
         try { await client.execute("ALTER TABLE pagamentos ADD COLUMN tipo_pessoa TEXT") } catch(e) {}
     } catch(e) {}
 
-    // Busca pagamentos: 3 meses atrás + 6 meses à frente (captura checkouts e parcelas)
+    // Busca pagamentos: 365 dias para capturar todos os treatments e parcelas
     var h = new Date()
-    var dInicio = new Date(h.getFullYear(), h.getMonth() - 3, 1)
-    var dFim = new Date(h.getFullYear(), h.getMonth() + 6, 0)
-    var desde = dInicio.toISOString().slice(0,10)
-    var ate = dFim.toISOString().slice(0,10)
-    var lista = await fetchAll('payment/list', { from: desde, to: ate, limit: 500 }, 10)
+    var dt365 = hoje365()
+    var lista = await fetchAll('payment/list', { from: dt365.from, to: dt365.to, limit: 500 }, 10)
     var inseridos = 0, atualizados = 0, ignorados = 0
 
     for (var i = 0; i < lista.length; i++) {
