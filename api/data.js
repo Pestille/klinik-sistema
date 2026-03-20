@@ -341,9 +341,9 @@ module.exports = async function handler(req, res) {
                     client.execute({ sql: "SELECT forma_pagamento, COUNT(*) as qtd, SUM(valor) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 GROUP BY forma_pagamento ORDER BY total DESC", args: [mm] }),
                     // Pagamentos cancelados (valor)
                     client.execute({ sql: "SELECT COUNT(*) as qtd, COALESCE(SUM(valor),0) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=1", args: [mm] }),
-                    // Orçamentos aprovados: tratamentos únicos com checkout no mês (vendas realizadas)
-                    client.execute({ sql: "SELECT COUNT(DISTINCT treatment_id) as total, COALESCE(SUM(valor),0) as valor FROM pagamentos WHERE strftime('%Y-%m',data_checkout)=? AND cancelado=0 AND treatment_id IS NOT NULL AND treatment_id!=''", args: [mm] }),
-                    // Orçamentos em aberto: parcelas com vencimento no mês mas não confirmadas
+                    // Orçamentos aprovados (vendas): tratamentos com checkout no mês, valor = valor_parcela × qtd_parcelas
+                    client.execute({ sql: "SELECT COUNT(DISTINCT treatment_id) as total, COALESCE(SUM(valor * CASE WHEN parcelas>0 THEN parcelas ELSE 1 END),0) as valor FROM pagamentos WHERE strftime('%Y-%m',data_checkout)=? AND cancelado=0 AND treatment_id IS NOT NULL AND treatment_id!=''", args: [mm] }),
+                    // Orçamentos em aberto: parcelas pendentes (não confirmadas)
                     client.execute({ sql: "SELECT COUNT(*) as total, COALESCE(SUM(valor),0) as valor FROM pagamentos WHERE strftime('%Y-%m',data_vencimento)=? AND confirmado=0 AND cancelado=0", args: [mm] }),
                     // Ticket médio pagamentos
                     client.execute({ sql: "SELECT AVG(valor) as ticket FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND valor>0", args: [mm] }),
@@ -386,8 +386,8 @@ module.exports = async function handler(req, res) {
                 client.execute({ sql: "SELECT pr.id,pr.nome,pr.especialidade,COUNT(DISTINCT a.id) as atendimentos,COALESCE((SELECT SUM(pg.valor) FROM pagamentos pg WHERE pg.paciente_id IN (SELECT DISTINCT a2.paciente_id FROM agendamentos a2 WHERE a2.profissional_id=pr.id AND a2.data_hora>=?) AND pg.data_pagamento>=? AND pg.cancelado=0),0) as valor_total FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id AND a.data_hora>=? WHERE pr.ativo=1 GROUP BY pr.id ORDER BY valor_total DESC", args: [desde, desde, desde] }),
                 // Procedimentos por profissional (qtd + receita estimada via ticket médio)
                 client.execute({ sql: "SELECT pr.nome as profissional,a.tipo as procedimento,COUNT(*) as qtd FROM agendamentos a INNER JOIN profissionais pr ON pr.id=a.profissional_id WHERE a.data_hora>=? AND a.tipo IS NOT NULL AND a.tipo!='' GROUP BY pr.id,a.tipo ORDER BY pr.nome,qtd DESC", args: [desde] }),
-                // Orçamentos aprovados: agrupar por treatment_id com checkout no período, somar valor total do tratamento
-                client.execute({ sql: "SELECT pr.nome as profissional,COUNT(DISTINCT pg.treatment_id) as orcamentos,COALESCE(SUM(pg.valor),0) as valor_orcamentos FROM pagamentos pg INNER JOIN (SELECT DISTINCT paciente_id, profissional_id FROM agendamentos WHERE profissional_id IS NOT NULL) a2 ON pg.paciente_id=a2.paciente_id INNER JOIN profissionais pr ON pr.id=a2.profissional_id WHERE pg.data_checkout>=? AND pg.cancelado=0 AND pg.treatment_id IS NOT NULL AND pg.treatment_id!='' GROUP BY pr.id ORDER BY valor_orcamentos DESC", args: [desde] }),
+                // Orçamentos aprovados por profissional: valor = parcela × qtd_parcelas
+                client.execute({ sql: "SELECT pr.nome as profissional,COUNT(DISTINCT pg.treatment_id) as orcamentos,COALESCE(SUM(pg.valor * CASE WHEN pg.parcelas>0 THEN pg.parcelas ELSE 1 END),0) as valor_orcamentos FROM pagamentos pg INNER JOIN (SELECT DISTINCT paciente_id, profissional_id FROM agendamentos WHERE profissional_id IS NOT NULL) a2 ON pg.paciente_id=a2.paciente_id INNER JOIN profissionais pr ON pr.id=a2.profissional_id WHERE pg.data_checkout>=? AND pg.cancelado=0 AND pg.treatment_id IS NOT NULL AND pg.treatment_id!='' GROUP BY pr.id ORDER BY valor_orcamentos DESC", args: [desde] }),
                 // Totais gerais (atendimentos + receita pagamentos)
                 client.execute({ sql: "SELECT COUNT(*) as total_atendimentos,COUNT(DISTINCT profissional_id) as total_profissionais FROM agendamentos WHERE data_hora>=?", args: [desde] }),
                 // Total receita pagamentos no período
