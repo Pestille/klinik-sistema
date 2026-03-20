@@ -1660,7 +1660,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
       <div class="form-row c2"><div class="form-group"><label class="form-label">Telefone</label><input class="form-input" id="pac-f-tel" placeholder="(67) 99999-9999"></div><div class="form-group"><label class="form-label">WhatsApp</label><input class="form-input" id="pac-f-whats" placeholder="(67) 99999-9999"></div></div>
       <div class="form-row c2"><div class="form-group"><label class="form-label">Email</label><input class="form-input" id="pac-f-email" placeholder="email@email.com"></div><div class="form-group"><label class="form-label">Como nos conheceu?</label><select class="form-input" id="pac-f-como"><option value="">—</option><option>Indicação</option><option>Instagram</option><option>Google</option><option>Facebook</option><option>Plano/Convênio</option><option>Placa</option><option>Panfleto</option><option>Outro</option></select></div></div>
       <div class="form-row c2"><div class="form-group"><label class="form-label">Endereço</label><input class="form-input" id="pac-f-end" placeholder="Rua, número"></div><div class="form-group"><label class="form-label">Bairro</label><input class="form-input" id="pac-f-bairro" placeholder="Bairro"></div></div>
-      <div class="form-row c3"><div class="form-group"><label class="form-label">Cidade</label><input class="form-input" id="pac-f-cidade" placeholder="Campo Grande"></div><div class="form-group"><label class="form-label">CEP</label><input class="form-input" id="pac-f-cep" placeholder="79000-000"></div><div class="form-group"><label class="form-label">Convênio</label><input class="form-input" id="pac-f-conv" placeholder="Plano de saúde"></div></div>
+      <div class="form-row c3"><div class="form-group"><label class="form-label">Cidade</label><input class="form-input" id="pac-f-cidade" placeholder="Campo Grande"></div><div class="form-group"><label class="form-label">CEP</label><input class="form-input" id="pac-f-cep" placeholder="79000-000" oninput="buscarCep(this.value,'pac-f')"></div><div class="form-group"><label class="form-label">Convênio</label><input class="form-input" id="pac-f-conv" placeholder="Plano de saúde"></div></div>
       <div class="form-group"><label class="form-label">Alerta Médico</label><input class="form-input" id="pac-f-alerta" placeholder="Alergias, condições especiais, medicamentos..."></div>
     </div>
     <div class="modal-foot"><button class="btn btn-primary" onclick="salvarPaciente()">Salvar Paciente</button><button class="btn" onclick="closeModal('paciente')">Cancelar</button></div>
@@ -2322,7 +2322,7 @@ function renderProfContato(p){
         '<div class="pdt-field"><label>Email</label><input id="prof-c-email" value="'+email+'" placeholder="email@email.com"></div>'+
       '</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:24px">'+
-        '<div class="pdt-field"><label>CEP</label><input id="prof-c-cep" placeholder="79000-000"></div>'+
+        '<div class="pdt-field"><label>CEP</label><input id="prof-c-cep" placeholder="79000-000" oninput="buscarCep(this.value,\'prof-c\')"></div>'+
         '<div class="pdt-field"><label>Cidade</label><input id="prof-c-cidade" placeholder="Campo Grande"></div>'+
         '<div class="pdt-field"><label>UF</label><select id="prof-c-uf"><option value="">—</option><option>AC</option><option>AL</option><option>AM</option><option>AP</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option><option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option><option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option><option>SP</option><option>TO</option></select></div>'+
       '</div>'+
@@ -2336,6 +2336,27 @@ function renderProfContato(p){
       '</div>'+
       '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="pdt-btn-outline" onclick="nav(\'profissionais\')">Cancelar</button><button class="pdt-btn-fill" onclick="salvarProfissional()">Salvar Alterações</button></div>'+
     '</div>'
+}
+
+// ── BUSCA CEP (ViaCEP) ──────────────────────────────────────────
+var _cepTimer=null
+function buscarCep(cep,prefix){
+  clearTimeout(_cepTimer)
+  var limpo=cep.replace(/\D/g,'')
+  if(limpo.length!==8)return
+  _cepTimer=setTimeout(async function(){
+    try{
+      var r=await fetch('https://viacep.com.br/ws/'+limpo+'/json/')
+      var d=await r.json()
+      if(d.erro)return
+      var el=function(id){return document.getElementById(prefix+'-'+id)}
+      if(d.logradouro&&el('endereco'))el('endereco').value=d.logradouro
+      if(d.bairro&&el('bairro'))el('bairro').value=d.bairro
+      if(d.localidade&&el('cidade'))el('cidade').value=d.localidade
+      if(d.uf&&el('uf')){var sel=el('uf');for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===d.uf){sel.selectedIndex=i;break}}}
+      if(d.complemento&&el('complemento'))el('complemento').value=d.complemento
+    }catch(e){}
+  },400)
 }
 
 var _profCorSelecionada=null
