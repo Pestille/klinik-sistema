@@ -2,6 +2,7 @@
 // Schema real: agendamentos.data_hora, financeiro.data_pagamento, pacientes.criado_em
 
 var { getClient } = require('./db')
+var { authenticateRequest } = require('./middleware')
 
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*')
@@ -18,6 +19,15 @@ module.exports = async function handler(req, res) {
                     'profissionais','financeiro','crc','relatorios','busca',
                     'aniversariantes','conta-corrente','fluxo-caixa','metas','agenda-view']
         })
+    }
+
+    // Auth check — public routes skip authentication
+    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate']
+    var auth = null, clinica_id = null
+    if (publicRoutes.indexOf(route) === -1) {
+        auth = await authenticateRequest(req)
+        if (!auth) return res.status(401).json({ success: false, error: 'Não autenticado' })
+        clinica_id = auth.clinica_id
     }
 
     try {
@@ -51,16 +61,16 @@ module.exports = async function handler(req, res) {
             var hoje = new Date().toISOString().slice(0, 10)
             var mesStr = hoje.slice(0, 7)
             var rs = await Promise.all([
-                client.execute('SELECT COUNT(*) as total FROM pacientes'),
-                client.execute('SELECT COUNT(*) as total FROM profissionais WHERE ativo=1'),
-                client.execute('SELECT COUNT(*) as total FROM agendamentos'),
-                client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE DATE(data_hora)=?", args: [hoje] }),
-                client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=?", args: [mesStr] }),
-                client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE tipo='entrada' AND strftime('%Y-%m',data_pagamento)=?", args: [mesStr] }),
-                client.execute("SELECT pr.id,pr.nome,pr.especialidade,COUNT(a.id) as total_agendamentos FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id GROUP BY pr.id ORDER BY total_agendamentos DESC"),
-                client.execute("SELECT p.id,p.nome,p.telefone,MAX(a.data_hora) as ultima_visita,CAST(julianday('now')-julianday(DATE(MAX(a.data_hora))) AS INTEGER) as dias_ausente FROM pacientes p LEFT JOIN agendamentos a ON p.id=a.paciente_id GROUP BY p.id HAVING ultima_visita < date('now','-180 days') OR ultima_visita IS NULL ORDER BY ultima_visita ASC LIMIT 50"),
-                client.execute("SELECT strftime('%Y-%m',data_hora) as mes,COUNT(*) as total FROM agendamentos WHERE data_hora >= date('now','-6 months') GROUP BY mes ORDER BY mes"),
-                client.execute("SELECT tipo,COUNT(*) as total FROM agendamentos WHERE tipo IS NOT NULL AND tipo!='' GROUP BY tipo ORDER BY total DESC LIMIT 10"),
+                client.execute({ sql: 'SELECT COUNT(*) as total FROM pacientes WHERE clinica_id=?', args: [clinica_id] }),
+                client.execute({ sql: 'SELECT COUNT(*) as total FROM profissionais WHERE ativo=1 AND clinica_id=?', args: [clinica_id] }),
+                client.execute({ sql: 'SELECT COUNT(*) as total FROM agendamentos WHERE clinica_id=?', args: [clinica_id] }),
+                client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE DATE(data_hora)=? AND clinica_id=?", args: [hoje, clinica_id] }),
+                client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND clinica_id=?", args: [mesStr, clinica_id] }),
+                client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE tipo='entrada' AND strftime('%Y-%m',data_pagamento)=? AND clinica_id=?", args: [mesStr, clinica_id] }),
+                client.execute({ sql: "SELECT pr.id,pr.nome,pr.especialidade,COUNT(a.id) as total_agendamentos FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id WHERE pr.clinica_id=? GROUP BY pr.id ORDER BY total_agendamentos DESC", args: [clinica_id] }),
+                client.execute({ sql: "SELECT p.id,p.nome,p.telefone,MAX(a.data_hora) as ultima_visita,CAST(julianday('now')-julianday(DATE(MAX(a.data_hora))) AS INTEGER) as dias_ausente FROM pacientes p LEFT JOIN agendamentos a ON p.id=a.paciente_id WHERE p.clinica_id=? GROUP BY p.id HAVING ultima_visita < date('now','-180 days') OR ultima_visita IS NULL ORDER BY ultima_visita ASC LIMIT 50", args: [clinica_id] }),
+                client.execute({ sql: "SELECT strftime('%Y-%m',data_hora) as mes,COUNT(*) as total FROM agendamentos WHERE data_hora >= date('now','-6 months') AND clinica_id=? GROUP BY mes ORDER BY mes", args: [clinica_id] }),
+                client.execute({ sql: "SELECT tipo,COUNT(*) as total FROM agendamentos WHERE tipo IS NOT NULL AND tipo!='' AND clinica_id=? GROUP BY tipo ORDER BY total DESC LIMIT 10", args: [clinica_id] }),
             ])
             return res.status(200).json({
                 success: true,
@@ -85,22 +95,22 @@ module.exports = async function handler(req, res) {
             var pid = parseInt(q.id) || 0
             var pnome = q.nome || ''
             var sqlP, argP
-            if (pid) { sqlP = "SELECT * FROM pacientes WHERE id=?"; argP = [pid] }
-            else { sqlP = "SELECT * FROM pacientes WHERE nome LIKE ? LIMIT 1"; argP = ['%'+pnome+'%'] }
+            if (pid) { sqlP = "SELECT * FROM pacientes WHERE id=? AND clinica_id=?"; argP = [pid, clinica_id] }
+            else { sqlP = "SELECT * FROM pacientes WHERE nome LIKE ? AND clinica_id=? LIMIT 1"; argP = ['%'+pnome+'%', clinica_id] }
             var rp = await client.execute({ sql: sqlP, args: argP })
             if (!rp.rows.length) return res.status(404).json({ success: false, error: 'Paciente não encontrado' })
             var pac = rp.rows[0]
             var rpId = pac.id
             var rs5 = await Promise.all([
-                client.execute({ sql: "SELECT a.*,COALESCE(pr.nome,a.profissional_nome) as prof_nome FROM agendamentos a LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE a.paciente_id=? OR a.paciente_nome LIKE ? ORDER BY a.data_hora DESC LIMIT 100", args: [rpId, '%'+pac.nome+'%'] }),
-                client.execute({ sql: "SELECT * FROM pagamentos WHERE paciente_id=? OR paciente_nome LIKE ? ORDER BY data_pagamento DESC LIMIT 100", args: [rpId, '%'+pac.nome+'%'] }),
-                client.execute({ sql: "SELECT * FROM financeiro WHERE paciente_id=? ORDER BY data_pagamento DESC LIMIT 50", args: [rpId] }),
+                client.execute({ sql: "SELECT a.*,COALESCE(pr.nome,a.profissional_nome) as prof_nome FROM agendamentos a LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE (a.paciente_id=? OR a.paciente_nome LIKE ?) AND a.clinica_id=? ORDER BY a.data_hora DESC LIMIT 100", args: [rpId, '%'+pac.nome+'%', clinica_id] }),
+                client.execute({ sql: "SELECT * FROM pagamentos WHERE (paciente_id=? OR paciente_nome LIKE ?) AND clinica_id=? ORDER BY data_pagamento DESC LIMIT 100", args: [rpId, '%'+pac.nome+'%', clinica_id] }),
+                client.execute({ sql: "SELECT * FROM financeiro WHERE paciente_id=? AND clinica_id=? ORDER BY data_pagamento DESC LIMIT 50", args: [rpId, clinica_id] }),
             ])
             // Odontograma — tabela pode não existir ainda
             var odontRows = []
             try {
                 await client.execute("CREATE TABLE IF NOT EXISTS odontograma (id INTEGER PRIMARY KEY AUTOINCREMENT, paciente_id INTEGER REFERENCES pacientes(id), dente INTEGER NOT NULL, status TEXT DEFAULT 'saudavel', cor TEXT, observacao TEXT, updated_at TEXT DEFAULT (datetime('now')))")
-                var odR = await client.execute({ sql: "SELECT * FROM odontograma WHERE paciente_id=? ORDER BY dente", args: [rpId] })
+                var odR = await client.execute({ sql: "SELECT * FROM odontograma WHERE paciente_id=? AND clinica_id=? ORDER BY dente", args: [rpId, clinica_id] })
                 odontRows = odR.rows
             } catch(e) { /* tabela não existe, retorna vazio */ }
             return res.status(200).json({ success: true, paciente: pac, agendamentos: rs5[0].rows, pagamentos: rs5[1].rows, financeiro: rs5[2].rows, odontograma: odontRows })
@@ -112,8 +122,8 @@ module.exports = async function handler(req, res) {
             var off = (page - 1) * lim
             var busca = q.busca || q.q || ''
             var status = q.status || ''
-            var where = '', args = []
-            if (busca) { where = ' WHERE p.nome LIKE ? OR p.telefone LIKE ?'; args = ['%'+busca+'%','%'+busca+'%'] }
+            var where = ' WHERE p.clinica_id=?', args = [clinica_id]
+            if (busca) { where += ' AND (p.nome LIKE ? OR p.telefone LIKE ?)'; args.push('%'+busca+'%','%'+busca+'%') }
             var sql
             if (status === 'inativos') {
                 sql = "SELECT p.id,p.nome,p.telefone,p.email,MAX(a.data_hora) as ultima_visita,CAST(julianday('now')-julianday(DATE(MAX(a.data_hora))) AS INTEGER) as dias_ausente FROM pacientes p LEFT JOIN agendamentos a ON p.id=a.paciente_id" + where + " GROUP BY p.id HAVING ultima_visita < date('now','-180 days') OR ultima_visita IS NULL ORDER BY ultima_visita ASC LIMIT ? OFFSET ?"
@@ -124,7 +134,7 @@ module.exports = async function handler(req, res) {
             }
             args.push(lim, off)
             var pr = await client.execute({ sql: sql, args: args })
-            var tot = await client.execute('SELECT COUNT(*) as total FROM pacientes')
+            var tot = await client.execute({ sql: 'SELECT COUNT(*) as total FROM pacientes WHERE clinica_id=?', args: [clinica_id] })
             return res.status(200).json({ success: true, data: pr.rows, total: tot.rows[0].total, page: page, limit: lim })
         }
 
@@ -132,7 +142,7 @@ module.exports = async function handler(req, res) {
         if (route === 'agendamentos') {
             var lim2 = Math.min(parseInt(q.limit) || 200, 500)
             var base = "SELECT a.id,a.data_hora,a.hora_fim,a.tipo,a.status,a.procedimento,a.valor,a.observacoes,a.profissional_id,COALESCE(p.nome,a.paciente_nome) as paciente_nome,COALESCE(p.telefone,a.paciente_telefone) as paciente_telefone,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id"
-            var wheres = [], argsAg = []
+            var wheres = ["a.clinica_id=?"], argsAg = [clinica_id]
             if (q.dataInicio && q.dataFim) { wheres.push("DATE(a.data_hora) BETWEEN ? AND ?"); argsAg.push(q.dataInicio, q.dataFim) }
             else if (q.data) { wheres.push("DATE(a.data_hora)=?"); argsAg.push(q.data) }
             else { var m = q.mes || new Date().toISOString().slice(0, 7); wheres.push("strftime('%Y-%m',a.data_hora)=?"); argsAg.push(m) }
@@ -147,26 +157,26 @@ module.exports = async function handler(req, res) {
             var d = q.data || new Date().toISOString().slice(0, 10)
             var sqlAv, argsAv
             if (q.profissional) {
-                sqlAv = "SELECT a.*,p.nome as paciente_nome,p.telefone as paciente_telefone,pr.nome as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE DATE(a.data_hora)=? AND a.profissional_id=? ORDER BY a.data_hora"
-                argsAv = [d, q.profissional]
+                sqlAv = "SELECT a.*,p.nome as paciente_nome,p.telefone as paciente_telefone,pr.nome as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE DATE(a.data_hora)=? AND a.profissional_id=? AND a.clinica_id=? ORDER BY a.data_hora"
+                argsAv = [d, q.profissional, clinica_id]
             } else {
-                sqlAv = "SELECT a.*,p.nome as paciente_nome,p.telefone as paciente_telefone,pr.nome as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE DATE(a.data_hora)=? ORDER BY pr.nome,a.data_hora"
-                argsAv = [d]
+                sqlAv = "SELECT a.*,p.nome as paciente_nome,p.telefone as paciente_telefone,pr.nome as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE DATE(a.data_hora)=? AND a.clinica_id=? ORDER BY pr.nome,a.data_hora"
+                argsAv = [d, clinica_id]
             }
             var rav = await client.execute({ sql: sqlAv, args: argsAv })
-            var profs3 = await client.execute('SELECT id,nome,especialidade FROM profissionais WHERE ativo=1 ORDER BY nome')
+            var profs3 = await client.execute({ sql: 'SELECT id,nome,especialidade FROM profissionais WHERE ativo=1 AND clinica_id=? ORDER BY nome', args: [clinica_id] })
             return res.status(200).json({ success: true, agendamentos: rav.rows, profissionais: profs3.rows, data: d, total: rav.rows.length })
         }
 
         // ── PROFISSIONAIS ───────────────────────────────────────────────────
         if (route === 'profissionais') {
-            var rpr = await client.execute("SELECT pr.*,COUNT(a.id) as total_agendamentos FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id GROUP BY pr.id ORDER BY pr.nome")
+            var rpr = await client.execute({ sql: "SELECT pr.*,COUNT(a.id) as total_agendamentos FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id WHERE pr.clinica_id=? GROUP BY pr.id ORDER BY pr.nome", args: [clinica_id] })
             return res.status(200).json({ success: true, data: rpr.rows, total: rpr.rows.length })
         }
 
         // ── FINANCEIRO ──────────────────────────────────────────────────────
         if (route === 'financeiro') {
-            var fw = [], fa = []
+            var fw = ["f.clinica_id=?"], fa = [clinica_id]
             if (q.de)   { fw.push("f.data_pagamento >= ?"); fa.push(q.de) }
             if (q.ate)  { fw.push("f.data_pagamento <= ?"); fa.push(q.ate) }
             if (q.tipo) { fw.push("f.tipo = ?");            fa.push(q.tipo) }
@@ -184,8 +194,8 @@ module.exports = async function handler(req, res) {
         // ── CRC (inativos) ──────────────────────────────────────────────────
         if (route === 'crc') {
             var busca2 = q.busca || q.q || ''
-            var cw = busca2 ? ' WHERE p.nome LIKE ?' : ''
-            var ca = busca2 ? ['%'+busca2+'%'] : []
+            var cw = busca2 ? ' WHERE p.clinica_id=? AND p.nome LIKE ?' : ' WHERE p.clinica_id=?'
+            var ca = busca2 ? [clinica_id, '%'+busca2+'%'] : [clinica_id]
             var prioridade = q.prioridade || ''
             var having = " GROUP BY p.id HAVING ultima_visita < date('now','-180 days') OR ultima_visita IS NULL"
             if (prioridade === 'urgente')    having += ' AND dias_ausente > 365'
@@ -207,12 +217,12 @@ module.exports = async function handler(req, res) {
             var tipo = q.tipo || 'producao'
             var meses2 = parseInt(q.meses) || 6
             if (tipo === 'producao') {
-                var prod = await client.execute({ sql: "SELECT strftime('%Y-%m',data_hora) as mes,COUNT(*) as agendamentos FROM agendamentos WHERE data_hora >= date('now','-' || ? || ' months') GROUP BY mes ORDER BY mes", args: [meses2] })
-                var rece = await client.execute({ sql: "SELECT strftime('%Y-%m',data_pagamento) as mes,SUM(valor) as receita FROM financeiro WHERE data_pagamento >= date('now','-' || ? || ' months') AND tipo='entrada' GROUP BY mes ORDER BY mes", args: [meses2] })
+                var prod = await client.execute({ sql: "SELECT strftime('%Y-%m',data_hora) as mes,COUNT(*) as agendamentos FROM agendamentos WHERE data_hora >= date('now','-' || ? || ' months') AND clinica_id=? GROUP BY mes ORDER BY mes", args: [meses2, clinica_id] })
+                var rece = await client.execute({ sql: "SELECT strftime('%Y-%m',data_pagamento) as mes,SUM(valor) as receita FROM financeiro WHERE data_pagamento >= date('now','-' || ? || ' months') AND tipo='entrada' AND clinica_id=? GROUP BY mes ORDER BY mes", args: [meses2, clinica_id] })
                 return res.status(200).json({ success: true, tipo: 'producao', producao_mensal: prod.rows, receita_mensal: rece.rows })
             }
             if (tipo === 'procedimentos') {
-                var procs = await client.execute("SELECT tipo,COUNT(*) as total FROM agendamentos WHERE tipo IS NOT NULL AND tipo!='' GROUP BY tipo ORDER BY total DESC LIMIT 15")
+                var procs = await client.execute({ sql: "SELECT tipo,COUNT(*) as total FROM agendamentos WHERE tipo IS NOT NULL AND tipo!='' AND clinica_id=? GROUP BY tipo ORDER BY total DESC LIMIT 15", args: [clinica_id] })
                 return res.status(200).json({ success: true, tipo: 'procedimentos', data: procs.rows })
             }
             return res.status(200).json({ success: true, tipo: tipo, data: [] })
@@ -223,15 +233,15 @@ module.exports = async function handler(req, res) {
             var bq = q.q || q.busca || ''
             if (bq.length < 2) return res.status(400).json({ success: false, error: 'Mínimo 2 caracteres' })
             var bt = '%' + bq + '%'
-            var bp = await client.execute({ sql: "SELECT id,nome,telefone,email FROM pacientes WHERE nome LIKE ? OR telefone LIKE ? LIMIT 15", args: [bt, bt] })
-            var ba = await client.execute({ sql: "SELECT a.id,a.data_hora,a.tipo,a.status,a.procedimento,p.nome as paciente_nome,pr.nome as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE p.nome LIKE ? ORDER BY a.data_hora DESC LIMIT 10", args: [bt] })
+            var bp = await client.execute({ sql: "SELECT id,nome,telefone,email FROM pacientes WHERE (nome LIKE ? OR telefone LIKE ?) AND clinica_id=? LIMIT 15", args: [bt, bt, clinica_id] })
+            var ba = await client.execute({ sql: "SELECT a.id,a.data_hora,a.tipo,a.status,a.procedimento,p.nome as paciente_nome,pr.nome as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE p.nome LIKE ? AND a.clinica_id=? ORDER BY a.data_hora DESC LIMIT 10", args: [bt, clinica_id] })
             return res.status(200).json({ success: true, pacientes: bp.rows, agendamentos: ba.rows, total: bp.rows.length + ba.rows.length })
         }
 
         // ── ANIVERSARIANTES ─────────────────────────────────────────────────
         if (route === 'aniversariantes') {
             var dias3 = parseInt(q.dias) || 60
-            var anr = await client.execute("SELECT id,nome,telefone,email,data_nascimento FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!=''")
+            var anr = await client.execute({ sql: "SELECT id,nome,telefone,email,data_nascimento FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!='' AND clinica_id=?", args: [clinica_id] })
             var hj = new Date()
             var anivs = []
             anr.rows.forEach(function(p) {
@@ -253,8 +263,8 @@ module.exports = async function handler(req, res) {
             var ccde = q.de || (function(){ var d = new Date(); d.setDate(d.getDate()-7); return d.toISOString().slice(0,10) })()
             var ccate = q.ate || new Date().toISOString().slice(0, 10)
             // Union financeiro + pagamentos para ter todos os lançamentos
-            var ccsql = "SELECT 'recibo' as origem, f.id, f.clinicorp_id, f.tipo, f.descricao, f.valor, f.data_pagamento, f.forma_pagamento, f.criado_em, p.nome as paciente_nome FROM financeiro f LEFT JOIN pacientes p ON p.id=f.paciente_id WHERE f.data_pagamento >= ? AND f.data_pagamento <= ? UNION ALL SELECT 'pagamento' as origem, pg.id, pg.clinicorp_id, CASE WHEN pg.cancelado=1 THEN 'cancelado' ELSE 'entrada' END as tipo, pg.descricao, pg.valor, pg.data_pagamento, pg.forma_pagamento, pg.criado_em, pg.paciente_nome FROM pagamentos pg WHERE pg.data_pagamento >= ? AND pg.data_pagamento <= ? AND pg.cancelado=0 ORDER BY data_pagamento ASC, criado_em ASC"
-            var ccr = await client.execute({ sql: ccsql, args: [ccde, ccate, ccde, ccate] })
+            var ccsql = "SELECT 'recibo' as origem, f.id, f.clinicorp_id, f.tipo, f.descricao, f.valor, f.data_pagamento, f.forma_pagamento, f.criado_em, p.nome as paciente_nome FROM financeiro f LEFT JOIN pacientes p ON p.id=f.paciente_id WHERE f.data_pagamento >= ? AND f.data_pagamento <= ? AND f.clinica_id=? UNION ALL SELECT 'pagamento' as origem, pg.id, pg.clinicorp_id, CASE WHEN pg.cancelado=1 THEN 'cancelado' ELSE 'entrada' END as tipo, pg.descricao, pg.valor, pg.data_pagamento, pg.forma_pagamento, pg.criado_em, pg.paciente_nome FROM pagamentos pg WHERE pg.data_pagamento >= ? AND pg.data_pagamento <= ? AND pg.cancelado=0 AND pg.clinica_id=? ORDER BY data_pagamento ASC, criado_em ASC"
+            var ccr = await client.execute({ sql: ccsql, args: [ccde, ccate, clinica_id, ccde, ccate, clinica_id] })
             var totalE = 0, totalS = 0
             ccr.rows.forEach(function(r){ var v = +(r.valor||0); if (r.tipo==='entrada'||v>0) totalE += Math.abs(v); else totalS += Math.abs(v) })
             return res.status(200).json({ success: true, data: ccr.rows, totais: { entradas: totalE, saidas: totalS, saldo: totalE-totalS }, periodo: { de: ccde, ate: ccate } })
@@ -265,7 +275,7 @@ module.exports = async function handler(req, res) {
             var fmes = parseInt(q.mes) || (new Date().getMonth() + 1)
             var fano = parseInt(q.ano) || new Date().getFullYear()
             var fmstr = fano + '-' + String(fmes).padStart(2, '0')
-            var fdr = await client.execute({ sql: "SELECT data_pagamento as dia,tipo,SUM(valor) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? GROUP BY data_pagamento,tipo ORDER BY data_pagamento", args: [fmstr] })
+            var fdr = await client.execute({ sql: "SELECT data_pagamento as dia,tipo,SUM(valor) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND clinica_id=? GROUP BY data_pagamento,tipo ORDER BY data_pagamento", args: [fmstr, clinica_id] })
             var fud = new Date(fano, fmes, 0).getDate()
             var fpd = [], fac = 0
             for (var fd = 1; fd <= fud; fd++) {
@@ -275,8 +285,8 @@ module.exports = async function handler(req, res) {
                 fac += fe - fs
                 fpd.push({ dia: fd, data: fds, entradas: fe, saidas: fs, saldo: fe-fs, acumulado: fac })
             }
-            var fte = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='entrada'", args: [fmstr] })
-            var fts = await client.execute({ sql: "SELECT COALESCE(SUM(ABS(valor)),0) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='saida'", args: [fmstr] })
+            var fte = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='entrada' AND clinica_id=?", args: [fmstr, clinica_id] })
+            var fts = await client.execute({ sql: "SELECT COALESCE(SUM(ABS(valor)),0) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='saida' AND clinica_id=?", args: [fmstr, clinica_id] })
             return res.status(200).json({ success: true, mes: fmes, ano: fano, por_dia: fpd, totais: { entradas: fte.rows[0].total, saidas: fts.rows[0].total, saldo: fte.rows[0].total - fts.rows[0].total } })
         }
 
@@ -285,15 +295,15 @@ module.exports = async function handler(req, res) {
             var mm = parseInt(q.mes) || (new Date().getMonth() + 1)
             var ma = parseInt(q.ano) || new Date().getFullYear()
             var mstr = ma + '-' + String(mm).padStart(2, '0')
-            var mpr = await client.execute({ sql: "SELECT pr.*,COUNT(a.id) as agendamentos_mes FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id AND strftime('%Y-%m',a.data_hora)=? AND a.status!='cancelado' GROUP BY pr.id ORDER BY agendamentos_mes DESC", args: [mstr] })
-            var mtm = await client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND status!='cancelado'", args: [mstr] })
-            var mrm = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='entrada'", args: [mstr] })
+            var mpr = await client.execute({ sql: "SELECT pr.*,COUNT(a.id) as agendamentos_mes FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id AND strftime('%Y-%m',a.data_hora)=? AND a.status!='cancelado' WHERE pr.clinica_id=? GROUP BY pr.id ORDER BY agendamentos_mes DESC", args: [mstr, clinica_id] })
+            var mtm = await client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND status!='cancelado' AND clinica_id=?", args: [mstr, clinica_id] })
+            var mrm = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='entrada' AND clinica_id=?", args: [mstr, clinica_id] })
             return res.status(200).json({ success: true, mes: mm, ano: ma, resumo_mes: { agendamentos: mtm.rows[0].total, receita: mrm.rows[0].total }, profissionais: mpr.rows })
         }
 
         // ── PAGAMENTOS ─────────────────────────────────────────────────
         if (route === 'pagamentos') {
-            var pw = [], pa = []
+            var pw = ["clinica_id=?"], pa = [clinica_id]
             if (q.de)    { pw.push("data_pagamento >= ?"); pa.push(q.de) }
             if (q.ate)   { pw.push("data_pagamento <= ?"); pa.push(q.ate) }
             if (q.forma) { pw.push("forma_pagamento LIKE ?"); pa.push('%'+q.forma+'%') }
@@ -318,8 +328,8 @@ module.exports = async function handler(req, res) {
             var ede = q.de || (function(){ var d2 = new Date(); d2.setDate(d2.getDate()-30); return d2.toISOString().slice(0,10) })()
             var eate = q.ate || new Date().toISOString().slice(0, 10)
             // Union de financeiro + pagamentos
-            var esql = "SELECT 'recibo' as origem, clinicorp_id, descricao, valor, data_pagamento as data, 'entrada' as tipo_mov, NULL as forma, NULL as bandeira FROM financeiro WHERE data_pagamento >= ? AND data_pagamento <= ? UNION ALL SELECT 'pagamento' as origem, clinicorp_id, descricao, valor, data_pagamento as data, CASE WHEN cancelado=1 THEN 'cancelado' ELSE 'entrada' END as tipo_mov, forma_pagamento as forma, bandeira FROM pagamentos WHERE data_pagamento >= ? AND data_pagamento <= ? AND cancelado=0 ORDER BY data DESC, origem"
-            var er = await client.execute({ sql: esql, args: [ede, eate, ede, eate] })
+            var esql = "SELECT 'recibo' as origem, clinicorp_id, descricao, valor, data_pagamento as data, 'entrada' as tipo_mov, NULL as forma, NULL as bandeira FROM financeiro WHERE data_pagamento >= ? AND data_pagamento <= ? AND clinica_id=? UNION ALL SELECT 'pagamento' as origem, clinicorp_id, descricao, valor, data_pagamento as data, CASE WHEN cancelado=1 THEN 'cancelado' ELSE 'entrada' END as tipo_mov, forma_pagamento as forma, bandeira FROM pagamentos WHERE data_pagamento >= ? AND data_pagamento <= ? AND cancelado=0 AND clinica_id=? ORDER BY data DESC, origem"
+            var er = await client.execute({ sql: esql, args: [ede, eate, clinica_id, ede, eate, clinica_id] })
             return res.status(200).json({ success: true, data: er.rows, periodo: { de: ede, ate: eate }, total: er.rows.length })
         }
 
@@ -338,41 +348,41 @@ module.exports = async function handler(req, res) {
                 var mm = meses3[mx]
                 var rs3 = await Promise.all([
                     // Agendamentos totais do mês
-                    client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=?", args: [mm] }),
+                    client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND clinica_id=?", args: [mm, clinica_id] }),
                     // Cancelados
-                    client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND status='cancelado'", args: [mm] }),
+                    client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND status='cancelado' AND clinica_id=?", args: [mm, clinica_id] }),
                     // Faltas
-                    client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND (status LIKE '%falt%' OR status='faltou')", args: [mm] }),
+                    client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND (status LIKE '%falt%' OR status='faltou') AND clinica_id=?", args: [mm, clinica_id] }),
                     // Primeiras consultas (tipo contém 'Avaliação' ou primeiro agendamento)
-                    client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND (tipo LIKE '%Avaliação%' OR tipo LIKE '%avaliacao%')", args: [mm] }),
+                    client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND (tipo LIKE '%Avaliação%' OR tipo LIKE '%avaliacao%') AND clinica_id=?", args: [mm, clinica_id] }),
                     // Receita entrada (pagamentos)
-                    client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0", args: [mm] }),
+                    client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND clinica_id=?", args: [mm, clinica_id] }),
                     // Receita saída (financeiro tipo=saida)
-                    client.execute({ sql: "SELECT COALESCE(SUM(ABS(valor)),0) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='saida'", args: [mm] }),
+                    client.execute({ sql: "SELECT COALESCE(SUM(ABS(valor)),0) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='saida' AND clinica_id=?", args: [mm, clinica_id] }),
                     // Recibos
-                    client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='entrada'", args: [mm] }),
+                    client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='entrada' AND clinica_id=?", args: [mm, clinica_id] }),
                     // Pagamentos confirmados
-                    client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND confirmado=1", args: [mm] }),
+                    client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND confirmado=1 AND clinica_id=?", args: [mm, clinica_id] }),
                     // Pagamentos pendentes
-                    client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND confirmado=0 AND cancelado=0", args: [mm] }),
+                    client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND confirmado=0 AND cancelado=0 AND clinica_id=?", args: [mm, clinica_id] }),
                     // Categorias agendadas
-                    client.execute({ sql: "SELECT tipo, COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND tipo IS NOT NULL AND tipo!='' GROUP BY tipo ORDER BY total DESC LIMIT 10", args: [mm] }),
+                    client.execute({ sql: "SELECT tipo, COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND tipo IS NOT NULL AND tipo!='' AND clinica_id=? GROUP BY tipo ORDER BY total DESC LIMIT 10", args: [mm, clinica_id] }),
                     // Total pagamentos (qtd)
-                    client.execute({ sql: "SELECT COUNT(*) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0", args: [mm] }),
+                    client.execute({ sql: "SELECT COUNT(*) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND clinica_id=?", args: [mm, clinica_id] }),
                     // Parcelas
-                    client.execute({ sql: "SELECT COALESCE(SUM(parcelas),0) as total, COUNT(*) as qtd FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND parcelas>0", args: [mm] }),
+                    client.execute({ sql: "SELECT COALESCE(SUM(parcelas),0) as total, COUNT(*) as qtd FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND parcelas>0 AND clinica_id=?", args: [mm, clinica_id] }),
                     // Faltas primeiras consultas
-                    client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND (tipo LIKE '%Avaliação%') AND (status LIKE '%falt%' OR status='faltou')", args: [mm] }),
+                    client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND (tipo LIKE '%Avaliação%') AND (status LIKE '%falt%' OR status='faltou') AND clinica_id=?", args: [mm, clinica_id] }),
                     // Pagamentos por forma
-                    client.execute({ sql: "SELECT forma_pagamento, COUNT(*) as qtd, SUM(valor) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 GROUP BY forma_pagamento ORDER BY total DESC", args: [mm] }),
+                    client.execute({ sql: "SELECT forma_pagamento, COUNT(*) as qtd, SUM(valor) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND clinica_id=? GROUP BY forma_pagamento ORDER BY total DESC", args: [mm, clinica_id] }),
                     // Pagamentos cancelados (valor)
-                    client.execute({ sql: "SELECT COUNT(*) as qtd, COALESCE(SUM(valor),0) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=1", args: [mm] }),
+                    client.execute({ sql: "SELECT COUNT(*) as qtd, COALESCE(SUM(valor),0) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=1 AND clinica_id=?", args: [mm, clinica_id] }),
                     // Orçamentos aprovados (vendas): valor_parcela × qtd_parcelas por treatment
-                    client.execute({ sql: "SELECT COUNT(*) as total, COALESCE(SUM(vt),0) as valor FROM (SELECT treatment_id, valor * CASE WHEN parcelas>0 THEN parcelas ELSE 1 END as vt FROM pagamentos WHERE strftime('%Y-%m',data_checkout)=? AND cancelado=0 AND treatment_id IS NOT NULL AND treatment_id!='' GROUP BY treatment_id)", args: [mm] }),
+                    client.execute({ sql: "SELECT COUNT(*) as total, COALESCE(SUM(vt),0) as valor FROM (SELECT treatment_id, valor * CASE WHEN parcelas>0 THEN parcelas ELSE 1 END as vt FROM pagamentos WHERE strftime('%Y-%m',data_checkout)=? AND cancelado=0 AND treatment_id IS NOT NULL AND treatment_id!='' AND clinica_id=? GROUP BY treatment_id)", args: [mm, clinica_id] }),
                     // Orçamentos em aberto: parcelas pendentes (não confirmadas)
-                    client.execute({ sql: "SELECT COUNT(*) as total, COALESCE(SUM(valor),0) as valor FROM pagamentos WHERE strftime('%Y-%m',data_vencimento)=? AND confirmado=0 AND cancelado=0", args: [mm] }),
+                    client.execute({ sql: "SELECT COUNT(*) as total, COALESCE(SUM(valor),0) as valor FROM pagamentos WHERE strftime('%Y-%m',data_vencimento)=? AND confirmado=0 AND cancelado=0 AND clinica_id=?", args: [mm, clinica_id] }),
                     // Ticket médio pagamentos
-                    client.execute({ sql: "SELECT AVG(valor) as ticket FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND valor>0", args: [mm] }),
+                    client.execute({ sql: "SELECT AVG(valor) as ticket FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND valor>0 AND clinica_id=?", args: [mm, clinica_id] }),
                 ])
                 result.por_mes[mm] = {
                     agendamentos: rs3[0].rows[0].total,
@@ -405,7 +415,7 @@ module.exports = async function handler(req, res) {
         // ── ORÇAMENTOS APROVADOS (query direta) ──────────────────────
         if (route === 'orcamentos-aprovados') {
             var omRef = q.mes || new Date().toISOString().slice(0, 7)
-            var orc = await client.execute({ sql: "SELECT treatment_id, paciente_nome, valor, parcelas, forma_pagamento, data_checkout FROM pagamentos WHERE strftime('%Y-%m',data_checkout)=? AND cancelado=0 AND treatment_id IS NOT NULL AND treatment_id!='' GROUP BY treatment_id", args: [omRef] })
+            var orc = await client.execute({ sql: "SELECT treatment_id, paciente_nome, valor, parcelas, forma_pagamento, data_checkout FROM pagamentos WHERE strftime('%Y-%m',data_checkout)=? AND cancelado=0 AND treatment_id IS NOT NULL AND treatment_id!='' AND clinica_id=? GROUP BY treatment_id", args: [omRef, clinica_id] })
             var total = 0
             var items = orc.rows.map(function(r) {
                 var vt = (+(r.valor||0)) * Math.max(+(r.parcelas||1), 1)
@@ -422,15 +432,15 @@ module.exports = async function handler(req, res) {
             var desde = dDesde.toISOString().slice(0, 10)
             var rs4 = await Promise.all([
                 // Produtividade: atendimentos + receita via pagamentos vinculados ao paciente do profissional
-                client.execute({ sql: "SELECT pr.id,pr.nome,pr.especialidade,COUNT(DISTINCT a.id) as atendimentos,COALESCE((SELECT SUM(pg.valor) FROM pagamentos pg WHERE pg.paciente_id IN (SELECT DISTINCT a2.paciente_id FROM agendamentos a2 WHERE a2.profissional_id=pr.id AND a2.data_hora>=?) AND pg.data_pagamento>=? AND pg.cancelado=0),0) as valor_total FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id AND a.data_hora>=? WHERE pr.ativo=1 GROUP BY pr.id ORDER BY valor_total DESC", args: [desde, desde, desde] }),
+                client.execute({ sql: "SELECT pr.id,pr.nome,pr.especialidade,COUNT(DISTINCT a.id) as atendimentos,COALESCE((SELECT SUM(pg.valor) FROM pagamentos pg WHERE pg.paciente_id IN (SELECT DISTINCT a2.paciente_id FROM agendamentos a2 WHERE a2.profissional_id=pr.id AND a2.data_hora>=? AND a2.clinica_id=?) AND pg.data_pagamento>=? AND pg.cancelado=0 AND pg.clinica_id=?),0) as valor_total FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id AND a.data_hora>=? WHERE pr.ativo=1 AND pr.clinica_id=? GROUP BY pr.id ORDER BY valor_total DESC", args: [desde, clinica_id, desde, clinica_id, desde, clinica_id] }),
                 // Procedimentos por profissional (qtd + receita estimada via ticket médio)
-                client.execute({ sql: "SELECT pr.nome as profissional,a.tipo as procedimento,COUNT(*) as qtd FROM agendamentos a INNER JOIN profissionais pr ON pr.id=a.profissional_id WHERE a.data_hora>=? AND a.tipo IS NOT NULL AND a.tipo!='' GROUP BY pr.id,a.tipo ORDER BY pr.nome,qtd DESC", args: [desde] }),
+                client.execute({ sql: "SELECT pr.nome as profissional,a.tipo as procedimento,COUNT(*) as qtd FROM agendamentos a INNER JOIN profissionais pr ON pr.id=a.profissional_id WHERE a.data_hora>=? AND a.tipo IS NOT NULL AND a.tipo!='' AND a.clinica_id=? GROUP BY pr.id,a.tipo ORDER BY pr.nome,qtd DESC", args: [desde, clinica_id] }),
                 // Orçamentos aprovados por profissional: valor_parcela × qtd_parcelas
-                client.execute({ sql: "SELECT pr.nome as profissional,COUNT(DISTINCT t.treatment_id) as orcamentos,COALESCE(SUM(t.vt),0) as valor_orcamentos FROM (SELECT treatment_id, paciente_id, valor * CASE WHEN parcelas>0 THEN parcelas ELSE 1 END as vt FROM pagamentos WHERE data_checkout>=? AND cancelado=0 AND treatment_id IS NOT NULL AND treatment_id!='' GROUP BY treatment_id) t INNER JOIN (SELECT DISTINCT paciente_id, profissional_id FROM agendamentos WHERE profissional_id IS NOT NULL) a2 ON t.paciente_id=a2.paciente_id INNER JOIN profissionais pr ON pr.id=a2.profissional_id GROUP BY pr.id ORDER BY valor_orcamentos DESC", args: [desde] }),
+                client.execute({ sql: "SELECT pr.nome as profissional,COUNT(DISTINCT t.treatment_id) as orcamentos,COALESCE(SUM(t.vt),0) as valor_orcamentos FROM (SELECT treatment_id, paciente_id, valor * CASE WHEN parcelas>0 THEN parcelas ELSE 1 END as vt FROM pagamentos WHERE data_checkout>=? AND cancelado=0 AND treatment_id IS NOT NULL AND treatment_id!='' AND clinica_id=? GROUP BY treatment_id) t INNER JOIN (SELECT DISTINCT paciente_id, profissional_id FROM agendamentos WHERE profissional_id IS NOT NULL AND clinica_id=?) a2 ON t.paciente_id=a2.paciente_id INNER JOIN profissionais pr ON pr.id=a2.profissional_id GROUP BY pr.id ORDER BY valor_orcamentos DESC", args: [desde, clinica_id, clinica_id] }),
                 // Totais gerais (atendimentos + receita pagamentos)
-                client.execute({ sql: "SELECT COUNT(*) as total_atendimentos,COUNT(DISTINCT profissional_id) as total_profissionais FROM agendamentos WHERE data_hora>=?", args: [desde] }),
+                client.execute({ sql: "SELECT COUNT(*) as total_atendimentos,COUNT(DISTINCT profissional_id) as total_profissionais FROM agendamentos WHERE data_hora>=? AND clinica_id=?", args: [desde, clinica_id] }),
                 // Total receita pagamentos no período
-                client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total_valor FROM pagamentos WHERE data_pagamento>=? AND cancelado=0", args: [desde] }),
+                client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total_valor FROM pagamentos WHERE data_pagamento>=? AND cancelado=0 AND clinica_id=?", args: [desde, clinica_id] }),
             ])
             // Agrupar procedimentos por profissional + calcular valor via ticket médio
             var procsPorProf = {}
@@ -458,34 +468,34 @@ module.exports = async function handler(req, res) {
             var mesAtual = new Date().toISOString().slice(0, 7)
             var mesAnt = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString().slice(0, 7)
             var rs = await Promise.all([
-                client.execute("SELECT COUNT(*) as total FROM pacientes"),
-                client.execute("SELECT COUNT(DISTINCT p.id) as total FROM pacientes p INNER JOIN agendamentos a ON p.id=a.paciente_id WHERE a.data_hora >= date('now','-180 days')"),
-                client.execute("SELECT COUNT(DISTINCT p.id) as total FROM pacientes p LEFT JOIN agendamentos a ON p.id=a.paciente_id GROUP BY p.id HAVING MAX(a.data_hora) < date('now','-180 days') OR MAX(a.data_hora) IS NULL"),
-                client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE tipo='entrada' AND strftime('%Y-%m',data_pagamento)=?", args: [mesAtual] }),
-                client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE tipo='entrada' AND strftime('%Y-%m',data_pagamento)=?", args: [mesAnt] }),
-                client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=?", args: [mesAtual] }),
-                client.execute({ sql: "SELECT COUNT(*) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0", args: [mesAtual] }),
-                client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0", args: [mesAtual] }),
+                client.execute({ sql: "SELECT COUNT(*) as total FROM pacientes WHERE clinica_id=?", args: [clinica_id] }),
+                client.execute({ sql: "SELECT COUNT(DISTINCT p.id) as total FROM pacientes p INNER JOIN agendamentos a ON p.id=a.paciente_id WHERE a.data_hora >= date('now','-180 days') AND p.clinica_id=?", args: [clinica_id] }),
+                client.execute({ sql: "SELECT COUNT(*) as total FROM (SELECT p.id FROM pacientes p LEFT JOIN agendamentos a ON p.id=a.paciente_id WHERE p.clinica_id=? GROUP BY p.id HAVING MAX(a.data_hora) < date('now','-180 days') OR MAX(a.data_hora) IS NULL)", args: [clinica_id] }),
+                client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE tipo='entrada' AND strftime('%Y-%m',data_pagamento)=? AND clinica_id=?", args: [mesAtual, clinica_id] }),
+                client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE tipo='entrada' AND strftime('%Y-%m',data_pagamento)=? AND clinica_id=?", args: [mesAnt, clinica_id] }),
+                client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND clinica_id=?", args: [mesAtual, clinica_id] }),
+                client.execute({ sql: "SELECT COUNT(*) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND clinica_id=?", args: [mesAtual, clinica_id] }),
+                client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND clinica_id=?", args: [mesAtual, clinica_id] }),
                 // Receita por forma de pagamento
-                client.execute({ sql: "SELECT forma_pagamento, COUNT(*) as qtd, SUM(valor) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 GROUP BY forma_pagamento ORDER BY total DESC", args: [mesAtual] }),
+                client.execute({ sql: "SELECT forma_pagamento, COUNT(*) as qtd, SUM(valor) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND clinica_id=? GROUP BY forma_pagamento ORDER BY total DESC", args: [mesAtual, clinica_id] }),
                 // Evolução receita 6 meses
-                client.execute("SELECT strftime('%Y-%m',data_pagamento) as mes, SUM(valor) as total FROM pagamentos WHERE data_pagamento >= date('now','-6 months') AND cancelado=0 GROUP BY mes ORDER BY mes"),
+                client.execute({ sql: "SELECT strftime('%Y-%m',data_pagamento) as mes, SUM(valor) as total FROM pagamentos WHERE data_pagamento >= date('now','-6 months') AND cancelado=0 AND clinica_id=? GROUP BY mes ORDER BY mes", args: [clinica_id] }),
                 // Top procedimentos
-                client.execute("SELECT tipo, COUNT(*) as total FROM agendamentos WHERE tipo IS NOT NULL AND tipo!='' GROUP BY tipo ORDER BY total DESC LIMIT 10"),
+                client.execute({ sql: "SELECT tipo, COUNT(*) as total FROM agendamentos WHERE tipo IS NOT NULL AND tipo!='' AND clinica_id=? GROUP BY tipo ORDER BY total DESC LIMIT 10", args: [clinica_id] }),
                 // Produção por profissional
-                client.execute("SELECT pr.nome, COUNT(a.id) as agendamentos, COALESCE(SUM(a.valor),0) as receita FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id AND a.data_hora >= date('now','-30 days') WHERE pr.ativo=1 GROUP BY pr.id ORDER BY agendamentos DESC"),
+                client.execute({ sql: "SELECT pr.nome, COUNT(a.id) as agendamentos, COALESCE(SUM(a.valor),0) as receita FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id AND a.data_hora >= date('now','-30 days') WHERE pr.ativo=1 AND pr.clinica_id=? GROUP BY pr.id ORDER BY agendamentos DESC", args: [clinica_id] }),
                 // Status agendamentos mês
-                client.execute({ sql: "SELECT status, COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? GROUP BY status", args: [mesAtual] }),
+                client.execute({ sql: "SELECT status, COUNT(*) as total FROM agendamentos WHERE strftime('%Y-%m',data_hora)=? AND clinica_id=? GROUP BY status", args: [mesAtual, clinica_id] }),
                 // Faixa etária
-                client.execute("SELECT CASE WHEN data_nascimento IS NULL OR data_nascimento='' THEN 'N/I' WHEN CAST((julianday('now')-julianday(data_nascimento))/365.25 AS INT)<18 THEN '0-17' WHEN CAST((julianday('now')-julianday(data_nascimento))/365.25 AS INT)<30 THEN '18-29' WHEN CAST((julianday('now')-julianday(data_nascimento))/365.25 AS INT)<45 THEN '30-44' WHEN CAST((julianday('now')-julianday(data_nascimento))/365.25 AS INT)<60 THEN '45-59' ELSE '60+' END as faixa, COUNT(*) as total FROM pacientes GROUP BY faixa ORDER BY faixa"),
+                client.execute({ sql: "SELECT CASE WHEN data_nascimento IS NULL OR data_nascimento='' THEN 'N/I' WHEN CAST((julianday('now')-julianday(data_nascimento))/365.25 AS INT)<18 THEN '0-17' WHEN CAST((julianday('now')-julianday(data_nascimento))/365.25 AS INT)<30 THEN '18-29' WHEN CAST((julianday('now')-julianday(data_nascimento))/365.25 AS INT)<45 THEN '30-44' WHEN CAST((julianday('now')-julianday(data_nascimento))/365.25 AS INT)<60 THEN '45-59' ELSE '60+' END as faixa, COUNT(*) as total FROM pacientes WHERE clinica_id=? GROUP BY faixa ORDER BY faixa", args: [clinica_id] }),
                 // Novos pacientes por mês
-                client.execute("SELECT strftime('%Y-%m',criado_em) as mes, COUNT(*) as total FROM pacientes WHERE criado_em >= date('now','-6 months') GROUP BY mes ORDER BY mes"),
+                client.execute({ sql: "SELECT strftime('%Y-%m',criado_em) as mes, COUNT(*) as total FROM pacientes WHERE criado_em >= date('now','-6 months') AND clinica_id=? GROUP BY mes ORDER BY mes", args: [clinica_id] }),
                 // Ticket médio
-                client.execute({ sql: "SELECT AVG(valor) as ticket FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND valor>0", args: [mesAtual] }),
+                client.execute({ sql: "SELECT AVG(valor) as ticket FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND valor>0 AND clinica_id=?", args: [mesAtual, clinica_id] }),
                 // Bandeira cartão
-                client.execute({ sql: "SELECT bandeira, COUNT(*) as qtd, SUM(valor) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND bandeira!='' GROUP BY bandeira ORDER BY total DESC", args: [mesAtual] }),
+                client.execute({ sql: "SELECT bandeira, COUNT(*) as qtd, SUM(valor) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND bandeira!='' AND clinica_id=? GROUP BY bandeira ORDER BY total DESC", args: [mesAtual, clinica_id] }),
                 // Parcelas
-                client.execute({ sql: "SELECT parcelas, COUNT(*) as qtd, SUM(valor) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 GROUP BY parcelas ORDER BY parcelas", args: [mesAtual] }),
+                client.execute({ sql: "SELECT parcelas, COUNT(*) as qtd, SUM(valor) as total FROM pagamentos WHERE strftime('%Y-%m',data_pagamento)=? AND cancelado=0 AND clinica_id=? GROUP BY parcelas ORDER BY parcelas", args: [mesAtual, clinica_id] }),
             ])
             var receitaMes = +(rs[3].rows[0].total||0) + +(rs[7].rows[0].total||0)
             var receitaAnt = +(rs[4].rows[0].total||0)
@@ -527,19 +537,19 @@ module.exports = async function handler(req, res) {
 
             var rs2 = await Promise.all([
                 // Como conheceu
-                client.execute("SELECT como_conheceu, COUNT(*) as total FROM pacientes WHERE como_conheceu IS NOT NULL AND como_conheceu!='' GROUP BY como_conheceu ORDER BY total DESC"),
+                client.execute({ sql: "SELECT como_conheceu, COUNT(*) as total FROM pacientes WHERE como_conheceu IS NOT NULL AND como_conheceu!='' AND clinica_id=? GROUP BY como_conheceu ORDER BY total DESC", args: [clinica_id] }),
                 // Aniversariantes do mês
-                client.execute("SELECT id,nome,telefone,email,data_nascimento FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!=''"),
+                client.execute({ sql: "SELECT id,nome,telefone,email,data_nascimento FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!='' AND clinica_id=?", args: [clinica_id] }),
                 // Inativos por faixa
-                client.execute("SELECT CASE WHEN dias>365 THEN 'Crítico (+1 ano)' WHEN dias>270 THEN 'Urgente (+9m)' WHEN dias>180 THEN 'Atenção (+6m)' ELSE 'Recente' END as faixa, COUNT(*) as total FROM (SELECT CAST(julianday('now')-julianday(MAX(a.data_hora)) AS INT) as dias FROM pacientes p INNER JOIN agendamentos a ON p.id=a.paciente_id GROUP BY p.id HAVING dias>180) GROUP BY faixa ORDER BY total DESC"),
+                client.execute({ sql: "SELECT CASE WHEN dias>365 THEN 'Crítico (+1 ano)' WHEN dias>270 THEN 'Urgente (+9m)' WHEN dias>180 THEN 'Atenção (+6m)' ELSE 'Recente' END as faixa, COUNT(*) as total FROM (SELECT CAST(julianday('now')-julianday(MAX(a.data_hora)) AS INT) as dias FROM pacientes p INNER JOIN agendamentos a ON p.id=a.paciente_id WHERE p.clinica_id=? GROUP BY p.id HAVING dias>180) GROUP BY faixa ORDER BY total DESC", args: [clinica_id] }),
                 // Novos por mês (6 meses)
-                client.execute("SELECT strftime('%Y-%m',criado_em) as mes, COUNT(*) as total FROM pacientes WHERE criado_em >= date('now','-6 months') GROUP BY mes ORDER BY mes"),
+                client.execute({ sql: "SELECT strftime('%Y-%m',criado_em) as mes, COUNT(*) as total FROM pacientes WHERE criado_em >= date('now','-6 months') AND clinica_id=? GROUP BY mes ORDER BY mes", args: [clinica_id] }),
                 // Top pacientes por receita
-                client.execute("SELECT paciente_nome, COUNT(*) as pagamentos, SUM(valor) as total FROM pagamentos WHERE cancelado=0 AND paciente_nome IS NOT NULL GROUP BY paciente_nome ORDER BY total DESC LIMIT 10"),
+                client.execute({ sql: "SELECT paciente_nome, COUNT(*) as pagamentos, SUM(valor) as total FROM pagamentos WHERE cancelado=0 AND paciente_nome IS NOT NULL AND clinica_id=? GROUP BY paciente_nome ORDER BY total DESC LIMIT 10", args: [clinica_id] }),
                 // Retenção: ativos vs total
-                client.execute("SELECT COUNT(*) as total, SUM(CASE WHEN ultima < date('now','-180 days') OR ultima IS NULL THEN 1 ELSE 0 END) as inativos FROM (SELECT MAX(a.data_hora) as ultima FROM pacientes p LEFT JOIN agendamentos a ON p.id=a.paciente_id GROUP BY p.id)"),
+                client.execute({ sql: "SELECT COUNT(*) as total, SUM(CASE WHEN ultima < date('now','-180 days') OR ultima IS NULL THEN 1 ELSE 0 END) as inativos FROM (SELECT MAX(a.data_hora) as ultima FROM pacientes p LEFT JOIN agendamentos a ON p.id=a.paciente_id WHERE p.clinica_id=? GROUP BY p.id)", args: [clinica_id] }),
                 // Procedimentos mais lucrativos
-                client.execute("SELECT tipo, COUNT(*) as qtd, COALESCE(SUM(valor),0) as receita FROM agendamentos WHERE tipo IS NOT NULL AND tipo!='' AND valor>0 GROUP BY tipo ORDER BY receita DESC LIMIT 8"),
+                client.execute({ sql: "SELECT tipo, COUNT(*) as qtd, COALESCE(SUM(valor),0) as receita FROM agendamentos WHERE tipo IS NOT NULL AND tipo!='' AND valor>0 AND clinica_id=? GROUP BY tipo ORDER BY receita DESC LIMIT 8", args: [clinica_id] }),
             ])
             // Processar aniversariantes do mês atual
             var mesAtual2 = new Date().getMonth() + 1
@@ -575,7 +585,7 @@ module.exports = async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var b = req.body || {}
             if (!b.nome) return res.status(400).json({ success: false, error: 'Nome obrigatório' })
-            await client.execute({ sql: "INSERT INTO pacientes(nome,cpf,telefone,whatsapp,email,data_nascimento,sexo,estado_civil,como_conheceu,endereco,bairro,cidade,cep,convenio,alerta_medico,ativo,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,datetime('now'),datetime('now'))", args: [b.nome, b.cpf||'', b.telefone||'', b.whatsapp||'', b.email||'', b.data_nascimento||'', b.sexo||'', b.estado_civil||'', b.como_conheceu||'', b.endereco||'', b.bairro||'', b.cidade||'', b.cep||'', b.convenio||'', b.alerta_medico||''] })
+            await client.execute({ sql: "INSERT INTO pacientes(nome,cpf,telefone,whatsapp,email,data_nascimento,sexo,estado_civil,como_conheceu,endereco,bairro,cidade,cep,convenio,alerta_medico,ativo,criado_em,atualizado_em,clinica_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,datetime('now'),datetime('now'),?)", args: [b.nome, b.cpf||'', b.telefone||'', b.whatsapp||'', b.email||'', b.data_nascimento||'', b.sexo||'', b.estado_civil||'', b.como_conheceu||'', b.endereco||'', b.bairro||'', b.cidade||'', b.cep||'', b.convenio||'', b.alerta_medico||'', clinica_id] })
             return res.status(200).json({ success: true, msg: 'Paciente salvo' })
         }
 
@@ -584,18 +594,18 @@ module.exports = async function handler(req, res) {
             var ptab = q.tabela || ''
             var pw2 = ptab ? ' WHERE tabela_preco=?' : ''
             var pa2 = ptab ? [ptab] : []
-            var prc = await client.execute({ sql: "SELECT * FROM procedimentos" + pw2 + " WHERE ativo=1 ORDER BY tabela_preco,descricao".replace('WHERE ativo','AND ativo').replace(' WHERE tabela_preco=? AND',' WHERE tabela_preco=? AND').replace(' WHERE ativo=1',' WHERE ativo=1'), args: pa2 })
             // Fix: handle WHERE correctly
-            var sqlProc = ptab ? "SELECT * FROM procedimentos WHERE tabela_preco=? AND ativo=1 ORDER BY tabela_preco,descricao" : "SELECT * FROM procedimentos WHERE ativo=1 ORDER BY tabela_preco,descricao"
-            var prcr = await client.execute({ sql: sqlProc, args: pa2 })
-            var tabelas2 = await client.execute("SELECT DISTINCT tabela_preco FROM procedimentos WHERE ativo=1 ORDER BY tabela_preco")
+            var sqlProc = ptab ? "SELECT * FROM procedimentos WHERE tabela_preco=? AND ativo=1 AND clinica_id=? ORDER BY tabela_preco,descricao" : "SELECT * FROM procedimentos WHERE ativo=1 AND clinica_id=? ORDER BY tabela_preco,descricao"
+            var pa2args = ptab ? [ptab, clinica_id] : [clinica_id]
+            var prcr = await client.execute({ sql: sqlProc, args: pa2args })
+            var tabelas2 = await client.execute({ sql: "SELECT DISTINCT tabela_preco FROM procedimentos WHERE ativo=1 AND clinica_id=? ORDER BY tabela_preco", args: [clinica_id] })
             return res.status(200).json({ success: true, data: prcr.rows, total: prcr.rows.length, tabelas: tabelas2.rows.map(function(t){return t.tabela_preco}) })
         }
 
         // ── ANIVERSARIANTES DO MÊS ───────────────────────────────────
         if (route === 'aniversariantes-mes') {
             var ames = parseInt(q.mes) || (new Date().getMonth() + 1)
-            var aanr = await client.execute("SELECT id,nome,telefone,email,data_nascimento FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!=''")
+            var aanr = await client.execute({ sql: "SELECT id,nome,telefone,email,data_nascimento FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!='' AND clinica_id=?", args: [clinica_id] })
             var aanivs = []
             aanr.rows.forEach(function(p) {
                 try {
@@ -613,7 +623,7 @@ module.exports = async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var lb = req.body || {}
             if (!lb.data_pagamento || !lb.valor) return res.status(400).json({ success: false, error: 'Data e valor obrigatórios' })
-            await client.execute({ sql: "INSERT INTO financeiro(tipo,descricao,valor,data_pagamento,forma_pagamento,status,criado_em,atualizado_em) VALUES(?,?,?,?,?,'manual',datetime('now'),datetime('now'))", args: [lb.tipo||'entrada', lb.descricao||'', lb.valor, lb.data_pagamento, lb.forma_pagamento||''] })
+            await client.execute({ sql: "INSERT INTO financeiro(tipo,descricao,valor,data_pagamento,forma_pagamento,status,criado_em,atualizado_em,clinica_id) VALUES(?,?,?,?,?,'manual',datetime('now'),datetime('now'),?)", args: [lb.tipo||'entrada', lb.descricao||'', lb.valor, lb.data_pagamento, lb.forma_pagamento||'', clinica_id] })
             return res.status(200).json({ success: true, msg: 'Lançamento salvo' })
         }
 
@@ -636,21 +646,21 @@ module.exports = async function handler(req, res) {
             try {
             // 1. Enriquecer a partir dos dados JÁ NO TURSO (pagamentos + agendamentos)
             // CPF e email dos pagamentos
-            var pgCpf = await client.execute("SELECT DISTINCT paciente_nome, titular_cpf, pagador_email FROM pagamentos WHERE (titular_cpf IS NOT NULL AND titular_cpf!='') OR (pagador_email IS NOT NULL AND pagador_email!='')")
+            var pgCpf = await client.execute({ sql: "SELECT DISTINCT paciente_nome, titular_cpf, pagador_email FROM pagamentos WHERE ((titular_cpf IS NOT NULL AND titular_cpf!='') OR (pagador_email IS NOT NULL AND pagador_email!='')) AND clinica_id=?", args: [clinica_id] })
             var pgRows = (pgCpf && pgCpf.rows) ? pgCpf.rows : []
             for (var pi2 = 0; pi2 < pgRows.length; pi2++) {
                 var pg = pgRows[pi2]
                 var pg = pgCpf.rows[pi2]; var sets = []; var args3 = []
                 if (pg.titular_cpf) { sets.push("cpf=CASE WHEN cpf IS NULL OR cpf='' THEN ? ELSE cpf END"); args3.push(pg.titular_cpf); stats.cpf++ }
                 if (pg.pagador_email) { sets.push("email=CASE WHEN email IS NULL OR email='' THEN ? ELSE email END"); args3.push(pg.pagador_email); stats.email++ }
-                if (sets.length) { sets.push("atualizado_em=datetime('now')"); args3.push(pg.paciente_nome); await client.execute({ sql: "UPDATE pacientes SET " + sets.join(',') + " WHERE nome=?", args: args3 }) }
+                if (sets.length) { sets.push("atualizado_em=datetime('now')"); args3.push(pg.paciente_nome); args3.push(clinica_id); await client.execute({ sql: "UPDATE pacientes SET " + sets.join(',') + " WHERE nome=? AND clinica_id=?", args: args3 }) }
             }
             // Telefone dos agendamentos
-            var agTel2 = await client.execute("SELECT DISTINCT paciente_nome, paciente_telefone FROM agendamentos WHERE paciente_telefone IS NOT NULL AND paciente_telefone!=''")
+            var agTel2 = await client.execute({ sql: "SELECT DISTINCT paciente_nome, paciente_telefone FROM agendamentos WHERE paciente_telefone IS NOT NULL AND paciente_telefone!='' AND clinica_id=?", args: [clinica_id] })
             var agRows = (agTel2 && agTel2.rows) ? agTel2.rows : []
             for (var ti2 = 0; ti2 < agRows.length; ti2++) {
                 var at2 = agRows[ti2]; if (!at2.paciente_nome) continue
-                await client.execute({ sql: "UPDATE pacientes SET telefone=CASE WHEN telefone IS NULL OR telefone='' THEN ? ELSE telefone END, atualizado_em=datetime('now') WHERE nome=?", args: [at2.paciente_telefone, at2.paciente_nome] })
+                await client.execute({ sql: "UPDATE pacientes SET telefone=CASE WHEN telefone IS NULL OR telefone='' THEN ? ELSE telefone END, atualizado_em=datetime('now') WHERE nome=? AND clinica_id=?", args: [at2.paciente_telefone, at2.paciente_nome, clinica_id] })
                 stats.telefone++
             }
 
@@ -662,7 +672,7 @@ module.exports = async function handler(req, res) {
                 for (var pi3 = 0; pi3 < pgData.length; pi3++) {
                     var pg2 = pgData[pi3]; var nome = pg2.PatientName || ''; if (!nome) continue
                     if (pg2.PayerAddressStreet) {
-                        await client.execute({ sql: "UPDATE pacientes SET endereco=CASE WHEN endereco IS NULL OR endereco='' THEN ? ELSE endereco END, bairro=CASE WHEN bairro IS NULL OR bairro='' THEN ? ELSE bairro END, cidade=CASE WHEN cidade IS NULL OR cidade='' THEN ? ELSE cidade END, estado=CASE WHEN estado IS NULL OR estado='' THEN ? ELSE estado END, cep=CASE WHEN cep IS NULL OR cep='' THEN ? ELSE cep END, atualizado_em=datetime('now') WHERE nome=?", args: [pg2.PayerAddressStreet, pg2.PayerAddressDistrict || '', pg2.PayerAddressCity || '', pg2.PayerAddressState || '', pg2.PayerAddressZip || '', nome] })
+                        await client.execute({ sql: "UPDATE pacientes SET endereco=CASE WHEN endereco IS NULL OR endereco='' THEN ? ELSE endereco END, bairro=CASE WHEN bairro IS NULL OR bairro='' THEN ? ELSE bairro END, cidade=CASE WHEN cidade IS NULL OR cidade='' THEN ? ELSE cidade END, estado=CASE WHEN estado IS NULL OR estado='' THEN ? ELSE estado END, cep=CASE WHEN cep IS NULL OR cep='' THEN ? ELSE cep END, atualizado_em=datetime('now') WHERE nome=? AND clinica_id=?", args: [pg2.PayerAddressStreet, pg2.PayerAddressDistrict || '', pg2.PayerAddressCity || '', pg2.PayerAddressState || '', pg2.PayerAddressZip || '', nome, clinica_id] })
                         stats.enderecos++
                     }
                 }
@@ -679,14 +689,14 @@ module.exports = async function handler(req, res) {
                     if (ag2.HowDidMeet) { sets2.push("como_conheceu=CASE WHEN como_conheceu IS NULL OR como_conheceu='' THEN ? ELSE como_conheceu END"); args4.push(ag2.HowDidMeet); stats.como_conheceu++ }
                     if (ag2.Email) { sets2.push("email=CASE WHEN email IS NULL OR email='' THEN ? ELSE email END"); args4.push(ag2.Email) }
                     if (ag2.MobilePhone) { sets2.push("telefone=CASE WHEN telefone IS NULL OR telefone='' THEN ? ELSE telefone END"); args4.push(ag2.MobilePhone) }
-                    if (sets2.length) { sets2.push("atualizado_em=datetime('now')"); args4.push(ag2.PatientName); await client.execute({ sql: "UPDATE pacientes SET " + sets2.join(',') + " WHERE nome=?", args: args4 }) }
+                    if (sets2.length) { sets2.push("atualizado_em=datetime('now')"); args4.push(ag2.PatientName); args4.push(clinica_id); await client.execute({ sql: "UPDATE pacientes SET " + sets2.join(',') + " WHERE nome=? AND clinica_id=?", args: args4 }) }
                 }
             } catch(e4) { /* timeout ok */ }
             } // fim etapa 2
 
             } catch(eImport) { stats.erros.push(eImport.message) }
             // 3. Contar resultado final
-            var finalStats = await client.execute("SELECT COUNT(*) as total, SUM(CASE WHEN email!='' AND email IS NOT NULL THEN 1 ELSE 0 END) as com_email, SUM(CASE WHEN cpf!='' AND cpf IS NOT NULL THEN 1 ELSE 0 END) as com_cpf, SUM(CASE WHEN telefone!='' AND telefone IS NOT NULL THEN 1 ELSE 0 END) as com_tel, SUM(CASE WHEN endereco!='' AND endereco IS NOT NULL THEN 1 ELSE 0 END) as com_endereco, SUM(CASE WHEN como_conheceu!='' AND como_conheceu IS NOT NULL THEN 1 ELSE 0 END) as com_como, SUM(CASE WHEN data_nascimento!='' AND data_nascimento IS NOT NULL THEN 1 ELSE 0 END) as com_nasc FROM pacientes")
+            var finalStats = await client.execute({ sql: "SELECT COUNT(*) as total, SUM(CASE WHEN email!='' AND email IS NOT NULL THEN 1 ELSE 0 END) as com_email, SUM(CASE WHEN cpf!='' AND cpf IS NOT NULL THEN 1 ELSE 0 END) as com_cpf, SUM(CASE WHEN telefone!='' AND telefone IS NOT NULL THEN 1 ELSE 0 END) as com_tel, SUM(CASE WHEN endereco!='' AND endereco IS NOT NULL THEN 1 ELSE 0 END) as com_endereco, SUM(CASE WHEN como_conheceu!='' AND como_conheceu IS NOT NULL THEN 1 ELSE 0 END) as com_como, SUM(CASE WHEN data_nascimento!='' AND data_nascimento IS NOT NULL THEN 1 ELSE 0 END) as com_nasc FROM pacientes WHERE clinica_id=?", args: [clinica_id] })
             return res.status(200).json({ success: true, importados: stats, resultado_final: (finalStats && finalStats.rows) ? finalStats.rows[0] : {} })
         }
 
@@ -699,7 +709,7 @@ module.exports = async function handler(req, res) {
             for (var li = 0; li < lote.length; li++) {
                 var lp = lote[li]; if (!lp.nome) continue
                 try {
-                    var ex = await client.execute({ sql: "SELECT id FROM pacientes WHERE nome=?", args: [lp.nome] })
+                    var ex = await client.execute({ sql: "SELECT id FROM pacientes WHERE nome=? AND clinica_id=?", args: [lp.nome, clinica_id] })
                     if (ex.rows.length) {
                         // UPDATE: preenche campos vazios
                         var s = [], a = []
@@ -718,22 +728,22 @@ module.exports = async function handler(req, res) {
                         if (lp.convenio) { s.push("convenio=CASE WHEN convenio IS NULL OR convenio='' THEN ? ELSE convenio END"); a.push(lp.convenio) }
                         if (lp.numero_convenio) { s.push("numero_convenio=CASE WHEN numero_convenio IS NULL OR numero_convenio='' THEN ? ELSE numero_convenio END"); a.push(lp.numero_convenio) }
                         if (lp.observacoes) { s.push("observacoes=CASE WHEN observacoes IS NULL OR observacoes='' THEN ? ELSE observacoes END"); a.push(lp.observacoes) }
-                        if (s.length) { s.push("atualizado_em=datetime('now')"); a.push(lp.nome); await client.execute({ sql: "UPDATE pacientes SET " + s.join(',') + " WHERE nome=?", args: a }); at++ }
+                        if (s.length) { s.push("atualizado_em=datetime('now')"); a.push(lp.nome); a.push(clinica_id); await client.execute({ sql: "UPDATE pacientes SET " + s.join(',') + " WHERE nome=? AND clinica_id=?", args: a }); at++ }
                     } else {
                         // INSERT novo paciente
-                        await client.execute({ sql: "INSERT INTO pacientes(nome,data_nascimento,sexo,estado_civil,cpf,telefone,email,endereco,bairro,cidade,estado,cep,como_conheceu,convenio,numero_convenio,observacoes,ativo,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,datetime('now'),datetime('now'))", args: [lp.nome, lp.data_nascimento||'', lp.sexo||'', lp.estado_civil||'', lp.cpf||'', lp.telefone||'', lp.email||'', lp.endereco||'', lp.bairro||'', lp.cidade||'', lp.estado||'', lp.cep||'', lp.como_conheceu||'', lp.convenio||'', lp.numero_convenio||'', lp.observacoes||''] })
+                        await client.execute({ sql: "INSERT INTO pacientes(nome,data_nascimento,sexo,estado_civil,cpf,telefone,email,endereco,bairro,cidade,estado,cep,como_conheceu,convenio,numero_convenio,observacoes,ativo,criado_em,atualizado_em,clinica_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,datetime('now'),datetime('now'),?)", args: [lp.nome, lp.data_nascimento||'', lp.sexo||'', lp.estado_civil||'', lp.cpf||'', lp.telefone||'', lp.email||'', lp.endereco||'', lp.bairro||'', lp.cidade||'', lp.estado||'', lp.cep||'', lp.como_conheceu||'', lp.convenio||'', lp.numero_convenio||'', lp.observacoes||'', clinica_id] })
                         ins++
                     }
                 } catch(el) { errs++ }
             }
-            var fStats = await client.execute("SELECT COUNT(*) as total, SUM(CASE WHEN data_nascimento!='' AND data_nascimento IS NOT NULL THEN 1 ELSE 0 END) as com_nasc, SUM(CASE WHEN sexo!='' AND sexo IS NOT NULL THEN 1 ELSE 0 END) as com_sexo, SUM(CASE WHEN estado_civil!='' AND estado_civil IS NOT NULL THEN 1 ELSE 0 END) as com_civil, SUM(CASE WHEN cpf!='' AND cpf IS NOT NULL THEN 1 ELSE 0 END) as com_cpf, SUM(CASE WHEN endereco!='' AND endereco IS NOT NULL THEN 1 ELSE 0 END) as com_end, SUM(CASE WHEN como_conheceu!='' AND como_conheceu IS NOT NULL THEN 1 ELSE 0 END) as com_como, SUM(CASE WHEN convenio!='' AND convenio IS NOT NULL THEN 1 ELSE 0 END) as com_conv FROM pacientes")
+            var fStats = await client.execute({ sql: "SELECT COUNT(*) as total, SUM(CASE WHEN data_nascimento!='' AND data_nascimento IS NOT NULL THEN 1 ELSE 0 END) as com_nasc, SUM(CASE WHEN sexo!='' AND sexo IS NOT NULL THEN 1 ELSE 0 END) as com_sexo, SUM(CASE WHEN estado_civil!='' AND estado_civil IS NOT NULL THEN 1 ELSE 0 END) as com_civil, SUM(CASE WHEN cpf!='' AND cpf IS NOT NULL THEN 1 ELSE 0 END) as com_cpf, SUM(CASE WHEN endereco!='' AND endereco IS NOT NULL THEN 1 ELSE 0 END) as com_end, SUM(CASE WHEN como_conheceu!='' AND como_conheceu IS NOT NULL THEN 1 ELSE 0 END) as com_como, SUM(CASE WHEN convenio!='' AND convenio IS NOT NULL THEN 1 ELSE 0 END) as com_conv FROM pacientes WHERE clinica_id=?", args: [clinica_id] })
             return res.status(200).json({ success: true, recebidos: lote.length, atualizados: at, inseridos: ins, erros: errs, resultado: (fStats && fStats.rows) ? fStats.rows[0] : {} })
         }
 
         // ── ENRIQUECER PACIENTES (preenche campos vazios com dados dos pagamentos) ──
         if (route === 'enriquecer-pacientes') {
             // Busca todos pagamentos com email ou CPF do titular
-            var pgAll = await client.execute("SELECT DISTINCT paciente_nome, pagador_email, titular_cpf FROM pagamentos WHERE (pagador_email IS NOT NULL AND pagador_email!='') OR (titular_cpf IS NOT NULL AND titular_cpf!='')")
+            var pgAll = await client.execute({ sql: "SELECT DISTINCT paciente_nome, pagador_email, titular_cpf FROM pagamentos WHERE ((pagador_email IS NOT NULL AND pagador_email!='') OR (titular_cpf IS NOT NULL AND titular_cpf!='')) AND clinica_id=?", args: [clinica_id] })
             var atualiz = 0
             for (var ei = 0; ei < pgAll.rows.length; ei++) {
                 var pg = pgAll.rows[ei]
@@ -744,19 +754,20 @@ module.exports = async function handler(req, res) {
                 if (updates.length) {
                     updates.push("atualizado_em=datetime('now')")
                     args2.push(pg.paciente_nome)
-                    await client.execute({ sql: "UPDATE pacientes SET " + updates.join(',') + " WHERE nome=?", args: args2 })
+                    args2.push(clinica_id)
+                    await client.execute({ sql: "UPDATE pacientes SET " + updates.join(',') + " WHERE nome=? AND clinica_id=?", args: args2 })
                     atualiz++
                 }
             }
             // Também preenche telefone dos agendamentos
-            var agTel = await client.execute("SELECT DISTINCT paciente_nome, paciente_telefone FROM agendamentos WHERE paciente_telefone IS NOT NULL AND paciente_telefone!=''")
+            var agTel = await client.execute({ sql: "SELECT DISTINCT paciente_nome, paciente_telefone FROM agendamentos WHERE paciente_telefone IS NOT NULL AND paciente_telefone!='' AND clinica_id=?", args: [clinica_id] })
             for (var ti = 0; ti < agTel.rows.length; ti++) {
                 var at = agTel.rows[ti]
                 if (!at.paciente_nome || !at.paciente_telefone) continue
-                await client.execute({ sql: "UPDATE pacientes SET telefone=CASE WHEN telefone IS NULL OR telefone='' THEN ? ELSE telefone END, atualizado_em=datetime('now') WHERE nome=?", args: [at.paciente_telefone, at.paciente_nome] })
+                await client.execute({ sql: "UPDATE pacientes SET telefone=CASE WHEN telefone IS NULL OR telefone='' THEN ? ELSE telefone END, atualizado_em=datetime('now') WHERE nome=? AND clinica_id=?", args: [at.paciente_telefone, at.paciente_nome, clinica_id] })
             }
             // Conta resultado
-            var stats = await client.execute("SELECT COUNT(*) as total, SUM(CASE WHEN email!='' AND email IS NOT NULL THEN 1 ELSE 0 END) as com_email, SUM(CASE WHEN cpf!='' AND cpf IS NOT NULL THEN 1 ELSE 0 END) as com_cpf, SUM(CASE WHEN telefone!='' AND telefone IS NOT NULL THEN 1 ELSE 0 END) as com_tel FROM pacientes")
+            var stats = await client.execute({ sql: "SELECT COUNT(*) as total, SUM(CASE WHEN email!='' AND email IS NOT NULL THEN 1 ELSE 0 END) as com_email, SUM(CASE WHEN cpf!='' AND cpf IS NOT NULL THEN 1 ELSE 0 END) as com_cpf, SUM(CASE WHEN telefone!='' AND telefone IS NOT NULL THEN 1 ELSE 0 END) as com_tel FROM pacientes WHERE clinica_id=?", args: [clinica_id] })
             return res.status(200).json({ success: true, pacientes_processados: atualiz, telefones_atualizados: agTel.rows.length, stats: stats.rows[0] })
         }
 
@@ -766,7 +777,7 @@ module.exports = async function handler(req, res) {
             var spe = req.body || {}
             if (!spe.id) return res.status(400).json({ success: false, error: 'ID obrigatório' })
             try { await client.execute("ALTER TABLE pacientes ADD COLUMN rg TEXT") } catch(e) {}
-            await client.execute({ sql: "UPDATE pacientes SET nome=?,telefone=?,email=?,cpf=?,rg=?,data_nascimento=?,cep=?,cidade=?,endereco=?,bairro=?,atualizado_em=datetime('now') WHERE id=?", args: [spe.nome||'', spe.telefone||'', spe.email||'', spe.cpf||'', spe.rg||'', spe.data_nascimento||'', spe.cep||'', spe.cidade||'', spe.endereco||'', spe.bairro||'', spe.id] })
+            await client.execute({ sql: "UPDATE pacientes SET nome=?,telefone=?,email=?,cpf=?,rg=?,data_nascimento=?,cep=?,cidade=?,endereco=?,bairro=?,atualizado_em=datetime('now') WHERE id=? AND clinica_id=?", args: [spe.nome||'', spe.telefone||'', spe.email||'', spe.cpf||'', spe.rg||'', spe.data_nascimento||'', spe.cep||'', spe.cidade||'', spe.endereco||'', spe.bairro||'', spe.id, clinica_id] })
             return res.status(200).json({ success: true, msg: 'Paciente atualizado' })
         }
 
@@ -783,15 +794,15 @@ module.exports = async function handler(req, res) {
                 // Tenta match por CPF primeiro, depois por nome
                 var found = null
                 if (item.cpf) {
-                    var byCpf = await client.execute({ sql: "SELECT id,rg FROM pacientes WHERE cpf=?", args: [item.cpf] })
+                    var byCpf = await client.execute({ sql: "SELECT id,rg FROM pacientes WHERE cpf=? AND clinica_id=?", args: [item.cpf, clinica_id] })
                     if (byCpf.rows.length) found = byCpf.rows[0]
                 }
                 if (!found && item.nome) {
-                    var byNome = await client.execute({ sql: "SELECT id,rg FROM pacientes WHERE UPPER(nome)=UPPER(?)", args: [item.nome] })
+                    var byNome = await client.execute({ sql: "SELECT id,rg FROM pacientes WHERE UPPER(nome)=UPPER(?) AND clinica_id=?", args: [item.nome, clinica_id] })
                     if (byNome.rows.length) found = byNome.rows[0]
                 }
                 if (found) {
-                    await client.execute({ sql: "UPDATE pacientes SET rg=?,atualizado_em=datetime('now') WHERE id=?", args: [item.rg, found.id] })
+                    await client.execute({ sql: "UPDATE pacientes SET rg=?,atualizado_em=datetime('now') WHERE id=? AND clinica_id=?", args: [item.rg, found.id, clinica_id] })
                     at++
                 } else { nf++ }
             }
@@ -805,11 +816,11 @@ module.exports = async function handler(req, res) {
             if (!od.paciente_id || !od.dente) return res.status(400).json({ success: false, error: 'paciente_id e dente obrigatórios' })
             await client.execute("CREATE TABLE IF NOT EXISTS odontograma (id INTEGER PRIMARY KEY AUTOINCREMENT, paciente_id INTEGER REFERENCES pacientes(id), dente INTEGER NOT NULL, status TEXT DEFAULT 'saudavel', cor TEXT, observacao TEXT, updated_at TEXT DEFAULT (datetime('now')))")
             // Upsert: check if exists
-            var existing = await client.execute({ sql: "SELECT id FROM odontograma WHERE paciente_id=? AND dente=?", args: [od.paciente_id, od.dente] })
+            var existing = await client.execute({ sql: "SELECT id FROM odontograma WHERE paciente_id=? AND dente=? AND clinica_id=?", args: [od.paciente_id, od.dente, clinica_id] })
             if (existing.rows.length) {
-                await client.execute({ sql: "UPDATE odontograma SET status=?,cor=?,observacao=?,updated_at=datetime('now') WHERE paciente_id=? AND dente=?", args: [od.status||'saudavel', od.cor||null, od.observacao||null, od.paciente_id, od.dente] })
+                await client.execute({ sql: "UPDATE odontograma SET status=?,cor=?,observacao=?,updated_at=datetime('now') WHERE paciente_id=? AND dente=? AND clinica_id=?", args: [od.status||'saudavel', od.cor||null, od.observacao||null, od.paciente_id, od.dente, clinica_id] })
             } else {
-                await client.execute({ sql: "INSERT INTO odontograma (paciente_id,dente,status,cor,observacao) VALUES (?,?,?,?,?)", args: [od.paciente_id, od.dente, od.status||'saudavel', od.cor||null, od.observacao||null] })
+                await client.execute({ sql: "INSERT INTO odontograma (paciente_id,dente,status,cor,observacao,clinica_id) VALUES (?,?,?,?,?,?)", args: [od.paciente_id, od.dente, od.status||'saudavel', od.cor||null, od.observacao||null, clinica_id] })
             }
             return res.status(200).json({ success: true })
         }
@@ -819,7 +830,7 @@ module.exports = async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var sp = req.body || {}
             if (!sp.id) return res.status(400).json({ success: false, error: 'ID obrigatório' })
-            await client.execute({ sql: "UPDATE profissionais SET nome=?,especialidade=?,cpf=?,email=?,telefone=?,cro=?,atualizado_em=datetime('now') WHERE id=?", args: [sp.nome||'', sp.especialidade||'', sp.cpf||'', sp.email||'', sp.telefone||'', sp.cro||'', sp.id] })
+            await client.execute({ sql: "UPDATE profissionais SET nome=?,especialidade=?,cpf=?,email=?,telefone=?,cro=?,atualizado_em=datetime('now') WHERE id=? AND clinica_id=?", args: [sp.nome||'', sp.especialidade||'', sp.cpf||'', sp.email||'', sp.telefone||'', sp.cro||'', sp.id, clinica_id] })
             return res.status(200).json({ success: true, msg: 'Profissional atualizado' })
         }
 
@@ -833,16 +844,16 @@ module.exports = async function handler(req, res) {
             // Resolve paciente_id pelo nome
             var pacId2 = null
             if (sa2.paciente_nome) {
-                var rPac = await client.execute({ sql: "SELECT id FROM pacientes WHERE nome=? LIMIT 1", args: [sa2.paciente_nome] })
+                var rPac = await client.execute({ sql: "SELECT id FROM pacientes WHERE nome=? AND clinica_id=? LIMIT 1", args: [sa2.paciente_nome, clinica_id] })
                 if (rPac.rows.length) pacId2 = rPac.rows[0].id
             }
             // Resolve profissional_id pelo nome
             var profId2 = sa2.profissional_id || null
             if (!profId2 && sa2.profissional_nome) {
-                var rProf = await client.execute({ sql: "SELECT id FROM profissionais WHERE nome=? LIMIT 1", args: [sa2.profissional_nome] })
+                var rProf = await client.execute({ sql: "SELECT id FROM profissionais WHERE nome=? AND clinica_id=? LIMIT 1", args: [sa2.profissional_nome, clinica_id] })
                 if (rProf.rows.length) profId2 = rProf.rows[0].id
             }
-            await client.execute({ sql: "INSERT INTO agendamentos(paciente_id,profissional_id,data_hora,hora_fim,tipo,status,procedimento,observacoes,paciente_nome,profissional_nome,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))", args: [pacId2, profId2, dataHora2, horaFim2, sa2.tipo||'', sa2.status||'agendado', sa2.procedimento||'', sa2.observacoes||'', sa2.paciente_nome||'', sa2.profissional_nome||''] })
+            await client.execute({ sql: "INSERT INTO agendamentos(paciente_id,profissional_id,data_hora,hora_fim,tipo,status,procedimento,observacoes,paciente_nome,profissional_nome,criado_em,atualizado_em,clinica_id) VALUES(?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'),?)", args: [pacId2, profId2, dataHora2, horaFim2, sa2.tipo||'', sa2.status||'agendado', sa2.procedimento||'', sa2.observacoes||'', sa2.paciente_nome||'', sa2.profissional_nome||'', clinica_id] })
             return res.status(200).json({ success: true, msg: 'Agendamento salvo' })
         }
 
@@ -853,10 +864,10 @@ module.exports = async function handler(req, res) {
             if (!spg.valor) return res.status(400).json({ success: false, error: 'Valor obrigatório' })
             var pacIdPg = null
             if (spg.paciente_nome) {
-                var rPacPg = await client.execute({ sql: "SELECT id FROM pacientes WHERE nome=? LIMIT 1", args: [spg.paciente_nome] })
+                var rPacPg = await client.execute({ sql: "SELECT id FROM pacientes WHERE nome=? AND clinica_id=? LIMIT 1", args: [spg.paciente_nome, clinica_id] })
                 if (rPacPg.rows.length) pacIdPg = rPacPg.rows[0].id
             }
-            await client.execute({ sql: "INSERT INTO pagamentos(paciente_id,paciente_nome,valor,forma_pagamento,tipo,bandeira,parcelas,data_pagamento,data_vencimento,confirmado,cancelado,descricao,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,?,?,?,?,0,?,datetime('now'),datetime('now'))", args: [pacIdPg, spg.paciente_nome||'', spg.valor, spg.forma_pagamento||'', spg.tipo||'entrada', spg.bandeira||'', spg.parcelas||1, spg.data_pagamento||new Date().toISOString().slice(0,10), spg.data_vencimento||'', spg.confirmado||0, spg.descricao||''] })
+            await client.execute({ sql: "INSERT INTO pagamentos(paciente_id,paciente_nome,valor,forma_pagamento,tipo,bandeira,parcelas,data_pagamento,data_vencimento,confirmado,cancelado,descricao,criado_em,atualizado_em,clinica_id) VALUES(?,?,?,?,?,?,?,?,?,?,0,?,datetime('now'),datetime('now'),?)", args: [pacIdPg, spg.paciente_nome||'', spg.valor, spg.forma_pagamento||'', spg.tipo||'entrada', spg.bandeira||'', spg.parcelas||1, spg.data_pagamento||new Date().toISOString().slice(0,10), spg.data_vencimento||'', spg.confirmado||0, spg.descricao||'', clinica_id] })
             return res.status(200).json({ success: true, msg: 'Pagamento salvo' })
         }
 
@@ -871,23 +882,27 @@ module.exports = async function handler(req, res) {
             if (segmento === 'individual') {
                 var f = {}; try { f = JSON.parse(filtro || '{}') } catch(e) {}
                 if (f.paciente_id) {
-                    sql = "SELECT id,nome,email,telefone FROM pacientes WHERE id=?";
-                    args = [f.paciente_id];
+                    sql = "SELECT id,nome,email,telefone FROM pacientes WHERE id=? AND clinica_id=?";
+                    args = [f.paciente_id, clinica_id];
                 } else {
                     return [];
                 }
             } else if (segmento === 'ativos') {
-                sql = "SELECT DISTINCT p.id,p.nome,p.email,p.telefone FROM pacientes p INNER JOIN agendamentos a ON p.id=a.paciente_id WHERE p.ativo=1 AND a.data_hora >= date('now','-180 days')";
+                sql = "SELECT DISTINCT p.id,p.nome,p.email,p.telefone FROM pacientes p INNER JOIN agendamentos a ON p.id=a.paciente_id WHERE p.ativo=1 AND a.data_hora >= date('now','-180 days') AND p.clinica_id=?";
+                args = [clinica_id];
             } else if (segmento === 'inativos') {
-                sql = "SELECT p.id,p.nome,p.email,p.telefone FROM pacientes p LEFT JOIN agendamentos a ON p.id=a.paciente_id WHERE p.ativo=1 GROUP BY p.id HAVING MAX(a.data_hora) < date('now','-180 days') OR MAX(a.data_hora) IS NULL";
+                sql = "SELECT p.id,p.nome,p.email,p.telefone FROM pacientes p LEFT JOIN agendamentos a ON p.id=a.paciente_id WHERE p.ativo=1 AND p.clinica_id=? GROUP BY p.id HAVING MAX(a.data_hora) < date('now','-180 days') OR MAX(a.data_hora) IS NULL";
+                args = [clinica_id];
             } else if (segmento === 'aniversariantes') {
-                sql = "SELECT id,nome,email,telefone FROM pacientes WHERE ativo=1 AND data_nascimento IS NOT NULL AND strftime('%m',data_nascimento)=strftime('%m','now')";
+                sql = "SELECT id,nome,email,telefone FROM pacientes WHERE ativo=1 AND data_nascimento IS NOT NULL AND strftime('%m',data_nascimento)=strftime('%m','now') AND clinica_id=?";
+                args = [clinica_id];
             } else if (segmento === 'convenio') {
                 var f = {}; try { f = JSON.parse(filtro || '{}') } catch(e) {}
-                sql = "SELECT id,nome,email,telefone FROM pacientes WHERE ativo=1 AND convenio LIKE ?";
-                args = ['%' + (f.convenio || '') + '%'];
+                sql = "SELECT id,nome,email,telefone FROM pacientes WHERE ativo=1 AND convenio LIKE ? AND clinica_id=?";
+                args = ['%' + (f.convenio || '') + '%', clinica_id];
             } else {
-                sql = "SELECT id,nome,email,telefone FROM pacientes WHERE ativo=1";
+                sql = "SELECT id,nome,email,telefone FROM pacientes WHERE ativo=1 AND clinica_id=?";
+                args = [clinica_id];
             }
             var r = await cl.execute({ sql: sql, args: args });
             return r.rows;
@@ -910,7 +925,7 @@ module.exports = async function handler(req, res) {
 
         // ── TEMPLATES ───────────────────────────────────────────────
         if (route === 'templates') {
-            var tpls = await client.execute("SELECT * FROM templates_mensagem WHERE ativo=1 ORDER BY nome")
+            var tpls = await client.execute({ sql: "SELECT * FROM templates_mensagem WHERE ativo=1 AND clinica_id=? ORDER BY nome", args: [clinica_id] })
             return res.status(200).json({ success: true, data: tpls.rows })
         }
 
@@ -920,9 +935,9 @@ module.exports = async function handler(req, res) {
             var st = req.body || {}
             if (!st.nome || !st.tipo || !st.corpo) return res.status(400).json({ success: false, error: 'nome, tipo e corpo obrigatórios' })
             if (st.id) {
-                await client.execute({ sql: "UPDATE templates_mensagem SET nome=?,tipo=?,assunto=?,corpo=?,updated_at=datetime('now') WHERE id=?", args: [st.nome, st.tipo, st.assunto||'', st.corpo, st.id] })
+                await client.execute({ sql: "UPDATE templates_mensagem SET nome=?,tipo=?,assunto=?,corpo=?,updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [st.nome, st.tipo, st.assunto||'', st.corpo, st.id, clinica_id] })
             } else {
-                await client.execute({ sql: "INSERT INTO templates_mensagem(nome,tipo,assunto,corpo) VALUES(?,?,?,?)", args: [st.nome, st.tipo, st.assunto||'', st.corpo] })
+                await client.execute({ sql: "INSERT INTO templates_mensagem(nome,tipo,assunto,corpo,clinica_id) VALUES(?,?,?,?,?)", args: [st.nome, st.tipo, st.assunto||'', st.corpo, clinica_id] })
             }
             return res.status(200).json({ success: true, msg: 'Template salvo' })
         }
@@ -932,13 +947,13 @@ module.exports = async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var et = req.body || {}
             if (!et.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
-            await client.execute({ sql: "UPDATE templates_mensagem SET ativo=0 WHERE id=?", args: [et.id] })
+            await client.execute({ sql: "UPDATE templates_mensagem SET ativo=0 WHERE id=? AND clinica_id=?", args: [et.id, clinica_id] })
             return res.status(200).json({ success: true, msg: 'Template excluído' })
         }
 
         // ── CAMPANHAS ───────────────────────────────────────────────
         if (route === 'campanhas') {
-            var camps = await client.execute("SELECT * FROM campanhas ORDER BY created_at DESC LIMIT 50")
+            var camps = await client.execute({ sql: "SELECT * FROM campanhas WHERE clinica_id=? ORDER BY created_at DESC LIMIT 50", args: [clinica_id] })
             return res.status(200).json({ success: true, data: camps.rows })
         }
 
@@ -948,9 +963,9 @@ module.exports = async function handler(req, res) {
             var sc = req.body || {}
             if (!sc.nome || !sc.tipo || !sc.segmento || !sc.template) return res.status(400).json({ success: false, error: 'nome, tipo, segmento e template obrigatórios' })
             if (sc.id) {
-                await client.execute({ sql: "UPDATE campanhas SET nome=?,tipo=?,segmento=?,filtro_json=?,assunto=?,template=?,status=?,updated_at=datetime('now') WHERE id=?", args: [sc.nome, sc.tipo, sc.segmento, sc.filtro_json||'', sc.assunto||'', sc.template, sc.status||'rascunho', sc.id] })
+                await client.execute({ sql: "UPDATE campanhas SET nome=?,tipo=?,segmento=?,filtro_json=?,assunto=?,template=?,status=?,updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [sc.nome, sc.tipo, sc.segmento, sc.filtro_json||'', sc.assunto||'', sc.template, sc.status||'rascunho', sc.id, clinica_id] })
             } else {
-                await client.execute({ sql: "INSERT INTO campanhas(nome,tipo,segmento,filtro_json,assunto,template,status) VALUES(?,?,?,?,?,?,?)", args: [sc.nome, sc.tipo, sc.segmento, sc.filtro_json||'', sc.assunto||'', sc.template, sc.status||'rascunho'] })
+                await client.execute({ sql: "INSERT INTO campanhas(nome,tipo,segmento,filtro_json,assunto,template,status,clinica_id) VALUES(?,?,?,?,?,?,?,?)", args: [sc.nome, sc.tipo, sc.segmento, sc.filtro_json||'', sc.assunto||'', sc.template, sc.status||'rascunho', clinica_id] })
             }
             return res.status(200).json({ success: true, msg: 'Campanha salva' })
         }
@@ -969,7 +984,7 @@ module.exports = async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var ce = req.body || {}
             if (!ce.id) return res.status(400).json({ success: false, error: 'id da campanha obrigatório' })
-            var campR = await client.execute({ sql: "SELECT * FROM campanhas WHERE id=?", args: [ce.id] })
+            var campR = await client.execute({ sql: "SELECT * FROM campanhas WHERE id=? AND clinica_id=?", args: [ce.id, clinica_id] })
             if (!campR.rows.length) return res.status(404).json({ success: false, error: 'Campanha não encontrada' })
             var camp = campR.rows[0]
             var pacsCamp = await resolveSegmento(client, camp.segmento, camp.filtro_json)
@@ -999,7 +1014,7 @@ module.exports = async function handler(req, res) {
                             if (emailRes.ok) { envStatus = 'enviado'; totalEnv++ }
                             else { var eBody = await emailRes.text(); envStatus = 'erro'; envErro = 'Email: ' + eBody; totalErr++ }
                         } catch(emailErr) { envStatus = 'erro'; envErro = 'Email: ' + emailErr.message; totalErr++ }
-                        await client.execute({ sql: "INSERT INTO envios(campanha_id,paciente_id,canal,destinatario,mensagem_final,status,erro_msg,enviado_em) VALUES(?,?,?,?,?,?,?,datetime('now'))", args: [camp.id, pac.id, 'email', pac.email, msgFinal, envStatus, envErro] })
+                        await client.execute({ sql: "INSERT INTO envios(campanha_id,paciente_id,canal,destinatario,mensagem_final,status,erro_msg,enviado_em,clinica_id) VALUES(?,?,?,?,?,?,?,datetime('now'),?)", args: [camp.id, pac.id, 'email', pac.email, msgFinal, envStatus, envErro, clinica_id] })
                     }
 
                     // WhatsApp send
@@ -1016,14 +1031,14 @@ module.exports = async function handler(req, res) {
                             if (waRes.ok) { waStatus = 'enviado'; totalEnv++ }
                             else { var wBody = await waRes.text(); waStatus = 'erro'; waErro = 'WhatsApp: ' + wBody; totalErr++ }
                         } catch(waErr) { waStatus = 'erro'; waErro = 'WhatsApp: ' + waErr.message; totalErr++ }
-                        await client.execute({ sql: "INSERT INTO envios(campanha_id,paciente_id,canal,destinatario,mensagem_final,status,erro_msg,enviado_em) VALUES(?,?,?,?,?,?,?,datetime('now'))", args: [camp.id, pac.id, 'whatsapp', pac.telefone, msgFinal, waStatus, waErro] })
+                        await client.execute({ sql: "INSERT INTO envios(campanha_id,paciente_id,canal,destinatario,mensagem_final,status,erro_msg,enviado_em,clinica_id) VALUES(?,?,?,?,?,?,?,datetime('now'),?)", args: [camp.id, pac.id, 'whatsapp', pac.telefone, msgFinal, waStatus, waErro, clinica_id] })
                     }
                 }
                 // Small delay between batches to avoid rate limits
                 if (bi + 10 < pacsCamp.length) await new Promise(function(resolve) { setTimeout(resolve, 500) })
             }
 
-            await client.execute({ sql: "UPDATE campanhas SET total_destinatarios=?,total_enviados=?,total_erros=?,status='concluida',updated_at=datetime('now') WHERE id=?", args: [pacsCamp.length, totalEnv, totalErr, camp.id] })
+            await client.execute({ sql: "UPDATE campanhas SET total_destinatarios=?,total_enviados=?,total_erros=?,status='concluida',updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [pacsCamp.length, totalEnv, totalErr, camp.id, clinica_id] })
             return res.status(200).json({ success: true, msg: 'Campanha enviada', total_destinatarios: pacsCamp.length, total_enviados: totalEnv, total_erros: totalErr })
         }
 
@@ -1031,10 +1046,10 @@ module.exports = async function handler(req, res) {
         if (route === 'envios-historico') {
             var ehPage = parseInt(q.page) || 1
             var ehOff = (ehPage - 1) * 20
-            var ehSql = "SELECT e.*,p.nome as paciente_nome,c.nome as campanha_nome FROM envios e LEFT JOIN pacientes p ON p.id=e.paciente_id LEFT JOIN campanhas c ON c.id=e.campanha_id"
-            var ehArgs = []
+            var ehSql = "SELECT e.*,p.nome as paciente_nome,c.nome as campanha_nome FROM envios e LEFT JOIN pacientes p ON p.id=e.paciente_id LEFT JOIN campanhas c ON c.id=e.campanha_id WHERE e.clinica_id=?"
+            var ehArgs = [clinica_id]
             if (q.campanha_id) {
-                ehSql += " WHERE e.campanha_id=?"
+                ehSql += " AND e.campanha_id=?"
                 ehArgs.push(parseInt(q.campanha_id))
             }
             ehSql += " ORDER BY e.created_at DESC LIMIT 20 OFFSET ?"
