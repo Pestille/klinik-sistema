@@ -4,6 +4,10 @@
     "private": true,
     "dependencies": {
         "@libsql/client": "^0.14.0",
+        "bcryptjs": "^3.0.3",
         "nodemailer": "^8.0.3"
+    },
+    "devDependencies": {
+        "xlsx": "^0.18.5"
     }
 }

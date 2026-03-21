@@ -1053,6 +1053,73 @@ module.exports = async function handler(req, res) {
             })
         }
 
+        // ── MIGRATE-SAAS ────────────────────────────────────────────
+        if (route === 'migrate-saas') {
+            var summary = { clinica: null, tabelas: {}, indexes: [], billing_columns: [] }
+
+            // 1. Cria tabela clinicas se não existir
+            await client.execute("CREATE TABLE IF NOT EXISTS clinicas (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, cnpj TEXT, cidade TEXT, estado TEXT, criado_em TEXT DEFAULT (datetime('now')))")
+
+            // 2. Insere clínica padrão se nenhuma existir
+            var cCheck = await client.execute("SELECT id FROM clinicas LIMIT 1")
+            if (!cCheck.rows.length) {
+                await client.execute("INSERT INTO clinicas(nome,cnpj,cidade,estado) VALUES('Klinik Odontologia','','Campo Grande','MS')")
+                summary.clinica = 'Criada: Klinik Odontologia'
+            } else {
+                summary.clinica = 'Já existia (id=' + cCheck.rows[0].id + ')'
+            }
+
+            // Pega o id da clínica
+            var cRow = await client.execute("SELECT id FROM clinicas LIMIT 1")
+            var clinicaId = cRow.rows[0].id
+
+            // 3. Adiciona coluna clinica_id e atualiza registros em cada tabela
+            var tabelas = ['pacientes', 'agendamentos', 'pagamentos', 'procedimentos', 'financeiro', 'profissionais', 'usuarios', 'campanhas', 'envios', 'templates_mensagem', 'odontograma']
+            for (var i = 0; i < tabelas.length; i++) {
+                var tb = tabelas[i]
+                try {
+                    try { await client.execute("ALTER TABLE " + tb + " ADD COLUMN clinica_id INTEGER") } catch(e) {}
+                    var upd = await client.execute({ sql: "UPDATE " + tb + " SET clinica_id=? WHERE clinica_id IS NULL", args: [clinicaId] })
+                    summary.tabelas[tb] = upd.rowsAffected || 0
+                } catch(e) {
+                    summary.tabelas[tb] = 'erro: ' + e.message
+                }
+            }
+
+            // 4. Cria indexes de clinica_id nas tabelas principais
+            var idxTabelas = ['pacientes', 'agendamentos', 'pagamentos', 'procedimentos', 'financeiro', 'profissionais', 'usuarios']
+            for (var j = 0; j < idxTabelas.length; j++) {
+                var itb = idxTabelas[j]
+                try {
+                    await client.execute("CREATE INDEX IF NOT EXISTS idx_" + itb + "_clinica ON " + itb + "(clinica_id)")
+                    summary.indexes.push(itb + ': ok')
+                } catch(e) {
+                    summary.indexes.push(itb + ': ' + e.message)
+                }
+            }
+
+            // 5. Adiciona colunas de billing à tabela clinicas
+            var billingCols = [
+                "plano TEXT DEFAULT 'trial'",
+                "plano_inicio TEXT",
+                "plano_fim TEXT",
+                "stripe_customer_id TEXT",
+                "status_pagamento TEXT DEFAULT 'ativo'"
+            ]
+            for (var k = 0; k < billingCols.length; k++) {
+                var colDef = billingCols[k]
+                var colName = colDef.split(' ')[0]
+                try {
+                    await client.execute("ALTER TABLE clinicas ADD COLUMN " + colDef)
+                    summary.billing_columns.push(colName + ': adicionada')
+                } catch(e) {
+                    summary.billing_columns.push(colName + ': já existe ou erro')
+                }
+            }
+
+            return res.status(200).json({ success: true, summary: summary })
+        }
+
         return res.status(400).json({ success: false, error: 'Rota inválida: r=' + route })
 
     } catch (error) {
