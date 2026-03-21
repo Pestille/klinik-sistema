@@ -3753,7 +3753,7 @@ async function openNovaCampanha(id){
         '<div style="position:relative"><input id="camp-pac-busca" placeholder="Digite o nome do paciente..." oninput="campBuscarPaciente()" autocomplete="off" style="width:100%">'+
         '<div id="camp-pac-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--white);border:1px solid var(--border);border-radius:0 0 6px 6px;box-shadow:0 4px 12px rgba(0,0,0,.12);max-height:200px;overflow-y:auto;z-index:50"></div></div>'+
       '</div>'+
-      '<div id="camp-pac-selected" style="display:none;margin-top:8px;padding:10px 14px;background:var(--green-light,#E8F5E9);border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px"></div>'+
+      '<div id="camp-pac-selected" style="display:none;margin-top:8px;padding:10px 14px;background:#E8F5E9;border-radius:6px;font-size:13px;align-items:center;gap:8px"></div>'+
     '</div>'+
     '<div style="margin-bottom:12px;padding:10px 14px;background:var(--gray1);border-radius:6px;font-size:13px;color:var(--text2)" id="camp-preview-count">Selecione um segmento para ver o alcance</div>'+
     '<div class="pdt-field" style="margin-bottom:12px"><label>Template base</label><select id="camp-tpl-sel" onchange="campTplSelect()"><option value="">— Escrever manualmente —</option>'+tpls.map(function(t){return '<option value="'+t.id+'" data-corpo="'+t.corpo.replace(/"/g,'&quot;')+'" data-assunto="'+(t.assunto||'').replace(/"/g,'&quot;')+'">'+t.nome+' ('+t.tipo+')</option>'}).join('')+'</select></div>'+
@@ -3908,7 +3908,7 @@ async function salvarCampanha(status){
       if(last)await enviarCampanha(last.id,last.nome)
     }else{
       alert('Campanha salva!')
-      document.getElementById('mkt-camp-form').style.display='none'
+      var fEl=document.getElementById('mkt-camp-form');if(fEl)fEl.style.display='none'
       loadCampanhas()
     }
   }catch(e){alert('Erro: '+e.message)}
@@ -3924,7 +3924,7 @@ async function enviarCampanha(id,nome){
     if(r.success){
       alert('Campanha enviada!\n\nDestinatários: '+r.total_destinatarios+'\nEnviados: '+r.total_enviados+'\nErros: '+r.total_erros)
     }else{alert(r.error||'Erro ao enviar')}
-    document.getElementById('mkt-camp-form').style.display='none'
+    var formEl=document.getElementById('mkt-camp-form');if(formEl)formEl.style.display='none'
     loadCampanhas()
   }catch(e){alert('Erro: '+e.message);loadCampanhas()}
 }
