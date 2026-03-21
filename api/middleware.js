@@ -27,11 +27,25 @@ async function authenticateRequest(req) {
             return null
         }
 
+        // Load clinic plan info
+        var plano = 'trial', statusPg = 'ativo', planoFim = null
+        try {
+            var cliR = await client.execute({ sql: "SELECT plano,status_pagamento,plano_fim FROM clinicas WHERE id=?", args: [sess.clinica_id] })
+            if (cliR.rows.length) {
+                plano = cliR.rows[0].plano || 'trial'
+                statusPg = cliR.rows[0].status_pagamento || 'ativo'
+                planoFim = cliR.rows[0].plano_fim
+            }
+        } catch(e) {}
+
         return {
             usuario_id: sess.usuario_id,
             clinica_id: sess.clinica_id,
             perfil: sess.perfil,
-            nome: sess.nome
+            nome: sess.nome,
+            plano: plano,
+            status_pagamento: statusPg,
+            plano_fim: planoFim
         }
     } catch (e) {
         console.error('[middleware] Erro ao autenticar:', e.message)
