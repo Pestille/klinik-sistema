@@ -860,6 +860,191 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: true, msg: 'Pagamento salvo' })
         }
 
+        // ── MARKETING / CAMPANHAS ──────────────────────────────────────
+
+        function renderTemplate(tpl, vars) {
+            return (tpl||'').replace(/\{\{(\w+)\}\}/g, function(_, key) { return vars[key] || ''; });
+        }
+
+        async function resolveSegmento(cl, segmento, filtro) {
+            var sql, args = [];
+            if (segmento === 'ativos') {
+                sql = "SELECT DISTINCT p.id,p.nome,p.email,p.telefone FROM pacientes p INNER JOIN agendamentos a ON p.id=a.paciente_id WHERE p.ativo=1 AND a.data_hora >= date('now','-180 days')";
+            } else if (segmento === 'inativos') {
+                sql = "SELECT p.id,p.nome,p.email,p.telefone FROM pacientes p LEFT JOIN agendamentos a ON p.id=a.paciente_id WHERE p.ativo=1 GROUP BY p.id HAVING MAX(a.data_hora) < date('now','-180 days') OR MAX(a.data_hora) IS NULL";
+            } else if (segmento === 'aniversariantes') {
+                sql = "SELECT id,nome,email,telefone FROM pacientes WHERE ativo=1 AND data_nascimento IS NOT NULL AND strftime('%m',data_nascimento)=strftime('%m','now')";
+            } else if (segmento === 'convenio') {
+                var f = {}; try { f = JSON.parse(filtro || '{}') } catch(e) {}
+                sql = "SELECT id,nome,email,telefone FROM pacientes WHERE ativo=1 AND convenio LIKE ?";
+                args = ['%' + (f.convenio || '') + '%'];
+            } else {
+                sql = "SELECT id,nome,email,telefone FROM pacientes WHERE ativo=1";
+            }
+            var r = await cl.execute({ sql: sql, args: args });
+            return r.rows;
+        }
+
+        // ── MARKETING-MIGRATE ───────────────────────────────────────
+        if (route === 'marketing-migrate') {
+            try { await client.execute("CREATE TABLE IF NOT EXISTS campanhas (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, tipo TEXT NOT NULL, segmento TEXT NOT NULL, filtro_json TEXT, assunto TEXT, template TEXT NOT NULL, status TEXT DEFAULT 'rascunho', agendada_para TEXT, total_destinatarios INTEGER DEFAULT 0, total_enviados INTEGER DEFAULT 0, total_erros INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))") } catch(e) { console.error('campanhas table:', e.message) }
+            try { await client.execute("CREATE TABLE IF NOT EXISTS envios (id INTEGER PRIMARY KEY AUTOINCREMENT, campanha_id INTEGER, paciente_id INTEGER, canal TEXT NOT NULL, destinatario TEXT, mensagem_final TEXT, status TEXT DEFAULT 'pendente', erro_msg TEXT, enviado_em TEXT, created_at TEXT DEFAULT (datetime('now')))") } catch(e) { console.error('envios table:', e.message) }
+            try { await client.execute("CREATE TABLE IF NOT EXISTS templates_mensagem (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, tipo TEXT NOT NULL, assunto TEXT, corpo TEXT NOT NULL, ativo INTEGER DEFAULT 1, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))") } catch(e) { console.error('templates_mensagem table:', e.message) }
+            // Insert default templates if none exist
+            var tplCount = await client.execute("SELECT COUNT(*) as total FROM templates_mensagem")
+            if (tplCount.rows[0].total === 0) {
+                await client.execute({ sql: "INSERT INTO templates_mensagem(nome,tipo,assunto,corpo) VALUES(?,?,?,?)", args: ['Confirmação de Consulta', 'confirmacao', 'Confirmação de Consulta', 'Olá {{nome}}, sua consulta está confirmada para {{data_consulta}} às {{hora}} com {{profissional}}. Procedimento: {{procedimento}}. Qualquer dúvida, entre em contato conosco.'] })
+                await client.execute({ sql: "INSERT INTO templates_mensagem(nome,tipo,assunto,corpo) VALUES(?,?,?,?)", args: ['Aniversário', 'aniversario', 'Feliz Aniversário!', 'Olá {{nome}}, a equipe Klinik deseja um feliz aniversário! Aproveite para agendar sua consulta com condições especiais.'] })
+                await client.execute({ sql: "INSERT INTO templates_mensagem(nome,tipo,assunto,corpo) VALUES(?,?,?,?)", args: ['Reativação', 'retorno', 'Sentimos sua falta!', 'Olá {{nome}}, faz tempo que não nos visitamos! Que tal agendar uma consulta? Estamos com horários disponíveis para você.'] })
+            }
+            return res.status(200).json({ success: true, msg: 'Tabelas criadas' })
+        }
+
+        // ── TEMPLATES ───────────────────────────────────────────────
+        if (route === 'templates') {
+            var tpls = await client.execute("SELECT * FROM templates_mensagem WHERE ativo=1 ORDER BY nome")
+            return res.status(200).json({ success: true, data: tpls.rows })
+        }
+
+        // ── SALVAR-TEMPLATE ─────────────────────────────────────────
+        if (route === 'salvar-template') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var st = req.body || {}
+            if (!st.nome || !st.tipo || !st.corpo) return res.status(400).json({ success: false, error: 'nome, tipo e corpo obrigatórios' })
+            if (st.id) {
+                await client.execute({ sql: "UPDATE templates_mensagem SET nome=?,tipo=?,assunto=?,corpo=?,updated_at=datetime('now') WHERE id=?", args: [st.nome, st.tipo, st.assunto||'', st.corpo, st.id] })
+            } else {
+                await client.execute({ sql: "INSERT INTO templates_mensagem(nome,tipo,assunto,corpo) VALUES(?,?,?,?)", args: [st.nome, st.tipo, st.assunto||'', st.corpo] })
+            }
+            return res.status(200).json({ success: true, msg: 'Template salvo' })
+        }
+
+        // ── EXCLUIR-TEMPLATE ────────────────────────────────────────
+        if (route === 'excluir-template') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var et = req.body || {}
+            if (!et.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
+            await client.execute({ sql: "UPDATE templates_mensagem SET ativo=0 WHERE id=?", args: [et.id] })
+            return res.status(200).json({ success: true, msg: 'Template excluído' })
+        }
+
+        // ── CAMPANHAS ───────────────────────────────────────────────
+        if (route === 'campanhas') {
+            var camps = await client.execute("SELECT * FROM campanhas ORDER BY created_at DESC LIMIT 50")
+            return res.status(200).json({ success: true, data: camps.rows })
+        }
+
+        // ── SALVAR-CAMPANHA ─────────────────────────────────────────
+        if (route === 'salvar-campanha') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var sc = req.body || {}
+            if (!sc.nome || !sc.tipo || !sc.segmento || !sc.template) return res.status(400).json({ success: false, error: 'nome, tipo, segmento e template obrigatórios' })
+            if (sc.id) {
+                await client.execute({ sql: "UPDATE campanhas SET nome=?,tipo=?,segmento=?,filtro_json=?,assunto=?,template=?,status=?,updated_at=datetime('now') WHERE id=?", args: [sc.nome, sc.tipo, sc.segmento, sc.filtro_json||'', sc.assunto||'', sc.template, sc.status||'rascunho', sc.id] })
+            } else {
+                await client.execute({ sql: "INSERT INTO campanhas(nome,tipo,segmento,filtro_json,assunto,template,status) VALUES(?,?,?,?,?,?,?)", args: [sc.nome, sc.tipo, sc.segmento, sc.filtro_json||'', sc.assunto||'', sc.template, sc.status||'rascunho'] })
+            }
+            return res.status(200).json({ success: true, msg: 'Campanha salva' })
+        }
+
+        // ── CAMPANHA-PREVIEW ────────────────────────────────────────
+        if (route === 'campanha-preview') {
+            var segPrev = q.segmento || 'todos'
+            var filPrev = q.filtro || ''
+            var pacsPrev = await resolveSegmento(client, segPrev, filPrev)
+            var amostra = pacsPrev.slice(0, 10).map(function(p) { return { nome: p.nome, email: p.email, telefone: p.telefone } })
+            return res.status(200).json({ success: true, total: pacsPrev.length, amostra: amostra })
+        }
+
+        // ── CAMPANHA-ENVIAR ─────────────────────────────────────────
+        if (route === 'campanha-enviar') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var ce = req.body || {}
+            if (!ce.id) return res.status(400).json({ success: false, error: 'id da campanha obrigatório' })
+            var campR = await client.execute({ sql: "SELECT * FROM campanhas WHERE id=?", args: [ce.id] })
+            if (!campR.rows.length) return res.status(404).json({ success: false, error: 'Campanha não encontrada' })
+            var camp = campR.rows[0]
+            var pacsCamp = await resolveSegmento(client, camp.segmento, camp.filtro_json)
+            var totalEnv = 0, totalErr = 0
+            var resendKey = process.env.RESEND_API_KEY || ''
+            var resendFrom = process.env.RESEND_FROM_EMAIL || 'noreply@klinik.com.br'
+            var waToken = process.env.WHATSAPP_TOKEN || ''
+            var waPhoneId = process.env.WHATSAPP_PHONE_ID || ''
+
+            // Process in batches of 10
+            for (var bi = 0; bi < pacsCamp.length; bi += 10) {
+                var batch = pacsCamp.slice(bi, bi + 10)
+                for (var bj = 0; bj < batch.length; bj++) {
+                    var pac = batch[bj]
+                    var vars = { nome: pac.nome || '', email: pac.email || '', telefone: pac.telefone || '' }
+                    var msgFinal = renderTemplate(camp.template, vars)
+                    var envStatus = 'pendente', envErro = ''
+
+                    // Email send
+                    if ((camp.tipo === 'email' || camp.tipo === 'ambos') && resendKey && pac.email) {
+                        try {
+                            var emailRes = await fetch('https://api.resend.com/emails', {
+                                method: 'POST',
+                                headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ from: resendFrom, to: [pac.email], subject: camp.assunto || camp.nome, html: msgFinal })
+                            })
+                            if (emailRes.ok) { envStatus = 'enviado'; totalEnv++ }
+                            else { var eBody = await emailRes.text(); envStatus = 'erro'; envErro = 'Email: ' + eBody; totalErr++ }
+                        } catch(emailErr) { envStatus = 'erro'; envErro = 'Email: ' + emailErr.message; totalErr++ }
+                        await client.execute({ sql: "INSERT INTO envios(campanha_id,paciente_id,canal,destinatario,mensagem_final,status,erro_msg,enviado_em) VALUES(?,?,?,?,?,?,?,datetime('now'))", args: [camp.id, pac.id, 'email', pac.email, msgFinal, envStatus, envErro] })
+                    }
+
+                    // WhatsApp send
+                    if ((camp.tipo === 'whatsapp' || camp.tipo === 'ambos') && waToken && waPhoneId && pac.telefone) {
+                        var waStatus = 'pendente', waErro = ''
+                        try {
+                            var waPhone = (pac.telefone || '').replace(/\D/g, '')
+                            if (waPhone.length <= 11) waPhone = '55' + waPhone
+                            var waRes = await fetch('https://graph.facebook.com/v21.0/' + waPhoneId + '/messages', {
+                                method: 'POST',
+                                headers: { 'Authorization': 'Bearer ' + waToken, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ messaging_product: 'whatsapp', to: waPhone, type: 'text', text: { body: msgFinal } })
+                            })
+                            if (waRes.ok) { waStatus = 'enviado'; totalEnv++ }
+                            else { var wBody = await waRes.text(); waStatus = 'erro'; waErro = 'WhatsApp: ' + wBody; totalErr++ }
+                        } catch(waErr) { waStatus = 'erro'; waErro = 'WhatsApp: ' + waErr.message; totalErr++ }
+                        await client.execute({ sql: "INSERT INTO envios(campanha_id,paciente_id,canal,destinatario,mensagem_final,status,erro_msg,enviado_em) VALUES(?,?,?,?,?,?,?,datetime('now'))", args: [camp.id, pac.id, 'whatsapp', pac.telefone, msgFinal, waStatus, waErro] })
+                    }
+                }
+                // Small delay between batches to avoid rate limits
+                if (bi + 10 < pacsCamp.length) await new Promise(function(resolve) { setTimeout(resolve, 500) })
+            }
+
+            await client.execute({ sql: "UPDATE campanhas SET total_destinatarios=?,total_enviados=?,total_erros=?,status='concluida',updated_at=datetime('now') WHERE id=?", args: [pacsCamp.length, totalEnv, totalErr, camp.id] })
+            return res.status(200).json({ success: true, msg: 'Campanha enviada', total_destinatarios: pacsCamp.length, total_enviados: totalEnv, total_erros: totalErr })
+        }
+
+        // ── ENVIOS-HISTORICO ────────────────────────────────────────
+        if (route === 'envios-historico') {
+            var ehPage = parseInt(q.page) || 1
+            var ehOff = (ehPage - 1) * 20
+            var ehSql = "SELECT e.*,p.nome as paciente_nome,c.nome as campanha_nome FROM envios e LEFT JOIN pacientes p ON p.id=e.paciente_id LEFT JOIN campanhas c ON c.id=e.campanha_id"
+            var ehArgs = []
+            if (q.campanha_id) {
+                ehSql += " WHERE e.campanha_id=?"
+                ehArgs.push(parseInt(q.campanha_id))
+            }
+            ehSql += " ORDER BY e.created_at DESC LIMIT 20 OFFSET ?"
+            ehArgs.push(ehOff)
+            var ehR = await client.execute({ sql: ehSql, args: ehArgs })
+            return res.status(200).json({ success: true, data: ehR.rows, page: ehPage })
+        }
+
+        // ── MARKETING-CONFIG ────────────────────────────────────────
+        if (route === 'marketing-config') {
+            return res.status(200).json({
+                success: true,
+                resend_configured: !!process.env.RESEND_API_KEY,
+                whatsapp_configured: !!process.env.WHATSAPP_TOKEN,
+                resend_from: process.env.RESEND_FROM_EMAIL || ''
+            })
+        }
+
         return res.status(400).json({ success: false, error: 'Rota inválida: r=' + route })
 
     } catch (error) {

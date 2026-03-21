@@ -688,26 +688,39 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     <!-- MARKETING -->
     <div class="page" id="p-marketing">
       <div style="padding:20px 24px;max-width:1200px;margin:0 auto">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-          <div><div style="font-size:20px;font-weight:500;color:var(--text)">Marketing e Relacionamento</div><div style="font-size:13px;color:var(--text3)">Aquisição, retenção e engajamento de pacientes</div></div>
-          <button class="btn btn-sm" onclick="loadMarketing()" style="color:var(--orange);border-color:var(--orange)">Atualizar</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div><div style="font-size:20px;font-weight:500;color:var(--text)">Marketing e Comunicação</div><div style="font-size:13px;color:var(--text3)">Campanhas, disparos e confirmações automáticas</div></div>
         </div>
-        <!-- KPIs Marketing -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px" id="mkt-kpis"></div>
-        <!-- Charts -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Como nos Conheceram</div><canvas id="chart-como" height="220"></canvas></div>
-          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Novos Pacientes por Mês</div><canvas id="chart-novos" height="220"></canvas></div>
+        <!-- Tabs -->
+        <div class="fin-htabs" id="mkt-tabs">
+          <div class="fin-htab active" onclick="mktTab('visao',this)">Visão Geral</div>
+          <div class="fin-htab" onclick="mktTab('campanhas',this)">Campanhas</div>
+          <div class="fin-htab" onclick="mktTab('templates',this)">Templates</div>
+          <div class="fin-htab" onclick="mktTab('historico',this)">Histórico de Envios</div>
+          <div class="fin-htab" onclick="mktTab('config',this)">Configurações</div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Pacientes Inativos por Faixa</div><canvas id="chart-inativos" height="180"></canvas></div>
-          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Procedimentos mais Lucrativos</div><div id="mkt-procs-lucro"></div></div>
+        <!-- Tab Contents -->
+        <div class="fin-sub active" id="mkt-visao">
+          <div style="padding-top:16px">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px" id="mkt-kpis"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+              <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Como nos Conheceram</div><canvas id="chart-como" height="220"></canvas></div>
+              <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Novos Pacientes por Mês</div><canvas id="chart-novos" height="220"></canvas></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+              <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Pacientes Inativos por Faixa</div><canvas id="chart-inativos" height="180"></canvas></div>
+              <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Procedimentos mais Lucrativos</div><div id="mkt-procs-lucro"></div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Aniversariantes do Mês</div><div id="mkt-aniv"></div></div>
+              <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Top Pacientes por Receita</div><div id="mkt-top-pac"></div></div>
+            </div>
+          </div>
         </div>
-        <!-- Aniversariantes + Top Pacientes -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Aniversariantes do Mês</div><div id="mkt-aniv"></div></div>
-          <div class="card" style="padding:16px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Top Pacientes por Receita</div><div id="mkt-top-pac"></div></div>
-        </div>
+        <div class="fin-sub" id="mkt-campanhas"><div id="mkt-camp-content" style="padding-top:16px"></div></div>
+        <div class="fin-sub" id="mkt-templates"><div id="mkt-tpl-content" style="padding-top:16px"></div></div>
+        <div class="fin-sub" id="mkt-historico"><div id="mkt-hist-content" style="padding-top:16px"></div></div>
+        <div class="fin-sub" id="mkt-config"><div id="mkt-cfg-content" style="padding-top:16px"></div></div>
       </div>
     </div>
 
@@ -3671,6 +3684,314 @@ async function loadAnalytics(){
 }
 
 // ── MARKETING ───────────────────────────────────────────────────
+// ── MARKETING TABS ──────────────────────────────────────────────
+var _mktTab='visao',_mktCampEdit=null,_mktTplEdit=null,_mktHistPage=1
+
+function mktTab(tab,el){
+  document.querySelectorAll('#mkt-tabs .fin-htab').forEach(function(t){t.classList.remove('active')})
+  if(el)el.classList.add('active')
+  document.querySelectorAll('#p-marketing .fin-sub').forEach(function(s){s.classList.remove('active')})
+  var target=document.getElementById('mkt-'+tab);if(target)target.classList.add('active')
+  _mktTab=tab
+  if(tab==='visao')loadMarketing()
+  else if(tab==='campanhas')loadCampanhas()
+  else if(tab==='templates')loadTemplates()
+  else if(tab==='historico'){_mktHistPage=1;loadHistorico()}
+  else if(tab==='config')loadMktConfig()
+}
+
+// ── CAMPANHAS ──
+async function loadCampanhas(){
+  var el=document.getElementById('mkt-camp-content');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    // Migrate tables on first access
+    await apiData('marketing-migrate')
+    var d=await apiData('campanhas')
+    var camps=d.data||[]
+    var stBadge=function(s){var m={rascunho:'badge-gray',agendada:'badge-orange',enviando:'badge-orange',concluida:'badge-green',cancelada:'badge-red'};return '<span class="badge '+(m[s]||'badge-gray')+'">'+(s||'rascunho').toUpperCase()+'</span>'}
+    var tipoBadge=function(t){var m={email:'#1565C0',whatsapp:'#25D366',ambos:'#7B1FA2'};return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:500;background:'+(m[t]||'#999')+'20;color:'+(m[t]||'#999')+'">'+(t==='email'?'Email':t==='whatsapp'?'WhatsApp':'Ambos')+'</span>'}
+
+    el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+      '<span style="font-size:14px;font-weight:500;color:var(--text)">'+camps.length+' campanha'+(camps.length!==1?'s':'')+'</span>'+
+      '<button class="btn btn-orange" onclick="openNovaCampanha()">+ Nova Campanha</button></div>'+
+      (camps.length?'<table class="tbl" style="width:100%"><thead><tr><th>Nome</th><th>Canal</th><th>Segmento</th><th>Destinatários</th><th>Enviados</th><th>Erros</th><th>Status</th><th>Data</th><th></th></tr></thead><tbody>'+
+        camps.map(function(c){
+          var seg={todos:'Todos',ativos:'Ativos',inativos:'Inativos',aniversariantes:'Aniversariantes',convenio:'Convênio'}
+          return '<tr><td class="pname">'+c.nome+'</td><td>'+tipoBadge(c.tipo)+'</td><td>'+(seg[c.segmento]||c.segmento)+'</td><td style="text-align:center">'+(c.total_destinatarios||0)+'</td><td style="text-align:center;color:var(--green)">'+(c.total_enviados||0)+'</td><td style="text-align:center;color:var(--red)">'+(c.total_erros||0)+'</td><td>'+stBadge(c.status)+'</td><td style="font-size:12px;color:var(--text3)">'+fmtDt((c.created_at||'').slice(0,10))+'</td><td style="white-space:nowrap">'+
+            (c.status==='rascunho'?'<button class="pdt-icon-btn" title="Editar" onclick="openNovaCampanha('+c.id+')">✏️</button><button class="pdt-icon-btn" title="Enviar" onclick="enviarCampanha('+c.id+',\''+c.nome.replace(/'/g,"\\'")+'\')">🚀</button>':'')+
+          '</td></tr>'
+        }).join('')+'</tbody></table>':'<div style="text-align:center;padding:60px;color:var(--text3)"><div style="font-size:15px;font-weight:500;margin-bottom:8px">Nenhuma campanha criada</div><div style="font-size:13px">Clique em "+ Nova Campanha" para começar</div></div>')+
+      '<div id="mkt-camp-form" style="display:none;margin-top:20px"></div>'
+  }catch(e){el.innerHTML='<div style="color:var(--red);padding:20px;text-align:center">'+e.message+'</div>'}
+}
+
+async function openNovaCampanha(id){
+  var form=document.getElementById('mkt-camp-form');if(!form)return
+  // Load templates for selector
+  var tpls=[];try{var td=await apiData('templates');tpls=td.data||[]}catch(e){}
+  // Load campaign data if editing
+  var c={nome:'',tipo:'email',segmento:'todos',filtro_json:'',assunto:'',template:'',status:'rascunho'}
+  if(id){
+    try{var cd=await apiData('campanhas');var found=(cd.data||[]).filter(function(x){return x.id===id});if(found.length)c=found[0]}catch(e){}
+  }
+  _mktCampEdit=id||null
+  form.style.display='block'
+  form.innerHTML='<div class="card" style="padding:20px 24px">'+
+    '<div style="font-size:16px;font-weight:500;margin-bottom:16px">'+(id?'Editar Campanha':'Nova Campanha')+'</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'+
+      '<div class="pdt-field"><label>Nome da Campanha</label><input id="camp-nome" value="'+c.nome.replace(/"/g,'&quot;')+'"></div>'+
+      '<div class="pdt-field"><label>Assunto (email)</label><input id="camp-assunto" value="'+(c.assunto||'').replace(/"/g,'&quot;')+'"></div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">'+
+      '<div class="pdt-field"><label>Canal</label><select id="camp-tipo"><option value="email" '+(c.tipo==='email'?'selected':'')+'>Email</option><option value="whatsapp" '+(c.tipo==='whatsapp'?'selected':'')+'>WhatsApp</option><option value="ambos" '+(c.tipo==='ambos'?'selected':'')+'>Ambos</option></select></div>'+
+      '<div class="pdt-field"><label>Segmento</label><select id="camp-segmento" onchange="previewSegmento()"><option value="todos" '+(c.segmento==='todos'?'selected':'')+'>Todos os pacientes</option><option value="ativos" '+(c.segmento==='ativos'?'selected':'')+'>Ativos (6 meses)</option><option value="inativos" '+(c.segmento==='inativos'?'selected':'')+'>Inativos (+6 meses)</option><option value="aniversariantes" '+(c.segmento==='aniversariantes'?'selected':'')+'>Aniversariantes do mês</option><option value="convenio" '+(c.segmento==='convenio'?'selected':'')+'>Por convênio</option></select></div>'+
+      '<div class="pdt-field"><label>Filtro extra</label><input id="camp-filtro" placeholder="Ex: CASSEMS" value="'+(function(){try{var f=JSON.parse(c.filtro_json||'{}');return f.convenio||''}catch(e){return ''}}())+'"></div>'+
+    '</div>'+
+    '<div style="margin-bottom:12px;padding:10px 14px;background:var(--gray1);border-radius:6px;font-size:13px;color:var(--text2)" id="camp-preview-count">Selecione um segmento para ver o alcance</div>'+
+    '<div class="pdt-field" style="margin-bottom:12px"><label>Template base</label><select id="camp-tpl-sel" onchange="campTplSelect()"><option value="">— Escrever manualmente —</option>'+tpls.map(function(t){return '<option value="'+t.id+'" data-corpo="'+t.corpo.replace(/"/g,'&quot;')+'" data-assunto="'+(t.assunto||'').replace(/"/g,'&quot;')+'">'+t.nome+' ('+t.tipo+')</option>'}).join('')+'</select></div>'+
+    '<div class="pdt-field" style="margin-bottom:8px"><label>Mensagem</label>'+
+      '<div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap">'+
+        ['nome','data_consulta','hora','profissional','procedimento'].map(function(v){return '<button type="button" onclick="campInsertVar(\''+v+'\')" style="border:1px solid var(--border);background:var(--white);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif;color:var(--green)">{{'+v+'}}</button>'}).join('')+
+      '</div>'+
+      '<textarea id="camp-template" rows="6" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:10px 12px;font-size:13px;font-family:Roboto,sans-serif;resize:vertical;color:var(--text);outline:none">'+c.template+'</textarea>'+
+    '</div>'+
+    '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">'+
+      '<button class="pdt-btn-outline" onclick="document.getElementById(\'mkt-camp-form\').style.display=\'none\'">Cancelar</button>'+
+      '<button class="pdt-btn-outline" onclick="salvarCampanha(\'rascunho\')">Salvar Rascunho</button>'+
+      '<button class="btn btn-orange" onclick="salvarCampanha(\'concluida\')">Salvar e Enviar</button>'+
+    '</div>'+
+  '</div>'
+  previewSegmento()
+  // scroll into view
+  form.scrollIntoView({behavior:'smooth',block:'start'})
+}
+
+function campInsertVar(v){
+  var ta=document.getElementById('camp-template');if(!ta)return
+  var s=ta.selectionStart,e=ta.selectionEnd
+  var txt='{{'+v+'}}'
+  ta.value=ta.value.substring(0,s)+txt+ta.value.substring(e)
+  ta.focus();ta.selectionStart=ta.selectionEnd=s+txt.length
+}
+
+function campTplSelect(){
+  var sel=document.getElementById('camp-tpl-sel');if(!sel)return
+  var opt=sel.options[sel.selectedIndex]
+  if(opt&&opt.dataset.corpo){
+    document.getElementById('camp-template').value=opt.dataset.corpo
+    if(opt.dataset.assunto){var as=document.getElementById('camp-assunto');if(as&&!as.value)as.value=opt.dataset.assunto}
+  }
+}
+
+async function previewSegmento(){
+  var seg=document.getElementById('camp-segmento');if(!seg)return
+  var filtro=document.getElementById('camp-filtro');
+  var el=document.getElementById('camp-preview-count');if(!el)return
+  el.innerHTML='Calculando...'
+  try{
+    var params={segmento:seg.value}
+    if(filtro&&filtro.value)params.filtro=JSON.stringify({convenio:filtro.value})
+    var d=await apiData('campanha-preview',params)
+    var cEmail=0,cTel=0;(d.amostra||[]).forEach(function(p){if(p.email)cEmail++;if(p.telefone)cTel++})
+    el.innerHTML='<strong>'+d.total+'</strong> pacientes no segmento · Amostra: <strong>'+cEmail+'</strong> com email, <strong>'+cTel+'</strong> com telefone'
+  }catch(e){el.innerHTML='Erro ao calcular: '+e.message}
+}
+
+async function salvarCampanha(status){
+  var nome=(document.getElementById('camp-nome')?document.getElementById('camp-nome').value:'').trim()
+  var tipo=(document.getElementById('camp-tipo')?document.getElementById('camp-tipo').value:'email')
+  var seg=(document.getElementById('camp-segmento')?document.getElementById('camp-segmento').value:'todos')
+  var filtro=(document.getElementById('camp-filtro')?document.getElementById('camp-filtro').value:'')
+  var assunto=(document.getElementById('camp-assunto')?document.getElementById('camp-assunto').value:'').trim()
+  var template=(document.getElementById('camp-template')?document.getElementById('camp-template').value:'').trim()
+  if(!nome||!template){alert('Preencha nome e mensagem');return}
+  var body={nome:nome,tipo:tipo,segmento:seg,filtro_json:filtro?JSON.stringify({convenio:filtro}):'',assunto:assunto,template:template,status:status==='concluida'?'rascunho':status}
+  if(_mktCampEdit)body.id=_mktCampEdit
+  try{
+    var d=await fetch('/api/data?r=salvar-campanha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    var r=await d.json()
+    if(!r.success){alert(r.error||'Erro');return}
+    if(status==='concluida'){
+      // Get the campaign id, then send
+      var camps=await apiData('campanhas')
+      var last=(camps.data||[])[0]
+      if(last)await enviarCampanha(last.id,last.nome)
+    }else{
+      alert('Campanha salva!')
+      document.getElementById('mkt-camp-form').style.display='none'
+      loadCampanhas()
+    }
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function enviarCampanha(id,nome){
+  if(!confirm('Enviar campanha "'+(nome||'')+'" para todos os destinatários do segmento?\n\nEsta ação não pode ser desfeita.'))return
+  try{
+    var el=document.getElementById('mkt-camp-content')
+    if(el)el.innerHTML='<div style="text-align:center;padding:60px"><div style="font-size:15px;font-weight:500;margin-bottom:8px;color:var(--text)">Enviando campanha...</div><div style="font-size:13px;color:var(--text3)">Aguarde, isso pode levar alguns minutos</div></div>'
+    var d=await fetch('/api/data?r=campanha-enviar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})})
+    var r=await d.json()
+    if(r.success){
+      alert('Campanha enviada!\n\nDestinatários: '+r.total_destinatarios+'\nEnviados: '+r.total_enviados+'\nErros: '+r.total_erros)
+    }else{alert(r.error||'Erro ao enviar')}
+    document.getElementById('mkt-camp-form').style.display='none'
+    loadCampanhas()
+  }catch(e){alert('Erro: '+e.message);loadCampanhas()}
+}
+
+// ── TEMPLATES ──
+async function loadTemplates(){
+  var el=document.getElementById('mkt-tpl-content');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    await apiData('marketing-migrate')
+    var d=await apiData('templates')
+    var tpls=d.data||[]
+    var tipoCor={confirmacao:'#E65100',aniversario:'#1565C0',retorno:'#00695C',promocao:'#7B1FA2',geral:'#757575'}
+    el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+      '<span style="font-size:14px;font-weight:500;color:var(--text)">'+tpls.length+' template'+(tpls.length!==1?'s':'')+'</span>'+
+      '<button class="btn btn-orange" onclick="openNovoTemplate()">+ Novo Template</button></div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">'+
+        tpls.map(function(t){
+          var cor=tipoCor[t.tipo]||'#757575'
+          return '<div class="card" style="padding:16px">'+
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+              '<span style="font-size:14px;font-weight:500;color:var(--text)">'+t.nome+'</span>'+
+              '<span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:500;background:'+cor+'15;color:'+cor+'">'+t.tipo.toUpperCase()+'</span>'+
+            '</div>'+
+            (t.assunto?'<div style="font-size:12px;color:var(--text3);margin-bottom:6px">Assunto: '+t.assunto+'</div>':'')+
+            '<div style="font-size:12px;color:var(--text2);background:var(--gray1);border-radius:4px;padding:10px;margin-bottom:12px;max-height:80px;overflow:hidden;line-height:1.5">'+t.corpo+'</div>'+
+            '<div style="display:flex;gap:6px;justify-content:flex-end">'+
+              '<button class="pdt-icon-btn" title="Editar" onclick="openNovoTemplate('+t.id+')">✏️</button>'+
+              '<button class="pdt-icon-btn" title="Excluir" onclick="excluirTemplate('+t.id+',\''+t.nome.replace(/'/g,"\\'")+'\')">🗑️</button>'+
+            '</div></div>'
+        }).join('')+
+      '</div>'+
+      '<div id="mkt-tpl-form" style="display:none;margin-top:20px"></div>'
+  }catch(e){el.innerHTML='<div style="color:var(--red);padding:20px;text-align:center">'+e.message+'</div>'}
+}
+
+async function openNovoTemplate(id){
+  var form=document.getElementById('mkt-tpl-form');if(!form)return
+  var t={nome:'',tipo:'geral',assunto:'',corpo:''}
+  if(id){
+    try{var td=await apiData('templates');var found=(td.data||[]).filter(function(x){return x.id===id});if(found.length)t=found[0]}catch(e){}
+  }
+  _mktTplEdit=id||null
+  form.style.display='block'
+  form.innerHTML='<div class="card" style="padding:20px 24px">'+
+    '<div style="font-size:16px;font-weight:500;margin-bottom:16px">'+(id?'Editar Template':'Novo Template')+'</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'+
+      '<div class="pdt-field"><label>Nome</label><input id="tpl-nome" value="'+t.nome.replace(/"/g,'&quot;')+'"></div>'+
+      '<div class="pdt-field"><label>Tipo</label><select id="tpl-tipo"><option value="confirmacao" '+(t.tipo==='confirmacao'?'selected':'')+'>Confirmação</option><option value="aniversario" '+(t.tipo==='aniversario'?'selected':'')+'>Aniversário</option><option value="retorno" '+(t.tipo==='retorno'?'selected':'')+'>Retorno/Reativação</option><option value="promocao" '+(t.tipo==='promocao'?'selected':'')+'>Promoção</option><option value="geral" '+(t.tipo==='geral'?'selected':'')+'>Geral</option></select></div>'+
+    '</div>'+
+    '<div class="pdt-field" style="margin-bottom:16px"><label>Assunto (para email)</label><input id="tpl-assunto" value="'+(t.assunto||'').replace(/"/g,'&quot;')+'"></div>'+
+    '<div class="pdt-field" style="margin-bottom:8px"><label>Corpo da mensagem</label>'+
+      '<div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap">'+
+        ['nome','data_consulta','hora','profissional','procedimento'].map(function(v){return '<button type="button" onclick="tplInsertVar(\''+v+'\')" style="border:1px solid var(--border);background:var(--white);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif;color:var(--green)">{{'+v+'}}</button>'}).join('')+
+      '</div>'+
+      '<textarea id="tpl-corpo" rows="5" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:10px 12px;font-size:13px;font-family:Roboto,sans-serif;resize:vertical;color:var(--text);outline:none">'+t.corpo+'</textarea>'+
+    '</div>'+
+    '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">'+
+      '<button class="pdt-btn-outline" onclick="document.getElementById(\'mkt-tpl-form\').style.display=\'none\'">Cancelar</button>'+
+      '<button class="btn btn-orange" onclick="salvarTemplate()">Salvar</button>'+
+    '</div></div>'
+  form.scrollIntoView({behavior:'smooth',block:'start'})
+}
+
+function tplInsertVar(v){
+  var ta=document.getElementById('tpl-corpo');if(!ta)return
+  var s=ta.selectionStart,e=ta.selectionEnd;var txt='{{'+v+'}}'
+  ta.value=ta.value.substring(0,s)+txt+ta.value.substring(e)
+  ta.focus();ta.selectionStart=ta.selectionEnd=s+txt.length
+}
+
+async function salvarTemplate(){
+  var nome=(document.getElementById('tpl-nome')?document.getElementById('tpl-nome').value:'').trim()
+  var tipo=(document.getElementById('tpl-tipo')?document.getElementById('tpl-tipo').value:'geral')
+  var assunto=(document.getElementById('tpl-assunto')?document.getElementById('tpl-assunto').value:'').trim()
+  var corpo=(document.getElementById('tpl-corpo')?document.getElementById('tpl-corpo').value:'').trim()
+  if(!nome||!corpo){alert('Preencha nome e corpo');return}
+  var body={nome:nome,tipo:tipo,assunto:assunto,corpo:corpo}
+  if(_mktTplEdit)body.id=_mktTplEdit
+  try{
+    var d=await fetch('/api/data?r=salvar-template',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    var r=await d.json()
+    if(r.success){alert('Template salvo!');document.getElementById('mkt-tpl-form').style.display='none';loadTemplates()}
+    else alert(r.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function excluirTemplate(id,nome){
+  if(!confirm('Excluir template "'+nome+'"?'))return
+  try{
+    await fetch('/api/data?r=excluir-template',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})})
+    loadTemplates()
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+// ── HISTÓRICO ──
+async function loadHistorico(){
+  var el=document.getElementById('mkt-hist-content');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var d=await apiData('envios-historico',{page:_mktHistPage})
+    var envios=d.data||[]
+    var canalIcon={email:'📧',whatsapp:'💬'}
+    var stBadge=function(s){var m={enviado:'badge-green',erro:'badge-red',pendente:'badge-orange'};return '<span class="badge '+(m[s]||'badge-gray')+'">'+(s||'pendente').toUpperCase()+'</span>'}
+    el.innerHTML='<div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:16px">Histórico de Envios</div>'+
+      (envios.length?'<table class="tbl" style="width:100%"><thead><tr><th>Data</th><th>Paciente</th><th>Canal</th><th>Campanha</th><th>Status</th><th>Destinatário</th></tr></thead><tbody>'+
+        envios.map(function(e){
+          return '<tr><td style="font-size:12px;color:var(--text3)">'+fmtDt((e.enviado_em||e.created_at||'').slice(0,10))+'</td><td class="pname">'+(e.paciente_nome||'—')+'</td><td>'+(canalIcon[e.canal]||'')+' '+(e.canal||'')+'</td><td style="font-size:12px;color:var(--text3)">'+(e.campanha_nome||'—')+'</td><td>'+stBadge(e.status)+'</td><td style="font-size:12px;color:var(--text3)">'+(e.destinatario||'—')+'</td></tr>'
+        }).join('')+'</tbody></table>'+
+        '<div style="display:flex;justify-content:center;gap:8px;margin-top:12px">'+
+          '<button class="pdt-btn-outline" style="font-size:12px;padding:4px 12px" onclick="_mktHistPage=Math.max(1,_mktHistPage-1);loadHistorico()" '+(_mktHistPage<=1?'disabled':'')+'>‹ Anterior</button>'+
+          '<span style="font-size:12px;color:var(--text3);padding:6px">Página '+_mktHistPage+'</span>'+
+          '<button class="pdt-btn-outline" style="font-size:12px;padding:4px 12px" onclick="_mktHistPage++;loadHistorico()" '+(envios.length<20?'disabled':'')+'>Próxima ›</button>'+
+        '</div>'
+      :'<div style="text-align:center;padding:60px;color:var(--text3)"><div style="font-size:15px;font-weight:500;margin-bottom:8px">Nenhum envio registrado</div><div style="font-size:13px">Os envios aparecerão aqui após disparar uma campanha</div></div>')
+  }catch(e){el.innerHTML='<div style="color:var(--red);padding:20px;text-align:center">'+e.message+'</div>'}
+}
+
+// ── CONFIGURAÇÕES ──
+async function loadMktConfig(){
+  var el=document.getElementById('mkt-cfg-content');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var d=await apiData('marketing-config')
+    el.innerHTML='<div style="max-width:600px">'+
+      '<div class="card" style="padding:20px 24px;margin-bottom:16px">'+
+        '<div style="font-size:14px;font-weight:500;margin-bottom:16px;display:flex;align-items:center;gap:8px">📧 Email (Resend)'+
+          '<span class="badge '+(d.resend_configured?'badge-green':'badge-red')+'">'+(d.resend_configured?'CONFIGURADO':'NÃO CONFIGURADO')+'</span></div>'+
+        '<div style="font-size:13px;color:var(--text2);margin-bottom:12px">Configure a chave API do Resend nas variáveis de ambiente da Vercel:</div>'+
+        '<div style="background:var(--gray1);border-radius:6px;padding:12px;font-family:monospace;font-size:12px;color:var(--text2);margin-bottom:8px">'+
+          'RESEND_API_KEY=re_xxxxxxxxx<br>RESEND_FROM_EMAIL=contato@suaclinica.com.br'+
+        '</div>'+
+        (d.resend_from?'<div style="font-size:12px;color:var(--text3)">Email remetente: <strong>'+d.resend_from+'</strong></div>':'')+
+      '</div>'+
+      '<div class="card" style="padding:20px 24px;margin-bottom:16px">'+
+        '<div style="font-size:14px;font-weight:500;margin-bottom:16px;display:flex;align-items:center;gap:8px">💬 WhatsApp Business API'+
+          '<span class="badge '+(d.whatsapp_configured?'badge-green':'badge-red')+'">'+(d.whatsapp_configured?'CONFIGURADO':'NÃO CONFIGURADO')+'</span></div>'+
+        '<div style="font-size:13px;color:var(--text2);margin-bottom:12px">Configure o token do WhatsApp Business nas variáveis de ambiente da Vercel:</div>'+
+        '<div style="background:var(--gray1);border-radius:6px;padding:12px;font-family:monospace;font-size:12px;color:var(--text2);margin-bottom:8px">'+
+          'WHATSAPP_TOKEN=EAAxxxxxxxxx<br>WHATSAPP_PHONE_ID=123456789'+
+        '</div>'+
+        '<div style="font-size:12px;color:var(--text3)">Obtenha esses dados no <a href="https://business.facebook.com" target="_blank" style="color:var(--blue)">Meta Business Manager</a></div>'+
+      '</div>'+
+      '<div class="card" style="padding:20px 24px">'+
+        '<div style="font-size:14px;font-weight:500;margin-bottom:12px">Como configurar</div>'+
+        '<ol style="font-size:13px;color:var(--text2);line-height:1.8;padding-left:20px">'+
+          '<li>Acesse o painel da Vercel → seu projeto → Settings → Environment Variables</li>'+
+          '<li>Adicione as variáveis listadas acima</li>'+
+          '<li>Faça um redeploy para ativar</li>'+
+          '<li>Volte aqui e verifique o status</li>'+
+        '</ol>'+
+      '</div>'+
+    '</div>'
+  }catch(e){el.innerHTML='<div style="color:var(--red);padding:20px;text-align:center">'+e.message+'</div>'}
+}
+
 async function loadMarketing(){
   var kpiEl=document.getElementById('mkt-kpis');if(!kpiEl)return
   kpiEl.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">Carregando...</div>'
