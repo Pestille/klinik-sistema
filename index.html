@@ -2500,10 +2500,10 @@ function odontShowInfo(num){
 async function odontSetStatus(dente,status){
   if(!_prontData||!_prontData.paciente)return
   try{
-    await fetch('/api/data?r=salvar-odontograma',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    await apiPost('salvar-odontograma',{
       paciente_id:_prontData.paciente.id,dente:dente,status:status,
       observacao:(document.getElementById('odont-obs-input')?document.getElementById('odont-obs-input').value:'')
-    })})
+    })
     // Update local data
     var found=false
     _prontData.odontograma=(_prontData.odontograma||[]).map(function(o){if(o.dente===dente){found=true;return Object.assign({},o,{status:status})}return o})
@@ -2519,9 +2519,9 @@ async function odontSave(dente){
   var od=null;odData.forEach(function(o){if(o.dente===dente)od=o})
   var st=(od||{}).status||'saudavel'
   try{
-    await fetch('/api/data?r=salvar-odontograma',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    await apiPost('salvar-odontograma',{
       paciente_id:_prontData.paciente.id,dente:dente,status:st,observacao:obs
-    })})
+    })
     var found=false
     _prontData.odontograma=(_prontData.odontograma||[]).map(function(o){if(o.dente===dente){found=true;return Object.assign({},o,{observacao:obs})}return o})
     if(!found)_prontData.odontograma.push({dente:dente,status:st,observacao:obs})
@@ -2599,7 +2599,7 @@ async function salvarCadastroPaciente(){
   var endereco=(document.getElementById('pc-endereco')?document.getElementById('pc-endereco').value:'').trim()
   var bairro=(document.getElementById('pc-bairro')?document.getElementById('pc-bairro').value:'').trim()
   try{
-    var r=await fetch('/api/data?r=salvar-paciente-edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,nome:nome||_prontData.paciente.nome,telefone:cel,email:email,cpf:cpf,rg:rg,data_nascimento:nasc,cep:cep,cidade:cidade,endereco:endereco,bairro:bairro})})
+    var r=await apiPost('salvar-paciente-edit',{id:id,nome:nome||_prontData.paciente.nome,telefone:cel,email:email,cpf:cpf,rg:rg,data_nascimento:nasc,cep:cep,cidade:cidade,endereco:endereco,bairro:bairro})
     var d=await r.json()
     if(d.success){alert('Cadastro salvo!');_prontData.paciente.nome=nome||_prontData.paciente.nome;_prontData.paciente.telefone=cel;_prontData.paciente.email=email}
     else alert(d.error||'Erro')
@@ -2904,7 +2904,7 @@ async function salvarProfissional(){
   var cro=(document.getElementById('prof-f-cro').value||'').trim()
   var esp=(document.getElementById('prof-f-esp').value||'').trim()
   try{
-    var r=await fetch('/api/data?r=salvar-profissional',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.id,nome:nome,especialidade:esp,cpf:cpf,email:email,telefone:tel,cro:cro})})
+    var r=await apiPost('salvar-profissional',{id:p.id,nome:nome,especialidade:esp,cpf:cpf,email:email,telefone:tel,cro:cro})
     var d=await r.json()
     if(d.success){
       p.nome=nome;p.name=nome;p.Name=nome;p.telefone=tel;p.email=email;p.cpf=cpf;p.cro=cro;p.especialidade=esp;p.specialty=esp
@@ -3317,7 +3317,7 @@ function globalSearch(q){
 
   _searchTimer=setTimeout(async()=>{
     try{
-      const res=await fetch('/api/data?r=busca&q='+encodeURIComponent(q))
+      const res=await fetch('/api/data?r=busca&q='+encodeURIComponent(q),{headers:_apiHeaders()})
       const data=await res.json()
       const pacs=data.pacientes||[]
       if(pacs.length){
@@ -3365,7 +3365,7 @@ async function salvarPaciente(){
     alerta_medico:(document.getElementById('pac-f-alerta').value||'').trim()
   }
   try{
-    var r=await fetch('/api/data?r=salvar-paciente',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    var r=await apiPost('salvar-paciente',body)
     var d=await r.json()
     if(d.success){closeModal('paciente');alert('Paciente salvo!')}
     else{alert(d.error||'Erro ao salvar')}
@@ -3380,7 +3380,7 @@ async function salvarLancamento(){
   if(!data||!valor){alert('Data e Valor são obrigatórios');return}
   var body={tipo:tipo,data_pagamento:data,valor:tipo==='saida'?-Math.abs(valor):Math.abs(valor),forma_pagamento:document.getElementById('lanc-forma').value,descricao:document.getElementById('lanc-desc').value.trim()}
   try{
-    var r=await fetch('/api/data?r=salvar-lancamento',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    var r=await apiPost('salvar-lancamento',body)
     var d=await r.json()
     if(d.success){closeModal('lancamento');alert('Lançamento salvo!');if(typeof renderCC==='function')renderCC()}
     else{alert(d.error||'Erro ao salvar')}
@@ -3898,7 +3898,7 @@ async function salvarCampanha(status){
   var body={nome:nome,tipo:tipo,segmento:seg,filtro_json:filtroJson,assunto:assunto,template:template,status:status==='concluida'?'rascunho':status}
   if(_mktCampEdit)body.id=_mktCampEdit
   try{
-    var d=await fetch('/api/data?r=salvar-campanha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    var d=await apiPost('salvar-campanha',body)
     var r=await d.json()
     if(!r.success){alert(r.error||'Erro');return}
     if(status==='concluida'){
@@ -3919,7 +3919,7 @@ async function enviarCampanha(id,nome){
   try{
     var el=document.getElementById('mkt-camp-content')
     if(el)el.innerHTML='<div style="text-align:center;padding:60px"><div style="font-size:15px;font-weight:500;margin-bottom:8px;color:var(--text)">Enviando campanha...</div><div style="font-size:13px;color:var(--text3)">Aguarde, isso pode levar alguns minutos</div></div>'
-    var d=await fetch('/api/data?r=campanha-enviar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})})
+    var d=await apiPost('campanha-enviar',{id:id})
     var r=await d.json()
     if(r.success){
       if(r.total_erros>0){
@@ -4028,7 +4028,7 @@ async function salvarTemplate(){
   var body={nome:nome,tipo:tipo,assunto:assunto,corpo:corpo}
   if(_mktTplEdit)body.id=_mktTplEdit
   try{
-    var d=await fetch('/api/data?r=salvar-template',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    var d=await apiPost('salvar-template',body)
     var r=await d.json()
     if(r.success){alert('Template salvo!');document.getElementById('mkt-tpl-form').style.display='none';loadTemplates()}
     else alert(r.error||'Erro')
@@ -4038,7 +4038,7 @@ async function salvarTemplate(){
 async function excluirTemplate(id,nome){
   if(!confirm('Excluir template "'+nome+'"?'))return
   try{
-    await fetch('/api/data?r=excluir-template',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})})
+    await apiPost('excluir-template',{id:id})
     loadTemplates()
   }catch(e){alert('Erro: '+e.message)}
 }
@@ -4540,10 +4540,22 @@ document.addEventListener('click',e=>{
 // ── HELPERS ──────────────────────────────────────────────────────
 function fmtBrl(v){return 'R$ '+(+v||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
 function fmtDt(s){if(!s)return '—';var d=s.slice(0,10);try{return new Date(d+'T12:00:00').toLocaleDateString('pt-BR')}catch(e){return d}}
+function _apiHeaders(extra){
+  var h=Object.assign({'Content-Type':'application/json'},extra||{})
+  var tk=localStorage.getItem('klinik_token')
+  if(tk)h['Authorization']='Bearer '+tk
+  return h
+}
 async function apiData(rota,params){
   var qs=Object.entries(params||{}).filter(function(kv){return kv[1]!==undefined&&kv[1]!==''}).map(function(kv){return encodeURIComponent(kv[0])+'='+encodeURIComponent(kv[1])}).join('&')
-  var r=await fetch('/api/data?r='+rota+(qs?'&'+qs:''))
+  var r=await fetch('/api/data?r='+rota+(qs?'&'+qs:''),{headers:_apiHeaders()})
+  if(r.status===401){doLogout();throw new Error('Sessão expirada')}
   if(!r.ok)throw new Error('HTTP '+r.status)
+  return r.json()
+}
+async function apiPost(rota,body){
+  var r=await fetch('/api/data?r='+rota,{method:'POST',headers:_apiHeaders(),body:JSON.stringify(body)})
+  if(r.status===401){doLogout();throw new Error('Sessão expirada')}
   return r.json()
 }
 const DIAS_SEMANA=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado']
@@ -4946,7 +4958,7 @@ async function confirmarConsulta(){
       observacoes:obs,
       status:'agendado'
     }
-    var r=await fetch('/api/data?r=salvar-agendamento',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    var r=await apiPost('salvar-agendamento',body)
     var d=await r.json()
     if(d.success){
       closeNovaConsulta()
