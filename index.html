@@ -3922,7 +3922,30 @@ async function enviarCampanha(id,nome){
     var d=await fetch('/api/data?r=campanha-enviar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})})
     var r=await d.json()
     if(r.success){
-      alert('Campanha enviada!\n\nDestinatários: '+r.total_destinatarios+'\nEnviados: '+r.total_enviados+'\nErros: '+r.total_erros)
+      if(r.total_erros>0){
+        // Busca detalhes dos erros
+        var errDetalhes=''
+        try{
+          var hist=await apiData('envios-historico',{campanha_id:id})
+          var erros=(hist.data||[]).filter(function(e){return e.status==='erro'})
+          if(erros.length){
+            errDetalhes='\n\nDetalhes dos erros:\n'
+            erros.forEach(function(e){
+              var msg=e.erro_msg||''
+              // Simplifica mensagens de erro comuns
+              if(msg.indexOf('only send testing emails')>-1)msg='Resend em modo teste: só envia para seu email. Verifique um domínio em resend.com/domains'
+              else if(msg.indexOf('does not exist')>-1)msg='WhatsApp Phone ID inválido ou sem permissão. Verifique no Meta Business Manager'
+              else if(msg.indexOf('access token')>-1||msg.indexOf('OAuthException')>-1)msg='Token do WhatsApp expirado ou inválido. Gere um novo no Meta Business Manager'
+              else if(msg.indexOf('rate limit')>-1)msg='Limite de envios atingido. Tente novamente em alguns minutos'
+              else{try{var parsed=JSON.parse(msg.replace(/^(Email|WhatsApp): /,''));msg=(parsed.message||parsed.error&&parsed.error.message||msg).substring(0,120)}catch(x){msg=msg.substring(0,120)}}
+              errDetalhes+='• ['+e.canal.toUpperCase()+'] '+(e.destinatario||'—')+': '+msg+'\n'
+            })
+          }
+        }catch(x){}
+        alert('Campanha enviada com erros!\n\nDestinatários: '+r.total_destinatarios+'\nEnviados com sucesso: '+r.total_enviados+'\nErros: '+r.total_erros+errDetalhes)
+      }else{
+        alert('Campanha enviada com sucesso!\n\nDestinatários: '+r.total_destinatarios+'\nEnviados: '+r.total_enviados)
+      }
     }else{alert(r.error||'Erro ao enviar')}
     var formEl=document.getElementById('mkt-camp-form');if(formEl)formEl.style.display='none'
     loadCampanhas()
@@ -4032,7 +4055,16 @@ async function loadHistorico(){
     el.innerHTML='<div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:16px">Histórico de Envios</div>'+
       (envios.length?'<table class="tbl" style="width:100%"><thead><tr><th>Data</th><th>Paciente</th><th>Canal</th><th>Campanha</th><th>Status</th><th>Destinatário</th></tr></thead><tbody>'+
         envios.map(function(e){
-          return '<tr><td style="font-size:12px;color:var(--text3)">'+fmtDt((e.enviado_em||e.created_at||'').slice(0,10))+'</td><td class="pname">'+(e.paciente_nome||'—')+'</td><td>'+(canalIcon[e.canal]||'')+' '+(e.canal||'')+'</td><td style="font-size:12px;color:var(--text3)">'+(e.campanha_nome||'—')+'</td><td>'+stBadge(e.status)+'</td><td style="font-size:12px;color:var(--text3)">'+(e.destinatario||'—')+'</td></tr>'
+          var erroTip=''
+          if(e.status==='erro'&&e.erro_msg){
+            var emsg=e.erro_msg
+            if(emsg.indexOf('only send testing emails')>-1)emsg='Resend em modo teste — verifique domínio em resend.com/domains'
+            else if(emsg.indexOf('does not exist')>-1)emsg='Phone ID inválido ou sem permissão no Meta Business'
+            else if(emsg.indexOf('access token')>-1||emsg.indexOf('OAuthException')>-1)emsg='Token expirado ou inválido'
+            else{try{var ep=JSON.parse(emsg.replace(/^(Email|WhatsApp): /,''));emsg=(ep.message||ep.error&&ep.error.message||emsg).substring(0,80)}catch(x){emsg=emsg.substring(0,80)}}
+            erroTip='<div style="font-size:11px;color:var(--red);margin-top:2px">'+emsg+'</div>'
+          }
+          return '<tr><td style="font-size:12px;color:var(--text3)">'+fmtDt((e.enviado_em||e.created_at||'').slice(0,10))+'</td><td class="pname">'+(e.paciente_nome||'—')+'</td><td>'+(canalIcon[e.canal]||'')+' '+(e.canal||'')+'</td><td style="font-size:12px;color:var(--text3)">'+(e.campanha_nome||'—')+'</td><td>'+stBadge(e.status)+erroTip+'</td><td style="font-size:12px;color:var(--text3)">'+(e.destinatario||'—')+'</td></tr>'
         }).join('')+'</tbody></table>'+
         '<div style="display:flex;justify-content:center;gap:8px;margin-top:12px">'+
           '<button class="pdt-btn-outline" style="font-size:12px;padding:4px 12px" onclick="_mktHistPage=Math.max(1,_mktHistPage-1);loadHistorico()" '+(_mktHistPage<=1?'disabled':'')+'>‹ Anterior</button>'+
