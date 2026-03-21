@@ -868,7 +868,15 @@ module.exports = async function handler(req, res) {
 
         async function resolveSegmento(cl, segmento, filtro) {
             var sql, args = [];
-            if (segmento === 'ativos') {
+            if (segmento === 'individual') {
+                var f = {}; try { f = JSON.parse(filtro || '{}') } catch(e) {}
+                if (f.paciente_id) {
+                    sql = "SELECT id,nome,email,telefone FROM pacientes WHERE id=?";
+                    args = [f.paciente_id];
+                } else {
+                    return [];
+                }
+            } else if (segmento === 'ativos') {
                 sql = "SELECT DISTINCT p.id,p.nome,p.email,p.telefone FROM pacientes p INNER JOIN agendamentos a ON p.id=a.paciente_id WHERE p.ativo=1 AND a.data_hora >= date('now','-180 days')";
             } else if (segmento === 'inativos') {
                 sql = "SELECT p.id,p.nome,p.email,p.telefone FROM pacientes p LEFT JOIN agendamentos a ON p.id=a.paciente_id WHERE p.ativo=1 GROUP BY p.id HAVING MAX(a.data_hora) < date('now','-180 days') OR MAX(a.data_hora) IS NULL";

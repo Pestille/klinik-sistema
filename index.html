@@ -3745,8 +3745,15 @@ async function openNovaCampanha(id){
     '</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">'+
       '<div class="pdt-field"><label>Canal</label><select id="camp-tipo"><option value="email" '+(c.tipo==='email'?'selected':'')+'>Email</option><option value="whatsapp" '+(c.tipo==='whatsapp'?'selected':'')+'>WhatsApp</option><option value="ambos" '+(c.tipo==='ambos'?'selected':'')+'>Ambos</option></select></div>'+
-      '<div class="pdt-field"><label>Segmento</label><select id="camp-segmento" onchange="previewSegmento()"><option value="todos" '+(c.segmento==='todos'?'selected':'')+'>Todos os pacientes</option><option value="ativos" '+(c.segmento==='ativos'?'selected':'')+'>Ativos (6 meses)</option><option value="inativos" '+(c.segmento==='inativos'?'selected':'')+'>Inativos (+6 meses)</option><option value="aniversariantes" '+(c.segmento==='aniversariantes'?'selected':'')+'>Aniversariantes do mês</option><option value="convenio" '+(c.segmento==='convenio'?'selected':'')+'>Por convênio</option></select></div>'+
-      '<div class="pdt-field"><label>Filtro extra</label><input id="camp-filtro" placeholder="Ex: CASSEMS" value="'+(function(){try{var f=JSON.parse(c.filtro_json||'{}');return f.convenio||''}catch(e){return ''}}())+'"></div>'+
+      '<div class="pdt-field"><label>Segmento</label><select id="camp-segmento" onchange="onSegmentoChange()"><option value="individual" '+(c.segmento==='individual'?'selected':'')+'>Paciente individual</option><option value="todos" '+(c.segmento==='todos'?'selected':'')+'>Todos os pacientes</option><option value="ativos" '+(c.segmento==='ativos'?'selected':'')+'>Ativos (6 meses)</option><option value="inativos" '+(c.segmento==='inativos'?'selected':'')+'>Inativos (+6 meses)</option><option value="aniversariantes" '+(c.segmento==='aniversariantes'?'selected':'')+'>Aniversariantes do mês</option><option value="convenio" '+(c.segmento==='convenio'?'selected':'')+'>Por convênio</option></select></div>'+
+      '<div class="pdt-field" id="camp-filtro-wrap"><label id="camp-filtro-label">Filtro extra</label><input id="camp-filtro" placeholder="Ex: CASSEMS" value="'+(function(){try{var f=JSON.parse(c.filtro_json||'{}');return f.convenio||''}catch(e){return ''}}())+'"></div>'+
+    '</div>'+
+    '<div id="camp-individual-wrap" style="display:none;margin-bottom:12px">'+
+      '<div class="pdt-field"><label>Buscar paciente</label>'+
+        '<div style="position:relative"><input id="camp-pac-busca" placeholder="Digite o nome do paciente..." oninput="campBuscarPaciente()" autocomplete="off" style="width:100%">'+
+        '<div id="camp-pac-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--white);border:1px solid var(--border);border-radius:0 0 6px 6px;box-shadow:0 4px 12px rgba(0,0,0,.12);max-height:200px;overflow-y:auto;z-index:50"></div></div>'+
+      '</div>'+
+      '<div id="camp-pac-selected" style="display:none;margin-top:8px;padding:10px 14px;background:var(--green-light,#E8F5E9);border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px"></div>'+
     '</div>'+
     '<div style="margin-bottom:12px;padding:10px 14px;background:var(--gray1);border-radius:6px;font-size:13px;color:var(--text2)" id="camp-preview-count">Selecione um segmento para ver o alcance</div>'+
     '<div class="pdt-field" style="margin-bottom:12px"><label>Template base</label><select id="camp-tpl-sel" onchange="campTplSelect()"><option value="">— Escrever manualmente —</option>'+tpls.map(function(t){return '<option value="'+t.id+'" data-corpo="'+t.corpo.replace(/"/g,'&quot;')+'" data-assunto="'+(t.assunto||'').replace(/"/g,'&quot;')+'">'+t.nome+' ('+t.tipo+')</option>'}).join('')+'</select></div>'+
@@ -3762,7 +3769,7 @@ async function openNovaCampanha(id){
       '<button class="btn btn-orange" onclick="salvarCampanha(\'concluida\')">Salvar e Enviar</button>'+
     '</div>'+
   '</div>'
-  previewSegmento()
+  onSegmentoChange()
   // scroll into view
   form.scrollIntoView({behavior:'smooth',block:'start'})
 }
@@ -3784,8 +3791,86 @@ function campTplSelect(){
   }
 }
 
+var _campPacSelecionado=null
+var _campBuscaTimer=null
+
+function onSegmentoChange(){
+  var seg=document.getElementById('camp-segmento');if(!seg)return
+  var indWrap=document.getElementById('camp-individual-wrap')
+  var filtroWrap=document.getElementById('camp-filtro-wrap')
+  var filtroLabel=document.getElementById('camp-filtro-label')
+  var filtroInput=document.getElementById('camp-filtro')
+  if(seg.value==='individual'){
+    if(indWrap)indWrap.style.display='block'
+    if(filtroWrap)filtroWrap.style.display='none'
+    _campPacSelecionado=null
+    var selEl=document.getElementById('camp-pac-selected');if(selEl)selEl.style.display='none'
+    var prevEl=document.getElementById('camp-preview-count')
+    if(prevEl)prevEl.innerHTML='Busque e selecione um paciente acima'
+  }else{
+    if(indWrap)indWrap.style.display='none'
+    if(filtroWrap)filtroWrap.style.display='block'
+    _campPacSelecionado=null
+    if(seg.value==='convenio'){
+      if(filtroLabel)filtroLabel.textContent='Convênio'
+      if(filtroInput)filtroInput.placeholder='Ex: CASSEMS'
+    }else{
+      if(filtroLabel)filtroLabel.textContent='Filtro extra'
+      if(filtroInput)filtroInput.placeholder='Ex: CASSEMS'
+    }
+    previewSegmento()
+  }
+}
+
+function campBuscarPaciente(){
+  var input=document.getElementById('camp-pac-busca');if(!input)return
+  var termo=input.value.trim()
+  var results=document.getElementById('camp-pac-results')
+  if(termo.length<2){if(results)results.style.display='none';return}
+  clearTimeout(_campBuscaTimer)
+  _campBuscaTimer=setTimeout(async function(){
+    try{
+      var d=await apiData('busca',{q:termo})
+      var pacs=d.pacientes||[]
+      if(!pacs.length){
+        results.innerHTML='<div style="padding:12px;font-size:12px;color:var(--text3);text-align:center">Nenhum paciente encontrado</div>'
+        results.style.display='block'
+        return
+      }
+      results.innerHTML=pacs.map(function(p){
+        return '<div onclick="campSelecionarPaciente('+p.id+',\''+p.nome.replace(/'/g,"\\'")+'\',\''+(p.email||'').replace(/'/g,"\\'")+'\',\''+(p.telefone||'').replace(/'/g,"\\'")+'\')" style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border2);transition:background .1s;display:flex;justify-content:space-between;align-items:center" onmouseover="this.style.background=\'var(--gray1)\'" onmouseout="this.style.background=\'\'">'+
+          '<div><div style="font-weight:500;color:var(--text)">'+p.nome+'</div><div style="font-size:11px;color:var(--text3)">'+(p.telefone||'Sem telefone')+' · '+(p.email||'Sem email')+'</div></div>'+
+        '</div>'
+      }).join('')
+      results.style.display='block'
+    }catch(e){if(results)results.style.display='none'}
+  },300)
+}
+
+function campSelecionarPaciente(id,nome,email,telefone){
+  _campPacSelecionado={id:id,nome:nome,email:email,telefone:telefone}
+  var results=document.getElementById('camp-pac-results');if(results)results.style.display='none'
+  var input=document.getElementById('camp-pac-busca');if(input)input.value=''
+  var selEl=document.getElementById('camp-pac-selected')
+  if(selEl){
+    selEl.style.display='flex'
+    selEl.innerHTML='<span style="font-weight:500;color:var(--green)">'+nome+'</span>'+
+      '<span style="font-size:11px;color:var(--text3)">'+(email||'sem email')+' · '+(telefone||'sem telefone')+'</span>'+
+      '<button onclick="campRemoverPaciente()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--red);font-size:14px" title="Remover">✕</button>'
+  }
+  var prevEl=document.getElementById('camp-preview-count')
+  if(prevEl)prevEl.innerHTML='<strong>1</strong> paciente selecionado: <strong>'+nome+'</strong>'+(email?' · '+email:'')+(telefone?' · '+telefone:'')
+}
+
+function campRemoverPaciente(){
+  _campPacSelecionado=null
+  var selEl=document.getElementById('camp-pac-selected');if(selEl)selEl.style.display='none'
+  var prevEl=document.getElementById('camp-preview-count');if(prevEl)prevEl.innerHTML='Busque e selecione um paciente acima'
+}
+
 async function previewSegmento(){
   var seg=document.getElementById('camp-segmento');if(!seg)return
+  if(seg.value==='individual')return
   var filtro=document.getElementById('camp-filtro');
   var el=document.getElementById('camp-preview-count');if(!el)return
   el.innerHTML='Calculando...'
@@ -3806,7 +3891,11 @@ async function salvarCampanha(status){
   var assunto=(document.getElementById('camp-assunto')?document.getElementById('camp-assunto').value:'').trim()
   var template=(document.getElementById('camp-template')?document.getElementById('camp-template').value:'').trim()
   if(!nome||!template){alert('Preencha nome e mensagem');return}
-  var body={nome:nome,tipo:tipo,segmento:seg,filtro_json:filtro?JSON.stringify({convenio:filtro}):'',assunto:assunto,template:template,status:status==='concluida'?'rascunho':status}
+  if(seg==='individual'&&!_campPacSelecionado){alert('Selecione um paciente');return}
+  var filtroJson=''
+  if(seg==='individual'&&_campPacSelecionado)filtroJson=JSON.stringify({paciente_id:_campPacSelecionado.id,paciente_nome:_campPacSelecionado.nome})
+  else if(filtro)filtroJson=JSON.stringify({convenio:filtro})
+  var body={nome:nome,tipo:tipo,segmento:seg,filtro_json:filtroJson,assunto:assunto,template:template,status:status==='concluida'?'rascunho':status}
   if(_mktCampEdit)body.id=_mktCampEdit
   try{
     var d=await fetch('/api/data?r=salvar-campanha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
