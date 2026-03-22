@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Auth check — public routes skip authentication
-    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos']
+    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos', 'pagamentos-migrate']
     var auth = null, clinica_id = null
     if (publicRoutes.indexOf(route) === -1) {
         auth = await authenticateRequest(req)
@@ -1473,6 +1473,266 @@ module.exports = async function handler(req, res) {
                 } catch(e) { alErrs++ }
             }
             return res.status(200).json({ success: true, importados: alIns, erros: alErrs })
+        }
+
+        // ── PAGAMENTOS-MIGRATE ──────────────────────────────────────
+        if (route === 'pagamentos-migrate') {
+            var pmSummary = { tables: [], columns: [] }
+
+            // Create cobrancas table
+            await client.execute("CREATE TABLE IF NOT EXISTS cobrancas (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, paciente_nome TEXT, tipo TEXT NOT NULL, valor REAL NOT NULL, descricao TEXT, referencia TEXT, status TEXT DEFAULT 'pendente', data_vencimento TEXT, data_pagamento TEXT, boleto_url TEXT, boleto_codigo TEXT, pix_qrcode TEXT, pix_copia_cola TEXT, asaas_id TEXT, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))")
+            pmSummary.tables.push('cobrancas: ok')
+
+            // Create saques table
+            await client.execute("CREATE TABLE IF NOT EXISTS saques (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, valor REAL NOT NULL, taxa REAL DEFAULT 0, valor_liquido REAL, status TEXT DEFAULT 'pendente', banco_dados TEXT, created_at TEXT DEFAULT (datetime('now')), processado_em TEXT)")
+            pmSummary.tables.push('saques: ok')
+
+            // Add columns to clinicas
+            var pmCols = [
+                "documento_tipo TEXT",
+                "documento_numero TEXT",
+                "razao_social TEXT",
+                "endereco TEXT",
+                "cep TEXT",
+                "pix_tipo TEXT",
+                "pix_chave TEXT",
+                "banco_nome TEXT",
+                "banco_agencia TEXT",
+                "banco_conta TEXT",
+                "asaas_api_key TEXT",
+                "saldo REAL DEFAULT 0"
+            ]
+            for (var pmi = 0; pmi < pmCols.length; pmi++) {
+                var pmCol = pmCols[pmi]
+                var pmColName = pmCol.split(' ')[0]
+                try {
+                    await client.execute("ALTER TABLE clinicas ADD COLUMN " + pmCol)
+                    pmSummary.columns.push(pmColName + ': adicionada')
+                } catch(e) {
+                    pmSummary.columns.push(pmColName + ': já existe')
+                }
+            }
+
+            // Create indexes
+            try { await client.execute("CREATE INDEX IF NOT EXISTS idx_cobrancas_clinica ON cobrancas(clinica_id)") } catch(e) {}
+            try { await client.execute("CREATE INDEX IF NOT EXISTS idx_cobrancas_paciente ON cobrancas(paciente_id)") } catch(e) {}
+            try { await client.execute("CREATE INDEX IF NOT EXISTS idx_saques_clinica ON saques(clinica_id)") } catch(e) {}
+
+            return res.status(200).json({ success: true, summary: pmSummary })
+        }
+
+        // ── SALVAR-DADOS-CLINICA ──────────────────────────────────────
+        if (route === 'salvar-dados-clinica') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var dc = req.body || {}
+            await client.execute({
+                sql: "UPDATE clinicas SET documento_tipo=?, documento_numero=?, razao_social=?, endereco=?, cidade=?, estado=?, cep=?, pix_tipo=?, pix_chave=?, banco_nome=?, banco_agencia=?, banco_conta=?, asaas_api_key=COALESCE(NULLIF(?, ''), asaas_api_key) WHERE id=?",
+                args: [
+                    dc.documento_tipo || '', dc.documento_numero || '', dc.razao_social || '',
+                    dc.endereco || '', dc.cidade || '', dc.estado || '', dc.cep || '',
+                    dc.pix_tipo || '', dc.pix_chave || '',
+                    dc.banco_nome || '', dc.banco_agencia || '', dc.banco_conta || '',
+                    dc.asaas_api_key || '', clinica_id
+                ]
+            })
+            return res.status(200).json({ success: true, msg: 'Dados da clínica atualizados' })
+        }
+
+        // ── DADOS-CLINICA ──────────────────────────────────────────────
+        if (route === 'dados-clinica') {
+            var dcRow = await client.execute({ sql: "SELECT id, nome, cnpj, cidade, estado, documento_tipo, documento_numero, razao_social, endereco, cep, pix_tipo, pix_chave, banco_nome, banco_agencia, banco_conta, saldo, CASE WHEN asaas_api_key IS NOT NULL AND asaas_api_key != '' THEN 1 ELSE 0 END as asaas_configurado FROM clinicas WHERE id=?", args: [clinica_id] })
+            if (!dcRow.rows.length) return res.status(404).json({ success: false, error: 'Clínica não encontrada' })
+            return res.status(200).json({ success: true, clinica: dcRow.rows[0] })
+        }
+
+        // ── GERAR-COBRANCA ──────────────────────────────────────────────
+        if (route === 'gerar-cobranca') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var gc = req.body || {}
+            if (!gc.tipo || !gc.valor) return res.status(400).json({ success: false, error: 'tipo e valor obrigatórios' })
+
+            var gcPix = '', gcPixCola = '', gcBoletoUrl = '', gcBoletoCod = '', gcAsaasId = ''
+
+            if (gc.tipo === 'pix') {
+                // Get clinic data for PIX
+                var gcClinica = await client.execute({ sql: "SELECT nome, cidade, pix_tipo, pix_chave FROM clinicas WHERE id=?", args: [clinica_id] })
+                if (!gcClinica.rows.length || !gcClinica.rows[0].pix_chave) {
+                    return res.status(400).json({ success: false, error: 'Chave PIX não configurada. Vá em Configurações > Dados da Clínica para configurar.' })
+                }
+                var gcCl = gcClinica.rows[0]
+                // Generate PIX payload (EMV BR Code)
+                var gcValor = parseFloat(gc.valor)
+                var gcTxId = 'KLN' + Date.now().toString(36).toUpperCase()
+
+                function tlv(id, val) { return id + String(val.length).padStart(2, '0') + val }
+                var gui = tlv('00', 'br.gov.bcb.pix')
+                var chaveField = tlv('01', gcCl.pix_chave)
+                var mai = tlv('26', gui + chaveField)
+                var mcc = tlv('52', '0000')
+                var moeda = tlv('53', '986')
+                var valorField = gcValor > 0 ? tlv('54', gcValor.toFixed(2)) : ''
+                var pais = tlv('58', 'BR')
+                var nomeField = tlv('59', (gcCl.nome || 'Clinica').substring(0, 25))
+                var cidadeField = tlv('60', (gcCl.cidade || 'Cidade').substring(0, 15))
+                var txidField = tlv('05', gcTxId)
+                var addData = tlv('62', txidField)
+                var payload = tlv('00', '01') + mai + mcc + moeda + valorField + pais + nomeField + cidadeField + addData
+                payload += '6304'
+                // CRC16 CCITT
+                var crc = 0xFFFF
+                for (var ci = 0; ci < payload.length; ci++) {
+                    crc ^= payload.charCodeAt(ci) << 8
+                    for (var cj = 0; cj < 8; cj++) {
+                        if (crc & 0x8000) crc = (crc << 1) ^ 0x1021
+                        else crc <<= 1
+                        crc &= 0xFFFF
+                    }
+                }
+                gcPixCola = payload.slice(0, -4) + '6304' + crc.toString(16).toUpperCase().padStart(4, '0')
+            } else if (gc.tipo === 'boleto') {
+                // Check if Asaas is configured
+                var gcAsaas = await client.execute({ sql: "SELECT asaas_api_key FROM clinicas WHERE id=?", args: [clinica_id] })
+                var gcApiKey = (gcAsaas.rows.length && gcAsaas.rows[0].asaas_api_key) ? gcAsaas.rows[0].asaas_api_key : ''
+                if (!gcApiKey) {
+                    return res.status(400).json({ success: false, error: 'Asaas API Key não configurada. Vá em Configurações > Dados da Clínica para configurar.' })
+                }
+
+                // Check/create customer in Asaas
+                var gcPaciente = null
+                if (gc.paciente_id) {
+                    var gcPacRow = await client.execute({ sql: "SELECT nome, cpf, email FROM pacientes WHERE id=? AND clinica_id=?", args: [gc.paciente_id, clinica_id] })
+                    if (gcPacRow.rows.length) gcPaciente = gcPacRow.rows[0]
+                }
+
+                try {
+                    // Search for existing customer
+                    var gcCustSearch = await fetch('https://api.asaas.com/v3/customers?cpfCnpj=' + encodeURIComponent((gcPaciente && gcPaciente.cpf) || ''), {
+                        headers: { 'access_token': gcApiKey }
+                    })
+                    var gcCustData = await gcCustSearch.json()
+                    var gcCustomerId = ''
+
+                    if (gcCustData.data && gcCustData.data.length > 0) {
+                        gcCustomerId = gcCustData.data[0].id
+                    } else {
+                        // Create customer
+                        var gcNewCust = await fetch('https://api.asaas.com/v3/customers', {
+                            method: 'POST',
+                            headers: { 'access_token': gcApiKey, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                name: (gcPaciente && gcPaciente.nome) || gc.paciente_nome || 'Cliente',
+                                cpfCnpj: (gcPaciente && gcPaciente.cpf) || '',
+                                email: (gcPaciente && gcPaciente.email) || ''
+                            })
+                        })
+                        var gcNewCustData = await gcNewCust.json()
+                        gcCustomerId = gcNewCustData.id || ''
+                    }
+
+                    if (!gcCustomerId) {
+                        return res.status(400).json({ success: false, error: 'Não foi possível criar/encontrar cliente no Asaas' })
+                    }
+
+                    // Create boleto
+                    var gcBoleto = await fetch('https://api.asaas.com/v3/payments', {
+                        method: 'POST',
+                        headers: { 'access_token': gcApiKey, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            customer: gcCustomerId,
+                            billingType: 'BOLETO',
+                            value: parseFloat(gc.valor),
+                            dueDate: gc.data_vencimento || new Date().toISOString().slice(0, 10),
+                            description: gc.descricao || 'Cobrança Klinik'
+                        })
+                    })
+                    var gcBoletoData = await gcBoleto.json()
+                    gcAsaasId = gcBoletoData.id || ''
+                    gcBoletoUrl = gcBoletoData.bankSlipUrl || ''
+                    gcBoletoCod = gcBoletoData.nossoNumero || ''
+                } catch(e) {
+                    return res.status(500).json({ success: false, error: 'Erro ao gerar boleto no Asaas: ' + e.message })
+                }
+            }
+
+            // Insert cobranca
+            var gcIns = await client.execute({
+                sql: "INSERT INTO cobrancas(clinica_id, paciente_id, paciente_nome, tipo, valor, descricao, referencia, status, data_vencimento, boleto_url, boleto_codigo, pix_copia_cola, asaas_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                args: [clinica_id, gc.paciente_id || null, gc.paciente_nome || '', gc.tipo, parseFloat(gc.valor), gc.descricao || '', gc.referencia || '', 'pendente', gc.data_vencimento || '', gcBoletoUrl, gcBoletoCod, gcPixCola, gcAsaasId]
+            })
+            var gcNewId = Number(gcIns.lastInsertRowid)
+
+            // Update saldo
+            await client.execute({ sql: "UPDATE clinicas SET saldo = saldo + ? WHERE id=?", args: [parseFloat(gc.valor), clinica_id] })
+
+            // Fetch the inserted record
+            var gcRec = await client.execute({ sql: "SELECT * FROM cobrancas WHERE id=?", args: [gcNewId] })
+            return res.status(200).json({ success: true, cobranca: gcRec.rows[0] || { id: gcNewId } })
+        }
+
+        // ── COBRANCAS-PACIENTE ──────────────────────────────────────────
+        if (route === 'cobrancas-paciente') {
+            var cpPacId = parseInt(q.paciente_id) || 0
+            if (!cpPacId) return res.status(400).json({ success: false, error: 'paciente_id obrigatório' })
+            var cpRows = await client.execute({ sql: "SELECT * FROM cobrancas WHERE paciente_id=? AND clinica_id=? ORDER BY created_at DESC", args: [cpPacId, clinica_id] })
+            return res.status(200).json({ success: true, cobrancas: cpRows.rows })
+        }
+
+        // ── COBRANCAS-CLINICA ──────────────────────────────────────────
+        if (route === 'cobrancas-clinica') {
+            var ccPage = parseInt(q.page) || 1
+            var ccLimit = parseInt(q.limit) || 50
+            var ccOffset = (ccPage - 1) * ccLimit
+            var ccTotal = await client.execute({ sql: "SELECT COUNT(*) as total FROM cobrancas WHERE clinica_id=?", args: [clinica_id] })
+            var ccRows = await client.execute({ sql: "SELECT * FROM cobrancas WHERE clinica_id=? ORDER BY created_at DESC LIMIT ? OFFSET ?", args: [clinica_id, ccLimit, ccOffset] })
+            return res.status(200).json({ success: true, cobrancas: ccRows.rows, total: ccTotal.rows[0].total, page: ccPage, limit: ccLimit })
+        }
+
+        // ── SOLICITAR-SAQUE ──────────────────────────────────────────────
+        if (route === 'solicitar-saque') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var ss = req.body || {}
+            var ssValor = parseFloat(ss.valor) || 0
+            if (ssValor <= 0) return res.status(400).json({ success: false, error: 'Valor deve ser maior que zero' })
+
+            // Check saldo
+            var ssSaldo = await client.execute({ sql: "SELECT saldo, banco_nome, banco_agencia, banco_conta FROM clinicas WHERE id=?", args: [clinica_id] })
+            if (!ssSaldo.rows.length) return res.status(404).json({ success: false, error: 'Clínica não encontrada' })
+            var ssClinica = ssSaldo.rows[0]
+            if ((ssClinica.saldo || 0) < ssValor) return res.status(400).json({ success: false, error: 'Saldo insuficiente. Saldo atual: R$ ' + (ssClinica.saldo || 0).toFixed(2) })
+
+            // Check if first withdrawal today
+            var ssToday = await client.execute({ sql: "SELECT COUNT(*) as cnt FROM saques WHERE clinica_id=? AND DATE(created_at)=DATE('now') AND taxa=0", args: [clinica_id] })
+            var ssTaxa = (ssToday.rows[0].cnt > 0) ? 2.50 : 0
+            var ssLiquido = ssValor - ssTaxa
+
+            if (ssLiquido <= 0) return res.status(400).json({ success: false, error: 'Valor líquido deve ser maior que zero após taxa' })
+
+            // Deduct from saldo
+            await client.execute({ sql: "UPDATE clinicas SET saldo = saldo - ? WHERE id=?", args: [ssValor, clinica_id] })
+
+            // Insert saque
+            var ssBancoJson = JSON.stringify({ banco: ssClinica.banco_nome || '', agencia: ssClinica.banco_agencia || '', conta: ssClinica.banco_conta || '' })
+            var ssIns = await client.execute({
+                sql: "INSERT INTO saques(clinica_id, valor, taxa, valor_liquido, status, banco_dados) VALUES(?,?,?,?,?,?)",
+                args: [clinica_id, ssValor, ssTaxa, ssLiquido, 'pendente', ssBancoJson]
+            })
+
+            return res.status(200).json({ success: true, saque: { id: Number(ssIns.lastInsertRowid), valor: ssValor, taxa: ssTaxa, valor_liquido: ssLiquido, status: 'pendente' } })
+        }
+
+        // ── SAQUES-CLINICA ──────────────────────────────────────────────
+        if (route === 'saques-clinica') {
+            var scRows = await client.execute({ sql: "SELECT * FROM saques WHERE clinica_id=? ORDER BY created_at DESC", args: [clinica_id] })
+            return res.status(200).json({ success: true, saques: scRows.rows })
+        }
+
+        // ── SALDO-CLINICA ──────────────────────────────────────────────
+        if (route === 'saldo-clinica') {
+            var slRow = await client.execute({ sql: "SELECT saldo FROM clinicas WHERE id=?", args: [clinica_id] })
+            var slSaldo = slRow.rows.length ? (slRow.rows[0].saldo || 0) : 0
+            var slToday = await client.execute({ sql: "SELECT COUNT(*) as cnt FROM saques WHERE clinica_id=? AND DATE(created_at)=DATE('now')", args: [clinica_id] })
+            var slFree = await client.execute({ sql: "SELECT COUNT(*) as cnt FROM saques WHERE clinica_id=? AND DATE(created_at)=DATE('now') AND taxa=0", args: [clinica_id] })
+            return res.status(200).json({ success: true, saldo: slSaldo, saques_hoje: slToday.rows[0].cnt, saque_gratis_usado: slFree.rows[0].cnt > 0 })
         }
 
         return res.status(400).json({ success: false, error: 'Rota inválida: r=' + route })

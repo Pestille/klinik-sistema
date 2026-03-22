@@ -7,6 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -921,6 +922,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         <div class="pdt-tab" onclick="prontTab('exames',this)">Exames</div>
         <div class="pdt-tab" onclick="prontTab('recibos',this)">Recibos</div>
         <div class="pdt-tab" onclick="prontTab('agendamentos-pac',this)">Agendamentos</div>
+        <div class="pdt-tab" onclick="prontTab('cobrancas-pac',this)">Cobranças</div>
         <div class="pdt-tab" onclick="prontTab('indicacoes',this)">Indicações</div>
       </div>
       <!-- Content -->
@@ -966,6 +968,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
           <div class="fin-htab" onclick="finTab('extrato',this)">Extrato</div>
           <div class="fin-htab" onclick="finTab('conciliacoes',this)">Conciliações Bancárias</div>
           <div class="fin-htab" onclick="finTab('receitasaude',this)">Receita Saúde</div>
+          <div class="fin-htab" onclick="finTab('carteira',this)">Carteira</div>
         </div>
       </div>
       <div style="flex:1;overflow-y:auto;background:var(--bg)">
@@ -1345,6 +1348,10 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         <!-- RECEITA SAÚDE -->
         <div class="fin-sub" id="fin-receitasaude" style="padding:30px">
           <div style="text-align:center;padding:60px;color:var(--text3)">Módulo Receita Saúde — Integração em desenvolvimento</div>
+        </div>
+
+        <div class="fin-sub" id="fin-carteira" style="padding:30px">
+          <div id="carteira-content" style="color:var(--text3);text-align:center;padding:40px">Carregando...</div>
         </div>
 
       </div>
@@ -2660,6 +2667,9 @@ function renderProntTab(){
   }
   else if(_prontTab==='odontograma'){
     renderOdontograma(el,p,ag)
+  }
+  else if(_prontTab==='cobrancas-pac'){
+    renderCobrancasTab(el,p)
   }
   else if(_prontTab==='anamnese'){
     renderAnamneseTab(el,p)
@@ -4191,8 +4201,60 @@ async function loadRelOrcamentos(){
 // ── CONFIGURAÇÕES ──────────────────────────────────────────────
 function renderConfiguracoes() {
   var cfgEl=document.getElementById('cfg-list');if(!cfgEl)return
-  var itens=['Exportar Dados','Listas/Tabelas de Preço','Especialidades','Orçamento','Personalização do Sistema','Segurança']
+  var itens=['Dados da Clínica / Cobrança','Exportar Dados','Listas/Tabelas de Preço','Especialidades','Orçamento','Personalização do Sistema','Segurança']
   var conteudos={
+    'Dados da Clínica / Cobrança':'<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Configure os dados da clínica para emissão de cobranças (PIX e Boleto).</div>'+
+      '<div id="cfg-clinica-form">'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">'+
+          '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Tipo Documento</label>'+
+            '<select id="cfg-doc-tipo" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:var(--white);outline:none">'+
+              '<option value="">Selecione</option><option value="cpf">CPF</option><option value="cnpj">CNPJ</option>'+
+            '</select></div>'+
+          '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Número Documento</label>'+
+            '<input id="cfg-doc-numero" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="CPF ou CNPJ"></div>'+
+        '</div>'+
+        '<div style="margin-bottom:16px"><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Razão Social</label>'+
+          '<input id="cfg-razao-social" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="Razão social ou nome fantasia"></div>'+
+        '<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:16px;margin-bottom:20px">'+
+          '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Endereço</label>'+
+            '<input id="cfg-endereco" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="Rua, número"></div>'+
+          '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Cidade</label>'+
+            '<input id="cfg-cidade" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="Cidade"></div>'+
+          '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Estado</label>'+
+            '<input id="cfg-estado" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="UF" maxlength="2"></div>'+
+          '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">CEP</label>'+
+            '<input id="cfg-cep" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="00000-000"></div>'+
+        '</div>'+
+        '<div style="border-top:1px solid var(--border);padding-top:20px;margin-bottom:20px">'+
+          '<div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px">Chave PIX</div>'+
+          '<div style="display:grid;grid-template-columns:1fr 2fr;gap:16px">'+
+            '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Tipo</label>'+
+              '<select id="cfg-pix-tipo" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:var(--white);outline:none">'+
+                '<option value="">Selecione</option><option value="cpf">CPF</option><option value="cnpj">CNPJ</option><option value="email">Email</option><option value="telefone">Telefone</option><option value="aleatoria">Aleatória</option>'+
+              '</select></div>'+
+            '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Chave</label>'+
+              '<input id="cfg-pix-chave" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="Chave PIX"></div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="border-top:1px solid var(--border);padding-top:20px;margin-bottom:20px">'+
+          '<div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px">Dados Bancários (para saques)</div>'+
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">'+
+            '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Banco</label>'+
+              '<input id="cfg-banco-nome" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="Ex: Bradesco"></div>'+
+            '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Agência</label>'+
+              '<input id="cfg-banco-agencia" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="0001"></div>'+
+            '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Conta</label>'+
+              '<input id="cfg-banco-conta" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="12345-6"></div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="border-top:1px solid var(--border);padding-top:20px;margin-bottom:20px">'+
+          '<div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px">Integração Asaas (Boletos)</div>'+
+          '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">API Key</label>'+
+            '<input id="cfg-asaas-key" type="password" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="Deixe em branco para manter a atual">'+
+            '<div id="cfg-asaas-status" style="font-size:11px;color:var(--text3);margin-top:4px"></div></div>'+
+        '</div>'+
+        '<div style="display:flex;justify-content:flex-end"><button onclick="salvarDadosClinica()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s ease">Salvar Dados da Clínica</button></div>'+
+      '</div>',
     'Exportar Dados':'<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Exporte os dados do sistema em formato CSV para backup ou análise externa.</div>'+
       '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">'+
       [{id:'pacientes',label:'Pacientes (Cadastro)',icon:'👥'},{id:'agendamentos',label:'Agendamentos',icon:'📅'},{id:'financeiro',label:'Financeiro',icon:'💰'},{id:'orcamentos',label:'Orçamentos',icon:'📋'},{id:'pagamentos',label:'Pagamentos',icon:'💳'},{id:'profissionais',label:'Profissionais',icon:'👨‍⚕️'},{id:'procedimentos',label:'Procedimentos',icon:'🦷'}].map(function(e){
@@ -5165,6 +5227,349 @@ async function loadMarketing(){
   }catch(e){kpiEl.innerHTML='<div style="grid-column:1/-1;color:var(--red);text-align:center;padding:20px">'+e.message+'</div>'}
 }
 
+// ── COBRANCAS / PIX / CARTEIRA ──────────────────────────────────
+
+// Load clinic data into config form
+async function carregarDadosClinica(){
+  try{
+    var d=await apiData('dados-clinica',{})
+    if(!d.success||!d.clinica)return
+    var c=d.clinica
+    var setVal=function(id,v){var el=document.getElementById(id);if(el)el.value=v||''}
+    setVal('cfg-doc-tipo',c.documento_tipo)
+    setVal('cfg-doc-numero',c.documento_numero)
+    setVal('cfg-razao-social',c.razao_social)
+    setVal('cfg-endereco',c.endereco)
+    setVal('cfg-cidade',c.cidade)
+    setVal('cfg-estado',c.estado)
+    setVal('cfg-cep',c.cep)
+    setVal('cfg-pix-tipo',c.pix_tipo)
+    setVal('cfg-pix-chave',c.pix_chave)
+    setVal('cfg-banco-nome',c.banco_nome)
+    setVal('cfg-banco-agencia',c.banco_agencia)
+    setVal('cfg-banco-conta',c.banco_conta)
+    var asaasEl=document.getElementById('cfg-asaas-status')
+    if(asaasEl) asaasEl.textContent=c.asaas_configurado?'API Key configurada':'Não configurada'
+  }catch(e){}
+}
+
+async function salvarDadosClinica(){
+  try{
+    var gv=function(id){var el=document.getElementById(id);return el?el.value:''}
+    var body={
+      documento_tipo:gv('cfg-doc-tipo'),documento_numero:gv('cfg-doc-numero'),
+      razao_social:gv('cfg-razao-social'),endereco:gv('cfg-endereco'),
+      cidade:gv('cfg-cidade'),estado:gv('cfg-estado'),cep:gv('cfg-cep'),
+      pix_tipo:gv('cfg-pix-tipo'),pix_chave:gv('cfg-pix-chave'),
+      banco_nome:gv('cfg-banco-nome'),banco_agencia:gv('cfg-banco-agencia'),
+      banco_conta:gv('cfg-banco-conta'),asaas_api_key:gv('cfg-asaas-key')
+    }
+    var r=await apiPost('salvar-dados-clinica',body)
+    if(r.success){alert('Dados salvos com sucesso!');carregarDadosClinica()}
+    else alert('Erro: '+(r.error||'Falha ao salvar'))
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+// Observe config accordion opening to load data
+var _cfgClinicaLoaded=false
+document.addEventListener('click',function(e){
+  if(!_cfgClinicaLoaded&&e.target&&e.target.textContent&&e.target.textContent.indexOf('Dados da Clínica')>-1){
+    _cfgClinicaLoaded=true
+    setTimeout(carregarDadosClinica,200)
+  }
+})
+
+// PIX payload generator
+function gerarPixPayload(chave,nome,cidade,valor,txid){
+  function tlv(id,val){return id+String(val.length).padStart(2,'0')+val}
+  var gui=tlv('00','br.gov.bcb.pix')
+  var chaveField=tlv('01',chave)
+  var mai=tlv('26',gui+chaveField)
+  var mcc=tlv('52','0000')
+  var moeda=tlv('53','986')
+  var valorField=valor>0?tlv('54',valor.toFixed(2)):''
+  var pais=tlv('58','BR')
+  var nomeField=tlv('59',(nome||'Clinica').substring(0,25))
+  var cidadeField=tlv('60',(cidade||'Cidade').substring(0,15))
+  var txidField=tlv('05',txid||'***')
+  var addData=tlv('62',txidField)
+  var payload=tlv('00','01')+mai+mcc+moeda+valorField+pais+nomeField+cidadeField+addData
+  payload+='6304'
+  var crc=0xFFFF
+  for(var i=0;i<payload.length;i++){
+    crc^=payload.charCodeAt(i)<<8
+    for(var j=0;j<8;j++){
+      if(crc&0x8000)crc=(crc<<1)^0x1021
+      else crc<<=1
+      crc&=0xFFFF
+    }
+  }
+  return payload.slice(0,-4)+'6304'+crc.toString(16).toUpperCase().padStart(4,'0')
+}
+
+// Render cobrancas tab in patient prontuário
+var _cobrancasFormVisible=false
+
+function renderCobrancasTab(el,p){
+  var pacId=p.id
+  var html='<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">'+
+    '<button onclick="toggleCobrancaForm()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s ease">Gerar Cobrança</button>'+
+  '</div>'
+
+  // Cobranca form
+  html+='<div id="cobranca-form-area" style="display:'+(_cobrancasFormVisible?'block':'none')+';margin-bottom:20px">'+
+    '<div class="card" style="padding:20px 24px;border:1px solid var(--border);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08)">'+
+      '<div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px">Nova Cobrança</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;margin-bottom:16px">'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Tipo</label>'+
+          '<select id="cob-tipo" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:var(--white);outline:none">'+
+            '<option value="pix">PIX</option><option value="boleto">Boleto</option>'+
+          '</select></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Valor (R$)</label>'+
+          '<input id="cob-valor" type="number" step="0.01" min="0.01" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="0,00"></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Descrição</label>'+
+          '<input id="cob-descricao" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="Ex: Consulta"></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Vencimento</label>'+
+          '<input id="cob-vencimento" type="date" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:flex-end;gap:8px">'+
+        '<button onclick="toggleCobrancaForm()" style="background:transparent;color:var(--green);border:1.5px solid var(--green3);border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>'+
+        '<button onclick="enviarCobranca('+pacId+',\''+((p.nome||'').replace(/'/g,"\\'"))+'\')" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s ease">Gerar</button>'+
+      '</div>'+
+    '</div>'+
+  '</div>'
+
+  // Result area
+  html+='<div id="cobranca-resultado" style="display:none;margin-bottom:20px"></div>'
+
+  // Cobrancas list
+  html+='<div id="cobrancas-lista" style="color:var(--text3);text-align:center;padding:20px">Carregando cobranças...</div>'
+
+  el.innerHTML=html
+  carregarCobrancasPaciente(pacId)
+}
+
+function toggleCobrancaForm(){
+  _cobrancasFormVisible=!_cobrancasFormVisible
+  var el=document.getElementById('cobranca-form-area')
+  if(el)el.style.display=_cobrancasFormVisible?'block':'none'
+}
+
+async function enviarCobranca(pacienteId,pacienteNome){
+  var tipo=document.getElementById('cob-tipo')
+  var valor=document.getElementById('cob-valor')
+  var desc=document.getElementById('cob-descricao')
+  var venc=document.getElementById('cob-vencimento')
+  if(!tipo||!valor)return
+  if(!valor.value||parseFloat(valor.value)<=0){alert('Informe um valor válido');return}
+
+  try{
+    var body={
+      paciente_id:pacienteId,
+      paciente_nome:pacienteNome,
+      tipo:tipo.value,
+      valor:parseFloat(valor.value),
+      descricao:desc?desc.value:'',
+      data_vencimento:venc?venc.value:'',
+      referencia:''
+    }
+    var r=await apiPost('gerar-cobranca',body)
+    if(!r.success){alert('Erro: '+(r.error||'Falha ao gerar cobrança'));return}
+
+    var cob=r.cobranca
+    var resEl=document.getElementById('cobranca-resultado')
+    if(!resEl)return
+
+    if(cob.tipo==='pix'&&cob.pix_copia_cola){
+      var qrHtml='<div id="cob-qr-code"></div>'
+      resEl.innerHTML='<div class="card" style="padding:20px 24px;border:1px solid #1B5E3B;border-radius:8px;background:#E8F5E9">'+
+        '<div style="font-size:13px;font-weight:500;color:#034030;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">PIX Gerado com Sucesso</div>'+
+        '<div style="display:flex;gap:24px;align-items:flex-start">'+
+          '<div style="flex-shrink:0">'+qrHtml+'</div>'+
+          '<div style="flex:1">'+
+            '<div style="font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Copia e Cola</div>'+
+            '<div style="background:var(--white);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:12px;word-break:break-all;color:var(--text2);margin-bottom:12px" id="pix-copia-cola">'+cob.pix_copia_cola+'</div>'+
+            '<button onclick="copiarPix()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:500;cursor:pointer">Copiar Código PIX</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>'
+      resEl.style.display='block'
+
+      // Render QR code
+      if(typeof qrcode!=='undefined'){
+        var qr=qrcode(0,'M')
+        qr.addData(cob.pix_copia_cola)
+        qr.make()
+        var qrEl=document.getElementById('cob-qr-code')
+        if(qrEl)qrEl.innerHTML=qr.createSvgTag(4)
+      }
+    } else if(cob.tipo==='boleto'){
+      resEl.innerHTML='<div class="card" style="padding:20px 24px;border:1px solid #1B5E3B;border-radius:8px;background:#E8F5E9">'+
+        '<div style="font-size:13px;font-weight:500;color:#034030;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Boleto Gerado com Sucesso</div>'+
+        (cob.boleto_url?'<div style="margin-bottom:12px"><a href="'+cob.boleto_url+'" target="_blank" style="color:var(--blue);font-size:14px;font-weight:500">Abrir Boleto</a></div>':'')+
+        (cob.boleto_codigo?'<div style="font-size:12px;color:var(--text2)">Código: '+cob.boleto_codigo+'</div>':'')+
+      '</div>'
+      resEl.style.display='block'
+    }
+
+    // Reset form
+    _cobrancasFormVisible=false
+    var formEl=document.getElementById('cobranca-form-area')
+    if(formEl)formEl.style.display='none'
+    if(valor)valor.value=''
+    if(desc)desc.value=''
+
+    // Reload list
+    carregarCobrancasPaciente(pacienteId)
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+function copiarPix(){
+  var el=document.getElementById('pix-copia-cola')
+  if(!el)return
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(el.textContent).then(function(){alert('Código PIX copiado!')})
+  }else{
+    var range=document.createRange();range.selectNodeContents(el)
+    var sel=window.getSelection();sel.removeAllRanges();sel.addRange(range)
+    document.execCommand('copy');alert('Código PIX copiado!')
+  }
+}
+
+async function carregarCobrancasPaciente(pacId){
+  var el=document.getElementById('cobrancas-lista')
+  if(!el)return
+  try{
+    var d=await apiData('cobrancas-paciente',{paciente_id:pacId})
+    if(!d.success){el.innerHTML='<div style="color:var(--text3);text-align:center;padding:20px">Erro ao carregar</div>';return}
+    var cobs=d.cobrancas||[]
+    if(!cobs.length){el.innerHTML='<div style="color:var(--text3);text-align:center;padding:30px">Nenhuma cobrança gerada</div>';return}
+
+    var html='<table class="tbl" style="width:100%"><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead><tbody>'
+    for(var i=0;i<cobs.length;i++){
+      var c=cobs[i]
+      var stCor=c.status==='pago'?'green':c.status==='vencido'?'red':'orange'
+      var acoes=''
+      if(c.tipo==='pix'&&c.pix_copia_cola) acoes='<button onclick="mostrarPixResult(\''+c.pix_copia_cola.replace(/'/g,"\\'")+'\')" style="background:transparent;border:1px solid var(--green3);color:var(--green);border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer">Ver PIX</button>'
+      if(c.tipo==='boleto'&&c.boleto_url) acoes='<a href="'+c.boleto_url+'" target="_blank" style="background:transparent;border:1px solid var(--green3);color:var(--green);border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;text-decoration:none;display:inline-block">Ver Boleto</a>'
+      html+='<tr><td>'+fmtDt(c.created_at)+'</td><td><span class="badge badge-'+(c.tipo==='pix'?'green':'orange')+'">'+c.tipo.toUpperCase()+'</span></td><td>'+(c.descricao||'—')+'</td><td style="color:#1B5E3B;font-weight:500">'+fmtBrl(c.valor)+'</td><td>'+fmtDt(c.data_vencimento)+'</td><td><span class="badge badge-'+stCor+'">'+c.status.toUpperCase()+'</span></td><td>'+acoes+'</td></tr>'
+    }
+    html+='</tbody></table>'
+    el.innerHTML=html
+  }catch(e){el.innerHTML='<div style="color:var(--text3);text-align:center;padding:20px">Erro: '+e.message+'</div>'}
+}
+
+function mostrarPixResult(pixCola){
+  var resEl=document.getElementById('cobranca-resultado')
+  if(!resEl)return
+  resEl.innerHTML='<div class="card" style="padding:20px 24px;border:1px solid #1B5E3B;border-radius:8px;background:#E8F5E9">'+
+    '<div style="font-size:13px;font-weight:500;color:#034030;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Código PIX</div>'+
+    '<div style="display:flex;gap:24px;align-items:flex-start">'+
+      '<div style="flex-shrink:0" id="cob-qr-code2"></div>'+
+      '<div style="flex:1">'+
+        '<div style="font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Copia e Cola</div>'+
+        '<div style="background:var(--white);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:12px;word-break:break-all;color:var(--text2);margin-bottom:12px" id="pix-copia-cola">'+pixCola+'</div>'+
+        '<button onclick="copiarPix()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:500;cursor:pointer">Copiar Código PIX</button>'+
+      '</div>'+
+    '</div>'+
+  '</div>'
+  resEl.style.display='block'
+  if(typeof qrcode!=='undefined'){
+    var qr=qrcode(0,'M')
+    qr.addData(pixCola)
+    qr.make()
+    var qrEl=document.getElementById('cob-qr-code2')
+    if(qrEl)qrEl.innerHTML=qr.createSvgTag(4)
+  }
+}
+
+// Carteira (Wallet) in Financeiro
+async function renderCarteira(){
+  var el=document.getElementById('carteira-content')
+  if(!el)return
+  el.innerHTML='<div style="color:var(--text3);text-align:center;padding:20px">Carregando...</div>'
+
+  try{
+    var saldoData=await apiData('saldo-clinica',{})
+    var saquesData=await apiData('saques-clinica',{})
+
+    var saldo=saldoData.success?(saldoData.saldo||0):0
+    var gratiUsado=saldoData.success?saldoData.saque_gratis_usado:false
+    var saques=(saquesData.success?saquesData.saques:[])||[]
+
+    var html='<div style="max-width:800px;margin:0 auto">'+
+      '<div class="card" style="padding:24px;margin-bottom:24px;border:1px solid var(--border);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08)">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between">'+
+          '<div>'+
+            '<div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Saldo Disponível</div>'+
+            '<div style="font-size:28px;font-weight:300;color:var(--text);letter-spacing:-0.02em">'+fmtBrl(saldo)+'</div>'+
+          '</div>'+
+          '<button onclick="abrirFormSaque()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s ease">Solicitar Saque</button>'+
+        '</div>'+
+      '</div>'+
+      '<div id="saque-form-area" style="display:none;margin-bottom:24px">'+
+        '<div class="card" style="padding:20px 24px;border:1px solid var(--border);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08)">'+
+          '<div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px">Solicitar Saque</div>'+
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'+
+            '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Valor (R$)</label>'+
+              '<input id="saque-valor" type="number" step="0.01" min="0.01" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="0,00"></div>'+
+            '<div style="display:flex;flex-direction:column;justify-content:flex-end">'+
+              '<div style="font-size:12px;color:var(--text3);margin-bottom:4px">Taxa: <strong style="color:'+(gratiUsado?'var(--orange)':'#1B5E3B')+'">'+(gratiUsado?'R$ 2,50':'Grátis (1o do dia)')+'</strong></div>'+
+              '<div style="font-size:12px;color:var(--text3)">Saldo disponível: <strong>'+fmtBrl(saldo)+'</strong></div>'+
+            '</div>'+
+          '</div>'+
+          '<div style="display:flex;justify-content:flex-end;gap:8px">'+
+            '<button onclick="fecharFormSaque()" style="background:transparent;color:var(--green);border:1.5px solid var(--green3);border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>'+
+            '<button onclick="confirmarSaque()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s ease">Confirmar Saque</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>'
+
+    // Saques list
+    html+='<div class="card" style="padding:20px 24px;border:1px solid var(--border);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08)">'+
+      '<div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px">Histórico de Saques</div>'
+
+    if(!saques.length){
+      html+='<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px">Nenhum saque realizado</div>'
+    }else{
+      html+='<table class="tbl" style="width:100%"><thead><tr><th>Data</th><th>Valor</th><th>Taxa</th><th>Líquido</th><th>Status</th></tr></thead><tbody>'
+      for(var i=0;i<saques.length;i++){
+        var s=saques[i]
+        var stCor=s.status==='processado'?'green':s.status==='rejeitado'?'red':'orange'
+        html+='<tr><td>'+fmtDt(s.created_at)+'</td><td>'+fmtBrl(s.valor)+'</td><td>'+(s.taxa>0?fmtBrl(s.taxa):'Grátis')+'</td><td style="color:#1B5E3B;font-weight:500">'+fmtBrl(s.valor_liquido)+'</td><td><span class="badge badge-'+stCor+'">'+s.status.toUpperCase()+'</span></td></tr>'
+      }
+      html+='</tbody></table>'
+    }
+    html+='</div></div>'
+    el.innerHTML=html
+  }catch(e){el.innerHTML='<div style="color:var(--red);text-align:center;padding:20px">Erro ao carregar carteira: '+e.message+'</div>'}
+}
+
+function abrirFormSaque(){
+  var el=document.getElementById('saque-form-area')
+  if(el)el.style.display='block'
+}
+function fecharFormSaque(){
+  var el=document.getElementById('saque-form-area')
+  if(el)el.style.display='none'
+}
+
+async function confirmarSaque(){
+  var valEl=document.getElementById('saque-valor')
+  if(!valEl||!valEl.value||parseFloat(valEl.value)<=0){alert('Informe um valor válido');return}
+  if(!confirm('Confirma a solicitação de saque de R$ '+parseFloat(valEl.value).toFixed(2)+'?'))return
+
+  try{
+    var r=await apiPost('solicitar-saque',{valor:parseFloat(valEl.value)})
+    if(r.success){
+      alert('Saque solicitado com sucesso! Valor líquido: R$ '+(r.saque.valor_liquido||0).toFixed(2)+(r.saque.taxa>0?' (taxa: R$ '+r.saque.taxa.toFixed(2)+')':' (sem taxa)'))
+      renderCarteira()
+    }else{
+      alert('Erro: '+(r.error||'Falha ao solicitar saque'))
+    }
+  }catch(e){alert('Erro: '+e.message)}
+}
+
 // ── INIT ────────────────────────────────────────────────────────
 renderMiniCal()
 loadDashboard()
@@ -5350,7 +5755,7 @@ function closeNovoDrop(){document.getElementById('novo-drop').classList.remove('
 // Navega do card Geral para a aba — encontra o htab pelo ID
 function finNavTo(id){
   var tabs=document.querySelectorAll('.fin-htab')
-  var map={geral:0,contacorrente:1,fluxocaixa:2,boletos:3,cheques:4,cartoes:5,planos:6,recebiveis:7,contaspagar:8,contasreceber:9,extrato:10,conciliacoes:11,receitasaude:12}
+  var map={geral:0,contacorrente:1,fluxocaixa:2,boletos:3,cheques:4,cartoes:5,planos:6,recebiveis:7,contaspagar:8,contasreceber:9,extrato:10,conciliacoes:11,receitasaude:12,carteira:13}
   var idx=map[id]
   var el=(idx!==undefined&&tabs[idx])?tabs[idx]:null
   finTab(id,el)
@@ -5372,6 +5777,7 @@ function finTab(id,el){
   if(id==='boletos')renderBoletos()
   if(id==='cheques')renderCheques()
   if(id==='recebiveis')renderRecebiveis()
+  if(id==='carteira')renderCarteira()
 }
 
 function renderBoletos(){
