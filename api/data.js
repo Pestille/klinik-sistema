@@ -853,6 +853,10 @@ module.exports = async function handler(req, res) {
                 var rProf = await client.execute({ sql: "SELECT id FROM profissionais WHERE nome=? AND clinica_id=? LIMIT 1", args: [sa2.profissional_nome, clinica_id] })
                 if (rProf.rows.length) profId2 = rProf.rows[0].id
             }
+            if (sa2.id) {
+                await client.execute({ sql: "UPDATE agendamentos SET paciente_id=?,profissional_id=?,data_hora=?,hora_fim=?,tipo=?,status=?,procedimento=?,observacoes=?,paciente_nome=?,profissional_nome=?,atualizado_em=datetime('now') WHERE id=? AND clinica_id=?", args: [pacId2, profId2, dataHora2, horaFim2, sa2.tipo||'', sa2.status||'agendado', sa2.procedimento||'', sa2.observacoes||'', sa2.paciente_nome||'', sa2.profissional_nome||'', sa2.id, clinica_id] })
+                return res.status(200).json({ success: true, msg: 'Agendamento atualizado' })
+            }
             await client.execute({ sql: "INSERT INTO agendamentos(paciente_id,profissional_id,data_hora,hora_fim,tipo,status,procedimento,observacoes,paciente_nome,profissional_nome,criado_em,atualizado_em,clinica_id) VALUES(?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'),?)", args: [pacId2, profId2, dataHora2, horaFim2, sa2.tipo||'', sa2.status||'agendado', sa2.procedimento||'', sa2.observacoes||'', sa2.paciente_nome||'', sa2.profissional_nome||'', clinica_id] })
             return res.status(200).json({ success: true, msg: 'Agendamento salvo' })
         }

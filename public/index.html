@@ -2301,7 +2301,7 @@ function renderAgendaGrid() {
       var left = (startMinFromLeft/interval)*PX_SLOT_W
       var width = Math.max(PX_SLOT_W, (durMin/interval)*PX_SLOT_W)
       var statusIcon = getStatusIcon(a.status)
-      html += '<div class="appt-block" style="left:'+left+'px;width:'+width+'px;background:'+cor+'dd;color:#fff" onclick="event.stopPropagation()">'
+      html += '<div class="appt-block" style="left:'+left+'px;width:'+width+'px;background:'+cor+'dd;color:#fff" onclick="event.stopPropagation()" ondblclick="editarAgendamento('+a.id+',\''+profId+'\',\''+a.fromTime+'\',\''+String(aH2).padStart(2,'0')+':'+String(aM2).padStart(2,'0')+'\',\''+((a.PatientName||a.patientName||'').replace(/'/g,"\\'"))+'\',\''+((a.CategoryDescription||'').replace(/'/g,"\\'"))+'\',\''+((a.observations||'').replace(/'/g,"\\'"))+'\','+durMin+')">'
       html += '<div class="appt-name">'+statusIcon+' '+(a.PatientName||a.patientName||'Paciente')+'</div>'
       if(width>80) html += '<div class="appt-time">'+(a.fromTime||'--')+' - '+String(aH2).padStart(2,'0')+':'+String(aM2).padStart(2,'0')+'</div>'
       html += '</div>'
@@ -5188,8 +5188,34 @@ async function renderExtrato(){
 // NOVA CONSULTA
 // ══════════════════════════════════════════════════════
 const HORAS_NC=['8:00','8:15','8:30','8:45','9:00','9:15','9:30','9:45','10:00','10:15','10:30','10:45','11:00','11:15','11:30','11:45','12:00','12:15','12:30','12:45','13:00','13:15','13:30','13:45','14:00','14:15','14:30','14:45','15:00','15:15','15:30','15:45','16:00','16:15','16:30','16:45','17:00','17:15','17:30','17:45','18:00','18:15','18:30','18:45','19:00','19:15','19:30','19:45']
-let ncSelectedPac=null,ncSelectedHora=null
+let ncSelectedPac=null,ncSelectedHora=null,ncEditId=null
+function editarAgendamento(id,profId,horaInicio,horaFim,pacNome,tipo,obs,durMin){
+  ncEditId=id
+  openNovaConsulta(profId,horaInicio)
+  // Pre-fill patient
+  ncSelectedPac={nome:pacNome,tel:'',email:'',id:null}
+  var searchSec=document.getElementById('nc-search-section');if(searchSec)searchSec.classList.add('hidden')
+  var pacSel=document.getElementById('nc-pac-selected');if(pacSel)pacSel.classList.remove('hidden')
+  var pacName=document.getElementById('nc-pac-name');if(pacName)pacName.textContent=pacNome
+  var pacInfo=document.getElementById('nc-pac-info');if(pacInfo)pacInfo.textContent='Editando agendamento existente'
+  var confirmBtn=document.getElementById('nc-confirmar');if(confirmBtn){confirmBtn.disabled=false;confirmBtn.textContent='Salvar alterações'}
+  // Pre-fill duration
+  var durSel=document.getElementById('nc-duracao')
+  if(durSel){
+    var found=false
+    for(var i=0;i<durSel.options.length;i++){if(parseInt(durSel.options[i].value)===durMin){durSel.selectedIndex=i;found=true;break}}
+    if(!found){var opt=document.createElement('option');opt.value=durMin;opt.textContent=durMin+' minutos';durSel.appendChild(opt);durSel.value=String(durMin)}
+  }
+  // Pre-fill category
+  var catSel=document.getElementById('nc-cat-sel')
+  if(catSel&&tipo){for(var c=0;c<catSel.options.length;c++){if(catSel.options[c].text.toLowerCase().includes(tipo.toLowerCase())){catSel.selectedIndex=c;break}}}
+  // Pre-fill obs
+  var obsEl=document.getElementById('nc-obs');if(obsEl)obsEl.value=obs||''
+  // Re-render horarios with duration
+  renderNcHorarios()
+}
 function openNovaConsulta(prefillProfId, prefillTime){
+  ncEditId=null
   document.getElementById('modal-nova-consulta').classList.add('open')
   var profs=ST.dashboard&&ST.dashboard.profissionais||ST.profissionais||[]
   var sel=document.getElementById('nc-prof-sel')
@@ -5212,7 +5238,7 @@ function openNovaConsulta(prefillProfId, prefillTime){
 }
 function closeNovaConsulta(){document.getElementById('modal-nova-consulta').classList.remove('open');ncReset()}
 function ncReset(){
-  ncSelectedPac=null;ncSelectedHora=null
+  ncSelectedPac=null;ncSelectedHora=null;ncEditId=null
   const inp=document.getElementById('nc-pac-input');if(inp)inp.value=''
   const drop=document.getElementById('nc-pac-drop');if(drop){drop.classList.add('hidden');drop.innerHTML=''}
   const ss=document.getElementById('nc-search-section');if(ss)ss.classList.remove('hidden')
@@ -5287,6 +5313,7 @@ function renderNcHorarios(){
   var todayAg=ag.filter(function(a){
     if(a.Deleted||!a.date||a.date.slice(0,10)!==hojeStr) return false
     if(profId!=='all'&&String(a.ProfessionalId||a.professionalId||'')!==profId) return false
+    if(ncEditId&&a.id===ncEditId) return false // Exclude the appointment being edited
     return true
   })
   var occupiedSlots=new Set()
@@ -5381,11 +5408,13 @@ async function confirmarConsulta(){
       observacoes:obs,
       status:'agendado'
     }
+    if(ncEditId) body.id=ncEditId
     var d=await apiPost('salvar-agendamento',body)
     if(d.success){
+      var wasEdit=!!ncEditId
       closeNovaConsulta()
-      alert('Consulta agendada!')
-      loadAgenda() // Recarrega agenda
+      alert(wasEdit?'Agendamento atualizado!':'Consulta agendada!')
+      loadAgenda()
     }else{alert(d.error||'Erro ao agendar')}
   }catch(e){alert('Erro: '+e.message)}
   btn.disabled=false;btn.textContent='Confirmar consulta'
