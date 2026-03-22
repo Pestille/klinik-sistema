@@ -1740,8 +1740,28 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
           </div>
         </div>
 
-        <!-- Grade de horários -->
-        <div class="nc-field-label" style="margin-bottom:8px">Horário</div>
+        <!-- Duração + Grade de horários -->
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px">
+          <div>
+            <div class="nc-field-label">Duração do atendimento</div>
+            <select id="nc-duracao" class="nc-prof-sel" onchange="renderNcHorarios()" style="min-width:140px">
+              <option value="5">5 minutos</option>
+              <option value="10">10 minutos</option>
+              <option value="15">15 minutos</option>
+              <option value="20">20 minutos</option>
+              <option value="25">25 minutos</option>
+              <option value="30" selected>30 minutos</option>
+              <option value="45">45 minutos</option>
+              <option value="60">1 hora</option>
+              <option value="90">1h30</option>
+              <option value="120">2 horas</option>
+            </select>
+          </div>
+          <div>
+            <div class="nc-field-label">Horário</div>
+            <span id="nc-hora-selecionada" style="font-size:14px;font-weight:500;color:var(--text)">—</span>
+          </div>
+        </div>
         <div class="horario-grid" id="nc-horarios"></div>
 
         <!-- Confirmação / Alertas -->
@@ -5255,14 +5275,81 @@ function ncPrimeiraChange(el){const s=document.getElementById('nc-como-conheceu'
 function ncProfChange(){renderNcHorarios()}
 function renderNcHorarios(){
   var ag=ST.agendamentos||[],hojeStr=agendaDate.toISOString().slice(0,10)
-  var ocu=new Set(ag.filter(function(a){return !a.Deleted&&a.date&&a.date.slice(0,10)===hojeStr}).map(function(a){return a.fromTime}))
-  const el=document.getElementById('nc-horarios');if(!el)return
-  el.innerHTML=HORAS_NC.map(h=>{
-    const occ=ocu.has(h),sel=h===ncSelectedHora
-    return'<div class="h-slot '+(occ?'occupied':'')+' '+(sel?'selected':'')+'" onclick="'+(occ?'':'ncSelectHora(\''+h+'\')')+'">'+h+'</div>'
+  var interval=agendaInterval
+  var durSel=document.getElementById('nc-duracao')
+  var durMin=durSel?parseInt(durSel.value)||30:30
+  var slotsNeeded=Math.ceil(durMin/interval)
+
+  // Build set of occupied time slots (each slot = interval minutes)
+  var profSel=document.getElementById('nc-prof-sel')
+  var profIdx=profSel?profSel.selectedIndex-1:-1
+  var profId=profIdx>=0&&ST.profissionais&&ST.profissionais[profIdx]?String(ST.profissionais[profIdx].id):'all'
+  var todayAg=ag.filter(function(a){
+    if(a.Deleted||!a.date||a.date.slice(0,10)!==hojeStr) return false
+    if(profId!=='all'&&String(a.ProfessionalId||a.professionalId||'')!==profId) return false
+    return true
+  })
+  var occupiedSlots=new Set()
+  todayAg.forEach(function(a){
+    var p1=(a.fromTime||'').split(':').map(Number)
+    var p2=(a.toTime||'').replace(/h$/,'').split(':').map(Number)
+    var startMin=p1[0]*60+(p1[1]||0)
+    var endMin=p2[0]*60+(p2[1]||0)
+    if(endMin<=startMin) endMin=startMin+30
+    for(var m=startMin;m<endMin;m+=interval){
+      occupiedSlots.add(String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'))
+    }
+  })
+
+  // Generate all time slots based on system interval
+  var START_H=7,END_H=21
+  var slots=[]
+  for(var h=START_H;h<END_H;h++){
+    for(var m=0;m<60;m+=interval){
+      slots.push(String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'))
+    }
+  }
+
+  // Calculate which slots are part of the selected range
+  var selStartIdx=-1
+  if(ncSelectedHora){
+    selStartIdx=slots.indexOf(ncSelectedHora)
+  }
+
+  var el=document.getElementById('nc-horarios');if(!el)return
+  el.innerHTML=slots.map(function(slot,idx){
+    var isOccupied=occupiedSlots.has(slot)
+    // Check if selecting here would overlap with occupied slots
+    var wouldOverlap=false
+    for(var k=0;k<slotsNeeded;k++){
+      if(idx+k>=slots.length||occupiedSlots.has(slots[idx+k])){wouldOverlap=true;break}
+    }
+    var isSelected=selStartIdx>=0&&idx>=selStartIdx&&idx<selStartIdx+slotsNeeded
+    var cls='h-slot'
+    if(isOccupied) cls+=' occupied'
+    else if(isSelected) cls+=' selected'
+    var onclick=isOccupied?'':'ncSelectHora(\''+slot+'\','+idx+')'
+    return '<div class="'+cls+'" onclick="'+onclick+'">'+slot+'</div>'
   }).join('')
+
+  // Update hora display
+  var horaEl=document.getElementById('nc-hora-selecionada')
+  if(horaEl){
+    if(ncSelectedHora&&selStartIdx>=0){
+      var endIdx=Math.min(selStartIdx+slotsNeeded,slots.length)-1
+      var endSlotMin=(parseInt(slots[endIdx].split(':')[0])*60+parseInt(slots[endIdx].split(':')[1]))+interval
+      var endH=String(Math.floor(endSlotMin/60)).padStart(2,'0')
+      var endM=String(endSlotMin%60).padStart(2,'0')
+      horaEl.textContent=ncSelectedHora+' — '+endH+':'+endM+' ('+durMin+'min)'
+    }else{
+      horaEl.textContent='—'
+    }
+  }
 }
-function ncSelectHora(h){ncSelectedHora=h;renderNcHorarios()}
+function ncSelectHora(h,idx){
+  ncSelectedHora=h
+  renderNcHorarios()
+}
 
 async function confirmarConsulta(){
   if(!ncSelectedPac||!ncSelectedHora){alert('Selecione paciente e horário');return}
@@ -5278,19 +5365,23 @@ async function confirmarConsulta(){
     var catSel=document.getElementById('nc-cat-sel')
     var tipo=catSel?catSel.options[catSel.selectedIndex].text:''
     var obs=document.getElementById('nc-obs').value||''
+    var durSel2=document.getElementById('nc-duracao')
+    var durMin2=durSel2?parseInt(durSel2.value)||30:30
+    var hParts=ncSelectedHora.split(':').map(Number)
+    var endTotalMin=hParts[0]*60+(hParts[1]||0)+durMin2
+    var horaFim=String(Math.floor(endTotalMin/60)).padStart(2,'0')+':'+String(endTotalMin%60).padStart(2,'0')
     var body={
       paciente_nome:ncSelectedPac.nome,
       data:hoje,
       hora:ncSelectedHora,
-      hora_fim:'',
+      hora_fim:horaFim,
       profissional_id:profId,
       profissional_nome:profNome,
       tipo:tipo,
       observacoes:obs,
       status:'agendado'
     }
-    var r=await apiPost('salvar-agendamento',body)
-    var d=await r.json()
+    var d=await apiPost('salvar-agendamento',body)
     if(d.success){
       closeNovaConsulta()
       alert('Consulta agendada!')
