@@ -835,9 +835,23 @@ module.exports = async function handler(req, res) {
         }
 
         // ── SALVAR AGENDAMENTO ────────────────────────────────────────
+        // ── EXCLUIR AGENDAMENTO ──────────────────────────────────────
+        if (route === 'excluir-agendamento') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var ea = req.body || {}
+            if (!ea.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
+            await client.execute({ sql: "DELETE FROM agendamentos WHERE id=? AND clinica_id=?", args: [ea.id, clinica_id] })
+            return res.status(200).json({ success: true, msg: 'Agendamento excluído' })
+        }
+
         if (route === 'salvar-agendamento') {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var sa2 = req.body || {}
+            // Status-only update (partial)
+            if (sa2.id && sa2.paciente_nome === '_keep_') {
+                await client.execute({ sql: "UPDATE agendamentos SET status=?,atualizado_em=datetime('now') WHERE id=? AND clinica_id=?", args: [sa2.status||'agendado', sa2.id, clinica_id] })
+                return res.status(200).json({ success: true, msg: 'Status atualizado' })
+            }
             if (!sa2.paciente_nome || !sa2.data || !sa2.hora) return res.status(400).json({ success: false, error: 'Paciente, data e hora obrigatórios' })
             var dataHora2 = sa2.data + ' ' + sa2.hora
             var horaFim2 = sa2.hora_fim || ''

@@ -173,6 +173,36 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 /* Now marker (vertical line) */
 .now-line{position:absolute;top:0;bottom:0;width:2px;background:var(--orange);z-index:8;pointer-events:none}
 .now-line::before{content:'';position:absolute;top:-5px;left:-4px;width:10px;height:10px;border-radius:50%;background:var(--orange)}
+/* Appointment detail panel */
+.appt-panel-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.35);z-index:500;display:none;align-items:center;justify-content:center}
+.appt-panel-overlay.open{display:flex}
+.appt-panel{background:var(--white);border-radius:8px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.appt-panel-header{padding:16px 20px;display:flex;align-items:center;gap:14px;position:relative}
+.appt-panel-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:20px;color:var(--text3);cursor:pointer;padding:4px 8px;border-radius:4px}
+.appt-panel-close:hover{background:var(--gray2);color:var(--text)}
+.appt-panel-av{width:52px;height:52px;border-radius:50%;background:var(--gray2);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--green);flex-shrink:0}
+.appt-panel-name{font-size:18px;font-weight:500;color:var(--text)}
+.appt-panel-phone{font-size:13px;color:var(--text3);margin-top:2px;display:flex;align-items:center;gap:6px}
+.appt-panel-actions{display:flex;align-items:center;gap:6px;padding:0 20px 12px}
+.appt-panel-action{display:flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--border);border-radius:6px;background:var(--white);font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .12s;font-family:'Roboto',sans-serif}
+.appt-panel-action:hover{background:var(--gray1);border-color:var(--green3)}
+.appt-panel-action svg{width:16px;height:16px;flex-shrink:0}
+.appt-panel-fin{margin:0 20px 12px;padding:10px 16px;border-radius:6px;font-size:13px;font-weight:500;text-align:center}
+.appt-panel-fin.ok{background:#E8F5E9;color:#2E7D32}
+.appt-panel-fin.pending{background:#FFF3E0;color:#E65100}
+.appt-panel-detail{padding:12px 20px;border-top:1px solid var(--border2);display:flex;align-items:center;gap:12px}
+.appt-panel-detail-icon{width:32px;height:32px;border-radius:50%;background:var(--gray1);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.appt-panel-detail-text{flex:1;font-size:13px;color:var(--text2)}
+.appt-panel-detail-text small{font-size:11px;color:var(--text3);display:block;margin-top:1px}
+.appt-panel-detail-actions{display:flex;gap:4px}
+.appt-panel-detail-btn{background:none;border:1px solid var(--border);border-radius:4px;padding:5px 7px;cursor:pointer;color:var(--text3);transition:all .12s;font-size:14px}
+.appt-panel-detail-btn:hover{background:var(--gray1);color:var(--text)}
+.appt-panel-detail-btn.danger:hover{background:#FFEBEE;color:var(--red);border-color:var(--red)}
+.appt-panel-tags{padding:12px 20px;border-top:1px solid var(--border2)}
+.appt-panel-tag{display:inline-flex;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.appt-panel-footer{padding:12px 20px;border-top:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.appt-panel-footer-info{font-size:11px;color:var(--text3)}
+.appt-status-sel{border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;font-family:'Roboto',sans-serif;color:var(--text2);cursor:pointer;background:var(--white)}
 /* Month view */
 .agenda-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);padding:0}
 .agenda-month-hdr{background:var(--white);font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;padding:8px;text-align:center}
@@ -2299,7 +2329,7 @@ function renderAgendaGrid() {
       var left = (startMinFromLeft/interval)*PX_SLOT_W
       var width = Math.max(PX_SLOT_W, (durMin/interval)*PX_SLOT_W)
       var statusIcon = getStatusIcon(a.status)
-      html += '<div class="appt-block" style="left:'+left+'px;width:'+width+'px;background:'+cor+'dd;color:#fff" onclick="event.stopPropagation()" ondblclick="editarAgendamento('+a.id+',\''+profId+'\',\''+a.fromTime+'\',\''+String(aH2).padStart(2,'0')+':'+String(aM2).padStart(2,'0')+'\',\''+((a.PatientName||a.patientName||'').replace(/'/g,"\\'"))+'\',\''+((a.CategoryDescription||'').replace(/'/g,"\\'"))+'\',\''+((a.observations||'').replace(/'/g,"\\'"))+'\','+durMin+')">'
+      html += '<div class="appt-block" style="left:'+left+'px;width:'+width+'px;background:'+cor+'dd;color:#fff" onclick="event.stopPropagation();openApptPanel('+a.id+')" ondblclick="event.stopPropagation();editarAgendamento('+a.id+',\''+profId+'\',\''+a.fromTime+'\',\''+String(aH2).padStart(2,'0')+':'+String(aM2).padStart(2,'0')+'\',\''+((a.PatientName||a.patientName||'').replace(/'/g,"\\'"))+'\',\''+((a.CategoryDescription||'').replace(/'/g,"\\'"))+'\',\''+((a.observations||'').replace(/'/g,"\\'"))+'\','+durMin+')">'
       html += '<div class="appt-name">'+statusIcon+' '+(a.PatientName||a.patientName||'Paciente')+'</div>'
       if(width>80) html += '<div class="appt-time">'+(a.fromTime||'--')+' - '+String(aH2).padStart(2,'0')+':'+String(aM2).padStart(2,'0')+'</div>'
       html += '</div>'
@@ -5186,6 +5216,115 @@ async function renderExtrato(){
 // NOVA CONSULTA
 // ══════════════════════════════════════════════════════
 const HORAS_NC=['8:00','8:15','8:30','8:45','9:00','9:15','9:30','9:45','10:00','10:15','10:30','10:45','11:00','11:15','11:30','11:45','12:00','12:15','12:30','12:45','13:00','13:15','13:30','13:45','14:00','14:15','14:30','14:45','15:00','15:15','15:30','15:45','16:00','16:15','16:30','16:45','17:00','17:15','17:30','17:45','18:00','18:15','18:30','18:45','19:00','19:15','19:30','19:45']
+// ── APPOINTMENT DETAIL PANEL ──
+function openApptPanel(agId){
+  var ag=ST.agendamentos||[]
+  var a=null;ag.forEach(function(x){if(x.id===agId)a=x})
+  if(!a)return
+  var allProfs=ST.profissionais||(ST.dashboard&&ST.dashboard.profissionais)||[]
+  var profId=String(a.ProfessionalId||a.professionalId||'')
+  var profInfo=null;var profIdx=0
+  allProfs.forEach(function(p,i){if(String(p.id||p.Id||'')===profId){profInfo=p;profIdx=i}})
+  var cor=PROF_CORES[profIdx%PROF_CORES.length]
+  var nome=a.PatientName||a.patientName||'Paciente'
+  var ini=nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
+  var tel=a.MobilePhone||''
+  var profNome=profInfo?(profInfo.name||profInfo.Name||profInfo.nome||''):(a.ProfessionalName||'')
+  var fromTime=a.fromTime||'--'
+  var toTime=a.toTime||''
+  if(!toTime){var p1=(a.fromTime||'9:00').split(':').map(Number);toTime=String(p1[0]+1).padStart(2,'0')+':'+String(p1[1]||0).padStart(2,'0')}
+  var dataFmt=agendaDate.getDate()+' de '+MESES_PT[agendaDate.getMonth()]+' de '+agendaDate.getFullYear()
+  var diaSemana=DIAS_FULL[agendaDate.getDay()]
+  var status=a.status||'agendado'
+  var statusColors={agendado:'#1565C0',confirmado:'#2E7D52',em_espera:'#FF6D00',em_atendimento:'#7B1FA2',atendido:'#4CAF50',atrasado:'#E65100',faltou:'#C62828',cancelado:'#757575'}
+  var stCor=statusColors[status]||'#1565C0'
+
+  // Duration calc
+  var p1t=(a.fromTime||'9:00').split(':').map(Number)
+  var p2t=toTime.replace(/h$/,'').split(':').map(Number)
+  var durMin=(p2t[0]*60+(p2t[1]||0))-(p1t[0]*60+(p1t[1]||0))
+  if(durMin<=0)durMin=30
+
+  var panel=document.getElementById('appt-panel')
+  panel.innerHTML=
+    // Header with colored bar
+    '<div style="height:4px;background:'+cor+';border-radius:8px 8px 0 0"></div>'+
+    '<div class="appt-panel-header">'+
+      '<div class="appt-panel-av" style="background:'+cor+'20;color:'+cor+'">'+ini+'</div>'+
+      '<div>'+
+        '<div class="appt-panel-name">'+nome+'</div>'+
+        '<div class="appt-panel-phone">'+
+          (tel?'<span>'+tel+'</span>':'<span style="color:var(--text3)">Sem telefone</span>')+
+          '<span class="badge" style="background:'+stCor+'20;color:'+stCor+';padding:2px 8px;border-radius:4px;font-size:10px;font-weight:500">'+status.toUpperCase().replace('_',' ')+'</span>'+
+        '</div>'+
+      '</div>'+
+      '<button class="appt-panel-close" onclick="closeApptPanel()">&times;</button>'+
+    '</div>'+
+    // Action buttons
+    '<div class="appt-panel-actions">'+
+      '<button class="appt-panel-action" onclick="closeApptPanel();abrirProntuario(\''+nome.replace(/'/g,"\\'")+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>Prontuário</button>'+
+      (tel?'<button class="appt-panel-action" onclick="window.open(\'https://wa.me/55'+tel.replace(/\\D/g,'')+'\',\'_blank\')"><svg viewBox="0 0 24 24" fill="#25D366" stroke="none"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg></button>':'')+
+      '<button class="appt-panel-action" onclick="closeApptPanel();nav(\'financeiro\')" title="Financeiro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></button>'+
+    '</div>'+
+    // Financial status
+    '<div class="appt-panel-fin ok">Financeiro OK</div>'+
+    // Date/time detail
+    '<div class="appt-panel-detail">'+
+      '<div class="appt-panel-detail-icon">📅</div>'+
+      '<div class="appt-panel-detail-text">'+diaSemana+', '+dataFmt+' | '+fromTime+' — '+toTime+'<small>'+profNome+' · '+durMin+' min</small></div>'+
+      '<div class="appt-panel-detail-actions">'+
+        '<button class="appt-panel-detail-btn" title="Editar" onclick="closeApptPanel();editarAgendamento('+a.id+',\''+profId+'\',\''+fromTime+'\',\''+toTime+'\',\''+nome.replace(/'/g,"\\'")+'\',\''+((a.CategoryDescription||'').replace(/'/g,"\\'"))+'\',\''+((a.observations||'').replace(/'/g,"\\'"))+'\','+durMin+')">✏️</button>'+
+        '<button class="appt-panel-detail-btn danger" title="Cancelar" onclick="cancelarAgendamento('+a.id+')">✕</button>'+
+        '<button class="appt-panel-detail-btn danger" title="Excluir" onclick="excluirAgendamento('+a.id+')">🗑️</button>'+
+      '</div>'+
+    '</div>'+
+    // Category/tags
+    (a.CategoryDescription?'<div class="appt-panel-tags"><span style="font-size:12px;color:var(--text3);margin-right:8px">Categoria</span><span class="appt-panel-tag" style="background:'+cor+'20;color:'+cor+'">'+a.CategoryDescription+'</span></div>':'')+
+    // Footer: who booked + status selector
+    '<div class="appt-panel-footer">'+
+      '<div class="appt-panel-footer-info">Agendamento #'+a.id+'</div>'+
+      '<select class="appt-status-sel" onchange="alterarStatusAgendamento('+a.id+',this.value)" style="border-color:'+stCor+'">'+
+        ['agendado','confirmado','em_espera','em_atendimento','atendido','atrasado','faltou','cancelado'].map(function(s){
+          return '<option value="'+s+'"'+(s===status?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1).replace('_',' ')+'</option>'
+        }).join('')+
+      '</select>'+
+    '</div>'
+
+  document.getElementById('appt-panel-overlay').classList.add('open')
+}
+
+function closeApptPanel(){
+  document.getElementById('appt-panel-overlay').classList.remove('open')
+}
+
+async function alterarStatusAgendamento(id,novoStatus){
+  try{
+    await apiPost('salvar-agendamento',{id:id,status:novoStatus,paciente_nome:'_keep_',data:'_keep_',hora:'_keep_'})
+    // Update local state
+    (ST.agendamentos||[]).forEach(function(a){if(a.id===id)a.status=novoStatus})
+    renderAgendaGrid()
+    openApptPanel(id) // Refresh panel
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function cancelarAgendamento(id){
+  if(!confirm('Cancelar este agendamento?'))return
+  try{
+    await apiPost('salvar-agendamento',{id:id,status:'cancelado',paciente_nome:'_keep_',data:'_keep_',hora:'_keep_'})
+    closeApptPanel()
+    loadAgenda()
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function excluirAgendamento(id){
+  if(!confirm('Excluir este agendamento permanentemente?'))return
+  try{
+    await apiPost('excluir-agendamento',{id:id})
+    closeApptPanel()
+    loadAgenda()
+  }catch(e){alert('Erro: '+e.message)}
+}
+
 let ncSelectedPac=null,ncSelectedHora=null,ncEditId=null
 function editarAgendamento(id,profId,horaInicio,horaFim,pacNome,tipo,obs,durMin){
   ncEditId=id
@@ -5427,6 +5566,10 @@ document.querySelectorAll('.module-card').forEach(card=>{
   card.addEventListener('mouseleave',()=>{const i=card.querySelector('.module-icon');if(i){i.classList.remove('hov');card.style.borderColor='transparent'}})
 })
 </script>
+<!-- Appointment Detail Panel -->
+<div class="appt-panel-overlay" id="appt-panel-overlay" onclick="if(event.target===this)closeApptPanel()">
+  <div class="appt-panel" id="appt-panel"></div>
+</div>
 <script src="/klinik-turso.js"></script>
 </body>
 </html>
