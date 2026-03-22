@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Auth check — public routes skip authentication
-    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote']
+    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos']
     var auth = null, clinica_id = null
     if (publicRoutes.indexOf(route) === -1) {
         auth = await authenticateRequest(req)
@@ -1345,17 +1345,34 @@ module.exports = async function handler(req, res) {
             var bpq = q.q || ''
             var bpTab = q.tabela || ''
             if (bpq.length < 2) return res.status(400).json({ success: false, error: 'Mínimo 2 caracteres' })
-            // Search in tabelas_preco_itens first, fallback to procedimentos
+            try { await client.execute("CREATE TABLE IF NOT EXISTS tabela_precos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER DEFAULT 1, tabela TEXT NOT NULL, procedimento TEXT NOT NULL, especialidade TEXT, sessoes INTEGER DEFAULT 1, valor REAL DEFAULT 0, comissao REAL DEFAULT 0, codigo_interno TEXT)") } catch(e) {}
             var bpSql, bpArgs
             if (bpTab) {
-                bpSql = "SELECT tpi.id,tpi.codigo,tpi.descricao as nome,tpi.valor,tp.nome as tabela FROM tabelas_preco_itens tpi JOIN tabelas_preco tp ON tp.id=tpi.tabela_id WHERE (tpi.descricao LIKE ? OR tpi.codigo LIKE ?) AND tp.nome LIKE ? AND tp.clinica_id=? ORDER BY tpi.descricao LIMIT 20"
-                bpArgs = ['%'+bpq+'%', '%'+bpq+'%', '%'+bpTab+'%', clinica_id]
+                bpSql = "SELECT id,procedimento as nome,especialidade,sessoes,valor,tabela,codigo_interno FROM tabela_precos WHERE procedimento LIKE ? AND UPPER(tabela)=UPPER(?) AND clinica_id=? ORDER BY procedimento LIMIT 20"
+                bpArgs = ['%'+bpq+'%', bpTab, clinica_id || 1]
             } else {
-                bpSql = "SELECT tpi.id,tpi.codigo,tpi.descricao as nome,tpi.valor,tp.nome as tabela FROM tabelas_preco_itens tpi JOIN tabelas_preco tp ON tp.id=tpi.tabela_id WHERE (tpi.descricao LIKE ? OR tpi.codigo LIKE ?) AND tp.clinica_id=? ORDER BY tpi.descricao LIMIT 20"
-                bpArgs = ['%'+bpq+'%', '%'+bpq+'%', clinica_id]
+                bpSql = "SELECT id,procedimento as nome,especialidade,sessoes,valor,tabela,codigo_interno FROM tabela_precos WHERE procedimento LIKE ? AND clinica_id=? ORDER BY procedimento LIMIT 20"
+                bpArgs = ['%'+bpq+'%', clinica_id || 1]
             }
             var bpResult = await client.execute({ sql: bpSql, args: bpArgs })
             return res.status(200).json({ success: true, procedimentos: bpResult.rows })
+        }
+
+        // ── IMPORTAR TABELA DE PREÇOS ────────────────────────────────
+        if (route === 'importar-tabela-precos') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            try { await client.execute("CREATE TABLE IF NOT EXISTS tabela_precos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER DEFAULT 1, tabela TEXT NOT NULL, procedimento TEXT NOT NULL, especialidade TEXT, sessoes INTEGER DEFAULT 1, valor REAL DEFAULT 0, comissao REAL DEFAULT 0, codigo_interno TEXT)") } catch(e) {}
+            var tpLote = req.body || []
+            if (!Array.isArray(tpLote)) tpLote = tpLote.itens || []
+            var tpIns = 0, tpErr = 0
+            for (var ti = 0; ti < tpLote.length; ti++) {
+                var tp = tpLote[ti]
+                try {
+                    await client.execute({ sql: "INSERT INTO tabela_precos(clinica_id,tabela,procedimento,especialidade,sessoes,valor,comissao,codigo_interno) VALUES(1,?,?,?,?,?,?,?)", args: [tp.tabela||'', tp.procedimento||'', tp.especialidade||'', tp.sessoes||1, tp.valor||0, tp.comissao||0, tp.codigo_interno||''] })
+                    tpIns++
+                } catch(e) { tpErr++ }
+            }
+            return res.status(200).json({ success: true, importados: tpIns, erros: tpErr })
         }
 
         // ── ANAMNESE ─────────────────────────────────────────────────
