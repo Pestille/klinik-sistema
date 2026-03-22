@@ -30,6 +30,12 @@ module.exports = async function handler(req, res) {
         clinica_id = auth.clinica_id
     }
 
+    // Ensure foto_url column exists (once per cold start)
+    if (!global._fotoColChecked) {
+        try { await client.execute("ALTER TABLE pacientes ADD COLUMN foto_url TEXT") } catch(e) {}
+        global._fotoColChecked = true
+    }
+
     try {
         var client = getClient()
 
