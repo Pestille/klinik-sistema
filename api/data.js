@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Auth check — public routes skip authentication
-    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate']
+    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote']
     var auth = null, clinica_id = null
     if (publicRoutes.indexOf(route) === -1) {
         auth = await authenticateRequest(req)
@@ -1196,6 +1196,44 @@ module.exports = async function handler(req, res) {
             await client.execute("CREATE TABLE IF NOT EXISTS orcamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, profissional_id INTEGER, profissional_nome TEXT, data_criacao TEXT DEFAULT (datetime('now')), observacoes TEXT, tabela_preco TEXT DEFAULT 'PARTICULAR', status TEXT DEFAULT 'aberto', aprovado_por TEXT, data_aprovacao TEXT, motivo_reprovacao TEXT, forma_pagamento TEXT, tipo_pagamento TEXT DEFAULT 'valor_total', parcelas INTEGER DEFAULT 1, desconto REAL DEFAULT 0, valor_total REAL DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))")
             await client.execute("CREATE TABLE IF NOT EXISTS orcamento_itens (id INTEGER PRIMARY KEY AUTOINCREMENT, orcamento_id INTEGER REFERENCES orcamentos(id), procedimento_codigo TEXT, procedimento_nome TEXT, dente TEXT, regiao TEXT, profissional_id INTEGER, profissional_nome TEXT, valor_unitario REAL DEFAULT 0, valor_plano REAL DEFAULT 0, quantidade INTEGER DEFAULT 1, executado INTEGER DEFAULT 0, data_execucao TEXT, created_at TEXT DEFAULT (datetime('now')))")
             return res.status(200).json({ success: true, msg: 'Tabelas orcamentos e orcamento_itens criadas' })
+        }
+
+        // ── IMPORTAR ORÇAMENTOS EM LOTE ──────────────────────────────
+        if (route === 'importar-orcamentos-lote') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var lote = req.body || []
+            if (!Array.isArray(lote)) lote = lote.orcamentos || []
+            var ins = 0, errs = 0
+            for (var oi = 0; oi < lote.length; oi++) {
+                var orc = lote[oi]
+                try {
+                    // Find paciente_id by name
+                    var pacR = await client.execute({ sql: "SELECT id FROM pacientes WHERE nome=? LIMIT 1", args: [orc.paciente_nome || ''] })
+                    var pacId = pacR.rows.length ? pacR.rows[0].id : null
+                    if (!pacId) { errs++; continue }
+                    // Find profissional_id
+                    var profR = await client.execute({ sql: "SELECT id FROM profissionais WHERE nome=? LIMIT 1", args: [orc.profissional_nome || ''] })
+                    var profId = profR.rows.length ? profR.rows[0].id : null
+                    // Parse date
+                    var dataCriacao = orc.data || ''
+                    if (dataCriacao.includes('/')) {
+                        var dp = dataCriacao.split(' ')[0].split('/')
+                        if (dp.length === 3) dataCriacao = dp[2] + '-' + dp[1].padStart(2,'0') + '-' + dp[0].padStart(2,'0')
+                    }
+                    // Insert orcamento
+                    var orcRes = await client.execute({ sql: "INSERT INTO orcamentos(clinica_id,paciente_id,profissional_id,profissional_nome,data_criacao,observacoes,tabela_preco,status,aprovado_por,data_aprovacao,forma_pagamento,tipo_pagamento,parcelas,desconto,valor_total) VALUES(1,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", args: [pacId, profId, orc.profissional_nome||'', dataCriacao, orc.obs||'', orc.tabela||'PARTICULAR', orc.status||'aberto', orc.aprovado_por||'', orc.data_aprovacao||'', orc.forma_pagamento||'', orc.tipo_pagamento||'valor_total', orc.parcelas||1, orc.desconto||0, orc.valor_total||0] })
+                    var orcId = Number(orcRes.lastInsertRowid)
+                    // Insert items
+                    if (orc.itens && orc.itens.length) {
+                        for (var ii = 0; ii < orc.itens.length; ii++) {
+                            var it = orc.itens[ii]
+                            await client.execute({ sql: "INSERT INTO orcamento_itens(orcamento_id,procedimento_nome,dente,regiao,profissional_nome,valor_unitario,valor_plano,executado,data_execucao) VALUES(?,?,?,?,?,?,?,?,?)", args: [orcId, it.procedimento_nome||'', it.dente||'', it.regiao||'', it.profissional_nome||'', it.valor_unitario||0, it.valor_plano||0, it.executado||0, it.data_execucao||''] })
+                        }
+                    }
+                    ins++
+                } catch(e) { errs++ }
+            }
+            return res.status(200).json({ success: true, importados: ins, erros: errs })
         }
 
         // ── ORÇAMENTOS — LISTAR POR PACIENTE ─────────────────────────
