@@ -1551,100 +1551,142 @@ module.exports = async function handler(req, res) {
             var gc = req.body || {}
             if (!gc.tipo || !gc.valor) return res.status(400).json({ success: false, error: 'tipo e valor obrigatórios' })
 
-            var gcPix = '', gcPixCola = '', gcBoletoUrl = '', gcBoletoCod = '', gcAsaasId = ''
+            var gcPix = '', gcPixCola = '', gcBoletoUrl = '', gcBoletoCod = '', gcAsaasId = '', gcInvoiceUrl = ''
 
-            if (gc.tipo === 'pix' || gc.tipo === 'boleto') {
-                // Check if Asaas is configured
-                var gcAsaas = await client.execute({ sql: "SELECT asaas_api_key FROM clinicas WHERE id=?", args: [clinica_id] })
-                var gcApiKey = (gcAsaas.rows.length && gcAsaas.rows[0].asaas_api_key) ? gcAsaas.rows[0].asaas_api_key : (process.env.ASAAS_API_KEY || '')
-                if (!gcApiKey) {
-                    return res.status(400).json({ success: false, error: 'Asaas API Key não configurada. Vá em Configurações > Dados da Clínica para configurar.' })
-                }
+            // Check if Asaas is configured
+            var gcAsaas = await client.execute({ sql: "SELECT asaas_api_key FROM clinicas WHERE id=?", args: [clinica_id] })
+            var gcApiKey = (gcAsaas.rows.length && gcAsaas.rows[0].asaas_api_key) ? gcAsaas.rows[0].asaas_api_key : (process.env.ASAAS_API_KEY || '')
+            if (!gcApiKey) {
+                return res.status(400).json({ success: false, error: 'Asaas API Key não configurada. Vá em Configurações > Dados da Clínica.' })
+            }
 
-                // Check/create customer in Asaas
-                var gcPaciente = null
-                if (gc.paciente_id) {
-                    var gcPacRow = await client.execute({ sql: "SELECT nome, cpf, email FROM pacientes WHERE id=? AND clinica_id=?", args: [gc.paciente_id, clinica_id] })
-                    if (gcPacRow.rows.length) gcPaciente = gcPacRow.rows[0]
-                }
+            // Check/create customer in Asaas
+            var gcPaciente = null
+            if (gc.paciente_id) {
+                var gcPacRow = await client.execute({ sql: "SELECT nome, cpf, email, telefone FROM pacientes WHERE id=? AND clinica_id=?", args: [gc.paciente_id, clinica_id] })
+                if (gcPacRow.rows.length) gcPaciente = gcPacRow.rows[0]
+            }
 
-                try {
-                    // Search for existing customer
-                    var gcCustSearch = await fetch('https://api.asaas.com/v3/customers?cpfCnpj=' + encodeURIComponent((gcPaciente && gcPaciente.cpf) || ''), {
+            try {
+                // Search for existing customer by CPF
+                var gcCpf = (gcPaciente && gcPaciente.cpf) || ''
+                var gcCustomerId = ''
+                if (gcCpf) {
+                    var gcCustSearch = await fetch('https://api.asaas.com/v3/customers?cpfCnpj=' + encodeURIComponent(gcCpf), {
                         headers: { 'access_token': gcApiKey }
                     })
                     var gcCustData = await gcCustSearch.json()
-                    var gcCustomerId = ''
-
-                    if (gcCustData.data && gcCustData.data.length > 0) {
-                        gcCustomerId = gcCustData.data[0].id
-                    } else {
-                        // Create customer
-                        var gcNewCust = await fetch('https://api.asaas.com/v3/customers', {
-                            method: 'POST',
-                            headers: { 'access_token': gcApiKey, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                name: (gcPaciente && gcPaciente.nome) || gc.paciente_nome || 'Cliente',
-                                cpfCnpj: (gcPaciente && gcPaciente.cpf) || '',
-                                email: (gcPaciente && gcPaciente.email) || ''
-                            })
-                        })
-                        var gcNewCustData = await gcNewCust.json()
-                        gcCustomerId = gcNewCustData.id || ''
-                    }
-
-                    if (!gcCustomerId) {
-                        return res.status(400).json({ success: false, error: 'Não foi possível criar/encontrar cliente no Asaas' })
-                    }
-
-                    // Create payment (BOLETO or PIX)
-                    var gcBillingType = gc.tipo === 'pix' ? 'PIX' : 'BOLETO'
-                    var gcPayment = await fetch('https://api.asaas.com/v3/payments', {
+                    if (gcCustData.data && gcCustData.data.length > 0) gcCustomerId = gcCustData.data[0].id
+                }
+                if (!gcCustomerId) {
+                    // Create customer
+                    var gcNewCust = await fetch('https://api.asaas.com/v3/customers', {
                         method: 'POST',
                         headers: { 'access_token': gcApiKey, 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            customer: gcCustomerId,
-                            billingType: gcBillingType,
-                            value: parseFloat(gc.valor),
-                            dueDate: gc.data_vencimento || new Date().toISOString().slice(0, 10),
-                            description: gc.descricao || 'Cobrança Klinik'
+                            name: (gcPaciente && gcPaciente.nome) || gc.paciente_nome || 'Cliente',
+                            cpfCnpj: gcCpf || undefined,
+                            email: (gcPaciente && gcPaciente.email) || undefined
                         })
                     })
-                    var gcPayData = await gcPayment.json()
-                    if (gcPayData.errors) {
-                        return res.status(400).json({ success: false, error: 'Asaas: ' + (gcPayData.errors[0] && gcPayData.errors[0].description || JSON.stringify(gcPayData.errors)) })
-                    }
-                    gcAsaasId = gcPayData.id || ''
-                    gcBoletoUrl = gcPayData.bankSlipUrl || ''
-                    gcBoletoCod = gcPayData.nossoNumero || ''
-
-                    // For PIX, fetch the QR code
-                    if (gc.tipo === 'pix' && gcAsaasId) {
-                        try {
-                            var gcPixRes = await fetch('https://api.asaas.com/v3/payments/' + gcAsaasId + '/pixQrCode', {
-                                headers: { 'access_token': gcApiKey }
-                            })
-                            var gcPixData = await gcPixRes.json()
-                            gcPixCola = gcPixData.payload || ''
-                            gcPix = gcPixData.encodedImage || '' // base64 QR code image
-                        } catch(ep) { console.error('[gerar-cobranca] PIX QR error:', ep.message) }
-                    }
-                } catch(e) {
-                    return res.status(500).json({ success: false, error: 'Erro ao gerar cobrança no Asaas: ' + e.message })
+                    var gcNewCustData = await gcNewCust.json()
+                    if (gcNewCustData.errors) return res.status(400).json({ success: false, error: 'Asaas cliente: ' + (gcNewCustData.errors[0] && gcNewCustData.errors[0].description || '') })
+                    gcCustomerId = gcNewCustData.id || ''
                 }
+                if (!gcCustomerId) return res.status(400).json({ success: false, error: 'Não foi possível criar/encontrar cliente no Asaas' })
+
+                // Map tipo to Asaas billingType
+                var gcBillingMap = { pix: 'PIX', boleto: 'BOLETO', credito: 'CREDIT_CARD', debito: 'DEBIT_CARD' }
+                var gcBillingType = gcBillingMap[gc.tipo] || 'BOLETO'
+
+                // Build payment body
+                var gcPayBody = {
+                    customer: gcCustomerId,
+                    billingType: gcBillingType,
+                    value: parseFloat(gc.valor),
+                    dueDate: gc.data_vencimento || new Date().toISOString().slice(0, 10),
+                    description: gc.descricao || 'Cobrança Klinik'
+                }
+                // Credit card: add installment count
+                if (gc.tipo === 'credito' && gc.parcelas && parseInt(gc.parcelas) > 1) {
+                    gcPayBody.installmentCount = parseInt(gc.parcelas)
+                    gcPayBody.installmentValue = parseFloat((parseFloat(gc.valor) / parseInt(gc.parcelas)).toFixed(2))
+                }
+
+                var gcPayment = await fetch('https://api.asaas.com/v3/payments', {
+                    method: 'POST',
+                    headers: { 'access_token': gcApiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(gcPayBody)
+                })
+                var gcPayData = await gcPayment.json()
+                if (gcPayData.errors) {
+                    return res.status(400).json({ success: false, error: 'Asaas: ' + (gcPayData.errors[0] && gcPayData.errors[0].description || JSON.stringify(gcPayData.errors)) })
+                }
+                gcAsaasId = gcPayData.id || ''
+                gcBoletoUrl = gcPayData.bankSlipUrl || ''
+                gcBoletoCod = gcPayData.nossoNumero || ''
+                gcInvoiceUrl = gcPayData.invoiceUrl || ''
+
+                // For PIX, fetch the QR code
+                if (gc.tipo === 'pix' && gcAsaasId) {
+                    try {
+                        var gcPixRes = await fetch('https://api.asaas.com/v3/payments/' + gcAsaasId + '/pixQrCode', {
+                            headers: { 'access_token': gcApiKey }
+                        })
+                        var gcPixData = await gcPixRes.json()
+                        gcPixCola = gcPixData.payload || ''
+                        gcPix = gcPixData.encodedImage || ''
+                    } catch(ep) { console.error('[gerar-cobranca] PIX QR error:', ep.message) }
+                }
+            } catch(e) {
+                return res.status(500).json({ success: false, error: 'Erro ao gerar cobrança no Asaas: ' + e.message })
             }
+
+            // Add invoice_url column if missing
+            try { await client.execute("ALTER TABLE cobrancas ADD COLUMN invoice_url TEXT") } catch(e) {}
+            try { await client.execute("ALTER TABLE cobrancas ADD COLUMN parcelas INTEGER DEFAULT 1") } catch(e) {}
 
             // Insert cobranca
             var gcIns = await client.execute({
-                sql: "INSERT INTO cobrancas(clinica_id, paciente_id, paciente_nome, tipo, valor, descricao, referencia, status, data_vencimento, boleto_url, boleto_codigo, pix_qrcode, pix_copia_cola, asaas_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                args: [clinica_id, gc.paciente_id || null, gc.paciente_nome || '', gc.tipo, parseFloat(gc.valor), gc.descricao || '', gc.referencia || '', 'pendente', gc.data_vencimento || '', gcBoletoUrl, gcBoletoCod, gcPix || '', gcPixCola, gcAsaasId]
+                sql: "INSERT INTO cobrancas(clinica_id, paciente_id, paciente_nome, tipo, valor, descricao, referencia, status, data_vencimento, boleto_url, boleto_codigo, pix_qrcode, pix_copia_cola, asaas_id, invoice_url, parcelas) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                args: [clinica_id, gc.paciente_id || null, gc.paciente_nome || '', gc.tipo, parseFloat(gc.valor), gc.descricao || '', gc.referencia || '', 'pendente', gc.data_vencimento || '', gcBoletoUrl, gcBoletoCod, gcPix || '', gcPixCola, gcAsaasId, gcInvoiceUrl, parseInt(gc.parcelas) || 1]
             })
             var gcNewId = Number(gcIns.lastInsertRowid)
-            // Saldo é atualizado apenas quando o pagamento é confirmado via webhook
+
+            // Send payment link via WhatsApp/Email if requested
+            if (gc.enviar_link && gcInvoiceUrl && gcPaciente) {
+                var linkMsg = 'Olá ' + (gcPaciente.nome || '').split(' ')[0] + '! Segue o link para pagamento: ' + gcInvoiceUrl + ' - Valor: R$ ' + parseFloat(gc.valor).toFixed(2).replace('.', ',') + (gc.tipo === 'credito' && gc.parcelas > 1 ? ' ('+gc.parcelas+'x de R$ '+(parseFloat(gc.valor)/parseInt(gc.parcelas)).toFixed(2).replace('.',',')+')' : '') + ' - Klinik Odontologia'
+                // WhatsApp
+                var waToken = process.env.WHATSAPP_TOKEN || ''
+                var waPhoneId = process.env.WHATSAPP_PHONE_ID || ''
+                if (waToken && waPhoneId && gcPaciente.telefone) {
+                    try {
+                        var waPhone = (gcPaciente.telefone || '').replace(/\D/g, '')
+                        if (waPhone.length <= 11) waPhone = '55' + waPhone
+                        await fetch('https://graph.facebook.com/v21.0/' + waPhoneId + '/messages', {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer ' + waToken, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ messaging_product: 'whatsapp', to: waPhone, type: 'text', text: { body: linkMsg } })
+                        })
+                    } catch(ew) { console.error('[cobranca] WhatsApp send error:', ew.message) }
+                }
+                // Email
+                var resendKey = process.env.RESEND_API_KEY || ''
+                var resendFrom = process.env.RESEND_FROM_EMAIL || 'noreply@klinik.com.br'
+                if (resendKey && gcPaciente.email) {
+                    try {
+                        await fetch('https://api.resend.com/emails', {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ from: resendFrom, to: [gcPaciente.email], subject: 'Link de Pagamento - Klinik Odontologia', html: linkMsg.replace(/\n/g, '<br>') })
+                        })
+                    } catch(ee) { console.error('[cobranca] Email send error:', ee.message) }
+                }
+            }
 
             // Fetch the inserted record
             var gcRec = await client.execute({ sql: "SELECT * FROM cobrancas WHERE id=?", args: [gcNewId] })
-            return res.status(200).json({ success: true, cobranca: gcRec.rows[0] || { id: gcNewId } })
+            return res.status(200).json({ success: true, cobranca: gcRec.rows[0] || { id: gcNewId }, invoice_url: gcInvoiceUrl })
         }
 
         // ── COBRANCAS-PACIENTE ──────────────────────────────────────────

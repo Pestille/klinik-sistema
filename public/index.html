@@ -5322,8 +5322,8 @@ function renderCobrancasTab(el,p){
       '<div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px">Nova Cobrança</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;margin-bottom:16px">'+
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Tipo</label>'+
-          '<select id="cob-tipo" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:var(--white);outline:none">'+
-            '<option value="pix">PIX</option><option value="boleto">Boleto</option>'+
+          '<select id="cob-tipo" onchange="cobTipoChange()" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:var(--white);outline:none">'+
+            '<option value="pix">PIX</option><option value="boleto">Boleto</option><option value="credito">Cartão de Crédito</option><option value="debito">Cartão de Débito</option>'+
           '</select></div>'+
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Valor (R$)</label>'+
           '<input id="cob-valor" type="number" step="0.01" min="0.01" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="0,00"></div>'+
@@ -5332,9 +5332,20 @@ function renderCobrancasTab(el,p){
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Vencimento</label>'+
           '<input id="cob-vencimento" type="date" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
       '</div>'+
+      '<div id="cob-parcelas-wrap" style="display:none;margin-bottom:16px">'+
+        '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Parcelas</label>'+
+        '<select id="cob-parcelas" style="width:200px;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:var(--white);outline:none">'+
+          '<option value="1">1x (à vista)</option><option value="2">2x</option><option value="3">3x</option><option value="4">4x</option><option value="5">5x</option><option value="6">6x</option><option value="7">7x</option><option value="8">8x</option><option value="9">9x</option><option value="10">10x</option><option value="11">11x</option><option value="12">12x</option>'+
+        '</select>'+
+      '</div>'+
+      '<div style="margin-bottom:16px">'+
+        '<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer">'+
+          '<input type="checkbox" id="cob-enviar-link" checked style="accent-color:var(--orange)"> Enviar link de pagamento ao paciente (WhatsApp + Email)'+
+        '</label>'+
+      '</div>'+
       '<div style="display:flex;justify-content:flex-end;gap:8px">'+
         '<button onclick="toggleCobrancaForm()" style="background:transparent;color:var(--green);border:1.5px solid var(--green3);border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>'+
-        '<button onclick="enviarCobranca('+pacId+',\''+((p.nome||'').replace(/'/g,"\\'"))+'\')" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s ease">Gerar</button>'+
+        '<button onclick="enviarCobranca('+pacId+',\''+((p.nome||'').replace(/'/g,"\\'"))+'\')" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s ease">Gerar Cobrança</button>'+
       '</div>'+
     '</div>'+
   '</div>'
@@ -5355,11 +5366,19 @@ function toggleCobrancaForm(){
   if(el)el.style.display=_cobrancasFormVisible?'block':'none'
 }
 
+function cobTipoChange(){
+  var tipo=document.getElementById('cob-tipo')
+  var parcWrap=document.getElementById('cob-parcelas-wrap')
+  if(tipo&&parcWrap) parcWrap.style.display=tipo.value==='credito'?'block':'none'
+}
+
 async function enviarCobranca(pacienteId,pacienteNome){
   var tipo=document.getElementById('cob-tipo')
   var valor=document.getElementById('cob-valor')
   var desc=document.getElementById('cob-descricao')
   var venc=document.getElementById('cob-vencimento')
+  var parcSel=document.getElementById('cob-parcelas')
+  var enviarLink=document.getElementById('cob-enviar-link')
   if(!tipo||!valor)return
   if(!valor.value||parseFloat(valor.value)<=0){alert('Informe um valor válido');return}
 
@@ -5371,6 +5390,8 @@ async function enviarCobranca(pacienteId,pacienteNome){
       valor:parseFloat(valor.value),
       descricao:desc?desc.value:'',
       data_vencimento:venc?venc.value:'',
+      parcelas:tipo.value==='credito'&&parcSel?parseInt(parcSel.value):1,
+      enviar_link:enviarLink&&enviarLink.checked?true:false,
       referencia:''
     }
     var r=await apiPost('gerar-cobranca',body)
@@ -5404,6 +5425,21 @@ async function enviarCobranca(pacienteId,pacienteNome){
         '<div style="font-size:13px;font-weight:500;color:#034030;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Boleto Gerado com Sucesso</div>'+
         (cob.boleto_url?'<div style="margin-bottom:12px"><a href="'+cob.boleto_url+'" target="_blank" style="color:var(--blue);font-size:14px;font-weight:500">Abrir Boleto</a></div>':'')+
         (cob.boleto_codigo?'<div style="font-size:12px;color:var(--text2)">Código: '+cob.boleto_codigo+'</div>':'')+
+        (cob.invoice_url||r.invoice_url?'<div style="margin-top:8px"><a href="'+(cob.invoice_url||r.invoice_url)+'" target="_blank" style="color:var(--blue);font-size:13px">Link de pagamento</a></div>':'')+
+      '</div>'
+      resEl.style.display='block'
+    } else if(cob.tipo==='credito'||cob.tipo==='debito'){
+      var tipoLabel=cob.tipo==='credito'?'Cartão de Crédito':'Cartão de Débito'
+      var parcInfo=cob.parcelas&&cob.parcelas>1?' em '+cob.parcelas+'x de R$ '+(parseFloat(cob.valor)/parseInt(cob.parcelas)).toFixed(2).replace('.',','):' à vista'
+      var linkUrl=cob.invoice_url||r.invoice_url||''
+      resEl.innerHTML='<div class="card" style="padding:20px 24px;border:1px solid #1B5E3B;border-radius:8px;background:#E8F5E9">'+
+        '<div style="font-size:13px;font-weight:500;color:#034030;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">'+tipoLabel+' — Cobrança Gerada</div>'+
+        '<div style="font-size:15px;font-weight:500;color:var(--text);margin-bottom:8px">'+fmtBrl(cob.valor)+parcInfo+'</div>'+
+        (linkUrl?'<div style="margin-bottom:12px"><a href="'+linkUrl+'" target="_blank" style="background:var(--blue);color:#fff;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:500;display:inline-block;text-decoration:none">Abrir Link de Pagamento</a></div>'+
+          '<div style="background:var(--white);border:1px solid var(--border);border-radius:6px;padding:10px;font-size:12px;word-break:break-all;color:var(--text2);margin-bottom:8px">'+linkUrl+'</div>'+
+          '<button onclick="navigator.clipboard.writeText(\''+linkUrl+'\');alert(\'Link copiado!\')" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:500;cursor:pointer">Copiar Link</button>'
+        :'<div style="font-size:13px;color:var(--text2)">Cobrança gerada. Aguardando pagamento.</div>')+
+        (body.enviar_link?'<div style="margin-top:12px;font-size:12px;color:var(--green)">Link enviado ao paciente via WhatsApp e Email</div>':'')+
       '</div>'
       resEl.style.display='block'
     }
