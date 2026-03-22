@@ -2104,7 +2104,9 @@ function setAgendaInterval(min) { agendaInterval = min; renderAgendaGrid() }
 
 function renderMiniCal() {
   var ano = miniCalDate.getFullYear(), mes = miniCalDate.getMonth()
-  document.getElementById('mini-cal-month').textContent = MESES_PT[mes]+' '+ano
+  var mcMonth = document.getElementById('mini-cal-month')
+  if(!mcMonth) return
+  mcMonth.textContent = MESES_PT[mes]+' '+ano
   var hoje = new Date()
   var primeiro = new Date(ano,mes,1)
   var ultimo = new Date(ano,mes+1,0)
@@ -2118,7 +2120,8 @@ function renderMiniCal() {
     var isSel = d===agendaDate.getDate()&&mes===agendaDate.getMonth()&&ano===agendaDate.getFullYear()
     html+='<div class="mini-cal-d '+(isToday&&!isSel?'today':'')+' '+(isSel?'selected':'')+'" onclick="selectMiniCalDay('+d+','+mes+','+ano+')">'+d+'</div>'
   }
-  document.getElementById('mini-cal-grid').innerHTML = html
+  var mcGrid = document.getElementById('mini-cal-grid')
+  if(mcGrid) mcGrid.innerHTML = html
 }
 
 function miniCalPrev() { miniCalDate.setMonth(miniCalDate.getMonth()-1); renderMiniCal() }
@@ -2131,7 +2134,9 @@ function renderProfsList() {
   if(Object.keys(agendaProfsFilter).length===0){
     profs.forEach(function(p,i){ agendaProfsFilter[String(p.id||p.Id||i)] = true })
   }
-  document.getElementById('profs-list').innerHTML = profs.map(function(p,i){
+  var profsListEl = document.getElementById('profs-list')
+  if(!profsListEl) return
+  profsListEl.innerHTML = profs.map(function(p,i){
     var nome = p.name||p.Name||p.nome||'Profissional'
     var cor = PROF_CORES[i%PROF_CORES.length]
     var profKey = String(p.id||p.Id||i)
@@ -2176,7 +2181,8 @@ function agendaDblClick(profId, timeStr) {
 function renderAgendaGrid() {
   var el = document.getElementById('agenda-grid')
   if(!el) return
-  document.getElementById('agenda-date-title').textContent = formatAgendaDate(agendaDate)
+  var dtTitle = document.getElementById('agenda-date-title')
+  if(dtTitle) dtTitle.textContent = formatAgendaDate(agendaDate)
   renderMiniCal()
 
   if(agendaView==='mes') { renderAgendaMonth(el); return }
