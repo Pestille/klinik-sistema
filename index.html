@@ -5380,28 +5380,24 @@ async function enviarCobranca(pacienteId,pacienteNome){
     var resEl=document.getElementById('cobranca-resultado')
     if(!resEl)return
 
-    if(cob.tipo==='pix'&&cob.pix_copia_cola){
-      var qrHtml='<div id="cob-qr-code"></div>'
+    if(cob.tipo==='pix'){
+      var qrImgHtml=cob.pix_qrcode?'<img src="data:image/png;base64,'+cob.pix_qrcode+'" style="width:200px;height:200px;border-radius:6px">':'<div id="cob-qr-code"></div>'
       resEl.innerHTML='<div class="card" style="padding:20px 24px;border:1px solid #1B5E3B;border-radius:8px;background:#E8F5E9">'+
         '<div style="font-size:13px;font-weight:500;color:#034030;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">PIX Gerado com Sucesso</div>'+
         '<div style="display:flex;gap:24px;align-items:flex-start">'+
-          '<div style="flex-shrink:0">'+qrHtml+'</div>'+
+          '<div style="flex-shrink:0">'+qrImgHtml+'</div>'+
           '<div style="flex:1">'+
-            '<div style="font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Copia e Cola</div>'+
+            (cob.pix_copia_cola?'<div style="font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Copia e Cola</div>'+
             '<div style="background:var(--white);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:12px;word-break:break-all;color:var(--text2);margin-bottom:12px" id="pix-copia-cola">'+cob.pix_copia_cola+'</div>'+
-            '<button onclick="copiarPix()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:500;cursor:pointer">Copiar Código PIX</button>'+
+            '<button onclick="copiarPix()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:500;cursor:pointer">Copiar Código PIX</button>':'<div style="font-size:13px;color:var(--text2)">Cobrança PIX gerada. Aguardando pagamento.</div>')+
           '</div>'+
         '</div>'+
       '</div>'
       resEl.style.display='block'
-
-      // Render QR code
-      if(typeof qrcode!=='undefined'){
-        var qr=qrcode(0,'M')
-        qr.addData(cob.pix_copia_cola)
-        qr.make()
-        var qrEl=document.getElementById('cob-qr-code')
-        if(qrEl)qrEl.innerHTML=qr.createSvgTag(4)
+      // Fallback QR code from copia-cola if no base64 image
+      if(!cob.pix_qrcode&&cob.pix_copia_cola&&typeof qrcode!=='undefined'){
+        var qr=qrcode(0,'M');qr.addData(cob.pix_copia_cola);qr.make()
+        var qrEl=document.getElementById('cob-qr-code');if(qrEl)qrEl.innerHTML=qr.createSvgTag(4)
       }
     } else if(cob.tipo==='boleto'){
       resEl.innerHTML='<div class="card" style="padding:20px 24px;border:1px solid #1B5E3B;border-radius:8px;background:#E8F5E9">'+

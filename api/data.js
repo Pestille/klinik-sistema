@@ -1553,46 +1553,10 @@ module.exports = async function handler(req, res) {
 
             var gcPix = '', gcPixCola = '', gcBoletoUrl = '', gcBoletoCod = '', gcAsaasId = ''
 
-            if (gc.tipo === 'pix') {
-                // Get clinic data for PIX
-                var gcClinica = await client.execute({ sql: "SELECT nome, cidade, pix_tipo, pix_chave FROM clinicas WHERE id=?", args: [clinica_id] })
-                if (!gcClinica.rows.length || !gcClinica.rows[0].pix_chave) {
-                    return res.status(400).json({ success: false, error: 'Chave PIX não configurada. Vá em Configurações > Dados da Clínica para configurar.' })
-                }
-                var gcCl = gcClinica.rows[0]
-                // Generate PIX payload (EMV BR Code)
-                var gcValor = parseFloat(gc.valor)
-                var gcTxId = 'KLN' + Date.now().toString(36).toUpperCase()
-
-                function tlv(id, val) { return id + String(val.length).padStart(2, '0') + val }
-                var gui = tlv('00', 'br.gov.bcb.pix')
-                var chaveField = tlv('01', gcCl.pix_chave)
-                var mai = tlv('26', gui + chaveField)
-                var mcc = tlv('52', '0000')
-                var moeda = tlv('53', '986')
-                var valorField = gcValor > 0 ? tlv('54', gcValor.toFixed(2)) : ''
-                var pais = tlv('58', 'BR')
-                var nomeField = tlv('59', (gcCl.nome || 'Clinica').substring(0, 25))
-                var cidadeField = tlv('60', (gcCl.cidade || 'Cidade').substring(0, 15))
-                var txidField = tlv('05', gcTxId)
-                var addData = tlv('62', txidField)
-                var payload = tlv('00', '01') + mai + mcc + moeda + valorField + pais + nomeField + cidadeField + addData
-                payload += '6304'
-                // CRC16 CCITT
-                var crc = 0xFFFF
-                for (var ci = 0; ci < payload.length; ci++) {
-                    crc ^= payload.charCodeAt(ci) << 8
-                    for (var cj = 0; cj < 8; cj++) {
-                        if (crc & 0x8000) crc = (crc << 1) ^ 0x1021
-                        else crc <<= 1
-                        crc &= 0xFFFF
-                    }
-                }
-                gcPixCola = payload.slice(0, -4) + '6304' + crc.toString(16).toUpperCase().padStart(4, '0')
-            } else if (gc.tipo === 'boleto') {
+            if (gc.tipo === 'pix' || gc.tipo === 'boleto') {
                 // Check if Asaas is configured
                 var gcAsaas = await client.execute({ sql: "SELECT asaas_api_key FROM clinicas WHERE id=?", args: [clinica_id] })
-                var gcApiKey = (gcAsaas.rows.length && gcAsaas.rows[0].asaas_api_key) ? gcAsaas.rows[0].asaas_api_key : ''
+                var gcApiKey = (gcAsaas.rows.length && gcAsaas.rows[0].asaas_api_key) ? gcAsaas.rows[0].asaas_api_key : (process.env.ASAAS_API_KEY || '')
                 if (!gcApiKey) {
                     return res.status(400).json({ success: false, error: 'Asaas API Key não configurada. Vá em Configurações > Dados da Clínica para configurar.' })
                 }
@@ -1633,36 +1597,50 @@ module.exports = async function handler(req, res) {
                         return res.status(400).json({ success: false, error: 'Não foi possível criar/encontrar cliente no Asaas' })
                     }
 
-                    // Create boleto
-                    var gcBoleto = await fetch('https://api.asaas.com/v3/payments', {
+                    // Create payment (BOLETO or PIX)
+                    var gcBillingType = gc.tipo === 'pix' ? 'PIX' : 'BOLETO'
+                    var gcPayment = await fetch('https://api.asaas.com/v3/payments', {
                         method: 'POST',
                         headers: { 'access_token': gcApiKey, 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             customer: gcCustomerId,
-                            billingType: 'BOLETO',
+                            billingType: gcBillingType,
                             value: parseFloat(gc.valor),
                             dueDate: gc.data_vencimento || new Date().toISOString().slice(0, 10),
                             description: gc.descricao || 'Cobrança Klinik'
                         })
                     })
-                    var gcBoletoData = await gcBoleto.json()
-                    gcAsaasId = gcBoletoData.id || ''
-                    gcBoletoUrl = gcBoletoData.bankSlipUrl || ''
-                    gcBoletoCod = gcBoletoData.nossoNumero || ''
+                    var gcPayData = await gcPayment.json()
+                    if (gcPayData.errors) {
+                        return res.status(400).json({ success: false, error: 'Asaas: ' + (gcPayData.errors[0] && gcPayData.errors[0].description || JSON.stringify(gcPayData.errors)) })
+                    }
+                    gcAsaasId = gcPayData.id || ''
+                    gcBoletoUrl = gcPayData.bankSlipUrl || ''
+                    gcBoletoCod = gcPayData.nossoNumero || ''
+
+                    // For PIX, fetch the QR code
+                    if (gc.tipo === 'pix' && gcAsaasId) {
+                        try {
+                            var gcPixRes = await fetch('https://api.asaas.com/v3/payments/' + gcAsaasId + '/pixQrCode', {
+                                headers: { 'access_token': gcApiKey }
+                            })
+                            var gcPixData = await gcPixRes.json()
+                            gcPixCola = gcPixData.payload || ''
+                            gcPix = gcPixData.encodedImage || '' // base64 QR code image
+                        } catch(ep) { console.error('[gerar-cobranca] PIX QR error:', ep.message) }
+                    }
                 } catch(e) {
-                    return res.status(500).json({ success: false, error: 'Erro ao gerar boleto no Asaas: ' + e.message })
+                    return res.status(500).json({ success: false, error: 'Erro ao gerar cobrança no Asaas: ' + e.message })
                 }
             }
 
             // Insert cobranca
             var gcIns = await client.execute({
-                sql: "INSERT INTO cobrancas(clinica_id, paciente_id, paciente_nome, tipo, valor, descricao, referencia, status, data_vencimento, boleto_url, boleto_codigo, pix_copia_cola, asaas_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                args: [clinica_id, gc.paciente_id || null, gc.paciente_nome || '', gc.tipo, parseFloat(gc.valor), gc.descricao || '', gc.referencia || '', 'pendente', gc.data_vencimento || '', gcBoletoUrl, gcBoletoCod, gcPixCola, gcAsaasId]
+                sql: "INSERT INTO cobrancas(clinica_id, paciente_id, paciente_nome, tipo, valor, descricao, referencia, status, data_vencimento, boleto_url, boleto_codigo, pix_qrcode, pix_copia_cola, asaas_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                args: [clinica_id, gc.paciente_id || null, gc.paciente_nome || '', gc.tipo, parseFloat(gc.valor), gc.descricao || '', gc.referencia || '', 'pendente', gc.data_vencimento || '', gcBoletoUrl, gcBoletoCod, gcPix || '', gcPixCola, gcAsaasId]
             })
             var gcNewId = Number(gcIns.lastInsertRowid)
-
-            // Update saldo
-            await client.execute({ sql: "UPDATE clinicas SET saldo = saldo + ? WHERE id=?", args: [parseFloat(gc.valor), clinica_id] })
+            // Saldo é atualizado apenas quando o pagamento é confirmado via webhook
 
             // Fetch the inserted record
             var gcRec = await client.execute({ sql: "SELECT * FROM cobrancas WHERE id=?", args: [gcNewId] })
