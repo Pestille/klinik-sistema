@@ -162,11 +162,11 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 .agenda-slot-line{border-top:1px solid var(--border2);position:relative;cursor:pointer;transition:background .1s}
 .agenda-slot-line:hover{background:rgba(27,94,59,.04)}
 .agenda-slot-line.hour-line{border-top-color:var(--border)}
-.appt-block{position:absolute;left:3px;right:3px;border-radius:4px;padding:4px 8px;font-size:11px;overflow:hidden;cursor:pointer;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.12);display:flex;flex-direction:column;justify-content:flex-start;transition:box-shadow .12s}
-.appt-block:hover{box-shadow:0 2px 8px rgba(0,0,0,.18)}
-.appt-name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
-.appt-time{font-size:10px;opacity:.85;white-space:nowrap}
-.appt-status{font-size:9px;opacity:.7;margin-top:1px}
+.appt-block{position:absolute;left:3px;right:3px;border-radius:4px;padding:4px 8px;font-size:11px;overflow:hidden;cursor:pointer;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.15);display:flex;flex-direction:column;justify-content:flex-start;transition:box-shadow .12s;border-left:3px solid rgba(0,0,0,.2)}
+.appt-block:hover{box-shadow:0 2px 8px rgba(0,0,0,.22)}
+.appt-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;text-shadow:0 0 2px rgba(0,0,0,.2)}
+.appt-time{font-size:10px;opacity:.9;white-space:nowrap}
+.appt-status{font-size:9px;opacity:.8;margin-top:1px}
 .now-line{position:absolute;left:0;right:0;height:2px;background:var(--orange);z-index:8;pointer-events:none}
 .now-line::before{content:'';position:absolute;top:-4px;left:-5px;width:10px;height:10px;border-radius:50%;background:var(--orange)}
 /* Month view */
@@ -187,7 +187,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 .agenda-week-time{font-size:11px;color:var(--text3);text-align:right;padding:2px 8px 0 0;border-right:1px solid var(--border);border-bottom:1px solid var(--border2)}
 .agenda-week-cell{border-right:1px solid var(--border2);border-bottom:1px solid var(--border2);position:relative;min-height:40px;cursor:pointer;transition:background .1s}
 .agenda-week-cell:hover{background:rgba(27,94,59,.04)}
-.agenda-week-appt{font-size:10px;padding:2px 4px;border-radius:3px;margin:1px 2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#fff;cursor:pointer}
+.agenda-week-appt{font-size:10px;padding:2px 4px;border-radius:3px;margin:1px 2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#fff;cursor:pointer;font-weight:500;text-shadow:0 0 2px rgba(0,0,0,.3)}
 
 /* ── GENERIC PAGE ── */
 .gpage{padding:0}
@@ -2057,6 +2057,13 @@ async function loadAgenda() {
   if (loadEl) loadEl.classList.remove('hidden')
   if (gridEl) gridEl.classList.add('hidden')
   try {
+    // Load professionals if not loaded yet
+    if(!ST.profissionais||!ST.profissionais.length){
+      try{
+        var pd=await apiData('profissionais')
+        ST.profissionais=(pd.data||pd.profissionais||[]).map(function(p){return {id:p.id,name:p.nome,Name:p.nome,nome:p.nome,specialty:p.especialidade,especialidade:p.especialidade}})
+      }catch(e2){ST.profissionais=[]}
+    }
     var d = await apiData('agendamentos')
     var rows = d.agendamentos || []
     ST.agendamentos = rows.map(function(a) {
@@ -5221,17 +5228,31 @@ function ncReset(){
   const cl=document.getElementById('nc-clear-btn');if(cl)cl.style.display='none'
 }
 function ncTab(tab,el){document.querySelectorAll('.nc-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active')}
+var _ncSearchTimer=null
 function ncSearchPac(q){
-  const drop=document.getElementById('nc-pac-drop'),btn=document.getElementById('nc-clear-btn')
+  var drop=document.getElementById('nc-pac-drop'),btn=document.getElementById('nc-clear-btn')
   if(btn)btn.style.display=q?'block':'none'
-  if(!q){drop.classList.add('hidden');return}
-  const filtered=(ST.pacientesLista||[]).filter(p=>p.nome.toLowerCase().includes(q.toLowerCase())).slice(0,8)
-  drop.classList.remove('hidden')
-  const AVC=['#E91E63','#9C27B0','#3F51B5','#009688','#FF5722','#795548']
-  drop.innerHTML=`<div class="pac-new" onclick="ncSelectNew('${q.replace(/'/g,"\'")}')"><span class="pac-new-plus">+</span>Novo paciente: ${q}</div>
-    ${filtered.length?'<div class="pac-section-label">Pacientes</div>':''}
-    ${filtered.map((p,i)=>{const ini=p.nome.split(' ').slice(0,2).map(x=>x[0]).join(''),cor=AVC[i%AVC.length]
-      return`<div class="pac-result" onclick="ncSelectPac(${JSON.stringify(p).replace(/"/g,'&quot;')})"><div class="pac-av-sm" style="background:${cor}">${ini}</div><div class="pac-name">${p.nome}</div></div>`}).join('')}`
+  if(!q||q.length<2){if(drop)drop.classList.add('hidden');return}
+  clearTimeout(_ncSearchTimer)
+  _ncSearchTimer=setTimeout(async function(){
+    try{
+      var d=await apiData('busca',{q:q})
+      var pacs=d.pacientes||[]
+      var AVC=['#E91E63','#9C27B0','#3F51B5','#009688','#FF5722','#795548']
+      if(drop){
+        drop.classList.remove('hidden')
+        drop.innerHTML='<div class="pac-new" onclick="ncSelectNew(\''+q.replace(/'/g,"\\'").toUpperCase()+'\')"><span class="pac-new-plus">+</span>Novo paciente: '+q+'</div>'+
+          (pacs.length?'<div class="pac-section-label">Pacientes cadastrados</div>':'')+
+          pacs.map(function(p,i){
+            var nome=p.nome||p.Name||''
+            var ini=nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
+            var cor=AVC[i%AVC.length]
+            var pacObj=JSON.stringify({nome:nome,tel:p.telefone||'',email:p.email||'',id:p.id}).replace(/"/g,'&quot;')
+            return '<div class="pac-result" onclick="ncSelectPac('+pacObj+')"><div class="pac-av-sm" style="background:'+cor+'">'+ini+'</div><div class="pac-name">'+nome+'</div></div>'
+          }).join('')
+      }
+    }catch(e){if(drop)drop.classList.add('hidden')}
+  },300)
 }
 function ncClearSearch(){const inp=document.getElementById('nc-pac-input');if(inp)inp.value='';const drop=document.getElementById('nc-pac-drop');if(drop)drop.classList.add('hidden');const btn=document.getElementById('nc-clear-btn');if(btn)btn.style.display='none'}
 function ncSelectPac(pac){
