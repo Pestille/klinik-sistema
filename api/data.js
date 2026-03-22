@@ -141,7 +141,7 @@ module.exports = async function handler(req, res) {
         // ── AGENDAMENTOS ────────────────────────────────────────────────────
         if (route === 'agendamentos') {
             var lim2 = Math.min(parseInt(q.limit) || 200, 500)
-            var base = "SELECT a.id,a.data_hora,a.hora_fim,a.tipo,a.status,a.procedimento,a.valor,a.observacoes,a.profissional_id,COALESCE(p.nome,a.paciente_nome) as paciente_nome,COALESCE(p.telefone,a.paciente_telefone) as paciente_telefone,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id"
+            var base = "SELECT a.id,a.data_hora,a.hora_fim,a.tipo,a.status,a.procedimento,a.valor,a.observacoes,a.profissional_id,COALESCE(p.nome,a.paciente_nome) as paciente_nome,COALESCE(p.telefone,a.paciente_telefone) as paciente_telefone,p.foto_url as paciente_foto,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id"
             var wheres = ["a.clinica_id=?"], argsAg = [clinica_id]
             if (q.dataInicio && q.dataFim) { wheres.push("DATE(a.data_hora) BETWEEN ? AND ?"); argsAg.push(q.dataInicio, q.dataFim) }
             else if (q.data) { wheres.push("DATE(a.data_hora)=?"); argsAg.push(q.data) }
@@ -157,10 +157,10 @@ module.exports = async function handler(req, res) {
             var d = q.data || new Date().toISOString().slice(0, 10)
             var sqlAv, argsAv
             if (q.profissional) {
-                sqlAv = "SELECT a.*,p.nome as paciente_nome,p.telefone as paciente_telefone,pr.nome as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE DATE(a.data_hora)=? AND a.profissional_id=? AND a.clinica_id=? ORDER BY a.data_hora"
+                sqlAv = "SELECT a.*,p.nome as paciente_nome,p.telefone as paciente_telefone,p.foto_url as paciente_foto,pr.nome as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE DATE(a.data_hora)=? AND a.profissional_id=? AND a.clinica_id=? ORDER BY a.data_hora"
                 argsAv = [d, q.profissional, clinica_id]
             } else {
-                sqlAv = "SELECT a.*,p.nome as paciente_nome,p.telefone as paciente_telefone,pr.nome as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE DATE(a.data_hora)=? AND a.clinica_id=? ORDER BY pr.nome,a.data_hora"
+                sqlAv = "SELECT a.*,p.nome as paciente_nome,p.telefone as paciente_telefone,p.foto_url as paciente_foto,pr.nome as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE DATE(a.data_hora)=? AND a.clinica_id=? ORDER BY pr.nome,a.data_hora"
                 argsAv = [d, clinica_id]
             }
             var rav = await client.execute({ sql: sqlAv, args: argsAv })
@@ -233,7 +233,7 @@ module.exports = async function handler(req, res) {
             var bq = q.q || q.busca || ''
             if (bq.length < 2) return res.status(400).json({ success: false, error: 'Mínimo 2 caracteres' })
             var bt = '%' + bq + '%'
-            var bp = await client.execute({ sql: "SELECT id,nome,telefone,email FROM pacientes WHERE (nome LIKE ? OR telefone LIKE ?) AND clinica_id=? LIMIT 15", args: [bt, bt, clinica_id] })
+            var bp = await client.execute({ sql: "SELECT id,nome,telefone,email,foto_url FROM pacientes WHERE (nome LIKE ? OR telefone LIKE ?) AND clinica_id=? LIMIT 15", args: [bt, bt, clinica_id] })
             var ba = await client.execute({ sql: "SELECT a.id,a.data_hora,a.tipo,a.status,a.procedimento,p.nome as paciente_nome,pr.nome as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE p.nome LIKE ? AND a.clinica_id=? ORDER BY a.data_hora DESC LIMIT 10", args: [bt, clinica_id] })
             return res.status(200).json({ success: true, pacientes: bp.rows, agendamentos: ba.rows, total: bp.rows.length + ba.rows.length })
         }
@@ -823,6 +823,18 @@ module.exports = async function handler(req, res) {
                 await client.execute({ sql: "INSERT INTO odontograma (paciente_id,dente,status,cor,observacao,clinica_id) VALUES (?,?,?,?,?,?)", args: [od.paciente_id, od.dente, od.status||'saudavel', od.cor||null, od.observacao||null, clinica_id] })
             }
             return res.status(200).json({ success: true })
+        }
+
+        // ── SALVAR FOTO PACIENTE ─────────────────────────────────
+        if (route === 'salvar-foto-paciente') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var sf = req.body || {}
+            if (!sf.paciente_id) return res.status(400).json({ success: false, error: 'paciente_id obrigatório' })
+            if (!sf.foto) return res.status(400).json({ success: false, error: 'foto obrigatória' })
+            // Garante coluna foto_url
+            try { await client.execute("ALTER TABLE pacientes ADD COLUMN foto_url TEXT") } catch(e) {}
+            await client.execute({ sql: "UPDATE pacientes SET foto_url=?,atualizado_em=datetime('now') WHERE id=? AND clinica_id=?", args: [sf.foto, sf.paciente_id, clinica_id] })
+            return res.status(200).json({ success: true, msg: 'Foto salva' })
         }
 
         // ── SALVAR PROFISSIONAL ─────────────────────────────────────

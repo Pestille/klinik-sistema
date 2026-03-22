@@ -180,7 +180,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 .appt-panel-header{padding:16px 20px;display:flex;align-items:center;gap:14px;position:relative}
 .appt-panel-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:20px;color:var(--text3);cursor:pointer;padding:4px 8px;border-radius:4px}
 .appt-panel-close:hover{background:var(--gray2);color:var(--text)}
-.appt-panel-av{width:52px;height:52px;border-radius:50%;background:var(--gray2);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--green);flex-shrink:0}
+.appt-panel-av{width:52px;height:52px;border-radius:50%;background:var(--gray2);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--green);flex-shrink:0;overflow:hidden}
 .appt-panel-name{font-size:18px;font-weight:500;color:var(--text)}
 .appt-panel-phone{font-size:13px;color:var(--text3);margin-top:2px;display:flex;align-items:center;gap:6px}
 .appt-panel-actions{display:flex;align-items:center;gap:6px;padding:0 20px 12px}
@@ -368,7 +368,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 /* ── PATIENT LIST ── */
 .patient-row{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:14px 16px;display:flex;gap:14px;align-items:flex-start;cursor:pointer;transition:box-shadow .15s;margin-bottom:8px;box-shadow:var(--shadow)}
 .patient-row:hover{box-shadow:var(--shadow2)}
-.patient-av{width:40px;height:40px;border-radius:50%;background:var(--gray2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:500;color:var(--green);flex-shrink:0;border:1px solid var(--border)}
+.patient-av{width:40px;height:40px;border-radius:50%;background:var(--gray2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:500;color:var(--green);flex-shrink:0;border:1px solid var(--border);overflow:hidden}
 .patient-info{flex:1;min-width:0}
 .patient-name{font-weight:500;font-size:14px;color:var(--text)}
 .patient-meta{font-size:12px;color:var(--text3);margin-top:3px;display:flex;gap:12px;flex-wrap:wrap}
@@ -2126,7 +2126,8 @@ async function loadAgenda() {
         MobilePhone: a.paciente_telefone || '', ProfessionalId: a.profissional_id,
         ProfessionalName: a.profissional_nome || '', professionalId: a.profissional_id,
         CategoryDescription: a.tipo || '', status: a.status || 'agendado',
-        procedureName: a.procedimento || '', value: a.valor || 0, observations: a.observacoes || ''
+        procedureName: a.procedimento || '', value: a.valor || 0, observations: a.observacoes || '',
+        paciente_foto: a.paciente_foto || ''
       }
     })
     renderMiniCal()
@@ -2509,8 +2510,10 @@ async function buscarPacientes(){
     if(!pacs.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#9e9e9e">Nenhum paciente encontrado</div>';return}
     el.innerHTML=pacs.map(function(p){
       var ini=p.nome?p.nome.split(' ').slice(0,2).map(function(x){return x[0]}).join(''):'?'
+      var avBg=p.foto_url?'background:url('+p.foto_url+') center/cover':'background:#E8F5E9'
+      var avTxt=p.foto_url?'':ini
       return '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid #e0e0e0;border-radius:6px;margin-bottom:8px;cursor:pointer;transition:border-color .12s;background:#fff" onmouseover="this.style.borderColor=\'#E65100\'" onmouseout="this.style.borderColor=\'#e0e0e0\'" onclick="abrirProntuario(\''+p.nome.replace(/'/g,"\\'")+'\')">'+
-        '<div style="width:40px;height:40px;border-radius:50%;background:#E8F5E9;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#1B5E3B;flex-shrink:0">'+ini+'</div>'+
+        '<div style="width:40px;height:40px;border-radius:50%;'+avBg+';display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#1B5E3B;flex-shrink:0;overflow:hidden">'+avTxt+'</div>'+
         '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500;color:#212121">'+p.nome+'</div><div style="font-size:12px;color:#9e9e9e">'+(p.telefone||'Sem telefone')+' · '+(p.email||'Sem email')+'</div></div>'+
         '<svg width="16" height="16" viewBox="0 0 24 24" fill="#9e9e9e"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>'+
       '</div>'
@@ -2524,7 +2527,7 @@ function renderPacientes() {
   const porPac = {}
   ag.filter(a=>!a.Deleted&&a.PatientName).forEach(a=>{
     const n=a.PatientName,dt=new Date(a.date)
-    if (!porPac[n]||dt>porPac[n].ultima) porPac[n]={nome:n,ultima:dt,tel:a.MobilePhone||'',cat:a.CategoryDescription||''}
+    if (!porPac[n]||dt>porPac[n].ultima) porPac[n]={nome:n,ultima:dt,tel:a.MobilePhone||'',cat:a.CategoryDescription||'',foto:a.paciente_foto||''}
   })
   ST.pacientesLista = Object.values(porPac).sort((a,b)=>b.ultima-a.ultima)
   var pacSubEl=document.getElementById('pac-sub');if(pacSubEl)pacSubEl.textContent = `${ST.pacientesLista.length} pacientes únicos`
@@ -2551,7 +2554,7 @@ function filterPac() {
     const dias=Math.floor((Date.now()-p.ultima.getTime())/86400e3)
     const inativo=dias>180
     return `<div class="patient-row">
-      <div class="patient-av">${ini}</div>
+      <div class="patient-av" style="${p.foto?'background:url('+p.foto+') center/cover':''}">${p.foto?'':ini}</div>
       <div class="patient-info">
         <div class="patient-name">${p.nome}</div>
         <div class="patient-meta"><span>${p.tel||'—'}</span><span>Última visita: ${p.ultima.toLocaleDateString('pt-BR')}</span><span>${dias} dias atrás</span></div>
@@ -2571,7 +2574,9 @@ function filterProntList() {
   var q=(document.getElementById('pront-search')?document.getElementById('pront-search').value:'').toLowerCase()
   var lista=(ST.pacientesLista||[]).filter(function(p){return p.nome.toLowerCase().includes(q)}).slice(0,30)
   el.innerHTML=lista.map(function(p){
-    return '<div class="patient-row" style="padding:10px 12px;cursor:pointer" onclick="abrirProntuario(\''+p.nome.replace(/'/g,"\\'")+'\')">'+'<div class="patient-av" style="width:32px;height:32px;font-size:12px">'+p.nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')+'</div>'+'<div class="patient-info"><div class="patient-name" style="font-size:12px">'+p.nome.split(' ').slice(0,3).join(' ')+'</div><div style="font-size:11px;color:var(--text3)">'+(p.tel||'—')+'</div></div></div>'
+    var pIni=p.nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
+    var pAvStyle=p.foto?'width:32px;height:32px;font-size:12px;background:url('+p.foto+') center/cover':'width:32px;height:32px;font-size:12px'
+    return '<div class="patient-row" style="padding:10px 12px;cursor:pointer" onclick="abrirProntuario(\''+p.nome.replace(/'/g,"\\'")+'\')">'+'<div class="patient-av" style="'+pAvStyle+'">'+(p.foto?'':pIni)+'</div>'+'<div class="patient-info"><div class="patient-name" style="font-size:12px">'+p.nome.split(' ').slice(0,3).join(' ')+'</div><div style="font-size:11px;color:var(--text3)">'+(p.tel||'—')+'</div></div></div>'
   }).join('')
 }
 
@@ -2591,9 +2596,13 @@ async function abrirProntuario(nome) {
     var tel=p.telefone||'';var email=p.email||''
 
     // Header
+    var fotoUrl=p.foto_url||''
+    var avatarStyle='width:72px;height:72px;border-radius:50%;border:2px solid #e0e0e0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#1B5E3B;flex-shrink:0;cursor:pointer;position:relative;overflow:hidden'
+    var avatarBg=fotoUrl?'background:url('+fotoUrl+') center/cover':'background:#E8F5E9'
+    var avatarContent=fotoUrl?'':''+ini
     document.getElementById('pront-header').innerHTML=
       '<div style="display:flex;align-items:flex-start;gap:16px">'+
-        '<div style="width:72px;height:72px;border-radius:50%;border:2px solid #e0e0e0;background:#E8F5E9;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#1B5E3B;flex-shrink:0">'+ini+'</div>'+
+        '<div id="pront-avatar" style="'+avatarStyle+';'+avatarBg+'" onclick="triggerFotoUpload('+p.id+')" title="Clique para alterar foto" onmouseover="this.querySelector(\'.foto-overlay\').style.opacity=1" onmouseout="this.querySelector(\'.foto-overlay\').style.opacity=0">'+avatarContent+'<div class="foto-overlay" style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.45);color:#fff;font-size:10px;text-align:center;padding:2px 0;opacity:0;transition:opacity .12s;pointer-events:none">📷</div></div>'+
         '<div style="flex:1">'+
           '<div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px;font-weight:700;color:#212121">'+p.nome+'</span><span style="background:#E8F5E9;color:#2E7D32;border-radius:20px;padding:3px 10px;font-size:12px">● Ativo</span></div>'+
           '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;font-size:13px;color:#616161">'+
@@ -2894,7 +2903,18 @@ function prontCadSecao(secao){
 
   if(secao==='dados'){
     var idade='';if(p.data_nascimento){try{var bn=new Date(p.data_nascimento+'T12:00:00');idade=Math.floor((Date.now()-bn.getTime())/31557600000)}catch(e){}}
+    var cadFotoUrl=p.foto_url||''
+    var cadIni=p.nome?p.nome.split(' ').slice(0,2).map(function(x){return x[0]}).join(''):''
+    var cadAvBg=cadFotoUrl?'background:url('+cadFotoUrl+') center/cover':'background:#E8F5E9'
+    var cadAvContent=cadFotoUrl?'':cadIni
     el.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:24px"><span style="color:#E65100">👤</span><span style="font-size:16px;font-weight:500">Dados Cadastrais</span></div>'+
+      '<div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;padding:16px;border:1px solid #e0e0e0;border-radius:8px;background:#FAFAFA">'+
+        '<div id="cad-foto-preview" style="width:80px;height:80px;border-radius:50%;border:2px solid #e0e0e0;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#1B5E3B;flex-shrink:0;'+cadAvBg+'">'+cadAvContent+'</div>'+
+        '<div><div style="font-size:14px;font-weight:500;color:#1A1A1A;margin-bottom:8px">Foto do Paciente</div>'+
+          '<button class="pdt-btn-outline" style="font-size:12px;padding:6px 14px" onclick="triggerFotoUpload('+p.id+')">Enviar foto</button>'+
+          '<span style="font-size:11px;color:#757575;margin-left:8px">JPG/PNG, max 200x200px</span>'+
+        '</div>'+
+      '</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Nome</label><input id="pc-nome" value="'+(p.nome||'')+'"></div><div class="pdt-field"><label>Apelido</label><input id="pc-apelido" value=""></div></div>'+
       '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>Data de Nascimento</label><input type="date" id="pc-nasc" value="'+(p.data_nascimento||'')+'"></div><div class="pdt-field"><label>Idade</label><input value="'+(idade||'—')+'" readonly style="width:50px;color:#9e9e9e"></div><div class="pdt-field"><label>Sexo</label><div style="display:flex;gap:12px;padding:6px 0"><label style="display:flex;align-items:center;gap:4px;font-size:14px;cursor:pointer"><input type="radio" name="pc-sexo" style="accent-color:#E65100"> Masculino</label><label style="display:flex;align-items:center;gap:4px;font-size:14px;cursor:pointer"><input type="radio" name="pc-sexo" style="accent-color:#E65100"> Feminino</label></div></div></div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px"><div class="pdt-field"><label>CPF</label><input id="pc-cpf" value="'+(p.cpf||'')+'" oninput="mascaraCpf(this)" onblur="validarCpfField(this)"></div><div class="pdt-field"><label>RG</label><input id="pc-rg" value="'+(p.rg||'')+'"></div></div>'+
@@ -3174,6 +3194,54 @@ function renderProfContato(p){
       '</div>'+
       '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="pdt-btn-outline" onclick="nav(\'profissionais\')">Cancelar</button><button class="pdt-btn-fill" onclick="salvarProfissional()">Salvar Alterações</button></div>'+
     '</div>'
+}
+
+// ── FOTO PACIENTE: COMPRESSÃO + UPLOAD ───────────────────────────
+function compressPhoto(file, maxSize, callback) {
+  var reader = new FileReader()
+  reader.onload = function(e) {
+    var img = new Image()
+    img.onload = function() {
+      var canvas = document.createElement('canvas')
+      var w = img.width, h = img.height
+      if (w > maxSize || h > maxSize) {
+        if (w > h) { h = Math.round(h * maxSize / w); w = maxSize }
+        else { w = Math.round(w * maxSize / h); h = maxSize }
+      }
+      canvas.width = w; canvas.height = h
+      var ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, w, h)
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.7)
+      callback(dataUrl)
+    }
+    img.src = e.target.result
+  }
+  reader.readAsDataURL(file)
+}
+
+async function uploadFotoPaciente(pacienteId, file) {
+  compressPhoto(file, 200, async function(dataUrl) {
+    try {
+      var r = await apiPost('salvar-foto-paciente', { paciente_id: pacienteId, foto: dataUrl })
+      if (r.success) {
+        if (_prontData && _prontData.paciente) _prontData.paciente.foto_url = dataUrl
+        // Update header avatar
+        var avEl = document.getElementById('pront-avatar')
+        if (avEl) { avEl.style.backgroundImage = 'url(' + dataUrl + ')'; avEl.style.backgroundSize = 'cover'; avEl.style.backgroundPosition = 'center'; avEl.textContent = '' }
+        // Update cadastro photo preview
+        var prevEl = document.getElementById('cad-foto-preview')
+        if (prevEl) { prevEl.style.backgroundImage = 'url(' + dataUrl + ')'; prevEl.style.backgroundSize = 'cover'; prevEl.style.backgroundPosition = 'center'; prevEl.textContent = '' }
+        alert('Foto salva!')
+      } else { alert(r.error || 'Erro ao salvar foto') }
+    } catch(e) { alert('Erro: ' + e.message) }
+  })
+}
+
+function triggerFotoUpload(pacienteId) {
+  var inp = document.createElement('input')
+  inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment'
+  inp.onchange = function() { if (inp.files && inp.files[0]) uploadFotoPaciente(pacienteId, inp.files[0]) }
+  inp.click()
 }
 
 // ── CPF: MÁSCARA + VALIDAÇÃO ─────────────────────────────────────
@@ -5228,6 +5296,7 @@ function openApptPanel(agId){
   var cor=PROF_CORES[profIdx%PROF_CORES.length]
   var nome=a.PatientName||a.patientName||'Paciente'
   var ini=nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
+  var apptFoto=a.paciente_foto||''
   var tel=a.MobilePhone||''
   var profNome=profInfo?(profInfo.name||profInfo.Name||profInfo.nome||''):(a.ProfessionalName||'')
   var fromTime=a.fromTime||'--'
@@ -5250,7 +5319,7 @@ function openApptPanel(agId){
     // Header with colored bar
     '<div style="height:4px;background:'+cor+';border-radius:8px 8px 0 0"></div>'+
     '<div class="appt-panel-header">'+
-      '<div class="appt-panel-av" style="background:'+cor+'20;color:'+cor+'">'+ini+'</div>'+
+      '<div class="appt-panel-av" style="'+(apptFoto?'background:url('+apptFoto+') center/cover;color:transparent':'background:'+cor+'20;color:'+cor)+'">'+ini+'</div>'+
       '<div>'+
         '<div class="appt-panel-name">'+nome+'</div>'+
         '<div class="appt-panel-phone">'+
