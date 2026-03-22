@@ -2508,15 +2508,16 @@ function renderPacientes() {
     if (!porPac[n]||dt>porPac[n].ultima) porPac[n]={nome:n,ultima:dt,tel:a.MobilePhone||'',cat:a.CategoryDescription||''}
   })
   ST.pacientesLista = Object.values(porPac).sort((a,b)=>b.ultima-a.ultima)
-  document.getElementById('pac-sub').textContent = `${ST.pacientesLista.length} pacientes únicos`
+  var pacSubEl=document.getElementById('pac-sub');if(pacSubEl)pacSubEl.textContent = `${ST.pacientesLista.length} pacientes únicos`
   filterPac()
-  document.getElementById('pac-loading').classList.add('hidden')
-  document.getElementById('pac-data').classList.remove('hidden')
+  var pacLoadEl=document.getElementById('pac-loading');if(pacLoadEl)pacLoadEl.classList.add('hidden')
+  var pacDataEl=document.getElementById('pac-data');if(pacDataEl)pacDataEl.classList.remove('hidden')
 }
 
 function filterPac() {
-  const q=(document.getElementById('pac-search').value||'').toLowerCase()
-  const f=document.getElementById('pac-filter').value
+  var pacSearchEl=document.getElementById('pac-search');if(!pacSearchEl)return
+  const q=(pacSearchEl.value||'').toLowerCase()
+  const f=(document.getElementById('pac-filter')||{}).value||''
   const cutoff=new Date();cutoff.setMonth(cutoff.getMonth()-6)
   const lista=(ST.pacientesLista||[]).filter(p=>{
     if(q&&!p.nome.toLowerCase().includes(q))return false
@@ -2524,8 +2525,9 @@ function filterPac() {
     if(f==='inativos'&&p.ultima>=cutoff)return false
     return true
   })
-  document.getElementById('pac-count').textContent=`${lista.length} pacientes`
-  document.getElementById('pac-list').innerHTML=lista.slice(0,50).map(p=>{
+  var pacCountEl=document.getElementById('pac-count');if(pacCountEl)pacCountEl.textContent=`${lista.length} pacientes`
+  var pacListEl=document.getElementById('pac-list');if(!pacListEl)return
+  pacListEl.innerHTML=lista.slice(0,50).map(p=>{
     const ini=p.nome.split(' ').slice(0,2).map(x=>x[0]).join('')
     const dias=Math.floor((Date.now()-p.ultima.getTime())/86400e3)
     const inativo=dias>180
