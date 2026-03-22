@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Auth check — public routes skip authentication
-    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote']
+    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote']
     var auth = null, clinica_id = null
     if (publicRoutes.indexOf(route) === -1) {
         auth = await authenticateRequest(req)
@@ -112,6 +112,12 @@ module.exports = async function handler(req, res) {
                 client.execute({ sql: "SELECT * FROM pagamentos WHERE (paciente_id=? OR paciente_nome LIKE ?) AND clinica_id=? ORDER BY data_pagamento DESC LIMIT 100", args: [rpId, '%'+pac.nome+'%', clinica_id] }),
                 client.execute({ sql: "SELECT * FROM financeiro WHERE paciente_id=? AND clinica_id=? ORDER BY data_pagamento DESC LIMIT 50", args: [rpId, clinica_id] }),
             ])
+            // Anamnese
+            var anamneseRows = []
+            try {
+                var anmR = await client.execute({ sql: "SELECT * FROM anamnese_respostas WHERE paciente_id=? AND clinica_id=? ORDER BY pergunta_id", args: [rpId, clinica_id] })
+                anamneseRows = anmR.rows
+            } catch(e) { /* tabela não existe */ }
             // Odontograma — tabela pode não existir ainda
             var odontRows = []
             try {
@@ -132,7 +138,7 @@ module.exports = async function handler(req, res) {
                     orcRows.forEach(function(o) { o.itens = itMap2[o.id] || [] })
                 }
             } catch(e) { /* tabela não existe */ }
-            return res.status(200).json({ success: true, paciente: pac, agendamentos: rs5[0].rows, pagamentos: rs5[1].rows, financeiro: rs5[2].rows, odontograma: odontRows, orcamentos: orcRows })
+            return res.status(200).json({ success: true, paciente: pac, agendamentos: rs5[0].rows, pagamentos: rs5[1].rows, financeiro: rs5[2].rows, odontograma: odontRows, orcamentos: orcRows, anamnese: anamneseRows })
         }
 
         if (route === 'pacientes') {
@@ -1350,6 +1356,106 @@ module.exports = async function handler(req, res) {
             }
             var bpResult = await client.execute({ sql: bpSql, args: bpArgs })
             return res.status(200).json({ success: true, procedimentos: bpResult.rows })
+        }
+
+        // ── ANAMNESE ─────────────────────────────────────────────────
+        if (route === 'anamnese-migrate') {
+            await client.execute("CREATE TABLE IF NOT EXISTS anamnese_perguntas (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, pergunta TEXT NOT NULL, tipo TEXT DEFAULT 'YES_NO', sequencia INTEGER, ativo INTEGER DEFAULT 1)")
+            await client.execute("CREATE TABLE IF NOT EXISTS anamnese_respostas (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, pergunta_id INTEGER, pergunta_texto TEXT, resposta TEXT, descricao TEXT, data_preenchimento TEXT DEFAULT (datetime('now')), preenchido_por TEXT)")
+            // Seed 18 default questions for clinica_id=1
+            var existQ = await client.execute({ sql: "SELECT COUNT(*) as c FROM anamnese_perguntas WHERE clinica_id=1", args: [] })
+            if (existQ.rows[0].c === 0) {
+                var pergs = [
+                    [1,'Qual o motivo da consulta?','DESC',1],
+                    [1,'Quando foi o seu último tratamento odontológico?','DESC',2],
+                    [1,'Está fazendo algum tratamento médico?','YES_NO',3],
+                    [1,'Está tomando algum medicamento?','YES_NO',4],
+                    [1,'Tem alergia a algum medicamento?','YES_NO',5],
+                    [1,'Teve alguma reação a anestesia local?','YES_NO',6],
+                    [1,'Sente sensibilidade nos dentes?','YES_NO',7],
+                    [1,'Range os dentes ou tem apertamento?','YES_NO',8],
+                    [1,'Sua gengiva sangra com frequência?','YES_NO',9],
+                    [1,'Tem algum hábito? (Ex.: roe unha, morde tampa de caneta)','YES_NO',10],
+                    [1,'Fuma? Quantos cigarros por dia?','YES_NO',11],
+                    [1,'É diabético? Tem alguém da família que é diabético?','YES_NO',12],
+                    [1,'Quando você se corta, sangra muito?','YES_NO',13],
+                    [1,'Tem algum problema cardíaco?','YES_NO',14],
+                    [1,'Sente dores de cabeça, dores na face, ouvido ou articulação?','YES_NO',15],
+                    [1,'Teve algum desmaio, tem ataques nervosos, epilepsia ou convulsão?','YES_NO',16],
+                    [1,'Sua pressão arterial é normal?','YES_NO',17],
+                    [1,'Está grávida?','YES_NO',18]
+                ]
+                for (var pi = 0; pi < pergs.length; pi++) {
+                    var pg = pergs[pi]
+                    await client.execute({ sql: "INSERT INTO anamnese_perguntas(clinica_id,pergunta,tipo,sequencia) VALUES(?,?,?,?)", args: pg })
+                }
+            }
+            return res.status(200).json({ success: true, message: 'Anamnese tables created and seeded' })
+        }
+
+        if (route === 'anamnese-perguntas') {
+            var apCid = clinica_id || parseInt(q.clinica_id) || 1
+            var apR = await client.execute({ sql: "SELECT * FROM anamnese_perguntas WHERE clinica_id=? AND ativo=1 ORDER BY sequencia", args: [apCid] })
+            return res.status(200).json({ success: true, perguntas: apR.rows })
+        }
+
+        if (route === 'anamnese-paciente') {
+            var anPid = parseInt(q.paciente_id) || 0
+            if (!anPid) return res.status(400).json({ success: false, error: 'paciente_id obrigatório' })
+            var anCid = clinica_id || parseInt(q.clinica_id) || 1
+            var anR = await client.execute({ sql: "SELECT * FROM anamnese_respostas WHERE paciente_id=? AND clinica_id=? ORDER BY pergunta_id", args: [anPid, anCid] })
+            return res.status(200).json({ success: true, respostas: anR.rows })
+        }
+
+        if (route === 'salvar-anamnese') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var saBody = req.body || {}
+            var saPid = parseInt(saBody.paciente_id) || 0
+            var saRespostas = saBody.respostas || []
+            if (!saPid) return res.status(400).json({ success: false, error: 'paciente_id obrigatório' })
+            var saCid = clinica_id || 1
+            // Delete existing answers for this patient
+            await client.execute({ sql: "DELETE FROM anamnese_respostas WHERE paciente_id=? AND clinica_id=?", args: [saPid, saCid] })
+            // Insert new answers
+            var saIns = 0
+            for (var si = 0; si < saRespostas.length; si++) {
+                var sr = saRespostas[si]
+                await client.execute({ sql: "INSERT INTO anamnese_respostas(clinica_id,paciente_id,pergunta_id,pergunta_texto,resposta,descricao,preenchido_por) VALUES(?,?,?,?,?,?,?)", args: [saCid, saPid, sr.pergunta_id||0, sr.pergunta_texto||'', sr.resposta||'', sr.descricao||'', saBody.preenchido_por||''] })
+                saIns++
+            }
+            return res.status(200).json({ success: true, salvos: saIns })
+        }
+
+        if (route === 'importar-anamneses-lote') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            // Ensure tables exist
+            await client.execute("CREATE TABLE IF NOT EXISTS anamnese_perguntas (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, pergunta TEXT NOT NULL, tipo TEXT DEFAULT 'YES_NO', sequencia INTEGER, ativo INTEGER DEFAULT 1)")
+            await client.execute("CREATE TABLE IF NOT EXISTS anamnese_respostas (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, pergunta_id INTEGER, pergunta_texto TEXT, resposta TEXT, descricao TEXT, data_preenchimento TEXT DEFAULT (datetime('now')), preenchido_por TEXT)")
+            var alBody = req.body || []
+            if (!Array.isArray(alBody)) alBody = alBody.anamneses || []
+            var alIns = 0, alErrs = 0
+            for (var ai = 0; ai < alBody.length; ai++) {
+                var an = alBody[ai]
+                try {
+                    // Find paciente by clinicorp_id
+                    var anPacR = await client.execute({ sql: "SELECT id FROM pacientes WHERE clinicorp_id=? LIMIT 1", args: [an.clinicorp_patient_id || ''] })
+                    var anPacId = anPacR.rows.length ? anPacR.rows[0].id : null
+                    if (!anPacId) { alErrs++; continue }
+                    // Delete existing answers
+                    await client.execute({ sql: "DELETE FROM anamnese_respostas WHERE paciente_id=? AND clinica_id=1", args: [anPacId] })
+                    // Insert answers
+                    var anResps = an.respostas || []
+                    for (var ari = 0; ari < anResps.length; ari++) {
+                        var ar = anResps[ari]
+                        // Try to find pergunta_id by matching text
+                        var arPergR = await client.execute({ sql: "SELECT id FROM anamnese_perguntas WHERE pergunta=? AND clinica_id=1 LIMIT 1", args: [ar.pergunta || ''] })
+                        var arPergId = arPergR.rows.length ? arPergR.rows[0].id : null
+                        await client.execute({ sql: "INSERT INTO anamnese_respostas(clinica_id,paciente_id,pergunta_id,pergunta_texto,resposta,descricao) VALUES(1,?,?,?,?,?)", args: [anPacId, arPergId, ar.pergunta||'', ar.resposta||'', ar.descricao||''] })
+                    }
+                    alIns++
+                } catch(e) { alErrs++ }
+            }
+            return res.status(200).json({ success: true, importados: alIns, erros: alErrs })
         }
 
         return res.status(400).json({ success: false, error: 'Rota inválida: r=' + route })

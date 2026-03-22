@@ -2661,10 +2661,185 @@ function renderProntTab(){
   else if(_prontTab==='odontograma'){
     renderOdontograma(el,p,ag)
   }
+  else if(_prontTab==='anamnese'){
+    renderAnamneseTab(el,p)
+  }
   else{
     // Abas placeholder
-    var nomes={'fotos':'Fotos','plano-clinico':'Plano e Ficha Clínica','fichas-esp':'Fichas Especialidades','anamnese':'Anamnese','documentos':'Documentos','exames':'Exames','recibos':'Recibos','indicacoes':'Indicações'}
+    var nomes={'fotos':'Fotos','plano-clinico':'Plano e Ficha Clínica','fichas-esp':'Fichas Especialidades','documentos':'Documentos','exames':'Exames','recibos':'Recibos','indicacoes':'Indicações'}
     el.innerHTML='<div style="text-align:center;padding:60px;color:#9e9e9e"><div style="font-size:15px;font-weight:500;margin-bottom:8px">'+(nomes[_prontTab]||_prontTab)+'</div><div style="font-size:13px">Dados não encontrados.</div></div>'
+  }
+}
+
+// ── ANAMNESE ──────────────────────────────────────────────────────
+var _anamnesePerguntas=null
+var _anamneseEditMode=false
+
+var ANAMNESE_DEFAULT_PERGUNTAS=[
+  {id:1,pergunta:'Qual o motivo da consulta?',tipo:'DESC',sequencia:1},
+  {id:2,pergunta:'Quando foi o seu último tratamento odontológico?',tipo:'DESC',sequencia:2},
+  {id:3,pergunta:'Está fazendo algum tratamento médico?',tipo:'YES_NO',sequencia:3},
+  {id:4,pergunta:'Está tomando algum medicamento?',tipo:'YES_NO',sequencia:4},
+  {id:5,pergunta:'Tem alergia a algum medicamento?',tipo:'YES_NO',sequencia:5},
+  {id:6,pergunta:'Teve alguma reação a anestesia local?',tipo:'YES_NO',sequencia:6},
+  {id:7,pergunta:'Sente sensibilidade nos dentes?',tipo:'YES_NO',sequencia:7},
+  {id:8,pergunta:'Range os dentes ou tem apertamento?',tipo:'YES_NO',sequencia:8},
+  {id:9,pergunta:'Sua gengiva sangra com frequência?',tipo:'YES_NO',sequencia:9},
+  {id:10,pergunta:'Tem algum hábito? (Ex.: roe unha, morde tampa de caneta)',tipo:'YES_NO',sequencia:10},
+  {id:11,pergunta:'Fuma? Quantos cigarros por dia?',tipo:'YES_NO',sequencia:11},
+  {id:12,pergunta:'É diabético? Tem alguém da família que é diabético?',tipo:'YES_NO',sequencia:12},
+  {id:13,pergunta:'Quando você se corta, sangra muito?',tipo:'YES_NO',sequencia:13},
+  {id:14,pergunta:'Tem algum problema cardíaco?',tipo:'YES_NO',sequencia:14},
+  {id:15,pergunta:'Sente dores de cabeça, dores na face, ouvido ou articulação?',tipo:'YES_NO',sequencia:15},
+  {id:16,pergunta:'Teve algum desmaio, tem ataques nervosos, epilepsia ou convulsão?',tipo:'YES_NO',sequencia:16},
+  {id:17,pergunta:'Sua pressão arterial é normal?',tipo:'YES_NO',sequencia:17},
+  {id:18,pergunta:'Está grávida?',tipo:'YES_NO',sequencia:18}
+]
+
+async function renderAnamneseTab(el,p){
+  var respostas=(_prontData.anamnese||[])
+  // Load perguntas from API or use defaults
+  if(!_anamnesePerguntas){
+    try{
+      var pResp=await apiData('anamnese-perguntas',{})
+      if(pResp.success&&pResp.perguntas&&pResp.perguntas.length){
+        _anamnesePerguntas=pResp.perguntas
+      }else{
+        _anamnesePerguntas=ANAMNESE_DEFAULT_PERGUNTAS
+      }
+    }catch(e){
+      _anamnesePerguntas=ANAMNESE_DEFAULT_PERGUNTAS
+    }
+  }
+  var perguntas=_anamnesePerguntas
+
+  // Build a map of answers by pergunta_id and pergunta_texto
+  var respMap={}
+  for(var i=0;i<respostas.length;i++){
+    var r=respostas[i]
+    if(r.pergunta_id) respMap[r.pergunta_id]=r
+    if(r.pergunta_texto) respMap[r.pergunta_texto]=r
+  }
+
+  // Find latest answer date
+  var ultimaData=''
+  for(var i=0;i<respostas.length;i++){
+    var dp=respostas[i].data_preenchimento||''
+    if(dp>ultimaData) ultimaData=dp
+  }
+
+  if(_anamneseEditMode){
+    // EDIT MODE
+    var html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">'+
+      '<div style="font-size:20px;font-weight:500;color:#1A1A1A">Anamnese</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button onclick="_anamneseEditMode=false;renderProntTab()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;transition:background .12s ease">Cancelar</button>'+
+        '<button onclick="salvarAnamnese('+p.id+')" style="background:#E65100;color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;transition:background .12s ease">Salvar</button>'+
+      '</div>'+
+    '</div>'
+    html+='<div id="anamnese-form" style="display:flex;flex-direction:column;gap:20px">'
+    for(var qi=0;qi<perguntas.length;qi++){
+      var prg=perguntas[qi]
+      var resp=respMap[prg.id]||respMap[prg.pergunta]||{}
+      var respVal=resp.resposta||''
+      var descVal=resp.descricao||''
+      html+='<div style="background:#FFFFFF;border:1px solid #E0E0E0;border-radius:8px;padding:16px 20px" data-pergunta-id="'+prg.id+'" data-pergunta-texto="'+prg.pergunta.replace(/"/g,'&quot;')+'" data-tipo="'+prg.tipo+'">'+
+        '<div style="font-size:14px;font-weight:500;color:#1A1A1A;margin-bottom:12px">'+prg.sequencia+'. '+prg.pergunta+'</div>'
+      if(prg.tipo==='DESC'){
+        html+='<textarea class="anam-input" style="width:100%;min-height:60px;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#1A1A1A;font-family:Roboto,sans-serif;resize:vertical;outline:none;transition:border-color .12s ease;box-sizing:border-box">'+(descVal||respVal)+'</textarea>'
+      }else{
+        html+='<div style="display:flex;align-items:center;gap:16px;margin-bottom:8px">'+
+          '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;color:#424242"><input type="radio" name="anam-q-'+prg.id+'" value="Sim" '+(respVal==='Sim'?'checked':'')+' style="accent-color:#034030"> Sim</label>'+
+          '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;color:#424242"><input type="radio" name="anam-q-'+prg.id+'" value="Não" '+(respVal==='Não'||respVal==='Nao'?'checked':'')+' style="accent-color:#034030"> Não</label>'+
+        '</div>'+
+        '<input type="text" class="anam-desc" placeholder="Detalhes (opcional)" value="'+descVal.replace(/"/g,'&quot;')+'" style="width:100%;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#1A1A1A;outline:none;transition:border-color .12s ease;box-sizing:border-box">'
+      }
+      html+='</div>'
+    }
+    html+='</div>'
+    el.innerHTML=html
+  }else{
+    // READ-ONLY MODE
+    var html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">'+
+      '<div>'+
+        '<div style="font-size:20px;font-weight:500;color:#1A1A1A">Anamnese</div>'+
+        (ultimaData?'<div style="font-size:12px;color:#757575;margin-top:4px">Última atualização: '+fmtDt(ultimaData)+'</div>':'')+
+      '</div>'+
+      '<button onclick="_anamneseEditMode=true;renderProntTab()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;transition:background .12s ease">Editar</button>'+
+    '</div>'
+    if(!respostas.length){
+      html+='<div style="text-align:center;padding:40px;color:#757575">'+
+        '<div style="font-size:15px;font-weight:500;margin-bottom:8px">Nenhuma anamnese preenchida</div>'+
+        '<div style="font-size:13px;margin-bottom:16px">Clique em Editar para preencher o questionário.</div>'+
+      '</div>'
+    }else{
+      html+='<div style="display:flex;flex-direction:column;gap:4px">'
+      for(var qi=0;qi<perguntas.length;qi++){
+        var prg=perguntas[qi]
+        var resp=respMap[prg.id]||respMap[prg.pergunta]||null
+        var bgColor=qi%2===0?'#FFFFFF':'#FAFAFA'
+        html+='<div style="display:flex;align-items:flex-start;gap:16px;padding:12px 16px;border-radius:6px;background:'+bgColor+'">'+
+          '<div style="flex:1;font-size:14px;color:#424242">'+prg.sequencia+'. '+prg.pergunta+'</div>'+
+          '<div style="min-width:120px;text-align:right">'
+        if(!resp||(!resp.resposta&&!resp.descricao)){
+          html+='<span style="color:#757575;font-size:13px">—</span>'
+        }else if(prg.tipo==='DESC'){
+          html+='<span style="font-size:14px;color:#1A1A1A">'+(resp.descricao||resp.resposta||'—')+'</span>'
+        }else{
+          var isYes=resp.resposta==='Sim'
+          if(isYes){
+            html+='<span style="color:#034030;font-weight:500;font-size:13px">&#10003; Sim</span>'
+          }else{
+            html+='<span style="color:#C62828;font-weight:500;font-size:13px">&#10007; Não</span>'
+          }
+          if(resp.descricao){
+            html+='<div style="font-size:12px;color:#757575;margin-top:2px">'+resp.descricao+'</div>'
+          }
+        }
+        html+='</div></div>'
+      }
+      html+='</div>'
+    }
+    el.innerHTML=html
+  }
+}
+
+async function salvarAnamnese(pacienteId){
+  var form=document.getElementById('anamnese-form')
+  if(!form)return
+  var cards=form.querySelectorAll('[data-pergunta-id]')
+  var respostas=[]
+  for(var i=0;i<cards.length;i++){
+    var card=cards[i]
+    var pergId=parseInt(card.getAttribute('data-pergunta-id'))||0
+    var pergTexto=card.getAttribute('data-pergunta-texto')||''
+    var tipo=card.getAttribute('data-tipo')||'YES_NO'
+    var resposta='',descricao=''
+    if(tipo==='DESC'){
+      var ta=card.querySelector('textarea')
+      descricao=ta?ta.value.trim():''
+      resposta=descricao
+    }else{
+      var checked=card.querySelector('input[type=radio]:checked')
+      resposta=checked?checked.value:''
+      var descInput=card.querySelector('.anam-desc')
+      descricao=descInput?descInput.value.trim():''
+    }
+    respostas.push({pergunta_id:pergId,pergunta_texto:pergTexto,resposta:resposta,descricao:descricao})
+  }
+  try{
+    var r=await apiPost('salvar-anamnese',{paciente_id:pacienteId,respostas:respostas})
+    if(r.success){
+      // Reload patient data to get updated anamnese
+      var d=await apiData('paciente',{id:pacienteId})
+      if(d.success) _prontData=d
+      _anamneseEditMode=false
+      renderProntTab()
+    }else{
+      alert('Erro ao salvar: '+(r.error||'Erro desconhecido'))
+    }
+  }catch(e){
+    alert('Erro ao salvar anamnese: '+e.message)
   }
 }
 
