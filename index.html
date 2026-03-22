@@ -4015,15 +4015,52 @@ async function loadRelOrcamentos(){
 
 // ── CONFIGURAÇÕES ──────────────────────────────────────────────
 function renderConfiguracoes() {
-  const itens=['Administração de Dados','Anamnese','Assinatura Eletrônica','Bloqueios','Calendário','Centros Radiológicos','Clinipay','Clínicas','Configuração de Emissor NFSe','Configuração de Registro (SPC/Serasa)','Configuração do QRCode para Check-in','Configurações de Caixa','Configurações de Consulta (SPC/Serasa)','Configurações de Regiões e Horários','Contas Bancárias','Diagnóstico Digital','Documentos','Emissores','Especialidades','Exportar dados','Listas/Tabelas de Preço','Medicamentos','Número de Prontuário','Orçamento','Personalização do Sistema','Recibos','Relatórios','Régua de Cobrança','Segurança','Taxas - Formas de Pagamento']
-  document.getElementById('cfg-list').innerHTML=itens.map(item=>`
-    <div class="accord-item">
-      <div class="accord-head" onclick="toggleAccord(this)">
-        ${item}
-        <span class="accord-arrow">›</span>
-      </div>
-      <div class="accord-body"><div style="color:var(--text3);font-size:13px">Configurações de <strong>${item}</strong> — em desenvolvimento</div></div>
-    </div>`).join('')
+  var cfgEl=document.getElementById('cfg-list');if(!cfgEl)return
+  var itens=['Exportar Dados','Listas/Tabelas de Preço','Especialidades','Orçamento','Personalização do Sistema','Segurança']
+  var conteudos={
+    'Exportar Dados':'<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Exporte os dados do sistema em formato CSV para backup ou análise externa.</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">'+
+      [{id:'pacientes',label:'Pacientes (Cadastro)',icon:'👥'},{id:'agendamentos',label:'Agendamentos',icon:'📅'},{id:'financeiro',label:'Financeiro',icon:'💰'},{id:'orcamentos',label:'Orçamentos',icon:'📋'},{id:'pagamentos',label:'Pagamentos',icon:'💳'},{id:'profissionais',label:'Profissionais',icon:'👨‍⚕️'},{id:'procedimentos',label:'Procedimentos',icon:'🦷'}].map(function(e){
+        return '<div style="border:1px solid var(--border);border-radius:6px;padding:16px;cursor:pointer;transition:all .12s;background:var(--white)" onmouseover="this.style.borderColor=\'var(--green3)\'" onmouseout="this.style.borderColor=\'var(--border)\'" onclick="exportarDados(\''+e.id+'\')">'+
+          '<div style="font-size:24px;margin-bottom:8px">'+e.icon+'</div>'+
+          '<div style="font-size:13px;font-weight:500;color:var(--text)">'+e.label+'</div>'+
+          '<div style="font-size:11px;color:var(--text3);margin-top:4px">Exportar CSV</div>'+
+        '</div>'
+      }).join('')+
+      '</div>'
+  }
+  cfgEl.innerHTML=itens.map(function(item){
+    return '<div class="accord-item">'+
+      '<div class="accord-head" onclick="toggleAccord(this)">'+item+'<span class="accord-arrow">›</span></div>'+
+      '<div class="accord-body">'+(conteudos[item]||'<div style="color:var(--text3);font-size:13px">Configurações de <strong>'+item+'</strong> — em desenvolvimento</div>')+'</div>'+
+    '</div>'
+  }).join('')
+}
+
+async function exportarDados(tipo){
+  try{
+    var d=await apiData('exportar-dados',{tipo:tipo})
+    if(!d.success||!d.data||!d.data.length){alert('Nenhum dado para exportar');return}
+    // Build CSV
+    var headers=Object.keys(d.data[0])
+    var csv=headers.join(';')+'\\n'
+    d.data.forEach(function(row){
+      csv+=headers.map(function(h){
+        var v=row[h]
+        if(v===null||v===undefined)v=''
+        v=String(v).replace(/"/g,'""')
+        if(String(v).indexOf(';')>-1||String(v).indexOf('"')>-1||String(v).indexOf('\\n')>-1)v='"'+v+'"'
+        return v
+      }).join(';')+'\\n'
+    })
+    // Download
+    var blob=new Blob(['\\ufeff'+csv],{type:'text/csv;charset=utf-8;'})
+    var url=URL.createObjectURL(blob)
+    var a=document.createElement('a')
+    a.href=url;a.download='klinik_'+tipo+'_'+new Date().toISOString().slice(0,10)+'.csv'
+    document.body.appendChild(a);a.click();document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }catch(e){alert('Erro: '+e.message)}
 }
 
 function toggleAccord(el) {

@@ -1124,6 +1124,23 @@ module.exports = async function handler(req, res) {
             })
         }
 
+        // ── EXPORTAR DADOS ─────────────────────────────────────────
+        if (route === 'exportar-dados') {
+            var tipo = q.tipo || ''
+            var sqlMap = {
+                pacientes: "SELECT id,nome,cpf,rg,data_nascimento,sexo,estado_civil,telefone,whatsapp,email,endereco,bairro,cidade,cep,convenio,numero_convenio,como_conheceu,observacoes,alerta_medico,ativo,criado_em FROM pacientes WHERE clinica_id=? ORDER BY nome",
+                agendamentos: "SELECT a.id,a.data_hora,a.hora_fim,a.tipo,a.status,a.procedimento,a.valor,a.observacoes,COALESCE(p.nome,a.paciente_nome) as paciente_nome,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE a.clinica_id=? ORDER BY a.data_hora DESC",
+                financeiro: "SELECT * FROM financeiro WHERE clinica_id=? ORDER BY data_pagamento DESC",
+                orcamentos: "SELECT o.*,p.nome as paciente_nome FROM orcamentos o LEFT JOIN pacientes p ON p.id=o.paciente_id WHERE o.clinica_id=? ORDER BY o.data_criacao DESC",
+                pagamentos: "SELECT pg.*,COALESCE(p.nome,pg.paciente_nome) as paciente FROM pagamentos pg LEFT JOIN pacientes p ON p.id=pg.paciente_id WHERE pg.clinica_id=? ORDER BY pg.data_pagamento DESC",
+                profissionais: "SELECT id,nome,especialidade,cpf,email,telefone,cro FROM profissionais WHERE clinica_id=? ORDER BY nome",
+                procedimentos: "SELECT * FROM procedimentos WHERE clinica_id=? ORDER BY nome"
+            }
+            if (!sqlMap[tipo]) return res.status(400).json({ success: false, error: 'Tipo inválido: ' + tipo })
+            var expR = await client.execute({ sql: sqlMap[tipo], args: [clinica_id] })
+            return res.status(200).json({ success: true, data: expR.rows, total: expR.rows.length })
+        }
+
         // ── MIGRATE-SAAS ────────────────────────────────────────────
         if (route === 'migrate-saas') {
             var summary = { clinica: null, tabelas: {}, indexes: [], billing_columns: [] }
