@@ -831,10 +831,17 @@ module.exports = async function handler(req, res) {
             var sf = req.body || {}
             if (!sf.paciente_id) return res.status(400).json({ success: false, error: 'paciente_id obrigatório' })
             if (!sf.foto) return res.status(400).json({ success: false, error: 'foto obrigatória' })
-            // Garante coluna foto_url
-            try { await client.execute("ALTER TABLE pacientes ADD COLUMN foto_url TEXT") } catch(e) {}
-            await client.execute({ sql: "UPDATE pacientes SET foto_url=?,atualizado_em=datetime('now') WHERE id=? AND clinica_id=?", args: [sf.foto, sf.paciente_id, clinica_id] })
-            return res.status(200).json({ success: true, msg: 'Foto salva' })
+            var fotoSize = sf.foto.length
+            console.log('[salvar-foto] paciente_id='+sf.paciente_id+' foto_size='+fotoSize)
+            if (fotoSize > 500000) return res.status(400).json({ success: false, error: 'Foto muito grande ('+Math.round(fotoSize/1024)+'KB). Máximo 500KB.' })
+            try {
+                try { await client.execute("ALTER TABLE pacientes ADD COLUMN foto_url TEXT") } catch(e) {}
+                await client.execute({ sql: "UPDATE pacientes SET foto_url=?,atualizado_em=datetime('now') WHERE id=? AND clinica_id=?", args: [sf.foto, parseInt(sf.paciente_id), clinica_id] })
+                return res.status(200).json({ success: true, msg: 'Foto salva' })
+            } catch(fErr) {
+                console.error('[salvar-foto] erro:', fErr.message)
+                return res.status(500).json({ success: false, error: 'Erro ao salvar foto: ' + fErr.message })
+            }
         }
 
         // ── SALVAR PROFISSIONAL ─────────────────────────────────────

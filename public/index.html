@@ -3222,6 +3222,7 @@ function compressPhoto(file, maxSize, callback) {
 async function uploadFotoPaciente(pacienteId, file) {
   compressPhoto(file, 200, async function(dataUrl) {
     try {
+      console.log('[foto] upload tamanho:', Math.round(dataUrl.length/1024)+'KB')
       var r = await apiPost('salvar-foto-paciente', { paciente_id: pacienteId, foto: dataUrl })
       if (r.success) {
         if (_prontData && _prontData.paciente) _prontData.paciente.foto_url = dataUrl
