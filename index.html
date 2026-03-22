@@ -812,7 +812,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         <button class="btn-hoje" onclick="agendaHoje()">Hoje</button>
         <button class="btn-ico" onclick="agendaNext()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
         <div class="agenda-date" id="agenda-date-title">Sábado, 21 de Março de 2026</div>
-        <button class="btn-ico" title="Recarregar" onclick="loadAgenda()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button>
+        <button class="btn-ico" title="Recarregar" onclick="_agendaMesesCarregados={};ST.agendamentos=[];loadAgenda()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button>
         <span class="agenda-warn" id="agenda-warn-txt" onclick="nav('confirmacoes')"></span>
         <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
           <select class="agenda-interval-sel" id="agenda-interval-sel" onchange="setAgendaInterval(Number(this.value))" title="Intervalo de tempo">
@@ -2063,6 +2063,20 @@ async function loadDashboard() {
 }
 
 // ── AGENDA ──────────────────────────────────────────────────────
+var _agendaMesesCarregados={}
+function _mapAgendamento(a){
+  var dh=a.data_hora||''
+  return {
+    id:a.id, date:dh.slice(0,10), fromTime:dh.slice(11,16)||'',
+    toTime:a.hora_fim||'', PatientName:a.paciente_nome||'', patientName:a.paciente_nome||'',
+    MobilePhone:a.paciente_telefone||'', ProfessionalId:a.profissional_id,
+    ProfessionalName:a.profissional_nome||'', professionalId:a.profissional_id,
+    CategoryDescription:a.tipo||'', status:a.status||'agendado',
+    procedureName:a.procedimento||'', value:a.valor||0, observations:a.observacoes||'',
+    paciente_foto:a.paciente_foto||'', paciente_id:a.paciente_id
+  }
+}
+
 async function loadAgenda() {
   var loadEl = document.getElementById('agenda-loading')
   var gridEl = document.getElementById('agenda-grid')
@@ -2076,20 +2090,9 @@ async function loadAgenda() {
         ST.profissionais=(pd.data||pd.profissionais||[]).map(function(p){return {id:p.id,name:p.nome,Name:p.nome,nome:p.nome,specialty:p.especialidade,especialidade:p.especialidade}})
       }catch(e2){ST.profissionais=[]}
     }
-    var d = await apiData('agendamentos')
-    var rows = d.agendamentos || []
-    ST.agendamentos = rows.map(function(a) {
-      var dh = a.data_hora || ''
-      return {
-        id: a.id, date: dh.slice(0,10), fromTime: dh.slice(11,16) || '',
-        toTime: a.hora_fim || '', PatientName: a.paciente_nome || '', patientName: a.paciente_nome || '',
-        MobilePhone: a.paciente_telefone || '', ProfessionalId: a.profissional_id,
-        ProfessionalName: a.profissional_nome || '', professionalId: a.profissional_id,
-        CategoryDescription: a.tipo || '', status: a.status || 'agendado',
-        procedureName: a.procedimento || '', value: a.valor || 0, observations: a.observacoes || '',
-        paciente_foto: a.paciente_foto || ''
-      }
-    })
+    // Load current month's agendamentos
+    var mesAtual=agendaDate.getFullYear()+'-'+String(agendaDate.getMonth()+1).padStart(2,'0')
+    await loadAgendaMes(mesAtual)
     renderMiniCal()
     renderProfsList()
     renderAgendaGrid()
@@ -2102,24 +2105,51 @@ async function loadAgenda() {
   }
 }
 
+async function loadAgendaMes(mes){
+  if(_agendaMesesCarregados[mes])return // Already loaded
+  try{
+    var d=await apiData('agendamentos',{mes:mes,limit:2000})
+    var rows=d.agendamentos||[]
+    var mapped=rows.map(_mapAgendamento)
+    // Merge into ST.agendamentos (avoid duplicates)
+    if(!ST.agendamentos)ST.agendamentos=[]
+    var existingIds={}
+    ST.agendamentos.forEach(function(a){existingIds[a.id]=true})
+    for(var i=0;i<mapped.length;i++){
+      if(!existingIds[mapped[i].id]){
+        ST.agendamentos.push(mapped[i])
+        existingIds[mapped[i].id]=true
+      }
+    }
+    _agendaMesesCarregados[mes]=true
+  }catch(e){console.error('[loadAgendaMes]',mes,e.message)}
+}
+
+async function ensureAgendaMonth(){
+  var mes=agendaDate.getFullYear()+'-'+String(agendaDate.getMonth()+1).padStart(2,'0')
+  if(!_agendaMesesCarregados[mes]){
+    await loadAgendaMes(mes)
+  }
+}
+
 function formatAgendaDate(d) {
   return DIAS_FULL[d.getDay()]+', '+d.getDate()+' de '+MESES_PT[d.getMonth()]+' de '+d.getFullYear()
 }
 
-function agendaPrev() {
+async function agendaPrev() {
   if(agendaView==='semana'){agendaDate.setDate(agendaDate.getDate()-7)}
   else if(agendaView==='mes'){agendaDate.setMonth(agendaDate.getMonth()-1)}
   else{agendaDate.setDate(agendaDate.getDate()-1)}
-  renderAgendaGrid()
+  await ensureAgendaMonth();renderMiniCal();renderAgendaGrid()
 }
-function agendaNext() {
+async function agendaNext() {
   if(agendaView==='semana'){agendaDate.setDate(agendaDate.getDate()+7)}
   else if(agendaView==='mes'){agendaDate.setMonth(agendaDate.getMonth()+1)}
   else{agendaDate.setDate(agendaDate.getDate()+1)}
-  renderAgendaGrid()
+  await ensureAgendaMonth();renderMiniCal();renderAgendaGrid()
 }
-function agendaHoje() { agendaDate = new Date(); renderMiniCal(); renderAgendaGrid() }
-function agendaChangeView(v) { agendaView = v; renderAgendaGrid() }
+async function agendaHoje() { agendaDate = new Date(); await ensureAgendaMonth(); renderMiniCal(); renderAgendaGrid() }
+async function agendaChangeView(v) { agendaView = v; await ensureAgendaMonth(); renderAgendaGrid() }
 function setAgendaInterval(min) { agendaInterval = min; renderAgendaGrid() }
 
 function renderMiniCal() {
@@ -2146,7 +2176,7 @@ function renderMiniCal() {
 
 function miniCalPrev() { miniCalDate.setMonth(miniCalDate.getMonth()-1); renderMiniCal() }
 function miniCalNext() { miniCalDate.setMonth(miniCalDate.getMonth()+1); renderMiniCal() }
-function selectMiniCalDay(d,m,y) { agendaDate=new Date(y,m,d); renderMiniCal(); renderAgendaGrid() }
+async function selectMiniCalDay(d,m,y) { agendaDate=new Date(y,m,d); await ensureAgendaMonth(); renderMiniCal(); renderAgendaGrid() }
 
 function renderProfsList() {
   var profs = ST.profissionais || (ST.dashboard&&ST.dashboard.profissionais) || []

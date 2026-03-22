@@ -165,8 +165,8 @@ module.exports = async function handler(req, res) {
 
         // ── AGENDAMENTOS ────────────────────────────────────────────────────
         if (route === 'agendamentos') {
-            var lim2 = Math.min(parseInt(q.limit) || 200, 500)
-            var base = "SELECT a.id,a.data_hora,a.hora_fim,a.tipo,a.status,a.procedimento,a.valor,a.observacoes,a.profissional_id,COALESCE(p.nome,a.paciente_nome) as paciente_nome,COALESCE(p.telefone,a.paciente_telefone) as paciente_telefone,p.foto_url as paciente_foto,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id"
+            var lim2 = Math.min(parseInt(q.limit) || 1000, 5000)
+            var base = "SELECT a.id,a.data_hora,a.hora_fim,a.tipo,a.status,a.procedimento,a.valor,a.observacoes,a.profissional_id,a.paciente_id,COALESCE(p.nome,a.paciente_nome) as paciente_nome,COALESCE(p.telefone,a.paciente_telefone) as paciente_telefone,p.foto_url as paciente_foto,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id"
             var wheres = ["a.clinica_id=?"], argsAg = [clinica_id]
             if (q.dataInicio && q.dataFim) { wheres.push("DATE(a.data_hora) BETWEEN ? AND ?"); argsAg.push(q.dataInicio, q.dataFim) }
             else if (q.data) { wheres.push("DATE(a.data_hora)=?"); argsAg.push(q.data) }
