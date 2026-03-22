@@ -170,7 +170,7 @@ module.exports = async function handler(req, res) {
         var senhaTemp = crypto.randomBytes(4).toString('hex') // 8 chars hex
         var hash2 = bcrypt.hashSync(senhaTemp, 10)
         var perfil = b2.perfil || 'recepcionista'
-        var validos = ['admin', 'dentista', 'recepcionista']
+        var validos = ['admin', 'dentista', 'recepcionista', 'asb', 'administrativo']
         if (validos.indexOf(perfil) === -1) perfil = 'recepcionista'
 
         await client.execute({ sql: "INSERT INTO usuarios(nome,email,senha_hash,perfil,deve_redefinir,clinica_id) VALUES(?,?,?,?,1,?)", args: [b2.nome.trim(), b2.email.toLowerCase().trim(), hash2, perfil, b2.clinica_id] })

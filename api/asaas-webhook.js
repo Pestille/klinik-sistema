@@ -41,10 +41,18 @@ module.exports = async function handler(req, res) {
                 })
                 // Se encontrou a cobrança, atualiza saldo da clínica
                 if (upd.rowsAffected > 0) {
-                    var cobR = await client.execute({ sql: "SELECT clinica_id,valor FROM cobrancas WHERE asaas_id=?", args: [externalId] })
+                    var cobR = await client.execute({ sql: "SELECT id,clinica_id,valor FROM cobrancas WHERE asaas_id=?", args: [externalId] })
                     if (cobR.rows.length) {
                         var cob = cobR.rows[0]
                         await client.execute({ sql: "UPDATE clinicas SET saldo=saldo+? WHERE id=?", args: [cob.valor, cob.clinica_id] })
+                        // Cascade: mark linked parcela as paid
+                        try {
+                            var parcUpd = await client.execute({
+                                sql: "UPDATE parcelas_orcamento SET status='pago', data_pagamento=datetime('now'), updated_at=datetime('now') WHERE cobranca_id=? AND status!='pago'",
+                                args: [cob.id]
+                            })
+                            if (parcUpd.rowsAffected > 0) console.log('[asaas-webhook] Parcela baixada automaticamente via cobranca_id=' + cob.id)
+                        } catch(ep) { console.error('[asaas-webhook] Parcela cascade error:', ep.message) }
                         console.log('[asaas-webhook] Pagamento confirmado: R$' + cob.valor + ' clinica_id=' + cob.clinica_id)
                     }
                 }
@@ -60,6 +68,16 @@ module.exports = async function handler(req, res) {
                     sql: "UPDATE cobrancas SET status='vencido',updated_at=datetime('now') WHERE asaas_id=?",
                     args: [externalId2]
                 })
+                // Cascade: mark linked parcela as overdue
+                try {
+                    var cobOv = await client.execute({ sql: "SELECT id FROM cobrancas WHERE asaas_id=?", args: [externalId2] })
+                    if (cobOv.rows.length) {
+                        await client.execute({
+                            sql: "UPDATE parcelas_orcamento SET status='vencido', updated_at=datetime('now') WHERE cobranca_id=? AND status='pendente'",
+                            args: [cobOv.rows[0].id]
+                        })
+                    }
+                } catch(ep) { console.error('[asaas-webhook] Parcela overdue cascade error:', ep.message) }
             }
             return res.status(200).json({ received: true })
         }

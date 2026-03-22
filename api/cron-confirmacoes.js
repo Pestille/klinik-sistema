@@ -133,6 +133,56 @@ module.exports = async function handler(req, res) {
             clinicasProcessadas.push({ clinica_id: clinica_id, agendamentos: agR.rows.length, enviados: totalEnv, erros: totalErr })
         }
 
+        // ── GERAÇÃO DE CONTAS RECORRENTES ──
+        var grTotal = 0
+        for (var gri = 0; gri < clinicasR.rows.length; gri++) {
+            var grClinica = clinicasR.rows[gri].id
+            try {
+                var grProxMes = new Date()
+                grProxMes.setMonth(grProxMes.getMonth() + 1)
+                var grProxMesStr = grProxMes.toISOString().slice(0, 7)
+
+                var grContas = await client.execute({
+                    sql: "SELECT DISTINCT cp.descricao, cp.fornecedor, cp.valor, cp.vencimento, cp.classificacao, cp.categoria, cp.categoria_id, cp.frequencia, cp.total_parcelas, MAX(cp.parcela_atual) as max_parcela FROM contas_pagar cp WHERE cp.recorrente=1 AND cp.clinica_id=? AND NOT EXISTS (SELECT 1 FROM contas_pagar x WHERE x.descricao=cp.descricao AND x.clinica_id=cp.clinica_id AND strftime('%Y-%m',x.vencimento)=?) GROUP BY cp.descricao",
+                    args: [grClinica, grProxMesStr]
+                })
+
+                for (var grj = 0; grj < grContas.rows.length; grj++) {
+                    var grC = grContas.rows[grj]
+                    var grNewParcela = (grC.max_parcela || 1) + 1
+                    if (grC.total_parcelas && grC.total_parcelas > 0 && grNewParcela > grC.total_parcelas) continue
+
+                    var grUlt = new Date(grC.vencimento + 'T12:00:00')
+                    var grNext = new Date(grUlt)
+                    var monthsDiff = grNewParcela - 1
+                    if (grC.frequencia === 'semanal') grNext.setDate(grUlt.getDate() + 7 * monthsDiff)
+                    else if (grC.frequencia === 'quinzenal') grNext.setDate(grUlt.getDate() + 15 * monthsDiff)
+                    else grNext.setMonth(grUlt.getMonth() + monthsDiff)
+
+                    await client.execute({
+                        sql: "INSERT INTO contas_pagar(clinica_id, descricao, fornecedor, valor, vencimento, classificacao, categoria, categoria_id, recorrente, frequencia, total_parcelas, parcela_atual, status) VALUES(?,?,?,?,?,?,?,?,1,?,?,?,?)",
+                        args: [grClinica, grC.descricao, grC.fornecedor || '', grC.valor, grNext.toISOString().slice(0, 10), grC.classificacao || '', grC.categoria || '', grC.categoria_id || null, grC.frequencia || 'mensal', grC.total_parcelas || 0, grNewParcela, 'aberta']
+                    })
+                    grTotal++
+                }
+            } catch(e) { console.error('[cron] recorrentes clinica ' + grClinica + ':', e.message) }
+        }
+        console.log('[cron] Recorrentes geradas: ' + grTotal)
+
+        // ── VERIFICAÇÃO DE VENCIMENTOS (parcelas + contas a pagar) ──
+        var vvHoje = new Date().toISOString().slice(0, 10)
+        var vvParcTotal = 0, vvCPTotal = 0
+        for (var vi = 0; vi < clinicasR.rows.length; vi++) {
+            var vClinica = clinicasR.rows[vi].id
+            try {
+                var vvP = await client.execute({ sql: "UPDATE parcelas_orcamento SET status='vencido', updated_at=datetime('now') WHERE data_vencimento < ? AND status='pendente' AND clinica_id=?", args: [vvHoje, vClinica] })
+                vvParcTotal += (vvP.rowsAffected || 0)
+                var vvC = await client.execute({ sql: "UPDATE contas_pagar SET status='vencida' WHERE vencimento < ? AND status='aberta' AND clinica_id=?", args: [vvHoje, vClinica] })
+                vvCPTotal += (vvC.rowsAffected || 0)
+            } catch(e) { console.error('[cron] vencimentos clinica ' + vClinica + ':', e.message) }
+        }
+        console.log('[cron] Vencimentos: ' + vvParcTotal + ' parcelas, ' + vvCPTotal + ' contas a pagar')
+
         return res.status(200).json({
             success: true,
             data: dataAmanha,
@@ -140,6 +190,8 @@ module.exports = async function handler(req, res) {
             agendamentos: totalGlobalAg,
             enviados: totalGlobalEnv,
             erros: totalGlobalErr,
+            recorrentes_geradas: grTotal,
+            vencimentos: { parcelas: vvParcTotal, contas_pagar: vvCPTotal },
             detalhes: clinicasProcessadas
         })
     } catch (error) {

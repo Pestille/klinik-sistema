@@ -67,4 +67,20 @@ function requireRole(auth, roles) {
     }
 }
 
-module.exports = { authenticateRequest, requireRole }
+/**
+ * verificarPermissao(client, clinica_id, perfil, recurso)
+ * Retorna true se o perfil tem permissão para o recurso
+ */
+async function verificarPermissao(client, clinica_id, perfil, recurso) {
+    if (perfil === 'admin') return true // Admin always has access
+    try {
+        var r = await client.execute({
+            sql: "SELECT permitido FROM permissoes WHERE (clinica_id IS NULL OR clinica_id=?) AND perfil=? AND recurso=? ORDER BY clinica_id DESC LIMIT 1",
+            args: [clinica_id, perfil, recurso]
+        })
+        if (!r.rows.length) return false
+        return r.rows[0].permitido === 1
+    } catch(e) { return false }
+}
+
+module.exports = { authenticateRequest, requireRole, verificarPermissao }

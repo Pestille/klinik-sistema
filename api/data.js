@@ -2,7 +2,7 @@
 // Schema real: agendamentos.data_hora, financeiro.data_pagamento, pacientes.criado_em
 
 var { getClient } = require('./db')
-var { authenticateRequest } = require('./middleware')
+var { authenticateRequest, verificarPermissao } = require('./middleware')
 
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*')
@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Auth check — public routes skip authentication
-    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos', 'pagamentos-migrate']
+    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos', 'pagamentos-migrate', 'financeiro-migrate', 'financeiro-migrate-v2', 'financeiro-migrate-v3', 'comissoes-migrate', 'permissoes-migrate']
     var auth = null, clinica_id = null
     if (publicRoutes.indexOf(route) === -1) {
         auth = await authenticateRequest(req)
@@ -1318,6 +1318,34 @@ module.exports = async function handler(req, res) {
             var ao = req.body || {}
             if (!ao.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
             await client.execute({ sql: "UPDATE orcamentos SET status='aprovado',aprovado_por=?,data_aprovacao=datetime('now'),updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [ao.aprovado_por||'', ao.id, clinica_id] })
+
+            // Generate approval commissions for each item's professional
+            try {
+                var aoOrc = await client.execute({ sql: "SELECT tabela_preco, paciente_id FROM orcamentos WHERE id=?", args: [ao.id] })
+                var aoTabela = aoOrc.rows.length ? (aoOrc.rows[0].tabela_preco || 'PARTICULAR') : 'PARTICULAR'
+                var aoPacId = aoOrc.rows.length ? aoOrc.rows[0].paciente_id : null
+                var aoPacNome = ''
+                if (aoPacId) { var aoPn = await client.execute({ sql: "SELECT nome FROM pacientes WHERE id=?", args: [aoPacId] }); if (aoPn.rows.length) aoPacNome = aoPn.rows[0].nome }
+
+                var aoItens = await client.execute({ sql: "SELECT * FROM orcamento_itens WHERE orcamento_id=?", args: [ao.id] })
+                for (var aoi = 0; aoi < aoItens.rows.length; aoi++) {
+                    var aoItem = aoItens.rows[aoi]
+                    var aoProfId = aoItem.profissional_id
+                    if (!aoProfId) continue
+                    var aoConfig = await client.execute({ sql: "SELECT * FROM comissoes_config WHERE profissional_id=? AND momento='aprovacao' AND (tabela_preco=? OR tabela_preco='TODAS') AND clinica_id=? ORDER BY tabela_preco='TODAS' LIMIT 1", args: [aoProfId, aoTabela, clinica_id] })
+                    if (!aoConfig.rows.length) continue
+                    var aoR = aoConfig.rows[0]
+                    var aoValBase = (aoItem.valor_unitario || 0) * (aoItem.quantidade || 1)
+                    var aoValCom = aoR.tipo === 'percentual' ? aoValBase * aoR.valor / 100 : aoR.valor
+                    var aoProfNome = aoItem.profissional_nome || ''
+                    if (!aoProfNome) { var aoProfN = await client.execute({ sql: "SELECT nome FROM profissionais WHERE id=?", args: [aoProfId] }); if (aoProfN.rows.length) aoProfNome = aoProfN.rows[0].nome }
+                    await client.execute({
+                        sql: "INSERT INTO comissoes_lancamentos(clinica_id, profissional_id, profissional_nome, orcamento_id, orcamento_item_id, paciente_id, paciente_nome, procedimento_nome, tabela_preco, momento, tipo, valor_base, percentual, valor_comissao, data_referencia) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                        args: [clinica_id, aoProfId, aoProfNome, ao.id, aoItem.id, aoPacId, aoPacNome, aoItem.procedimento_nome, aoTabela, 'aprovacao', aoR.tipo, aoValBase, aoR.tipo === 'percentual' ? aoR.valor : null, aoValCom, new Date().toISOString().slice(0, 10)]
+                    })
+                }
+            } catch(e) { console.error('[aprovar-orcamento] comissoes error:', e.message) }
+
             return res.status(200).json({ success: true, msg: 'Orçamento aprovado' })
         }
 
@@ -1328,6 +1356,118 @@ module.exports = async function handler(req, res) {
             if (!ro.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
             await client.execute({ sql: "UPDATE orcamentos SET status='reprovado',motivo_reprovacao=?,updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [ro.motivo||'', ro.id, clinica_id] })
             return res.status(200).json({ success: true, msg: 'Orçamento reprovado' })
+        }
+
+        // ── ORÇAMENTOS — DESAPROVAR ──────────────────────────────────
+        if (route === 'desaprovar-orcamento') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var da = req.body || {}
+            if (!da.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
+            if (!da.motivo) return res.status(400).json({ success: false, error: 'motivo obrigatório' })
+
+            // Verify orcamento is approved
+            var daOrc = await client.execute({ sql: "SELECT * FROM orcamentos WHERE id=? AND clinica_id=?", args: [da.id, clinica_id] })
+            if (!daOrc.rows.length) return res.status(404).json({ success: false, error: 'Orçamento não encontrado' })
+            var daO = daOrc.rows[0]
+            if (daO.status !== 'aprovado') return res.status(400).json({ success: false, error: 'Orçamento não está aprovado' })
+
+            // Check executed items
+            var daItens = await client.execute({ sql: "SELECT * FROM orcamento_itens WHERE orcamento_id=?", args: [da.id] })
+            var daExec = daItens.rows.filter(function(i) { return i.executado === 1 })
+            var daNaoExec = daItens.rows.filter(function(i) { return i.executado !== 1 })
+            var daForceParcial = da.parcial === true
+
+            // Check permission for partial (when items are executed)
+            if (daExec.length > 0 && !daForceParcial) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Existem ' + daExec.length + ' procedimentos executados',
+                    executados: daExec.length,
+                    nao_executados: daNaoExec.length,
+                    requer_parcial: true
+                })
+            }
+
+            var daHoje = new Date().toISOString().slice(0, 10)
+
+            if (daExec.length === 0) {
+                // TOTAL disapproval - no items executed
+                await client.execute({ sql: "UPDATE orcamentos SET status='desaprovado', motivo_reprovacao=?, updated_at=datetime('now') WHERE id=?", args: [da.motivo, da.id] })
+
+                // Cancel all parcelas
+                await client.execute({ sql: "UPDATE parcelas_orcamento SET status='cancelado', updated_at=datetime('now') WHERE orcamento_id=? AND status='pendente'", args: [da.id] })
+
+                // Cancel pending Asaas charges
+                var daCobs = await client.execute({ sql: "SELECT c.asaas_id FROM cobrancas c JOIN parcelas_orcamento po ON po.cobranca_id=c.id WHERE po.orcamento_id=? AND c.status='pendente'", args: [da.id] })
+                // Mark as cancelled in DB (Asaas cancellation would need API call)
+                await client.execute({ sql: "UPDATE cobrancas SET status='cancelado', updated_at=datetime('now') WHERE id IN (SELECT cobranca_id FROM parcelas_orcamento WHERE orcamento_id=? AND cobranca_id IS NOT NULL) AND status='pendente'", args: [da.id] })
+
+                // Cancel pending commissions
+                await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_id=? AND status='pendente'", args: [da.id] })
+
+                // Calculate refund: how much was already paid
+                var daPago = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM parcelas_orcamento WHERE orcamento_id=? AND status='pago'", args: [da.id] })
+                var daValorPago = daPago.rows[0].total || 0
+
+                // If patient paid something, register credit
+                if (daValorPago > 0) {
+                    await client.execute({
+                        sql: "INSERT INTO lancamentos(clinica_id, data, tipo, descricao, valor, classificacao, categoria, status) VALUES(?,?,?,?,?,?,?,?)",
+                        args: [clinica_id, daHoje, 'Saída', 'Estorno - Desaprovação Orçamento #' + da.id, daValorPago, 'Receita', 'Estorno', 'pendente']
+                    })
+                }
+
+                // Activity log
+                try {
+                    await client.execute({ sql: "INSERT INTO activity_log(clinica_id, usuario_id, acao, detalhes, created_at) VALUES(?,?,?,?,datetime('now'))", args: [clinica_id, auth.usuario_id, 'desaprovar_orcamento', 'Orçamento #' + da.id + ' desaprovado totalmente. Motivo: ' + da.motivo + '. Estorno: R$ ' + daValorPago.toFixed(2)] })
+                } catch(e) {}
+
+                return res.status(200).json({ success: true, tipo: 'total', msg: 'Orçamento desaprovado totalmente', estorno: daValorPago })
+
+            } else {
+                // PARTIAL disapproval - some items executed
+                // Calculate new total (only executed items)
+                var daNovoTotal = daExec.reduce(function(s, i) { return s + (i.valor_unitario || 0) * (i.quantidade || 1) }, 0)
+                var daDesconto = parseFloat(daO.desconto) || 0
+                var daNovoLiquido = daNovoTotal - daDesconto
+                if (daNovoLiquido < 0) daNovoLiquido = 0
+
+                // Update orcamento with new total
+                await client.execute({ sql: "UPDATE orcamentos SET valor_total=?, motivo_reprovacao=?, updated_at=datetime('now') WHERE id=?", args: [daNovoTotal, 'Desaprovação parcial: ' + da.motivo, da.id] })
+
+                // Cancel non-executed item commissions
+                for (var dai = 0; dai < daNaoExec.length; dai++) {
+                    await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_item_id=? AND status='pendente'", args: [daNaoExec[dai].id] })
+                }
+
+                // Cancel pending parcelas
+                await client.execute({ sql: "UPDATE parcelas_orcamento SET status='cancelado', updated_at=datetime('now') WHERE orcamento_id=? AND status='pendente'", args: [da.id] })
+                await client.execute({ sql: "UPDATE cobrancas SET status='cancelado', updated_at=datetime('now') WHERE id IN (SELECT cobranca_id FROM parcelas_orcamento WHERE orcamento_id=? AND cobranca_id IS NOT NULL) AND status='pendente'", args: [da.id] })
+
+                // Calculate refund
+                var daPago2 = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM parcelas_orcamento WHERE orcamento_id=? AND status='pago'", args: [da.id] })
+                var daValorPago2 = daPago2.rows[0].total || 0
+                var daDiferenca = daValorPago2 - daNovoLiquido
+
+                if (daDiferenca > 0) {
+                    // Patient overpaid - register credit/refund
+                    await client.execute({
+                        sql: "INSERT INTO lancamentos(clinica_id, data, tipo, descricao, valor, classificacao, categoria, status) VALUES(?,?,?,?,?,?,?,?)",
+                        args: [clinica_id, daHoje, 'Saída', 'Estorno parcial - Orçamento #' + da.id + ' (Pago: ' + daValorPago2.toFixed(2) + ', Novo total: ' + daNovoLiquido.toFixed(2) + ')', daDiferenca, 'Receita', 'Estorno', 'pendente']
+                    })
+                }
+
+                // Activity log
+                try {
+                    await client.execute({ sql: "INSERT INTO activity_log(clinica_id, usuario_id, acao, detalhes, created_at) VALUES(?,?,?,?,datetime('now'))", args: [clinica_id, auth.usuario_id, 'desaprovar_orcamento_parcial', 'Orçamento #' + da.id + ' desaprovado parcialmente. ' + daExec.length + ' executados, ' + daNaoExec.length + ' cancelados. Novo total: R$ ' + daNovoTotal.toFixed(2) + '. Diferença/Estorno: R$ ' + (daDiferenca > 0 ? daDiferenca.toFixed(2) : '0.00')] })
+                } catch(e) {}
+
+                return res.status(200).json({
+                    success: true, tipo: 'parcial', msg: 'Orçamento desaprovado parcialmente',
+                    executados: daExec.length, cancelados: daNaoExec.length,
+                    novo_total: daNovoTotal, valor_pago: daValorPago2, estorno: daDiferenca > 0 ? daDiferenca : 0
+                })
+            }
         }
 
         // ── ORÇAMENTOS — EXCLUIR ─────────────────────────────────────
@@ -1753,6 +1893,1104 @@ module.exports = async function handler(req, res) {
             var slToday = await client.execute({ sql: "SELECT COUNT(*) as cnt FROM saques WHERE clinica_id=? AND DATE(created_at)=DATE('now')", args: [clinica_id] })
             var slFree = await client.execute({ sql: "SELECT COUNT(*) as cnt FROM saques WHERE clinica_id=? AND DATE(created_at)=DATE('now') AND taxa=0", args: [clinica_id] })
             return res.status(200).json({ success: true, saldo: slSaldo, saques_hoje: slToday.rows[0].cnt, saque_gratis_usado: slFree.rows[0].cnt > 0 })
+        }
+
+        // ── PERMISSOES-MIGRATE ──────────────────────────────────────────
+        if (route === 'permissoes-migrate') {
+            var pmSummary = { tables: [], seeds: 0 }
+            await client.execute("CREATE TABLE IF NOT EXISTS permissoes (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, perfil TEXT NOT NULL, recurso TEXT NOT NULL, permitido INTEGER DEFAULT 1, created_at TEXT DEFAULT (datetime('now')))")
+            pmSummary.tables.push('permissoes: ok')
+            try { await client.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_perm_perfil_recurso ON permissoes(clinica_id, perfil, recurso)") } catch(e) {}
+
+            // Add clinica_id column to usuarios if missing
+            try { await client.execute("ALTER TABLE usuarios ADD COLUMN clinica_id INTEGER") } catch(e) {}
+
+            // Seed default permissions if empty
+            var pmCount = await client.execute("SELECT COUNT(*) as cnt FROM permissoes")
+            if (pmCount.rows[0].cnt === 0) {
+                var pmRecursos = [
+                    // recurso, descricao, admin, dentista, recepcionista, asb, administrativo
+                    ['agenda.ver', 1, 1, 1, 1, 1],
+                    ['agenda.editar', 1, 1, 1, 0, 0],
+                    ['pacientes.ver', 1, 1, 1, 1, 1],
+                    ['pacientes.editar', 1, 1, 1, 0, 1],
+                    ['prontuario.ver', 1, 1, 1, 1, 0],
+                    ['prontuario.editar', 1, 1, 0, 0, 0],
+                    ['orcamento.criar', 1, 1, 1, 0, 0],
+                    ['orcamento.aprovar', 1, 1, 0, 0, 0],
+                    ['orcamento.desaprovar', 1, 0, 0, 0, 0],
+                    ['financeiro.ver', 1, 0, 0, 0, 1],
+                    ['financeiro.dre', 1, 0, 0, 0, 0],
+                    ['financeiro.contas_pagar', 1, 0, 0, 0, 1],
+                    ['financeiro.dar_baixa', 1, 0, 0, 0, 1],
+                    ['financeiro.comissoes', 1, 0, 0, 0, 1],
+                    ['usuarios.gerenciar', 1, 0, 0, 0, 0],
+                    ['configuracoes.editar', 1, 0, 0, 0, 0],
+                    ['relatorios.ver', 1, 1, 0, 0, 1],
+                    ['marketing.ver', 1, 0, 1, 0, 0],
+                    ['estoque.ver', 1, 0, 1, 1, 1],
+                    ['estoque.editar', 1, 0, 0, 0, 1],
+                ]
+                var pmPerfis = ['admin', 'dentista', 'recepcionista', 'asb', 'administrativo']
+                for (var pri = 0; pri < pmRecursos.length; pri++) {
+                    var pmR = pmRecursos[pri]
+                    for (var ppi = 0; ppi < pmPerfis.length; ppi++) {
+                        await client.execute({ sql: "INSERT OR IGNORE INTO permissoes(clinica_id, perfil, recurso, permitido) VALUES(NULL,?,?,?)", args: [pmPerfis[ppi], pmR[0], pmR[1 + ppi]] })
+                        pmSummary.seeds++
+                    }
+                }
+            }
+            return res.status(200).json({ success: true, summary: pmSummary })
+        }
+
+        // ── PERMISSOES-PERFIL (GET permissões de um perfil) ──────────
+        if (route === 'permissoes-perfil') {
+            var ppPerfil = q.perfil || 'recepcionista'
+            var ppRows = await client.execute({
+                sql: "SELECT recurso, permitido FROM permissoes WHERE (clinica_id IS NULL OR clinica_id=?) AND perfil=? ORDER BY recurso",
+                args: [clinica_id, ppPerfil]
+            })
+            // Clinic-specific overrides global
+            var ppMap = {}
+            ppRows.rows.forEach(function(r) { ppMap[r.recurso] = r.permitido })
+            return res.status(200).json({ success: true, perfil: ppPerfil, permissoes: ppMap })
+        }
+
+        // ── PERMISSOES-SALVAR (POST save permissions for a profile) ──
+        if (route === 'permissoes-salvar') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var ps = req.body || {}
+            if (!ps.perfil || !ps.permissoes) return res.status(400).json({ success: false, error: 'perfil e permissoes obrigatórios' })
+
+            var psPerm = ps.permissoes // { recurso: 0|1, ... }
+            for (var psRecurso in psPerm) {
+                // Upsert: try update, then insert
+                var psUpd = await client.execute({ sql: "UPDATE permissoes SET permitido=? WHERE clinica_id=? AND perfil=? AND recurso=?", args: [psPerm[psRecurso] ? 1 : 0, clinica_id, ps.perfil, psRecurso] })
+                if (!psUpd.rowsAffected) {
+                    await client.execute({ sql: "INSERT OR IGNORE INTO permissoes(clinica_id, perfil, recurso, permitido) VALUES(?,?,?,?)", args: [clinica_id, ps.perfil, psRecurso, psPerm[psRecurso] ? 1 : 0] })
+                }
+            }
+            return res.status(200).json({ success: true, msg: 'Permissões salvas para ' + ps.perfil })
+        }
+
+        // ── PERMISSOES-USUARIO (GET permissões do usuário logado) ────
+        if (route === 'permissoes-usuario') {
+            var puRows = await client.execute({
+                sql: "SELECT recurso, permitido FROM permissoes WHERE (clinica_id IS NULL OR clinica_id=?) AND perfil=? ORDER BY recurso",
+                args: [clinica_id, auth.perfil]
+            })
+            var puMap = {}
+            puRows.rows.forEach(function(r) { puMap[r.recurso] = r.permitido })
+            return res.status(200).json({ success: true, perfil: auth.perfil, permissoes: puMap })
+        }
+
+        // ── COMISSOES-MIGRATE ──────────────────────────────────────────
+        if (route === 'comissoes-migrate') {
+            var cmSummary = { tables: [] }
+            await client.execute("CREATE TABLE IF NOT EXISTS comissoes_config (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, profissional_id INTEGER, tabela_preco TEXT DEFAULT 'PARTICULAR', momento TEXT NOT NULL, tipo TEXT NOT NULL, valor REAL NOT NULL, valido_desde TEXT, valido_ate TEXT, editado_por TEXT, created_at TEXT DEFAULT (datetime('now')))")
+            cmSummary.tables.push('comissoes_config: ok')
+            await client.execute("CREATE TABLE IF NOT EXISTS comissoes_lancamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, profissional_id INTEGER, profissional_nome TEXT, orcamento_id INTEGER, orcamento_item_id INTEGER, paciente_id INTEGER, paciente_nome TEXT, procedimento_nome TEXT, tabela_preco TEXT, momento TEXT, tipo TEXT, valor_base REAL, percentual REAL, valor_comissao REAL, status TEXT DEFAULT 'pendente', data_referencia TEXT, data_pagamento TEXT, created_at TEXT DEFAULT (datetime('now')))")
+            cmSummary.tables.push('comissoes_lancamentos: ok')
+            try { await client.execute("CREATE INDEX IF NOT EXISTS idx_com_config_prof ON comissoes_config(profissional_id)") } catch(e) {}
+            try { await client.execute("CREATE INDEX IF NOT EXISTS idx_com_lanc_prof ON comissoes_lancamentos(profissional_id)") } catch(e) {}
+            try { await client.execute("CREATE INDEX IF NOT EXISTS idx_com_lanc_orc ON comissoes_lancamentos(orcamento_id)") } catch(e) {}
+            try { await client.execute("CREATE INDEX IF NOT EXISTS idx_com_lanc_clinica ON comissoes_lancamentos(clinica_id)") } catch(e) {}
+            return res.status(200).json({ success: true, summary: cmSummary })
+        }
+
+        // ── COMISSOES-CONFIG (CRUD) ──────────────────────────────────
+        if (route === 'comissoes-config') {
+            if (req.method === 'POST') {
+                var cc = req.body || {}
+                if (!cc.profissional_id || !cc.momento || !cc.tipo || cc.valor === undefined) return res.status(400).json({ success: false, error: 'profissional_id, momento, tipo e valor obrigatórios' })
+                if (cc.id) {
+                    await client.execute({ sql: "UPDATE comissoes_config SET tabela_preco=?, momento=?, tipo=?, valor=?, valido_desde=?, valido_ate=?, editado_por=? WHERE id=? AND clinica_id=?", args: [cc.tabela_preco || 'PARTICULAR', cc.momento, cc.tipo, parseFloat(cc.valor), cc.valido_desde || '', cc.valido_ate || '', cc.editado_por || '', cc.id, clinica_id] })
+                    return res.status(200).json({ success: true, msg: 'Regra atualizada' })
+                }
+                var ccIns = await client.execute({ sql: "INSERT INTO comissoes_config(clinica_id, profissional_id, tabela_preco, momento, tipo, valor, valido_desde, valido_ate, editado_por) VALUES(?,?,?,?,?,?,?,?,?)", args: [clinica_id, cc.profissional_id, cc.tabela_preco || 'PARTICULAR', cc.momento, cc.tipo, parseFloat(cc.valor), cc.valido_desde || '', cc.valido_ate || '', cc.editado_por || ''] })
+                return res.status(200).json({ success: true, id: Number(ccIns.lastInsertRowid) })
+            }
+            if (req.method === 'DELETE' || (req.method === 'POST' && (req.body || {}).action === 'delete')) {
+                var ccd = req.body || {}; var ccdId = ccd.id || parseInt(q.id) || 0
+                if (!ccdId) return res.status(400).json({ success: false, error: 'id obrigatório' })
+                await client.execute({ sql: "DELETE FROM comissoes_config WHERE id=? AND clinica_id=?", args: [ccdId, clinica_id] })
+                return res.status(200).json({ success: true, msg: 'Regra excluída' })
+            }
+            // GET
+            var ccProfId = parseInt(q.profissional_id) || 0
+            var ccW = ["clinica_id=?"], ccA = [clinica_id]
+            if (ccProfId) { ccW.push("profissional_id=?"); ccA.push(ccProfId) }
+            var ccRows = await client.execute({ sql: "SELECT cc.*, p.nome as profissional_nome FROM comissoes_config cc LEFT JOIN profissionais p ON p.id=cc.profissional_id WHERE " + ccW.join(' AND ') + " ORDER BY cc.profissional_id, cc.tabela_preco", args: ccA })
+            return res.status(200).json({ success: true, configs: ccRows.rows })
+        }
+
+        // ── COMISSOES-PROFISSIONAL (lista lançamentos) ──────────────
+        if (route === 'comissoes-profissional') {
+            var cpProfId = parseInt(q.profissional_id) || 0
+            if (!cpProfId) return res.status(400).json({ success: false, error: 'profissional_id obrigatório' })
+            var cpW = ["clinica_id=?", "profissional_id=?"], cpA = [clinica_id, cpProfId]
+            if (q.status && q.status !== 'todas') { cpW.push("status=?"); cpA.push(q.status) }
+            if (q.de) { cpW.push("data_referencia>=?"); cpA.push(q.de) }
+            if (q.ate) { cpW.push("data_referencia<=?"); cpA.push(q.ate) }
+            if (!q.de && !q.ate && q.mes) { cpW.push("strftime('%Y-%m',data_referencia)=?"); cpA.push(q.mes) }
+            var cpRows = await client.execute({ sql: "SELECT * FROM comissoes_lancamentos WHERE " + cpW.join(' AND ') + " ORDER BY data_referencia DESC", args: cpA })
+            var cpTotais = { pendente: 0, pago: 0, cancelado: 0 }
+            cpRows.rows.forEach(function(r) { if (cpTotais[r.status] !== undefined) cpTotais[r.status] += r.valor_comissao })
+            return res.status(200).json({ success: true, comissoes: cpRows.rows, totais: cpTotais })
+        }
+
+        // ── COMISSOES-PAGAR (dar baixa) ──────────────────────────────
+        if (route === 'comissoes-pagar') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var cpg = req.body || {}
+            var cpgData = cpg.data_pagamento || new Date().toISOString().slice(0, 10)
+            if (cpg.ids && cpg.ids.length) {
+                // Batch pay
+                for (var cpi = 0; cpi < cpg.ids.length; cpi++) {
+                    await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='pago', data_pagamento=? WHERE id=? AND clinica_id=?", args: [cpgData, cpg.ids[cpi], clinica_id] })
+                }
+                // Create lancamento for total
+                var cpgTotal = await client.execute({ sql: "SELECT SUM(valor_comissao) as total, profissional_nome FROM comissoes_lancamentos WHERE id IN (" + cpg.ids.map(function() { return '?' }).join(',') + ")", args: cpg.ids })
+                if (cpgTotal.rows.length && cpgTotal.rows[0].total) {
+                    try {
+                        await client.execute({ sql: "INSERT INTO lancamentos(clinica_id, data, tipo, descricao, valor, classificacao, categoria, status) VALUES(?,?,?,?,?,?,?,?)", args: [clinica_id, cpgData, 'Saída', 'Comissão - ' + (cpgTotal.rows[0].profissional_nome || ''), cpgTotal.rows[0].total, 'Custo Variável', 'Comissão Profissionais', 'realizado'] })
+                    } catch(e) {}
+                }
+                return res.status(200).json({ success: true, msg: cpg.ids.length + ' comissões pagas' })
+            }
+            if (cpg.id) {
+                await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='pago', data_pagamento=? WHERE id=? AND clinica_id=?", args: [cpgData, cpg.id, clinica_id] })
+                return res.status(200).json({ success: true, msg: 'Comissão paga' })
+            }
+            return res.status(400).json({ success: false, error: 'id ou ids obrigatório' })
+        }
+
+        // ── COMISSOES-RELATORIO ──────────────────────────────────────
+        if (route === 'comissoes-relatorio') {
+            var crMes = q.mes || new Date().toISOString().slice(0, 7)
+            var crRows = await client.execute({
+                sql: "SELECT cl.profissional_id, cl.profissional_nome, cl.status, SUM(cl.valor_comissao) as total, COUNT(*) as qtd FROM comissoes_lancamentos cl WHERE cl.clinica_id=? AND strftime('%Y-%m',cl.data_referencia)=? GROUP BY cl.profissional_id, cl.status ORDER BY cl.profissional_nome",
+                args: [clinica_id, crMes]
+            })
+            return res.status(200).json({ success: true, mes: crMes, dados: crRows.rows })
+        }
+
+        // ── MARCAR-EXECUTADO (procedimento) ──────────────────────────
+        if (route === 'marcar-executado') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var me = req.body || {}
+            if (!me.orcamento_item_id) return res.status(400).json({ success: false, error: 'orcamento_item_id obrigatório' })
+            var meData = me.data_execucao || new Date().toISOString().slice(0, 10)
+
+            // Update item
+            await client.execute({ sql: "UPDATE orcamento_itens SET executado=1, data_execucao=? WHERE id=?", args: [meData, me.orcamento_item_id] })
+
+            // Get item + orcamento info for commission
+            var meItem = await client.execute({ sql: "SELECT oi.*, o.tabela_preco, o.paciente_id, p.nome as paciente_nome FROM orcamento_itens oi JOIN orcamentos o ON o.id=oi.orcamento_id LEFT JOIN pacientes p ON p.id=o.paciente_id WHERE oi.id=?", args: [me.orcamento_item_id] })
+            if (meItem.rows.length) {
+                var meI = meItem.rows[0]
+                var meProfId = me.profissional_id || meI.profissional_id
+                if (meProfId) {
+                    // Check for execution commission rule
+                    var meConfig = await client.execute({ sql: "SELECT * FROM comissoes_config WHERE profissional_id=? AND momento='execucao' AND (tabela_preco=? OR tabela_preco='TODAS') AND clinica_id=? ORDER BY tabela_preco='TODAS' LIMIT 1", args: [meProfId, meI.tabela_preco || 'PARTICULAR', clinica_id] })
+                    if (meConfig.rows.length) {
+                        var meR = meConfig.rows[0]
+                        var meValBase = meI.valor_unitario * (meI.quantidade || 1)
+                        var meValCom = meR.tipo === 'percentual' ? meValBase * meR.valor / 100 : meR.valor
+                        var meProfNome = meI.profissional_nome || ''
+                        if (!meProfNome) { var mePn = await client.execute({ sql: "SELECT nome FROM profissionais WHERE id=?", args: [meProfId] }); if (mePn.rows.length) meProfNome = mePn.rows[0].nome }
+                        await client.execute({
+                            sql: "INSERT INTO comissoes_lancamentos(clinica_id, profissional_id, profissional_nome, orcamento_id, orcamento_item_id, paciente_id, paciente_nome, procedimento_nome, tabela_preco, momento, tipo, valor_base, percentual, valor_comissao, data_referencia) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                            args: [clinica_id, meProfId, meProfNome, meI.orcamento_id, me.orcamento_item_id, meI.paciente_id, meI.paciente_nome || '', meI.procedimento_nome, meI.tabela_preco || 'PARTICULAR', 'execucao', meR.tipo, meValBase, meR.tipo === 'percentual' ? meR.valor : null, meValCom, meData]
+                        })
+                    }
+                }
+            }
+            return res.status(200).json({ success: true, msg: 'Procedimento marcado como executado' })
+        }
+
+        // ── DASHBOARD-FINANCEIRO ──────────────────────────────────────
+        if (route === 'dashboard-financeiro') {
+            var dfHoje = new Date().toISOString().slice(0, 10)
+            var dfMes = new Date().toISOString().slice(0, 7)
+            var dfProx30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
+
+            // Receita do mês (parcelas pagas + lancamentos + financeiro)
+            var dfRecParc = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM parcelas_orcamento WHERE strftime('%Y-%m',data_pagamento)=? AND status='pago' AND clinica_id=?", args: [dfMes, clinica_id] })
+            var dfRecLanc = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM lancamentos WHERE strftime('%Y-%m',data)=? AND tipo IN ('Vendas','Entrada') AND status='realizado' AND clinica_id=?", args: [dfMes, clinica_id] })
+            var dfRecFin = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='entrada' AND clinica_id=?", args: [dfMes, clinica_id] })
+            var receitaMes = (dfRecParc.rows[0].total || 0) + (dfRecLanc.rows[0].total || 0) + (dfRecFin.rows[0].total || 0)
+
+            // Despesas do mês
+            var dfDespLanc = await client.execute({ sql: "SELECT COALESCE(SUM(ABS(valor)),0) as total FROM lancamentos WHERE strftime('%Y-%m',data)=? AND tipo='Saída' AND status='realizado' AND clinica_id=?", args: [dfMes, clinica_id] })
+            var dfDespFin = await client.execute({ sql: "SELECT COALESCE(SUM(ABS(valor)),0) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='saida' AND clinica_id=?", args: [dfMes, clinica_id] })
+            var dfDespCP = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM contas_pagar WHERE strftime('%Y-%m',pagamento)=? AND status='paga' AND clinica_id=?", args: [dfMes, clinica_id] })
+            var despesasMes = (dfDespLanc.rows[0].total || 0) + (dfDespFin.rows[0].total || 0) + (dfDespCP.rows[0].total || 0)
+
+            // Parcelas vencidas (inadimplência)
+            var dfVencidas = await client.execute({ sql: "SELECT COUNT(*) as qtd, COALESCE(SUM(valor),0) as total FROM parcelas_orcamento WHERE status='vencido' AND clinica_id=?", args: [clinica_id] })
+
+            // Contas a pagar vencidas
+            var dfCPVenc = await client.execute({ sql: "SELECT COUNT(*) as qtd, COALESCE(SUM(valor),0) as total FROM contas_pagar WHERE status='vencida' AND clinica_id=?", args: [clinica_id] })
+
+            // A receber próximos 30 dias
+            var dfAReceber = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total, COUNT(*) as qtd FROM parcelas_orcamento WHERE data_vencimento >= ? AND data_vencimento <= ? AND status='pendente' AND clinica_id=?", args: [dfHoje, dfProx30, clinica_id] })
+
+            // A pagar próximos 30 dias
+            var dfAPagar = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total, COUNT(*) as qtd FROM contas_pagar WHERE vencimento >= ? AND vencimento <= ? AND status='aberta' AND clinica_id=?", args: [dfHoje, dfProx30, clinica_id] })
+
+            return res.status(200).json({
+                success: true,
+                receita_mes: receitaMes,
+                despesas_mes: despesasMes,
+                resultado_mes: receitaMes - despesasMes,
+                inadimplencia: { qtd: dfVencidas.rows[0].qtd, valor: dfVencidas.rows[0].total },
+                contas_vencidas: { qtd: dfCPVenc.rows[0].qtd, valor: dfCPVenc.rows[0].total },
+                projecao_30d: {
+                    a_receber: dfAReceber.rows[0].total, a_receber_qtd: dfAReceber.rows[0].qtd,
+                    a_pagar: dfAPagar.rows[0].total, a_pagar_qtd: dfAPagar.rows[0].qtd,
+                    saldo_projetado: receitaMes - despesasMes + (dfAReceber.rows[0].total || 0) - (dfAPagar.rows[0].total || 0)
+                }
+            })
+        }
+
+        // ── GERAR-RECORRENTES ──────────────────────────────────────────
+        if (route === 'gerar-recorrentes') {
+            var grHoje = new Date()
+            var grProxMes = new Date(grHoje.getFullYear(), grHoje.getMonth() + 1, 1)
+            var grProxMesStr = grProxMes.toISOString().slice(0, 7)
+
+            // Find recorrente contas_pagar where last parcela_atual < total_parcelas
+            var grContas = await client.execute({
+                sql: "SELECT cp.*, MAX(cp2.vencimento) as ultimo_venc FROM contas_pagar cp LEFT JOIN contas_pagar cp2 ON cp2.descricao=cp.descricao AND cp2.clinica_id=cp.clinica_id AND cp2.recorrente=1 WHERE cp.recorrente=1 AND cp.clinica_id=? GROUP BY cp.descricao HAVING NOT EXISTS (SELECT 1 FROM contas_pagar x WHERE x.descricao=cp.descricao AND x.clinica_id=cp.clinica_id AND strftime('%Y-%m',x.vencimento)=?)",
+                args: [clinica_id, grProxMesStr]
+            })
+
+            var grCriadas = 0
+            for (var gri = 0; gri < grContas.rows.length; gri++) {
+                var grC = grContas.rows[gri]
+                // Calculate next due date
+                var grUlt = grC.ultimo_venc ? new Date(grC.ultimo_venc + 'T12:00:00') : new Date(grC.vencimento + 'T12:00:00')
+                var grNext = new Date(grUlt)
+                if (grC.frequencia === 'semanal') grNext.setDate(grNext.getDate() + 7)
+                else if (grC.frequencia === 'quinzenal') grNext.setDate(grNext.getDate() + 15)
+                else grNext.setMonth(grNext.getMonth() + 1)
+
+                var grNextStr = grNext.toISOString().slice(0, 10)
+                var grNewParcela = (grC.parcela_atual || 1) + 1
+
+                if (grC.total_parcelas && grNewParcela > grC.total_parcelas) continue
+
+                await client.execute({
+                    sql: "INSERT INTO contas_pagar(clinica_id, descricao, fornecedor, valor, vencimento, classificacao, categoria, categoria_id, recorrente, frequencia, total_parcelas, parcela_atual, status) VALUES(?,?,?,?,?,?,?,?,1,?,?,?,?)",
+                    args: [clinica_id, grC.descricao, grC.fornecedor || '', grC.valor, grNextStr, grC.classificacao || '', grC.categoria || '', grC.categoria_id || null, grC.frequencia || 'mensal', grC.total_parcelas || 0, grNewParcela, 'aberta']
+                })
+                grCriadas++
+            }
+
+            return res.status(200).json({ success: true, contas_criadas: grCriadas })
+        }
+
+        // ── FINANCEIRO-MIGRATE-V3 (conciliação + receita saúde) ──────
+        if (route === 'financeiro-migrate-v3') {
+            var fm3Summary = { tables: [] }
+
+            await client.execute("CREATE TABLE IF NOT EXISTS conciliacoes (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, descricao TEXT, periodo_de TEXT, periodo_ate TEXT, status TEXT DEFAULT 'pendente', total_itens INTEGER DEFAULT 0, total_conciliados INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))")
+            fm3Summary.tables.push('conciliacoes: ok')
+
+            await client.execute("CREATE TABLE IF NOT EXISTS conciliacao_itens (id INTEGER PRIMARY KEY AUTOINCREMENT, conciliacao_id INTEGER, data TEXT, descricao TEXT, valor REAL, tipo TEXT, lancamento_id INTEGER, status TEXT DEFAULT 'pendente', created_at TEXT DEFAULT (datetime('now')))")
+            fm3Summary.tables.push('conciliacao_itens: ok')
+
+            await client.execute("CREATE TABLE IF NOT EXISTS receitas_saude (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, profissional_id INTEGER, orcamento_id INTEGER, valor REAL NOT NULL, data_emissao TEXT, numero_recibo TEXT, cpf_paciente TEXT, nome_paciente TEXT, cpf_profissional TEXT, nome_profissional TEXT, cro_profissional TEXT, descricao_servico TEXT, status TEXT DEFAULT 'rascunho', created_at TEXT DEFAULT (datetime('now')))")
+            fm3Summary.tables.push('receitas_saude: ok')
+
+            try { await client.execute("CREATE INDEX IF NOT EXISTS idx_conc_clinica ON conciliacoes(clinica_id)") } catch(e) {}
+            try { await client.execute("CREATE INDEX IF NOT EXISTS idx_conc_itens_conc ON conciliacao_itens(conciliacao_id)") } catch(e) {}
+            try { await client.execute("CREATE INDEX IF NOT EXISTS idx_rec_saude_clinica ON receitas_saude(clinica_id)") } catch(e) {}
+
+            return res.status(200).json({ success: true, summary: fm3Summary })
+        }
+
+        // ── CONCILIACAO-IMPORTAR (CSV) ──────────────────────────────
+        if (route === 'conciliacao-importar') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var ci = req.body || {}
+            if (!ci.itens || !ci.itens.length) return res.status(400).json({ success: false, error: 'itens obrigatórios (array de {data, descricao, valor, tipo})' })
+
+            // Create conciliacao header
+            var ciDatas = ci.itens.map(function(i) { return i.data || '' }).filter(Boolean).sort()
+            var ciIns = await client.execute({
+                sql: "INSERT INTO conciliacoes(clinica_id, descricao, periodo_de, periodo_ate, total_itens) VALUES(?,?,?,?,?)",
+                args: [clinica_id, ci.descricao || 'Importação ' + new Date().toISOString().slice(0, 10), ciDatas[0] || '', ciDatas[ciDatas.length - 1] || '', ci.itens.length]
+            })
+            var ciId = Number(ciIns.lastInsertRowid)
+
+            // Insert items
+            for (var cii = 0; cii < ci.itens.length; cii++) {
+                var item = ci.itens[cii]
+                await client.execute({
+                    sql: "INSERT INTO conciliacao_itens(conciliacao_id, data, descricao, valor, tipo, status) VALUES(?,?,?,?,?,?)",
+                    args: [ciId, item.data || '', item.descricao || '', parseFloat(item.valor) || 0, item.tipo || (parseFloat(item.valor) >= 0 ? 'credito' : 'debito'), 'pendente']
+                })
+            }
+
+            // Auto-match: try to find lancamentos/financeiro with same date and value
+            var ciItens = await client.execute({ sql: "SELECT * FROM conciliacao_itens WHERE conciliacao_id=?", args: [ciId] })
+            var ciMatched = 0
+            for (var cim = 0; cim < ciItens.rows.length; cim++) {
+                var cItem = ciItens.rows[cim]
+                var absVal = Math.abs(cItem.valor)
+                // Try financeiro table
+                var matchFin = await client.execute({
+                    sql: "SELECT id FROM financeiro WHERE data_pagamento=? AND ABS(valor - ?) < 0.01 AND clinica_id=? LIMIT 1",
+                    args: [cItem.data, absVal, clinica_id]
+                })
+                if (matchFin.rows.length) {
+                    await client.execute({ sql: "UPDATE conciliacao_itens SET status='conciliado', lancamento_id=? WHERE id=?", args: [matchFin.rows[0].id, cItem.id] })
+                    ciMatched++
+                    continue
+                }
+                // Try lancamentos table
+                var matchLanc = await client.execute({
+                    sql: "SELECT id FROM lancamentos WHERE data=? AND ABS(valor - ?) < 0.01 AND clinica_id=? LIMIT 1",
+                    args: [cItem.data, absVal, clinica_id]
+                })
+                if (matchLanc.rows.length) {
+                    await client.execute({ sql: "UPDATE conciliacao_itens SET status='conciliado', lancamento_id=? WHERE id=?", args: [matchLanc.rows[0].id, cItem.id] })
+                    ciMatched++
+                }
+            }
+
+            await client.execute({ sql: "UPDATE conciliacoes SET total_conciliados=?, status=? WHERE id=?", args: [ciMatched, ciMatched === ci.itens.length ? 'concluida' : 'parcial', ciId] })
+
+            return res.status(200).json({ success: true, conciliacao_id: ciId, total: ci.itens.length, conciliados: ciMatched })
+        }
+
+        // ── CONCILIACOES-LISTAR ──────────────────────────────────────
+        if (route === 'conciliacoes-listar') {
+            var clRows = await client.execute({ sql: "SELECT * FROM conciliacoes WHERE clinica_id=? ORDER BY created_at DESC LIMIT 50", args: [clinica_id] })
+            return res.status(200).json({ success: true, conciliacoes: clRows.rows })
+        }
+
+        // ── CONCILIACAO-ITENS ──────────────────────────────────────────
+        if (route === 'conciliacao-itens') {
+            var cqId = parseInt(q.conciliacao_id) || 0
+            if (!cqId) return res.status(400).json({ success: false, error: 'conciliacao_id obrigatório' })
+            var cqRows = await client.execute({ sql: "SELECT * FROM conciliacao_itens WHERE conciliacao_id=? ORDER BY data ASC", args: [cqId] })
+            return res.status(200).json({ success: true, itens: cqRows.rows })
+        }
+
+        // ── CONCILIACAO-CONCILIAR (manual match) ────────────────────
+        if (route === 'conciliacao-conciliar') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var cc = req.body || {}
+            if (!cc.item_id) return res.status(400).json({ success: false, error: 'item_id obrigatório' })
+            var ccStatus = cc.action === 'ignorar' ? 'ignorado' : 'conciliado'
+            await client.execute({ sql: "UPDATE conciliacao_itens SET status=?, lancamento_id=? WHERE id=?", args: [ccStatus, cc.lancamento_id || null, cc.item_id] })
+            // Update totals
+            var ccItem = await client.execute({ sql: "SELECT conciliacao_id FROM conciliacao_itens WHERE id=?", args: [cc.item_id] })
+            if (ccItem.rows.length) {
+                var ccConcId = ccItem.rows[0].conciliacao_id
+                var ccTot = await client.execute({ sql: "SELECT COUNT(*) as total, SUM(CASE WHEN status IN ('conciliado','ignorado') THEN 1 ELSE 0 END) as done FROM conciliacao_itens WHERE conciliacao_id=?", args: [ccConcId] })
+                var ccDone = ccTot.rows[0].done || 0, ccTotal = ccTot.rows[0].total || 0
+                await client.execute({ sql: "UPDATE conciliacoes SET total_conciliados=?, status=? WHERE id=?", args: [ccDone, ccDone >= ccTotal ? 'concluida' : 'parcial', ccConcId] })
+            }
+            return res.status(200).json({ success: true, msg: 'Item ' + ccStatus })
+        }
+
+        // ── RECEITAS-SAUDE (CRUD) ──────────────────────────────────
+        if (route === 'receitas-saude') {
+            if (req.method === 'POST') {
+                var rs = req.body || {}
+                if (rs.id) {
+                    // Update
+                    await client.execute({
+                        sql: "UPDATE receitas_saude SET paciente_id=?, profissional_id=?, orcamento_id=?, valor=?, data_emissao=?, numero_recibo=?, cpf_paciente=?, nome_paciente=?, cpf_profissional=?, nome_profissional=?, cro_profissional=?, descricao_servico=?, status=? WHERE id=? AND clinica_id=?",
+                        args: [rs.paciente_id || null, rs.profissional_id || null, rs.orcamento_id || null, parseFloat(rs.valor) || 0, rs.data_emissao || '', rs.numero_recibo || '', rs.cpf_paciente || '', rs.nome_paciente || '', rs.cpf_profissional || '', rs.nome_profissional || '', rs.cro_profissional || '', rs.descricao_servico || '', rs.status || 'rascunho', rs.id, clinica_id]
+                    })
+                    return res.status(200).json({ success: true, msg: 'Recibo atualizado' })
+                }
+                // Create
+                var rsIns = await client.execute({
+                    sql: "INSERT INTO receitas_saude(clinica_id, paciente_id, profissional_id, orcamento_id, valor, data_emissao, numero_recibo, cpf_paciente, nome_paciente, cpf_profissional, nome_profissional, cro_profissional, descricao_servico, status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    args: [clinica_id, rs.paciente_id || null, rs.profissional_id || null, rs.orcamento_id || null, parseFloat(rs.valor) || 0, rs.data_emissao || new Date().toISOString().slice(0, 10), rs.numero_recibo || '', rs.cpf_paciente || '', rs.nome_paciente || '', rs.cpf_profissional || '', rs.nome_profissional || '', rs.cro_profissional || '', rs.descricao_servico || '', 'rascunho']
+                })
+                return res.status(200).json({ success: true, id: Number(rsIns.lastInsertRowid), msg: 'Recibo criado' })
+            }
+            // GET
+            var rsRows = await client.execute({ sql: "SELECT * FROM receitas_saude WHERE clinica_id=? ORDER BY created_at DESC LIMIT 200", args: [clinica_id] })
+            return res.status(200).json({ success: true, recibos: rsRows.rows })
+        }
+
+        // ── RECEITA-SAUDE-EMITIR (marca como emitido) ──────────────
+        if (route === 'receita-saude-emitir') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var rse = req.body || {}
+            if (!rse.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
+            await client.execute({ sql: "UPDATE receitas_saude SET status='emitido', data_emissao=COALESCE(NULLIF(data_emissao,''),?) WHERE id=? AND clinica_id=?", args: [new Date().toISOString().slice(0, 10), rse.id, clinica_id] })
+            return res.status(200).json({ success: true, msg: 'Recibo marcado como emitido' })
+        }
+
+        // ── VERIFICAR-VENCIMENTOS ──────────────────────────────────
+        if (route === 'verificar-vencimentos') {
+            var vvHoje = new Date().toISOString().slice(0, 10)
+            // Parcelas vencidas
+            var vvParc = await client.execute({
+                sql: "UPDATE parcelas_orcamento SET status='vencido', updated_at=datetime('now') WHERE data_vencimento < ? AND status='pendente' AND clinica_id=?",
+                args: [vvHoje, clinica_id]
+            })
+            // Contas a pagar vencidas
+            var vvCP = await client.execute({
+                sql: "UPDATE contas_pagar SET status='vencida' WHERE vencimento < ? AND status='aberta' AND clinica_id=?",
+                args: [vvHoje, clinica_id]
+            })
+            return res.status(200).json({ success: true, parcelas_vencidas: vvParc.rowsAffected || 0, contas_vencidas: vvCP.rowsAffected || 0 })
+        }
+
+        // ── FINANCEIRO-MIGRATE-V2 (categorias + contas_pagar melhorias) ──
+        if (route === 'financeiro-migrate-v2') {
+            var fm2Summary = { tables: [], columns: [] }
+
+            // Create categorias_financeiras
+            await client.execute("CREATE TABLE IF NOT EXISTS categorias_financeiras (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, nome TEXT NOT NULL, classificacao TEXT NOT NULL, tipo TEXT NOT NULL, ativo INTEGER DEFAULT 1, created_at TEXT DEFAULT (datetime('now')))")
+            fm2Summary.tables.push('categorias_financeiras: ok')
+
+            // Seed default categories if empty
+            var fm2Count = await client.execute("SELECT COUNT(*) as cnt FROM categorias_financeiras")
+            if (fm2Count.rows[0].cnt === 0) {
+                var fm2Cats = [
+                    // Custos Fixos
+                    ['Aluguel', 'Custo Fixo', 'despesa'],
+                    ['Salários e Encargos', 'Custo Fixo', 'despesa'],
+                    ['Condomínio', 'Custo Fixo', 'despesa'],
+                    ['Internet e Telefone', 'Custo Fixo', 'despesa'],
+                    ['Contabilidade', 'Custo Fixo', 'despesa'],
+                    ['Seguros', 'Custo Fixo', 'despesa'],
+                    ['Limpeza e Manutenção', 'Custo Fixo', 'despesa'],
+                    ['Alarme e Monitoramento', 'Custo Fixo', 'despesa'],
+                    ['Software e Sistemas', 'Custo Fixo', 'despesa'],
+                    ['Energia Elétrica', 'Custo Fixo', 'despesa'],
+                    ['Água', 'Custo Fixo', 'despesa'],
+                    // Custos Variáveis
+                    ['Material Odontológico', 'Custo Variável', 'despesa'],
+                    ['Laboratório Protético', 'Custo Variável', 'despesa'],
+                    ['Comissão Profissionais', 'Custo Variável', 'despesa'],
+                    ['EPIs e Biossegurança', 'Custo Variável', 'despesa'],
+                    ['Material de Limpeza', 'Custo Variável', 'despesa'],
+                    ['Descartáveis', 'Custo Variável', 'despesa'],
+                    // Investimentos
+                    ['Equipamentos', 'Investimento', 'despesa'],
+                    ['Reforma e Obras', 'Investimento', 'despesa'],
+                    ['Capacitação e Cursos', 'Investimento', 'despesa'],
+                    ['Mobiliário', 'Investimento', 'despesa'],
+                    // Marketing
+                    ['Google Ads', 'Marketing', 'despesa'],
+                    ['Instagram/Facebook Ads', 'Marketing', 'despesa'],
+                    ['Material Gráfico', 'Marketing', 'despesa'],
+                    ['Eventos e Ações', 'Marketing', 'despesa'],
+                    // Impostos
+                    ['ISS', 'Impostos', 'despesa'],
+                    ['Simples Nacional / DAS', 'Impostos', 'despesa'],
+                    ['IRPJ', 'Impostos', 'despesa'],
+                    ['CSLL', 'Impostos', 'despesa'],
+                    ['INSS', 'Impostos', 'despesa'],
+                    // Receitas
+                    ['Tratamento Particular', 'Receita', 'receita'],
+                    ['Convênio/Plano', 'Receita', 'receita'],
+                    ['Estética', 'Receita', 'receita'],
+                    ['Ortodontia', 'Receita', 'receita'],
+                    ['Implante', 'Receita', 'receita'],
+                ]
+                for (var ci = 0; ci < fm2Cats.length; ci++) {
+                    await client.execute({ sql: "INSERT INTO categorias_financeiras(clinica_id, nome, classificacao, tipo) VALUES(NULL,?,?,?)", args: fm2Cats[ci] })
+                }
+                fm2Summary.tables.push('categorias seed: ' + fm2Cats.length + ' categorias')
+            }
+
+            // Add columns to contas_pagar
+            var fm2Cols = ["categoria_id INTEGER", "parcela_atual INTEGER DEFAULT 1", "total_parcelas INTEGER DEFAULT 1", "frequencia TEXT"]
+            for (var fi2 = 0; fi2 < fm2Cols.length; fi2++) {
+                try {
+                    await client.execute("ALTER TABLE contas_pagar ADD COLUMN " + fm2Cols[fi2])
+                    fm2Summary.columns.push(fm2Cols[fi2].split(' ')[0] + ': adicionada')
+                } catch(e) {
+                    fm2Summary.columns.push(fm2Cols[fi2].split(' ')[0] + ': já existe')
+                }
+            }
+
+            // Add columns to lancamentos for cross-references
+            var fm2LancCols = ["orcamento_id INTEGER", "parcela_orcamento_id INTEGER", "conta_pagar_id INTEGER"]
+            for (var fi3 = 0; fi3 < fm2LancCols.length; fi3++) {
+                try {
+                    await client.execute("ALTER TABLE lancamentos ADD COLUMN " + fm2LancCols[fi3])
+                    fm2Summary.columns.push('lancamentos.' + fm2LancCols[fi3].split(' ')[0] + ': adicionada')
+                } catch(e) {
+                    fm2Summary.columns.push('lancamentos.' + fm2LancCols[fi3].split(' ')[0] + ': já existe')
+                }
+            }
+
+            return res.status(200).json({ success: true, summary: fm2Summary })
+        }
+
+        // ── CATEGORIAS-FINANCEIRAS ──────────────────────────────────
+        if (route === 'categorias-financeiras') {
+            if (req.method === 'POST') {
+                var cf = req.body || {}
+                if (!cf.nome || !cf.classificacao || !cf.tipo) return res.status(400).json({ success: false, error: 'nome, classificacao e tipo obrigatórios' })
+                var cfIns = await client.execute({ sql: "INSERT INTO categorias_financeiras(clinica_id, nome, classificacao, tipo) VALUES(?,?,?,?)", args: [clinica_id, cf.nome, cf.classificacao, cf.tipo] })
+                return res.status(200).json({ success: true, id: Number(cfIns.lastInsertRowid) })
+            }
+            // GET - list all (global + clinic-specific)
+            var cfRows = await client.execute({ sql: "SELECT * FROM categorias_financeiras WHERE (clinica_id IS NULL OR clinica_id=?) AND ativo=1 ORDER BY classificacao, nome", args: [clinica_id] })
+            return res.status(200).json({ success: true, categorias: cfRows.rows })
+        }
+
+        // ── DRE (Demonstrativo de Resultado do Exercício) ──────────
+        if (route === 'dre') {
+            var dreAno = parseInt(q.ano) || new Date().getFullYear()
+            var dreMesIni = parseInt(q.mes_inicio) || 1
+            var dreMesFim = parseInt(q.mes_fim) || 12
+            var dreResult = []
+
+            for (var drm = dreMesIni; drm <= dreMesFim; drm++) {
+                var dreMes = dreAno + '-' + String(drm).padStart(2, '0')
+
+                // Receita: parcelas pagas + lancamentos tipo Vendas/Entrada
+                var dreRec = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM parcelas_orcamento WHERE strftime('%Y-%m',data_pagamento)=? AND status='pago' AND clinica_id=?", args: [dreMes, clinica_id] })
+                var dreRecLanc = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM lancamentos WHERE strftime('%Y-%m',data)=? AND tipo IN ('Vendas','Entrada') AND status='realizado' AND clinica_id=?", args: [dreMes, clinica_id] })
+                var dreRecFin = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='entrada' AND clinica_id=?", args: [dreMes, clinica_id] })
+                var receitaBruta = (dreRec.rows[0].total || 0) + (dreRecLanc.rows[0].total || 0) + (dreRecFin.rows[0].total || 0)
+
+                // Impostos
+                var dreImp = await client.execute({ sql: "SELECT COALESCE(SUM(ABS(valor)),0) as total FROM lancamentos WHERE strftime('%Y-%m',data)=? AND classificacao='Impostos' AND status='realizado' AND clinica_id=?", args: [dreMes, clinica_id] })
+                var dreImpCP = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM contas_pagar WHERE strftime('%Y-%m',pagamento)=? AND classificacao='Impostos' AND status='paga' AND clinica_id=?", args: [dreMes, clinica_id] })
+                var impostos = (dreImp.rows[0].total || 0) + (dreImpCP.rows[0].total || 0)
+
+                // Custos Fixos
+                var dreCF = await client.execute({ sql: "SELECT COALESCE(SUM(ABS(valor)),0) as total FROM lancamentos WHERE strftime('%Y-%m',data)=? AND classificacao='Custo Fixo' AND status='realizado' AND clinica_id=?", args: [dreMes, clinica_id] })
+                var dreCFcp = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM contas_pagar WHERE strftime('%Y-%m',pagamento)=? AND classificacao='Custo Fixo' AND status='paga' AND clinica_id=?", args: [dreMes, clinica_id] })
+                var custosFixos = (dreCF.rows[0].total || 0) + (dreCFcp.rows[0].total || 0)
+
+                // Custos Variáveis
+                var dreCV = await client.execute({ sql: "SELECT COALESCE(SUM(ABS(valor)),0) as total FROM lancamentos WHERE strftime('%Y-%m',data)=? AND classificacao='Custo Variável' AND status='realizado' AND clinica_id=?", args: [dreMes, clinica_id] })
+                var dreCVcp = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM contas_pagar WHERE strftime('%Y-%m',pagamento)=? AND classificacao='Custo Variável' AND status='paga' AND clinica_id=?", args: [dreMes, clinica_id] })
+                var custosVariaveis = (dreCV.rows[0].total || 0) + (dreCVcp.rows[0].total || 0)
+
+                // Marketing
+                var dreMkt = await client.execute({ sql: "SELECT COALESCE(SUM(ABS(valor)),0) as total FROM lancamentos WHERE strftime('%Y-%m',data)=? AND classificacao='Marketing' AND status='realizado' AND clinica_id=?", args: [dreMes, clinica_id] })
+                var dreMktCP = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM contas_pagar WHERE strftime('%Y-%m',pagamento)=? AND classificacao='Marketing' AND status='paga' AND clinica_id=?", args: [dreMes, clinica_id] })
+                var marketing = (dreMkt.rows[0].total || 0) + (dreMktCP.rows[0].total || 0)
+
+                // Investimentos
+                var dreInv = await client.execute({ sql: "SELECT COALESCE(SUM(ABS(valor)),0) as total FROM lancamentos WHERE strftime('%Y-%m',data)=? AND classificacao='Investimento' AND status='realizado' AND clinica_id=?", args: [dreMes, clinica_id] })
+                var dreInvCP = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM contas_pagar WHERE strftime('%Y-%m',pagamento)=? AND classificacao='Investimento' AND status='paga' AND clinica_id=?", args: [dreMes, clinica_id] })
+                var investimentos = (dreInv.rows[0].total || 0) + (dreInvCP.rows[0].total || 0)
+
+                var receitaLiquida = receitaBruta - impostos
+                var resultadoOperacional = receitaLiquida - custosFixos - custosVariaveis - marketing
+                var resultadoFinal = resultadoOperacional - investimentos
+
+                dreResult.push({
+                    mes: drm, mes_str: dreMes,
+                    receita_bruta: receitaBruta, impostos: impostos, receita_liquida: receitaLiquida,
+                    custos_fixos: custosFixos, custos_variaveis: custosVariaveis, marketing: marketing,
+                    resultado_operacional: resultadoOperacional,
+                    investimentos: investimentos, resultado_final: resultadoFinal
+                })
+            }
+
+            // Annual totals
+            var dreAnual = { receita_bruta: 0, impostos: 0, receita_liquida: 0, custos_fixos: 0, custos_variaveis: 0, marketing: 0, resultado_operacional: 0, investimentos: 0, resultado_final: 0 }
+            dreResult.forEach(function(m) {
+                for (var k in dreAnual) dreAnual[k] += m[k]
+            })
+
+            return res.status(200).json({ success: true, ano: dreAno, meses: dreResult, anual: dreAnual })
+        }
+
+        // ── FLUXO-CAIXA-REAL ──────────────────────────────────────────
+        if (route === 'fluxo-caixa-real') {
+            var fcMes = parseInt(q.mes) || (new Date().getMonth() + 1)
+            var fcAno = parseInt(q.ano) || new Date().getFullYear()
+            var fcMstr = fcAno + '-' + String(fcMes).padStart(2, '0')
+            var fcUltDia = new Date(fcAno, fcMes, 0).getDate()
+            var fcHoje = new Date().toISOString().slice(0, 10)
+
+            // Realized entries (financeiro + lancamentos + parcelas pagas)
+            var fcEntRealizadas = await client.execute({ sql: "SELECT data_pagamento as dia, SUM(valor) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='entrada' AND clinica_id=? GROUP BY data_pagamento", args: [fcMstr, clinica_id] })
+            var fcEntLanc = await client.execute({ sql: "SELECT data as dia, SUM(valor) as total FROM lancamentos WHERE strftime('%Y-%m',data)=? AND tipo IN ('Vendas','Entrada') AND status='realizado' AND clinica_id=? GROUP BY data", args: [fcMstr, clinica_id] })
+            var fcEntParc = await client.execute({ sql: "SELECT data_pagamento as dia, SUM(valor) as total FROM parcelas_orcamento WHERE strftime('%Y-%m',data_pagamento)=? AND status='pago' AND clinica_id=? GROUP BY data_pagamento", args: [fcMstr, clinica_id] })
+
+            // Realized exits
+            var fcSaiRealizadas = await client.execute({ sql: "SELECT data_pagamento as dia, SUM(ABS(valor)) as total FROM financeiro WHERE strftime('%Y-%m',data_pagamento)=? AND tipo='saida' AND clinica_id=? GROUP BY data_pagamento", args: [fcMstr, clinica_id] })
+            var fcSaiLanc = await client.execute({ sql: "SELECT data as dia, SUM(ABS(valor)) as total FROM lancamentos WHERE strftime('%Y-%m',data)=? AND tipo='Saída' AND status='realizado' AND clinica_id=? GROUP BY data", args: [fcMstr, clinica_id] })
+            var fcSaiCP = await client.execute({ sql: "SELECT pagamento as dia, SUM(valor) as total FROM contas_pagar WHERE strftime('%Y-%m',pagamento)=? AND status='paga' AND clinica_id=? GROUP BY pagamento", args: [fcMstr, clinica_id] })
+
+            // Projected: parcelas pendentes e contas a pagar abertas
+            var fcAReceber = await client.execute({ sql: "SELECT data_vencimento as dia, SUM(valor) as total FROM parcelas_orcamento WHERE strftime('%Y-%m',data_vencimento)=? AND status='pendente' AND clinica_id=? GROUP BY data_vencimento", args: [fcMstr, clinica_id] })
+            var fcAPagar = await client.execute({ sql: "SELECT vencimento as dia, SUM(valor) as total FROM contas_pagar WHERE strftime('%Y-%m',vencimento)=? AND status='aberta' AND clinica_id=? GROUP BY vencimento", args: [fcMstr, clinica_id] })
+
+            // Build day-by-day data
+            function fcSumMap(rows) { var m = {}; rows.forEach(function(r) { m[r.dia] = (m[r.dia] || 0) + (r.total || 0) }); return m }
+            var mEnt = fcSumMap(fcEntRealizadas.rows), mEntL = fcSumMap(fcEntLanc.rows), mEntP = fcSumMap(fcEntParc.rows)
+            var mSai = fcSumMap(fcSaiRealizadas.rows), mSaiL = fcSumMap(fcSaiLanc.rows), mSaiCP = fcSumMap(fcSaiCP.rows)
+            var mARec = fcSumMap(fcAReceber.rows), mAPag = fcSumMap(fcAPagar.rows)
+
+            var fcDias = [], fcAc = 0, fcTotEnt = 0, fcTotSai = 0, fcTotARec = 0, fcTotAPag = 0
+            for (var fcd = 1; fcd <= fcUltDia; fcd++) {
+                var fcDs = fcMstr + '-' + String(fcd).padStart(2, '0')
+                var ent = (mEnt[fcDs] || 0) + (mEntL[fcDs] || 0) + (mEntP[fcDs] || 0)
+                var sai = (mSai[fcDs] || 0) + (mSaiL[fcDs] || 0) + (mSaiCP[fcDs] || 0)
+                var arec = mARec[fcDs] || 0
+                var apag = mAPag[fcDs] || 0
+                fcAc += ent - sai
+                fcTotEnt += ent; fcTotSai += sai; fcTotARec += arec; fcTotAPag += apag
+                fcDias.push({ dia: fcd, data: fcDs, entradas: ent, saidas: sai, a_receber: arec, a_pagar: apag, saldo: ent - sai, acumulado: fcAc })
+            }
+
+            return res.status(200).json({ success: true, mes: fcMes, ano: fcAno, por_dia: fcDias, totais: { entradas: fcTotEnt, saidas: fcTotSai, a_receber: fcTotARec, a_pagar: fcTotAPag, saldo: fcTotEnt - fcTotSai } })
+        }
+
+        // ── CONTAS-PAGAR-CRUD ──────────────────────────────────────────
+        if (route === 'contas-pagar-crud') {
+            if (req.method === 'POST') {
+                var cp = req.body || {}
+                if (!cp.descricao || !cp.valor || !cp.vencimento) return res.status(400).json({ success: false, error: 'descricao, valor e vencimento obrigatórios' })
+
+                if (cp.id) {
+                    // Update existing
+                    await client.execute({
+                        sql: "UPDATE contas_pagar SET descricao=?, fornecedor=?, valor=?, vencimento=?, classificacao=?, categoria=?, categoria_id=?, recorrente=?, frequencia=?, total_parcelas=?, parcela_atual=? WHERE id=? AND clinica_id=?",
+                        args: [cp.descricao, cp.fornecedor || '', parseFloat(cp.valor), cp.vencimento, cp.classificacao || '', cp.categoria || '', parseInt(cp.categoria_id) || null, cp.recorrente ? 1 : 0, cp.frequencia || '', parseInt(cp.total_parcelas) || 1, parseInt(cp.parcela_atual) || 1, cp.id, clinica_id]
+                    })
+                    return res.status(200).json({ success: true, msg: 'Conta atualizada' })
+                }
+
+                // Create new
+                var cpIns = await client.execute({
+                    sql: "INSERT INTO contas_pagar(clinica_id, descricao, fornecedor, valor, vencimento, classificacao, categoria, categoria_id, recorrente, frequencia, total_parcelas, parcela_atual, status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    args: [clinica_id, cp.descricao, cp.fornecedor || '', parseFloat(cp.valor), cp.vencimento, cp.classificacao || '', cp.categoria || '', parseInt(cp.categoria_id) || null, cp.recorrente ? 1 : 0, cp.frequencia || '', parseInt(cp.total_parcelas) || 1, parseInt(cp.parcela_atual) || 1, 'aberta']
+                })
+
+                // If recorrente, generate future entries
+                if (cp.recorrente && cp.total_parcelas > 1) {
+                    var cpBase = new Date(cp.vencimento + 'T12:00:00')
+                    for (var cpi = 1; cpi < parseInt(cp.total_parcelas); cpi++) {
+                        var cpNext = new Date(cpBase)
+                        if (cp.frequencia === 'semanal') cpNext.setDate(cpNext.getDate() + 7 * cpi)
+                        else if (cp.frequencia === 'quinzenal') cpNext.setDate(cpNext.getDate() + 15 * cpi)
+                        else cpNext.setMonth(cpNext.getMonth() + cpi) // mensal default
+                        var cpNextStr = cpNext.toISOString().slice(0, 10)
+                        await client.execute({
+                            sql: "INSERT INTO contas_pagar(clinica_id, descricao, fornecedor, valor, vencimento, classificacao, categoria, categoria_id, recorrente, frequencia, total_parcelas, parcela_atual, status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                            args: [clinica_id, cp.descricao, cp.fornecedor || '', parseFloat(cp.valor), cpNextStr, cp.classificacao || '', cp.categoria || '', parseInt(cp.categoria_id) || null, 1, cp.frequencia || 'mensal', parseInt(cp.total_parcelas), cpi + 1, 'aberta']
+                        })
+                    }
+                }
+
+                return res.status(200).json({ success: true, id: Number(cpIns.lastInsertRowid), msg: 'Conta criada' })
+            }
+
+            // GET - list
+            var cpW = ["clinica_id=?"], cpA = [clinica_id]
+            if (q.status && q.status !== 'todas') { cpW.push("status=?"); cpA.push(q.status) }
+            if (q.classificacao) { cpW.push("classificacao=?"); cpA.push(q.classificacao) }
+            if (q.de) { cpW.push("vencimento>=?"); cpA.push(q.de) }
+            if (q.ate) { cpW.push("vencimento<=?"); cpA.push(q.ate) }
+            if (!q.de && !q.ate) {
+                var cpMes = q.mes || new Date().toISOString().slice(0, 7)
+                cpW.push("strftime('%Y-%m',vencimento)=?"); cpA.push(cpMes)
+            }
+            var cpRows = await client.execute({ sql: "SELECT * FROM contas_pagar WHERE " + cpW.join(' AND ') + " ORDER BY vencimento ASC", args: cpA })
+
+            // Totals by classification
+            var cpTotais = await client.execute({ sql: "SELECT classificacao, SUM(valor) as total, COUNT(*) as qtd FROM contas_pagar WHERE " + cpW.join(' AND ') + " GROUP BY classificacao", args: cpA })
+
+            return res.status(200).json({ success: true, contas: cpRows.rows, totais_classificacao: cpTotais.rows })
+        }
+
+        // ── CONTA-PAGAR-BAIXA ──────────────────────────────────────────
+        if (route === 'conta-pagar-baixa') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var cpb = req.body || {}
+            if (!cpb.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
+            var cpbData = cpb.data_pagamento || new Date().toISOString().slice(0, 10)
+            await client.execute({
+                sql: "UPDATE contas_pagar SET status='paga', pagamento=? WHERE id=? AND clinica_id=?",
+                args: [cpbData, cpb.id, clinica_id]
+            })
+            // Create lancamento
+            var cpbRow = await client.execute({ sql: "SELECT * FROM contas_pagar WHERE id=?", args: [cpb.id] })
+            if (cpbRow.rows.length) {
+                var cpbConta = cpbRow.rows[0]
+                try {
+                    await client.execute({
+                        sql: "INSERT INTO lancamentos(clinica_id, data, tipo, descricao, valor, classificacao, categoria, conta_pagar_id, status) VALUES(?,?,?,?,?,?,?,?,?)",
+                        args: [clinica_id, cpbData, 'Saída', cpbConta.descricao, cpbConta.valor, cpbConta.classificacao || '', cpbConta.categoria || '', cpb.id, 'realizado']
+                    })
+                } catch(e) { console.error('[conta-pagar-baixa] lancamento error:', e.message) }
+            }
+            return res.status(200).json({ success: true, msg: 'Conta paga' })
+        }
+
+        // ── CONTA-PAGAR-CANCELAR ──────────────────────────────────────
+        if (route === 'conta-pagar-cancelar') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var cpc = req.body || {}
+            if (!cpc.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
+            await client.execute({ sql: "UPDATE contas_pagar SET status='cancelada' WHERE id=? AND clinica_id=?", args: [cpc.id, clinica_id] })
+            return res.status(200).json({ success: true, msg: 'Conta cancelada' })
+        }
+
+        // ── CONTAS-RECEBER-REAL ────────────────────────────────────────
+        if (route === 'contas-receber-real') {
+            var crDe = q.de || new Date().toISOString().slice(0, 7) + '-01'
+            var crAte = q.ate || new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10)
+            var crStatus = q.status || 'todas'
+
+            var crW = ["po.clinica_id=?", "po.data_vencimento>=?", "po.data_vencimento<=?"]
+            var crA = [clinica_id, crDe, crAte]
+            if (crStatus !== 'todas') { crW.push("po.status=?"); crA.push(crStatus) }
+
+            var crRows = await client.execute({
+                sql: "SELECT po.*, p.nome as paciente_nome, o.valor_total as orcamento_valor, (SELECT GROUP_CONCAT(oi.procedimento_nome, ', ') FROM orcamento_itens oi WHERE oi.orcamento_id=po.orcamento_id LIMIT 3) as procedimentos FROM parcelas_orcamento po JOIN pacientes p ON p.id=po.paciente_id JOIN orcamentos o ON o.id=po.orcamento_id WHERE " + crW.join(' AND ') + " ORDER BY po.data_vencimento ASC",
+                args: crA
+            })
+
+            var crTotais = { pendente: 0, pago: 0, vencido: 0 }
+            crRows.rows.forEach(function(r) { if (crTotais[r.status] !== undefined) crTotais[r.status] += r.valor })
+
+            return res.status(200).json({ success: true, parcelas: crRows.rows, totais: crTotais })
+        }
+
+        // ── BOLETOS-DASHBOARD ──────────────────────────────────────────
+        if (route === 'boletos-dashboard') {
+            var bdStatus = q.status || 'todas'
+            var bdDe = q.de || ''
+            var bdAte = q.ate || ''
+            var bdW = ["clinica_id=?", "tipo='boleto'"], bdA = [clinica_id]
+            if (bdStatus !== 'todas') { bdW.push("status=?"); bdA.push(bdStatus) }
+            if (bdDe) { bdW.push("data_vencimento>=?"); bdA.push(bdDe) }
+            if (bdAte) { bdW.push("data_vencimento<=?"); bdA.push(bdAte) }
+            if (!bdDe && !bdAte) {
+                var bdMes = q.mes || new Date().toISOString().slice(0, 7)
+                bdW.push("strftime('%Y-%m',data_vencimento)=?"); bdA.push(bdMes)
+            }
+            var bdRows = await client.execute({ sql: "SELECT * FROM cobrancas WHERE " + bdW.join(' AND ') + " ORDER BY data_vencimento ASC", args: bdA })
+            var bdTotais = await client.execute({ sql: "SELECT status, COUNT(*) as qtd, SUM(valor) as total FROM cobrancas WHERE clinica_id=? AND tipo='boleto' GROUP BY status", args: [clinica_id] })
+            return res.status(200).json({ success: true, boletos: bdRows.rows, totais: bdTotais.rows })
+        }
+
+        // ── PLANOS-CONVENIO ──────────────────────────────────────────
+        if (route === 'planos-convenio') {
+            if (req.method === 'POST') {
+                var plc = req.body || {}
+                if (plc.action === 'atualizar-status') {
+                    await client.execute({ sql: "UPDATE planos_convenio SET status=?, data_recebimento=? WHERE id=? AND clinica_id=?", args: [plc.status || 'recebido', plc.data_recebimento || new Date().toISOString().slice(0, 10), plc.id, clinica_id] })
+                    if (plc.status === 'recebido' && plc.valor_recebido) {
+                        try {
+                            await client.execute({
+                                sql: "INSERT INTO lancamentos(clinica_id, data, tipo, descricao, valor, classificacao, categoria, status) VALUES(?,?,?,?,?,?,?,?)",
+                                args: [clinica_id, plc.data_recebimento || new Date().toISOString().slice(0, 10), 'Vendas', 'Convênio - ' + (plc.convenio || ''), parseFloat(plc.valor_recebido), 'Receita', 'Convênio/Plano', 'realizado']
+                            })
+                        } catch(e) {}
+                    }
+                    return res.status(200).json({ success: true, msg: 'Status atualizado' })
+                }
+            }
+            // GET - try planos_convenio first, fallback to empty
+            try {
+                var plRows = await client.execute({ sql: "SELECT pc.*, p.nome as paciente_nome FROM planos_convenio pc LEFT JOIN pacientes p ON p.id=pc.paciente_id WHERE pc.clinica_id=? ORDER BY pc.created_at DESC LIMIT 100", args: [clinica_id] })
+                return res.status(200).json({ success: true, planos: plRows.rows })
+            } catch(e) {
+                return res.status(200).json({ success: true, planos: [], msg: 'Tabela planos_convenio não existe ainda' })
+            }
+        }
+
+        // ── FINANCEIRO-MIGRATE ──────────────────────────────────────
+        if (route === 'financeiro-migrate') {
+            var fmSummary = { tables: [], columns: [] }
+
+            // Create parcelas_orcamento table
+            await client.execute("CREATE TABLE IF NOT EXISTS parcelas_orcamento (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, orcamento_id INTEGER, paciente_id INTEGER, numero_parcela INTEGER NOT NULL, total_parcelas INTEGER NOT NULL, valor REAL NOT NULL, data_vencimento TEXT NOT NULL, data_pagamento TEXT, forma_pagamento TEXT, status TEXT DEFAULT 'pendente', tipo TEXT DEFAULT 'parcela', cobranca_id INTEGER, asaas_id TEXT, observacoes TEXT, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))")
+            fmSummary.tables.push('parcelas_orcamento: ok')
+
+            // Create indexes
+            try { await client.execute("CREATE INDEX IF NOT EXISTS idx_parc_orc ON parcelas_orcamento(orcamento_id)") } catch(e) {}
+            try { await client.execute("CREATE INDEX IF NOT EXISTS idx_parc_pac ON parcelas_orcamento(paciente_id)") } catch(e) {}
+            try { await client.execute("CREATE INDEX IF NOT EXISTS idx_parc_venc ON parcelas_orcamento(data_vencimento)") } catch(e) {}
+            try { await client.execute("CREATE INDEX IF NOT EXISTS idx_parc_status ON parcelas_orcamento(status)") } catch(e) {}
+            try { await client.execute("CREATE INDEX IF NOT EXISTS idx_parc_clinica ON parcelas_orcamento(clinica_id)") } catch(e) {}
+
+            // Add columns to orcamentos
+            var fmCols = ["entrada_valor REAL DEFAULT 0", "entrada_forma TEXT", "dia_vencimento INTEGER DEFAULT 10"]
+            for (var fi = 0; fi < fmCols.length; fi++) {
+                try {
+                    await client.execute("ALTER TABLE orcamentos ADD COLUMN " + fmCols[fi])
+                    fmSummary.columns.push(fmCols[fi].split(' ')[0] + ': adicionada')
+                } catch(e) {
+                    fmSummary.columns.push(fmCols[fi].split(' ')[0] + ': já existe')
+                }
+            }
+
+            return res.status(200).json({ success: true, summary: fmSummary })
+        }
+
+        // ── PARCELAS-PACIENTE ──────────────────────────────────────────
+        if (route === 'parcelas-paciente') {
+            var ppPacId = parseInt(q.paciente_id) || 0
+            if (!ppPacId) return res.status(400).json({ success: false, error: 'paciente_id obrigatório' })
+            var ppRows = await client.execute({
+                sql: "SELECT po.*, o.valor_total as orcamento_valor, o.desconto as orcamento_desconto, o.forma_pagamento as orcamento_forma, o.observacoes as orcamento_obs, o.data_aprovacao, (SELECT GROUP_CONCAT(oi.procedimento_nome, ', ') FROM orcamento_itens oi WHERE oi.orcamento_id=po.orcamento_id) as procedimentos FROM parcelas_orcamento po JOIN orcamentos o ON o.id=po.orcamento_id WHERE po.paciente_id=? AND po.clinica_id=? ORDER BY po.orcamento_id, po.numero_parcela",
+                args: [ppPacId, clinica_id]
+            })
+            // Group by orcamento
+            var ppGroups = {}
+            for (var pi = 0; pi < ppRows.rows.length; pi++) {
+                var pr = ppRows.rows[pi]
+                if (!ppGroups[pr.orcamento_id]) {
+                    ppGroups[pr.orcamento_id] = {
+                        orcamento_id: pr.orcamento_id,
+                        valor_total: pr.orcamento_valor,
+                        desconto: pr.orcamento_desconto,
+                        forma_pagamento: pr.orcamento_forma,
+                        procedimentos: pr.procedimentos,
+                        observacoes: pr.orcamento_obs,
+                        data_aprovacao: pr.data_aprovacao,
+                        parcelas: []
+                    }
+                }
+                ppGroups[pr.orcamento_id].parcelas.push(pr)
+            }
+            var ppResult = Object.values(ppGroups)
+            return res.status(200).json({ success: true, orcamentos: ppResult })
+        }
+
+        // ── PARCELAS-ORCAMENTO ──────────────────────────────────────────
+        if (route === 'parcelas-orcamento') {
+            var poOrcId = parseInt(q.orcamento_id) || 0
+            if (!poOrcId) return res.status(400).json({ success: false, error: 'orcamento_id obrigatório' })
+            var poRows = await client.execute({
+                sql: "SELECT * FROM parcelas_orcamento WHERE orcamento_id=? AND clinica_id=? ORDER BY numero_parcela",
+                args: [poOrcId, clinica_id]
+            })
+            return res.status(200).json({ success: true, parcelas: poRows.rows })
+        }
+
+        // ── PARCELA-BAIXA (dar baixa manual) ──────────────────────────
+        if (route === 'parcela-baixa') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var pb = req.body || {}
+            if (!pb.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
+            var pbData = pb.data_pagamento || new Date().toISOString().slice(0, 10)
+
+            // Get parcela info
+            var pbRow = await client.execute({ sql: "SELECT * FROM parcelas_orcamento WHERE id=? AND clinica_id=?", args: [pb.id, clinica_id] })
+            if (!pbRow.rows.length) return res.status(404).json({ success: false, error: 'Parcela não encontrada' })
+            var pbParc = pbRow.rows[0]
+
+            // Update parcela
+            await client.execute({
+                sql: "UPDATE parcelas_orcamento SET status='pago', data_pagamento=?, updated_at=datetime('now') WHERE id=? AND clinica_id=?",
+                args: [pbData, pb.id, clinica_id]
+            })
+
+            // Create lancamento entry
+            var pbPacNome = ''
+            var pbPacRow = await client.execute({ sql: "SELECT nome FROM pacientes WHERE id=?", args: [pbParc.paciente_id] })
+            if (pbPacRow.rows.length) pbPacNome = pbPacRow.rows[0].nome
+
+            try {
+                await client.execute({
+                    sql: "INSERT INTO lancamentos(clinica_id, data, tipo, forma_pagamento, descricao, paciente_id, paciente_nome, valor, classificacao, categoria, status) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                    args: [clinica_id, pbData, 'Vendas', pbParc.forma_pagamento || '', 'Parcela ' + pbParc.numero_parcela + '/' + pbParc.total_parcelas + ' - Orçamento #' + pbParc.orcamento_id, pbParc.paciente_id, pbPacNome, pbParc.valor, 'Receita', 'Tratamento', 'realizado']
+                })
+            } catch(e) { console.error('[parcela-baixa] lancamento error:', e.message) }
+
+            return res.status(200).json({ success: true, msg: 'Baixa realizada' })
+        }
+
+        // ── PARCELA-CANCELAR ──────────────────────────────────────────
+        if (route === 'parcela-cancelar') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var pc = req.body || {}
+            if (!pc.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
+            await client.execute({
+                sql: "UPDATE parcelas_orcamento SET status='cancelado', updated_at=datetime('now') WHERE id=? AND clinica_id=?",
+                args: [pc.id, clinica_id]
+            })
+            return res.status(200).json({ success: true, msg: 'Parcela cancelada' })
+        }
+
+        // ── GERAR-PARCELAS (chamado após aprovação do orçamento) ──────
+        if (route === 'gerar-parcelas') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var gp = req.body || {}
+            if (!gp.orcamento_id) return res.status(400).json({ success: false, error: 'orcamento_id obrigatório' })
+
+            // Load orcamento
+            var gpOrc = await client.execute({ sql: "SELECT * FROM orcamentos WHERE id=? AND clinica_id=?", args: [gp.orcamento_id, clinica_id] })
+            if (!gpOrc.rows.length) return res.status(404).json({ success: false, error: 'Orçamento não encontrado' })
+            var gpO = gpOrc.rows[0]
+
+            // Config from request body (overrides orcamento defaults)
+            var gpEntradaValor = parseFloat(gp.entrada_valor) || 0
+            var gpEntradaForma = gp.entrada_forma || 'pix'
+            var gpParcelas = parseInt(gp.parcelas) || parseInt(gpO.parcelas) || 1
+            var gpFormaPag = gp.forma_pagamento || gpO.forma_pagamento || 'boleto'
+            var gpDiaVenc = parseInt(gp.dia_vencimento) || 10
+            var gpDesconto = parseFloat(gpO.desconto) || 0
+            var gpValorTotal = parseFloat(gpO.valor_total) || 0
+            var gpGerarAsaas = gp.gerar_cobrancas !== false
+
+            // Update orcamento with payment config
+            await client.execute({
+                sql: "UPDATE orcamentos SET entrada_valor=?, entrada_forma=?, dia_vencimento=?, forma_pagamento=?, parcelas=?, updated_at=datetime('now') WHERE id=?",
+                args: [gpEntradaValor, gpEntradaForma, gpDiaVenc, gpFormaPag, gpParcelas, gp.orcamento_id]
+            })
+
+            // Delete existing parcelas for this orcamento (in case of reconfiguration)
+            await client.execute({ sql: "DELETE FROM parcelas_orcamento WHERE orcamento_id=? AND clinica_id=?", args: [gp.orcamento_id, clinica_id] })
+
+            var gpValorLiquido = gpValorTotal - gpDesconto
+            var gpValorRestante = gpValorLiquido - gpEntradaValor
+            var gpValorParcela = gpParcelas > 0 ? Math.round((gpValorRestante / gpParcelas) * 100) / 100 : gpValorRestante
+            var gpHoje = new Date().toISOString().slice(0, 10)
+            var gpParcelasGeradas = []
+            var gpNumero = 0
+
+            // Load patient info for Asaas
+            var gpPacRow = await client.execute({ sql: "SELECT nome, cpf, email, telefone FROM pacientes WHERE id=?", args: [gpO.paciente_id] })
+            var gpPaciente = gpPacRow.rows.length ? gpPacRow.rows[0] : null
+
+            // Get Asaas API key
+            var gpAsaasKey = ''
+            if (gpGerarAsaas) {
+                var gpAk = await client.execute({ sql: "SELECT asaas_api_key FROM clinicas WHERE id=?", args: [clinica_id] })
+                gpAsaasKey = (gpAk.rows.length && gpAk.rows[0].asaas_api_key) ? gpAk.rows[0].asaas_api_key : ''
+            }
+
+            // Helper to create Asaas charge
+            async function criarCobrancaAsaas(tipo, valor, vencimento, descricao, parcNum) {
+                if (!gpAsaasKey || !gpPaciente) return null
+                var billingMap = { pix: 'PIX', boleto: 'BOLETO', credito: 'CREDIT_CARD', debito: 'DEBIT_CARD', dinheiro: null, cheque: null }
+                var billingType = billingMap[tipo]
+                if (!billingType) return null
+
+                try {
+                    // Find or create customer
+                    var custId = ''
+                    var cpf = (gpPaciente.cpf || '').replace(/\D/g, '')
+                    if (cpf) {
+                        var custSearch = await fetch('https://api.asaas.com/v3/customers?cpfCnpj=' + encodeURIComponent(cpf), { headers: { 'access_token': gpAsaasKey } })
+                        var custData = await custSearch.json()
+                        if (custData.data && custData.data.length > 0) custId = custData.data[0].id
+                    }
+                    if (!custId) {
+                        var newCust = await fetch('https://api.asaas.com/v3/customers', {
+                            method: 'POST',
+                            headers: { 'access_token': gpAsaasKey, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: gpPaciente.nome || 'Cliente', cpfCnpj: cpf || undefined, email: gpPaciente.email || undefined })
+                        })
+                        var newCustData = await newCust.json()
+                        if (newCustData.errors) return null
+                        custId = newCustData.id || ''
+                    }
+                    if (!custId) return null
+
+                    var payBody = { customer: custId, billingType: billingType, value: valor, dueDate: vencimento, description: descricao }
+                    var payRes = await fetch('https://api.asaas.com/v3/payments', {
+                        method: 'POST',
+                        headers: { 'access_token': gpAsaasKey, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payBody)
+                    })
+                    var payData = await payRes.json()
+                    if (payData.errors) return null
+
+                    // Get PIX QR code if applicable
+                    var pixQr = '', pixCola = ''
+                    if (tipo === 'pix' && payData.id) {
+                        try {
+                            var pixRes = await fetch('https://api.asaas.com/v3/payments/' + payData.id + '/pixQrCode', { headers: { 'access_token': gpAsaasKey } })
+                            var pixData = await pixRes.json()
+                            pixCola = pixData.payload || ''
+                            pixQr = pixData.encodedImage || ''
+                        } catch(ep) {}
+                    }
+
+                    // Insert cobranca
+                    try { await client.execute("ALTER TABLE cobrancas ADD COLUMN invoice_url TEXT") } catch(e) {}
+                    try { await client.execute("ALTER TABLE cobrancas ADD COLUMN parcelas INTEGER DEFAULT 1") } catch(e) {}
+                    var cobIns = await client.execute({
+                        sql: "INSERT INTO cobrancas(clinica_id, paciente_id, paciente_nome, tipo, valor, descricao, referencia, status, data_vencimento, boleto_url, boleto_codigo, pix_qrcode, pix_copia_cola, asaas_id, invoice_url, parcelas) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                        args: [clinica_id, gpO.paciente_id, gpPaciente.nome || '', tipo, valor, descricao, 'ORC-' + gp.orcamento_id, 'pendente', vencimento, payData.bankSlipUrl || '', payData.nossoNumero || '', pixQr, pixCola, payData.id || '', payData.invoiceUrl || '', 1]
+                    })
+
+                    // Send link to patient
+                    if (payData.invoiceUrl && gpPaciente) {
+                        var linkMsg = 'Olá ' + (gpPaciente.nome || '').split(' ')[0] + '! Parcela ' + parcNum + ': R$ ' + valor.toFixed(2).replace('.', ',') + ' - Vencimento: ' + vencimento.split('-').reverse().join('/') + ' - Link: ' + payData.invoiceUrl + ' - Klinik Odontologia'
+                        var waToken = process.env.WHATSAPP_TOKEN || ''
+                        var waPhoneId = process.env.WHATSAPP_PHONE_ID || ''
+                        if (waToken && waPhoneId && gpPaciente.telefone) {
+                            try {
+                                var waPhone = (gpPaciente.telefone || '').replace(/\D/g, '')
+                                if (waPhone.length <= 11) waPhone = '55' + waPhone
+                                await fetch('https://graph.facebook.com/v21.0/' + waPhoneId + '/messages', {
+                                    method: 'POST',
+                                    headers: { 'Authorization': 'Bearer ' + waToken, 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ messaging_product: 'whatsapp', to: waPhone, type: 'text', text: { body: linkMsg } })
+                                })
+                            } catch(ew) {}
+                        }
+                    }
+
+                    return { cobranca_id: Number(cobIns.lastInsertRowid), asaas_id: payData.id || '', invoice_url: payData.invoiceUrl || '' }
+                } catch(e) {
+                    console.error('[gerar-parcelas] Asaas error:', e.message)
+                    return null
+                }
+            }
+
+            // 1. Generate entrada (down payment) if applicable
+            if (gpEntradaValor > 0) {
+                gpNumero++
+                var gpEntradaAsaas = null
+                if (gpGerarAsaas && gpEntradaForma !== 'dinheiro' && gpEntradaForma !== 'cheque') {
+                    gpEntradaAsaas = await criarCobrancaAsaas(gpEntradaForma, gpEntradaValor, gpHoje, 'Entrada - Orçamento #' + gp.orcamento_id, 'Entrada')
+                }
+                await client.execute({
+                    sql: "INSERT INTO parcelas_orcamento(clinica_id, orcamento_id, paciente_id, numero_parcela, total_parcelas, valor, data_vencimento, forma_pagamento, status, tipo, cobranca_id, asaas_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                    args: [clinica_id, gp.orcamento_id, gpO.paciente_id, gpNumero, gpParcelas + (gpEntradaValor > 0 ? 1 : 0), gpEntradaValor, gpHoje, gpEntradaForma, 'pendente', 'entrada', gpEntradaAsaas ? gpEntradaAsaas.cobranca_id : null, gpEntradaAsaas ? gpEntradaAsaas.asaas_id : null]
+                })
+                gpParcelasGeradas.push({ numero: gpNumero, tipo: 'entrada', valor: gpEntradaValor, vencimento: gpHoje })
+            }
+
+            // 2. Generate installments
+            var gpTotalParcComEntrada = gpParcelas + (gpEntradaValor > 0 ? 1 : 0)
+            for (var gpi = 0; gpi < gpParcelas; gpi++) {
+                gpNumero++
+                // Calculate due date: next months from today, on the configured day
+                var gpBaseDate = new Date()
+                gpBaseDate.setMonth(gpBaseDate.getMonth() + gpi + 1)
+                gpBaseDate.setDate(Math.min(gpDiaVenc, new Date(gpBaseDate.getFullYear(), gpBaseDate.getMonth() + 1, 0).getDate()))
+                var gpVenc = gpBaseDate.toISOString().slice(0, 10)
+
+                // Last parcela gets the remainder to handle rounding
+                var gpVal = (gpi === gpParcelas - 1) ? Math.round((gpValorRestante - gpValorParcela * (gpParcelas - 1)) * 100) / 100 : gpValorParcela
+
+                var gpAsaasResult = null
+                if (gpGerarAsaas && gpFormaPag !== 'dinheiro' && gpFormaPag !== 'cheque') {
+                    gpAsaasResult = await criarCobrancaAsaas(gpFormaPag, gpVal, gpVenc, 'Parcela ' + (gpi + 1) + '/' + gpParcelas + ' - Orçamento #' + gp.orcamento_id, (gpi + 1) + '/' + gpParcelas)
+                }
+
+                await client.execute({
+                    sql: "INSERT INTO parcelas_orcamento(clinica_id, orcamento_id, paciente_id, numero_parcela, total_parcelas, valor, data_vencimento, forma_pagamento, status, tipo, cobranca_id, asaas_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                    args: [clinica_id, gp.orcamento_id, gpO.paciente_id, gpNumero, gpTotalParcComEntrada, gpVal, gpVenc, gpFormaPag, 'pendente', 'parcela', gpAsaasResult ? gpAsaasResult.cobranca_id : null, gpAsaasResult ? gpAsaasResult.asaas_id : null]
+                })
+                gpParcelasGeradas.push({ numero: gpNumero, tipo: 'parcela', valor: gpVal, vencimento: gpVenc })
+            }
+
+            return res.status(200).json({ success: true, parcelas: gpParcelasGeradas, total: gpValorLiquido, entrada: gpEntradaValor, valor_parcela: gpValorParcela })
         }
 
         return res.status(400).json({ success: false, error: 'Rota inválida: r=' + route })

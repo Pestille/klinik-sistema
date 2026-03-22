@@ -649,19 +649,19 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     <div class="sidebar-item" onclick="nav('crm');toggleSidebar()">CRM</div>
     <div class="sidebar-item" onclick="nav('confirmacoes');toggleSidebar()">Confirmação e Alertas</div>
     <div class="sidebar-item" onclick="nav('protético');toggleSidebar()">Controle Protético</div>
-    <div class="sidebar-item" onclick="nav('estoque');toggleSidebar()">Controle de Estoque</div>
+    <div class="sidebar-item" data-page="estoque" onclick="nav('estoque');toggleSidebar()">Controle de Estoque</div>
     <div class="sidebar-item" onclick="nav('indicacao');toggleSidebar()">Controle de Indicação</div>
-    <div class="sidebar-item" onclick="nav('financeiro');toggleSidebar()">Financeiro</div>
+    <div class="sidebar-item" data-page="financeiro" onclick="nav('financeiro');toggleSidebar()">Financeiro</div>
     <div class="sidebar-item" onclick="nav('alinhadores');toggleSidebar()">Gestão de Casos de Alinhadores</div>
     <div class="sidebar-item" onclick="nav('metas');toggleSidebar()">Metas</div>
     <div class="sidebar-item" onclick="nav('pacientes');toggleSidebar()">Pacientes</div>
     <div class="sidebar-item" onclick="nav('planos');toggleSidebar()">Planos de Recorrência</div>
     <div class="sidebar-item" onclick="nav('portal');toggleSidebar()">Portal de Assinatura</div>
     <div class="sidebar-item" onclick="nav('profissionais');toggleSidebar()">Profissionais</div>
-    <div class="sidebar-item" onclick="nav('relatorios');toggleSidebar()">Relatórios</div>
+    <div class="sidebar-item" data-page="relatorios" onclick="nav('relatorios');toggleSidebar()">Relatórios</div>
     <div class="sidebar-item" onclick="nav('tutoriais');toggleSidebar()">Tutoriais do Sistema</div>
-    <div class="sidebar-item" onclick="nav('usuarios');toggleSidebar()">Usuários e Permissões</div>
-    <div class="sidebar-item" onclick="nav('configuracoes');toggleSidebar()">⚙ Configuração</div>
+    <div class="sidebar-item" data-page="usuarios" onclick="nav('usuarios');toggleSidebar()">Usuários e Permissões</div>
+    <div class="sidebar-item" data-page="configuracoes" onclick="nav('configuracoes');toggleSidebar()">⚙ Configuração</div>
   </div>
   <div class="sidebar-footer">
     <div>KLINIK ODONTOLOGIA</div>
@@ -966,6 +966,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
           <div class="fin-htab" onclick="finTab('contaspagar',this)">Contas a Pagar</div>
           <div class="fin-htab" onclick="finTab('contasreceber',this)">Contas a Receber</div>
           <div class="fin-htab" onclick="finTab('extrato',this)">Extrato</div>
+          <div class="fin-htab" onclick="finTab('dre',this)">DRE</div>
           <div class="fin-htab" onclick="finTab('conciliacoes',this)">Conciliações Bancárias</div>
           <div class="fin-htab" onclick="finTab('receitasaude',this)">Receita Saúde</div>
           <div class="fin-htab" onclick="finTab('carteira',this)">Carteira</div>
@@ -1024,6 +1025,10 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
               <div style="width:40px;height:40px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-bottom:14px">12</div>
               <div style="font-size:15px;font-weight:500;color:var(--text)">Integração Receita Saúde</div>
             </div>
+            <div class="card" style="cursor:pointer;padding:20px" onclick="finNavTo('dre')">
+              <div style="width:40px;height:40px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-bottom:14px">13</div>
+              <div style="font-size:15px;font-weight:500;color:var(--text)">DRE</div>
+            </div>
           </div>
         </div>
 
@@ -1070,62 +1075,14 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 
         <!-- FLUXO DE CAIXA -->
         <div class="fin-sub" id="fin-fluxocaixa">
-          <div class="cc-filters">
-            <div class="cc-field"><div class="cc-label">Mês</div><select class="ctrl-type-sel"><option>Março</option><option>Fevereiro</option><option>Janeiro</option></select></div>
-            <div class="cc-field"><div class="cc-label">Ano</div><select class="ctrl-type-sel"><option>2026</option><option>2025</option></select></div>
-            <button class="ctrl-listar" onclick="renderFDC()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
-          </div>
-          <div style="padding:16px 20px">
-            <!-- Filtros FDC -->
-            <div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:20px">
-              <div class="cc-field"><div class="cc-label">Mês</div><select class="ctrl-type-sel" id="fdc-mes"><option>Março</option><option>Fevereiro</option><option>Janeiro</option></select></div>
-              <div class="cc-field"><div class="cc-label">Ano</div><select class="ctrl-type-sel"><option>2026</option><option>2025</option></select></div>
-              <button class="ctrl-listar" onclick="renderFDC()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
+          <div style="padding:24px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+              <div style="font-size:18px;font-weight:500;color:var(--text)">Fluxo de Caixa</div>
+              <button class="ctrl-listar" onclick="renderFDC()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Atualizar</button>
             </div>
-            <!-- Legenda -->
-            <div class="fdc-legend" style="justify-content:center;margin-bottom:12px">
-              <div class="fdc-leg-item"><div class="fdc-leg-dot" style="background:#4CAF50"></div>Entrada</div>
-              <div class="fdc-leg-item"><div class="fdc-leg-dot" style="background:#F44336"></div>Saída</div>
-              <div class="fdc-leg-item"><div class="fdc-leg-dot" style="background:#2196F3"></div>A Receber</div>
-              <div class="fdc-leg-item"><div class="fdc-leg-dot" style="background:#F8BBD0"></div>A Pagar</div>
-              <div class="fdc-leg-item"><div class="fdc-leg-dot" style="background:#FDD835;width:20px;height:4px;border-radius:0"></div>Saldo</div>
-              <div class="fdc-leg-item"><div class="fdc-leg-dot" style="background:#1565C0;width:20px;height:3px;border-radius:0"></div>Saldo Acumulado</div>
-            </div>
-            <!-- Área do gráfico -->
-            <div style="position:relative;background:var(--white);border:1px solid var(--border);border-radius:6px;padding:16px">
-              <div class="fdc-canvas-wrap">
-                <canvas id="fdc-canvas"></canvas>
-              </div>
-              <!-- Card resumo flutuante -->
-              <div class="fdc-summary" id="fdc-summary">
-                <div class="fdc-sum-title" id="fdc-sum-mes">Março</div>
-                <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Entradas</div>
-                <div class="fdc-sum-row"><svg width="10" height="10" viewBox="0 0 24 24" fill="#4CAF50"><path d="M7 14l5-5 5 5z"/></svg><span class="fdc-sum-val" style="color:var(--green)" id="fdc-sum-ent">R$21.113,09</span></div>
-                <div style="font-size:11px;color:var(--text3);margin:6px 0 3px">Saídas</div>
-                <div class="fdc-sum-row"><svg width="10" height="10" viewBox="0 0 24 24" fill="#F44336"><path d="M7 10l5 5 5-5z"/></svg><span class="fdc-sum-val" style="color:var(--red)" id="fdc-sum-sai">R$18.849,61</span></div>
-                <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">
-                  <div style="font-size:12px;font-weight:500;color:var(--text)">Saldo (parcial)</div>
-                  <div style="font-size:15px;font-weight:700;color:var(--orange)" id="fdc-sum-sal">R$2.263,48</div>
-                </div>
-                <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;font-size:12px">
-                  <div class="fdc-sum-row"><span style="color:var(--text3)">A Receber</span><span style="color:var(--blue);margin-left:auto">R$7.384,69</span></div>
-                  <div class="fdc-sum-row"><span style="color:var(--text3)">A Pagar</span><span style="color:var(--red);margin-left:auto">R$20.630,66</span></div>
-                  <div style="font-weight:600;margin-top:4px">Saldo (pendente)<br><span style="color:var(--red)">R$-13.245,97</span></div>
-                  <div style="font-weight:600;margin-top:4px">Saldo (previsto)<br><span style="color:var(--red)">R$-10.982,49</span></div>
-                </div>
-              </div>
-            </div>
-            <!-- Resumo Entradas -->
-            <div class="fdc-resumo" style="margin-top:20px">
-              <div class="fdc-resumo-title">Resumo Entradas</div>
-              <div class="fdc-resumo-cards">
-                <div class="fdc-resumo-card"><div class="fdc-resumo-card-title">Boleto</div><div class="fdc-resumo-card-val">R$ 2.800,00</div></div>
-                <div class="fdc-resumo-card"><div class="fdc-resumo-card-title">Cartão de Crédito</div><div class="fdc-resumo-card-val">R$ 8.413,09</div></div>
-                <div class="fdc-resumo-card"><div class="fdc-resumo-card-title">Cartão de Débito</div><div class="fdc-resumo-card-val">R$ 1.200,00</div></div>
-                <div class="fdc-resumo-card"><div class="fdc-resumo-card-title">Dinheiro</div><div class="fdc-resumo-card-val">R$ 3.200,00</div></div>
-                <div class="fdc-resumo-card"><div class="fdc-resumo-card-title">Planos de Saúde</div><div class="fdc-resumo-card-val">R$ 5.500,00</div></div>
-                <div class="fdc-resumo-card"><div class="fdc-resumo-card-title">Transferência</div><div class="fdc-resumo-card-val">R$ 1.500,00</div></div>
-              </div>
+            <div id="fdc-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px"></div>
+            <div style="position:relative;background:var(--white);border:1px solid var(--border);border-radius:6px;padding:16px;height:350px">
+              <canvas id="fdc-canvas"></canvas>
             </div>
           </div>
         </div>
@@ -1294,60 +1251,46 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
           </div>
         </div>
 
+        <!-- DRE -->
+        <div class="fin-sub" id="fin-dre" style="padding:30px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <div style="font-size:18px;font-weight:500;color:var(--text)">DRE — Demonstrativo de Resultado do Exercício</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <select id="dre-ano" onchange="loadDRE()" style="border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--text);background:#fff;outline:none"></select>
+              <select id="dre-periodo" onchange="loadDRE()" style="border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--text);background:#fff;outline:none">
+                <option value="anual">Anual</option>
+                <option value="trimestre1">1º Trimestre</option>
+                <option value="trimestre2">2º Trimestre</option>
+                <option value="trimestre3">3º Trimestre</option>
+                <option value="trimestre4">4º Trimestre</option>
+              </select>
+            </div>
+          </div>
+          <div id="dre-content" style="margin-bottom:24px"></div>
+          <div style="height:300px;position:relative">
+            <canvas id="dre-canvas"></canvas>
+          </div>
+        </div>
+
         <!-- CONCILIAÇÕES -->
         <div class="fin-sub" id="fin-conciliacoes" style="padding:30px">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="var(--orange)" stroke-width="1.5"/><polyline points="9 22 9 12 15 12 15 22" stroke="var(--orange)" stroke-width="1.5"/></svg>
-            <div style="font-size:18px;font-weight:500">Conciliações Bancárias</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <div style="font-size:18px;font-weight:500;color:var(--text)">Conciliação Bancária</div>
+            <button onclick="abrirImportExtrato()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Importar Extrato (CSV)</button>
           </div>
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:32px">
-            <div>
-              <div style="font-size:22px;font-weight:400;color:var(--text)">Olá, <strong>RAFAEL PESTILLE.</strong> <span style="color:var(--orange)">Boa tarde!</span></div>
-              <div style="font-size:18px;margin-top:4px;color:var(--text2)">Vamos realizar a Conciliação Bancária?</div>
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="1" y="4" width="22" height="16" rx="2" stroke="var(--orange)" stroke-width="1.5"/><path d="M1 10h22" stroke="var(--orange)" stroke-width="1.5"/></svg>
-            <div style="font-size:15px;font-weight:500">Contas bancárias</div>
-          </div>
-          <div style="margin-bottom:14px"><button class="btn" style="border-color:var(--orange);color:var(--orange)">Adicionar conta bancária</button></div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:800px">
-            <div class="card" style="padding:18px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-                <div style="width:32px;height:32px;background:#E53935;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">S</div>
-                <div><div style="font-size:13px;font-weight:500">BANCO SANTANDER E</div><div style="font-size:11px;color:var(--text3)">Conta Corrente</div></div>
-                <div style="margin-left:auto;display:flex;gap:6px"><button class="btn-icon-sm">✎</button><button class="btn-icon-sm">🗑</button></div>
-              </div>
-              <div style="font-size:12px;color:var(--text3);margin-bottom:4px">SANTANDER</div>
-              <div style="font-size:12px;display:flex;justify-content:space-between"><span style="color:var(--text3)">Agência:</span><span>2112</span></div>
-              <div style="font-size:12px;display:flex;justify-content:space-between"><span style="color:var(--text3)">Conta:</span><span>10453119</span></div>
-            </div>
-            <div class="card" style="padding:18px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-                <div style="width:32px;height:32px;background:#2E7D32;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">SC</div>
-                <div><div style="font-size:13px;font-weight:500">SICREDI S.A</div><div style="font-size:11px;color:var(--text3)">Conta Corrente</div></div>
-                <div style="margin-left:auto;display:flex;gap:6px"><button class="btn-icon-sm">✎</button><button class="btn-icon-sm">🗑</button></div>
-              </div>
-              <div style="font-size:12px;color:var(--text3);margin-bottom:4px">SICRED</div>
-              <div style="font-size:12px;display:flex;justify-content:space-between"><span style="color:var(--text3)">Agência:</span><span>0913</span></div>
-              <div style="font-size:12px;display:flex;justify-content:space-between"><span style="color:var(--text3)">Conta:</span><span>927668</span></div>
-            </div>
-            <div class="card" style="padding:18px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-                <div style="width:32px;height:32px;background:#1565C0;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">BC</div>
-                <div><div style="font-size:13px;font-weight:500">BANCOOB/SICOOB</div><div style="font-size:11px;color:var(--text3)">Conta Corrente</div></div>
-                <div style="margin-left:auto;display:flex;gap:6px"><button class="btn-icon-sm">✎</button><button class="btn-icon-sm">🗑</button></div>
-              </div>
-              <div style="font-size:12px;color:var(--text3);margin-bottom:4px">SICOOB</div>
-              <div style="font-size:12px;display:flex;justify-content:space-between"><span style="color:var(--text3)">Agência:</span><span>4354</span></div>
-              <div style="font-size:12px;display:flex;justify-content:space-between"><span style="color:var(--text3)">Conta:</span><span>154571</span></div>
-            </div>
-          </div>
+          <div style="font-size:13px;color:var(--text3);margin-bottom:20px">Importe o extrato bancário e concilie com os lançamentos do sistema. Itens conciliados garantem que seu saldo está correto.</div>
+          <div id="conciliacao-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px"></div>
+          <div id="conciliacao-content"></div>
         </div>
 
         <!-- RECEITA SAÚDE -->
         <div class="fin-sub" id="fin-receitasaude" style="padding:30px">
-          <div style="text-align:center;padding:60px;color:var(--text3)">Módulo Receita Saúde — Integração em desenvolvimento</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <div style="font-size:18px;font-weight:500;color:var(--text)">Receita Saude</div>
+            <button onclick="abrirModalReceitaSaude()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">+ Novo Recibo</button>
+          </div>
+          <div style="font-size:13px;color:var(--text3);margin-bottom:20px">Emissao de recibos para declaracao de imposto de renda dos pacientes. Os dados sao preparados no formato exigido pela Receita Federal para upload no portal gov.br (Receita Saude).</div>
+          <div id="receita-saude-list"></div>
         </div>
 
         <div class="fin-sub" id="fin-carteira" style="padding:30px">
@@ -1473,6 +1416,26 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
       </div>
       <div class="gpage-body" style="max-width:900px;margin:0 auto;padding:20px 24px">
         <div id="usr-list" style="color:var(--text3);text-align:center;padding:40px">Carregando...</div>
+        <!-- Permissões por Perfil -->
+        <div style="margin-top:32px;border-top:2px solid var(--border);padding-top:24px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div>
+              <div style="font-size:16px;font-weight:500;color:var(--text)">Permissoes por Perfil</div>
+              <div style="font-size:13px;color:var(--text3)">Configure o acesso de cada perfil aos modulos do sistema</div>
+            </div>
+            <select id="perm-perfil-sel" onchange="loadPermissoesPerfil()" style="border:1.5px solid var(--border);border-radius:6px;padding:8px 16px;font-size:14px;color:var(--text);background:#fff;outline:none;min-width:180px">
+              <option value="admin">Administrador</option>
+              <option value="dentista">Dentista</option>
+              <option value="recepcionista" selected>Recepcionista</option>
+              <option value="asb">ASB</option>
+              <option value="administrativo">Administrativo</option>
+            </select>
+          </div>
+          <div id="perm-grid" style="margin-bottom:16px"></div>
+          <div id="perm-actions" style="display:none;text-align:right">
+            <button onclick="salvarPermissoes()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Salvar Permissoes</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1482,7 +1445,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         <div class="modal-head"><div class="modal-title">Novo Usuário</div><button class="modal-close" onclick="closeModal('novo-usuario')">✕</button></div>
         <div class="modal-body">
           <div class="form-row c2"><div class="form-group"><label class="form-label">Nome Completo *</label><input class="form-input" id="usr-f-nome" placeholder="Nome completo"></div><div class="form-group"><label class="form-label">Email *</label><input class="form-input" id="usr-f-email" type="email" placeholder="email@klinik.com"></div></div>
-          <div class="form-group"><label class="form-label">Perfil *</label><select class="form-input" id="usr-f-perfil"><option value="recepcionista">Recepcionista</option><option value="dentista">Dentista</option><option value="admin">Administrador</option></select></div>
+          <div class="form-group"><label class="form-label">Perfil *</label><select class="form-input" id="usr-f-perfil"><option value="recepcionista">Recepcionista</option><option value="dentista">Dentista</option><option value="admin">Administrador</option><option value="asb">ASB</option><option value="administrativo">Administrativo</option></select></div>
           <div style="background:var(--gray1);border-radius:6px;padding:12px;font-size:12px;color:var(--text3);line-height:1.5">Uma senha temporária será gerada e enviada por email. No primeiro login, o usuário será obrigado a criar uma senha forte (mín. 8 chars, 1 número, 1 especial).</div>
         </div>
         <div class="modal-foot"><button class="btn btn-primary" onclick="salvarUsuario()">Criar Usuário</button><button class="btn" onclick="closeModal('novo-usuario')">Cancelar</button></div>
@@ -2062,7 +2025,7 @@ function nav(id) {
   if (id==='aniversariantes' && !ST.aniversariantes) loadAniversariantes()
   if (id==='relatorios' && ST.dashboard) renderRelatorios()
   if (id==='configuracoes') renderConfiguracoes()
-  if (id==='usuarios') loadUsuarios()
+  if (id==='usuarios') { loadUsuarios(); loadPermissoesPerfil() }
   if (id==='metas') loadMetas()
   if (id==='crc') { nav('crm'); return }
   if (id==='confirmacoes') loadConfirmacoes()
@@ -2652,15 +2615,8 @@ function renderProntTab(){
       '</tbody></table>'
   }
   else if(_prontTab==='financeiro-pac'){
-    var allFin=pgs.concat(fin)
-    el.innerHTML='<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px"><button class="pdt-btn-outline" onclick="openModal(\'lancamento\')">+ Adicionar Lançamento</button></div>'+
-      '<table class="tbl" style="width:100%"><thead><tr><th>Data</th><th>Descrição</th><th>Forma</th><th>Parcelas</th><th>Valor</th><th>Status</th></tr></thead><tbody>'+
-      (allFin.length?allFin.map(function(f){
-        var v=+(f.valor||0);var conf=f.confirmado
-        return '<tr><td>'+fmtDt(f.data_pagamento)+'</td><td>'+(f.descricao||f.forma_pagamento||'Pagamento')+'</td><td>'+(f.forma_pagamento||'—')+'</td><td>'+(f.parcelas||1)+'</td><td style="color:#1B5E3B;font-weight:500">'+fmtBrl(v)+'</td><td>'+(conf?'<span class="badge badge-green">PAGO</span>':'<span class="badge badge-orange">PENDENTE</span>')+'</td></tr>'
-      }).join(''):'<tr><td colspan="6" style="text-align:center;padding:30px;color:#9e9e9e">Nenhum lançamento</td></tr>')+
-      '</tbody></table>'+
-      '<div style="text-align:right;padding:12px 0;font-weight:700;border-top:1px solid #e0e0e0;margin-top:8px">Saldo: '+fmtBrl(allFin.reduce(function(s,f){return s+(+(f.valor||0))},0))+'</div>'
+    el.innerHTML='<div id="fin-pac-container" style="padding:4px"><div style="text-align:center;padding:40px;color:#9e9e9e">Carregando financeiro...</div></div>'
+    loadFinanceiroPaciente(p.id)
   }
   else if(_prontTab==='orcamentos'){
     renderOrcamentosTab(el,p)
@@ -3049,18 +3005,33 @@ function renderOrcModal(){
         '</div>'+
         // RIGHT PANEL
         '<div style="width:380px;flex-shrink:0;padding:20px 24px;display:flex;flex-direction:column;overflow-y:auto;background:#FAFAFA">'+
-          '<div style="font-size:13px;font-weight:500;color:#757575;text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px">Orçamento</div>'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+            '<div style="font-size:13px;font-weight:500;color:#757575;text-transform:uppercase;letter-spacing:.04em">Orçamento</div>'+
+            '<div style="position:relative">'+
+              '<button onclick="toggleOrcMenu()" style="background:transparent;border:1px solid #E0E0E0;border-radius:6px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#757575;display:flex;align-items:center;justify-content:center;font-family:Roboto,sans-serif" title="Opções">&#8942;</button>'+
+              '<div id="orc-menu-dropdown" style="display:none;position:absolute;right:0;top:36px;background:#fff;border:1px solid #E0E0E0;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.12);min-width:200px;z-index:10;overflow:hidden">'+
+                '<div onclick="abrirDescontoModal()" style="padding:12px 16px;font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .1s" onmouseover="this.style.background=\'#F5F5F5\'" onmouseout="this.style.background=\'#fff\'">'+
+                  '<span style="font-size:15px">%</span> Aplicar Desconto'+
+                '</div>'+
+                '<div onclick="limparDesconto()" style="padding:12px 16px;font-size:13px;color:var(--red);cursor:pointer;display:flex;align-items:center;gap:8px;border-top:1px solid #F0F0F0;transition:background .1s" onmouseover="this.style.background=\'#FFF5F5\'" onmouseout="this.style.background=\'#fff\'">'+
+                  '<span style="font-size:15px">&#10005;</span> Remover Desconto'+
+                '</div>'+
+              '</div>'+
+            '</div>'+
+          '</div>'+
           '<div id="orc-itens-list" style="flex:1;overflow-y:auto;margin-bottom:16px;border:1px solid #E0E0E0;border-radius:8px;background:#fff">'+
             (itensHtml||'<div style="text-align:center;padding:30px;color:#9e9e9e;font-size:13px">Nenhum procedimento adicionado</div>')+
           '</div>'+
-          '<div style="background:#fff;border:1px solid #E0E0E0;border-radius:8px;padding:16px;margin-bottom:16px">'+
-            '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:13px;color:#757575">Total Particular</span><span style="font-size:16px;font-weight:600;color:#1A1A1A">'+fmtBrl(totalPart)+'</span></div>'+
-            '<div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:#757575">Total Plano</span><span style="font-size:16px;font-weight:600;color:#1A1A1A">'+fmtBrl(totalPlano)+'</span></div>'+
+          '<div id="orc-totais-area" style="background:#fff;border:1px solid #E0E0E0;border-radius:8px;padding:16px;margin-bottom:16px">'+
+            '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:13px;color:#757575">Total Particular</span><span style="font-size:16px;font-weight:600;color:#1A1A1A" id="orc-total-part">'+fmtBrl(totalPart)+'</span></div>'+
+            '<div style="display:flex;justify-content:space-between'+(d.desconto>0?'':';display:none')+'" id="orc-desconto-row"><span style="font-size:13px;color:#C62828">Desconto</span><span style="font-size:14px;font-weight:600;color:#C62828" id="orc-desconto-val">- '+fmtBrl(d.desconto||0)+'</span></div>'+
+            '<div style="display:flex;justify-content:space-between;'+(d.desconto>0?'border-top:1px solid #E0E0E0;padding-top:8px;margin-top:8px':'')+'" id="orc-total-liq-row"><span style="font-size:13px;color:#757575">'+(d.desconto>0?'Total com Desconto':'Total Plano')+'</span><span style="font-size:16px;font-weight:600;color:#1B5E3B" id="orc-total-liq">'+fmtBrl(d.desconto>0?totalPart-(d.desconto||0):totalPlano)+'</span></div>'+
           '</div>'+
           '<div onclick="abrirPagamentoModal()" style="color:#1565C0;font-size:13px;cursor:pointer;margin-bottom:16px;text-align:center">Definir Forma de Pagamento'+(d.forma_pagamento?' ('+d.forma_pagamento+')':'')+'</div>'+
           '<div style="display:flex;gap:8px">'+
             (d.id&&d.status==='aberto'?'<button onclick="aprovarOrcamento()" style="flex:1;background:#034030;color:#fff;border:none;border-radius:6px;padding:12px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;transition:background .15s">Aprovar</button>'+
             '<button onclick="reprovarOrcamento()" style="flex:1;background:#C62828;color:#fff;border:none;border-radius:6px;padding:12px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;transition:background .15s">Reprovar</button>':'')+
+            (d.id&&d.status==='aprovado'?'<button onclick="abrirDesaprovarModal('+d.id+')" style="flex:1;background:#C62828;color:#fff;border:none;border-radius:6px;padding:12px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;transition:background .15s">Desaprovar</button>':'')+
           '</div>'+
           '<div style="display:flex;gap:8px;margin-top:12px">'+
             '<button onclick="fecharOrcModal()" style="flex:1;background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:10px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;transition:background .15s">Cancelar</button>'+
@@ -3076,6 +3047,146 @@ function renderOrcModal(){
 function fecharOrcModal(){
   var m=document.getElementById('orc-modal');if(m)m.remove()
   _orcEditData=null
+}
+
+function toggleOrcMenu(){
+  var dd=document.getElementById('orc-menu-dropdown')
+  if(!dd)return
+  dd.style.display=dd.style.display==='none'?'block':'none'
+  // Close on outside click
+  if(dd.style.display==='block'){
+    setTimeout(function(){
+      document.addEventListener('click',function closeMenu(e){
+        if(!e.target.closest('#orc-menu-dropdown')&&!e.target.closest('[onclick*="toggleOrcMenu"]')){
+          dd.style.display='none';document.removeEventListener('click',closeMenu)
+        }
+      })
+    },10)
+  }
+}
+
+function abrirDescontoModal(){
+  document.getElementById('orc-menu-dropdown').style.display='none'
+  var old=document.getElementById('modal-desconto');if(old)old.remove()
+  if(!_orcEditData)return
+
+  var totalPart=(_orcEditData.itens||[]).reduce(function(s,i){return s+(+(i.valor_unitario||0))*(+(i.quantidade||1))},0)
+  var descontoAtual=+(_orcEditData.desconto||0)
+
+  var m=document.createElement('div')
+  m.id='modal-desconto'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10003;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:400px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
+      '<div style="font-size:18px;font-weight:500;color:#1A1A1A;margin-bottom:4px">Aplicar Desconto</div>'+
+      '<div style="font-size:13px;color:var(--text3);margin-bottom:20px">Total do orçamento: <strong>'+fmtBrl(totalPart)+'</strong></div>'+
+      '<div style="display:flex;gap:0;border:1.5px solid #E0E0E0;border-radius:6px;overflow:hidden;margin-bottom:16px">'+
+        '<label style="flex:1;text-align:center;padding:10px;font-size:13px;cursor:pointer;background:#E8F5E9;color:#034030;font-weight:500" id="desc-tipo-pct-label">'+
+          '<input type="radio" name="desc-tipo" value="percentual" checked style="display:none" onchange="descTipoChange()"> Porcentagem (%)'+
+        '</label>'+
+        '<label style="flex:1;text-align:center;padding:10px;font-size:13px;cursor:pointer;background:#fff;color:#424242;border-left:1px solid #E0E0E0" id="desc-tipo-fixo-label">'+
+          '<input type="radio" name="desc-tipo" value="fixo" style="display:none" onchange="descTipoChange()"> Valor Fixo (R$)'+
+        '</label>'+
+      '</div>'+
+      '<div style="margin-bottom:16px">'+
+        '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px" id="desc-valor-label">Porcentagem</label>'+
+        '<input id="desc-valor" type="number" step="0.01" min="0" value="'+(descontoAtual>0&&descontoAtual<totalPart?Math.round(descontoAtual/totalPart*10000)/100:descontoAtual||'')+'" placeholder="Ex: 10" oninput="descPreview()" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:12px;font-size:16px;color:var(--text);outline:none;box-sizing:border-box;text-align:center">'+
+      '</div>'+
+      '<div id="desc-preview" style="background:#F5F5F5;border-radius:6px;padding:14px;margin-bottom:20px;text-align:center">'+
+        '<div style="font-size:12px;color:var(--text3);margin-bottom:4px">Valor do Desconto</div>'+
+        '<div style="font-size:22px;font-weight:700;color:#C62828" id="desc-preview-valor">'+fmtBrl(descontoAtual)+'</div>'+
+        '<div style="font-size:13px;color:var(--text2);margin-top:4px">Total final: <strong style="color:#1B5E3B" id="desc-preview-final">'+fmtBrl(totalPart-descontoAtual)+'</strong></div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+        '<button onclick="document.getElementById(\'modal-desconto\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+        '<button onclick="aplicarDesconto()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Aplicar</button>'+
+      '</div>'+
+    '</div>'
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)m.remove()}
+  m.dataset.totalPart=totalPart
+  descPreview()
+}
+
+function descTipoChange(){
+  var tipo=document.querySelector('input[name="desc-tipo"]:checked').value
+  var labelPct=document.getElementById('desc-tipo-pct-label')
+  var labelFixo=document.getElementById('desc-tipo-fixo-label')
+  var valLabel=document.getElementById('desc-valor-label')
+  if(tipo==='percentual'){
+    labelPct.style.background='#E8F5E9';labelPct.style.color='#034030';labelPct.style.fontWeight='500'
+    labelFixo.style.background='#fff';labelFixo.style.color='#424242';labelFixo.style.fontWeight='400'
+    valLabel.textContent='Porcentagem'
+    document.getElementById('desc-valor').placeholder='Ex: 10'
+  }else{
+    labelFixo.style.background='#E8F5E9';labelFixo.style.color='#034030';labelFixo.style.fontWeight='500'
+    labelPct.style.background='#fff';labelPct.style.color='#424242';labelPct.style.fontWeight='400'
+    valLabel.textContent='Valor (R$)'
+    document.getElementById('desc-valor').placeholder='Ex: 500'
+  }
+  descPreview()
+}
+
+function descPreview(){
+  var modal=document.getElementById('modal-desconto');if(!modal)return
+  var totalPart=parseFloat(modal.dataset.totalPart)||0
+  var tipo=(document.querySelector('input[name="desc-tipo"]:checked')||{}).value||'percentual'
+  var val=parseFloat(document.getElementById('desc-valor').value)||0
+  var desconto=tipo==='percentual'?Math.round(totalPart*val/100*100)/100:val
+  if(desconto>totalPart)desconto=totalPart
+  if(desconto<0)desconto=0
+  var prevValEl=document.getElementById('desc-preview-valor')
+  var prevFinEl=document.getElementById('desc-preview-final')
+  if(prevValEl)prevValEl.textContent=fmtBrl(desconto)
+  if(prevFinEl)prevFinEl.textContent=fmtBrl(totalPart-desconto)
+}
+
+function aplicarDesconto(){
+  var modal=document.getElementById('modal-desconto');if(!modal)return
+  var totalPart=parseFloat(modal.dataset.totalPart)||0
+  var tipo=(document.querySelector('input[name="desc-tipo"]:checked')||{}).value||'percentual'
+  var val=parseFloat(document.getElementById('desc-valor').value)||0
+  var desconto=tipo==='percentual'?Math.round(totalPart*val/100*100)/100:val
+  if(desconto>totalPart)desconto=totalPart
+  if(desconto<0)desconto=0
+
+  _orcEditData.desconto=desconto
+  modal.remove()
+  atualizarOrcTotais()
+}
+
+function limparDesconto(){
+  document.getElementById('orc-menu-dropdown').style.display='none'
+  if(!_orcEditData)return
+  _orcEditData.desconto=0
+  atualizarOrcTotais()
+}
+
+function atualizarOrcTotais(){
+  if(!_orcEditData)return
+  var totalPart=(_orcEditData.itens||[]).reduce(function(s,i){return s+(+(i.valor_unitario||0))*(+(i.quantidade||1))},0)
+  var desconto=+(_orcEditData.desconto||0)
+
+  var partEl=document.getElementById('orc-total-part')
+  var descRow=document.getElementById('orc-desconto-row')
+  var descVal=document.getElementById('orc-desconto-val')
+  var liqRow=document.getElementById('orc-total-liq-row')
+  var liqEl=document.getElementById('orc-total-liq')
+
+  if(partEl)partEl.textContent=fmtBrl(totalPart)
+  if(desconto>0){
+    if(descRow)descRow.style.display='flex'
+    if(descVal)descVal.textContent='- '+fmtBrl(desconto)
+    if(liqRow){liqRow.style.borderTop='1px solid #E0E0E0';liqRow.style.paddingTop='8px';liqRow.style.marginTop='8px'}
+    if(liqRow)liqRow.querySelector('span:first-child').textContent='Total com Desconto'
+    if(liqEl)liqEl.textContent=fmtBrl(totalPart-desconto)
+  }else{
+    if(descRow)descRow.style.display='none'
+    if(liqRow){liqRow.style.borderTop='none';liqRow.style.paddingTop='0';liqRow.style.marginTop='0'}
+    if(liqRow)liqRow.querySelector('span:first-child').textContent='Total Plano'
+    var totalPlano=(_orcEditData.itens||[]).reduce(function(s,i){return s+(+(i.valor_plano||0))*(+(i.quantidade||1))},0)
+    if(liqEl)liqEl.textContent=fmtBrl(totalPlano)
+  }
 }
 
 function orcUpdateProf(sel){
@@ -3167,6 +3278,7 @@ async function salvarOrcamento(){
       tabela_preco:d.tabela_preco,
       forma_pagamento:d.forma_pagamento,
       tipo_pagamento:d.tipo_pagamento,
+      desconto:d.desconto||0,
       itens:d.itens
     })
     fecharOrcModal()
@@ -3187,12 +3299,179 @@ async function aprovarOrcamento(){
     await apiPost('salvar-orcamento',{
       id:d.id,paciente_id:d.paciente_id,profissional_id:d.profissional_id,profissional_nome:d.profissional_nome,
       data_criacao:dataEl?dataEl.value:d.data_criacao,observacoes:obsEl?obsEl.value:d.observacoes,
-      tabela_preco:d.tabela_preco,forma_pagamento:d.forma_pagamento,tipo_pagamento:d.tipo_pagamento,itens:d.itens
+      tabela_preco:d.tabela_preco,forma_pagamento:d.forma_pagamento,tipo_pagamento:d.tipo_pagamento,desconto:d.desconto||0,itens:d.itens
     })
     await apiPost('aprovar-orcamento',{id:orcId,aprovado_por:nome})
-    fecharOrcModal()
-    await reloadOrcamentos()
+    // Open payment config modal to generate installments
+    abrirConfigParcelas(orcId,d,nome)
   }catch(e){alert('Erro: '+e.message)}
+}
+
+function abrirConfigParcelas(orcId,orcData,aprovadoPor){
+  var old=document.getElementById('config-parcelas-modal');if(old)old.remove()
+  var valorTotal=+(orcData.valor_total||0)
+  var desconto=+(orcData.desconto||0)
+  var valorLiq=valorTotal-desconto
+
+  var m=document.createElement('div')
+  m.id='config-parcelas-modal'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10002;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:560px;max-height:90vh;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
+      '<div style="font-size:18px;font-weight:500;color:#1A1A1A;margin-bottom:4px">Configurar Pagamento</div>'+
+      '<div style="font-size:13px;color:var(--text3);margin-bottom:20px">Orçamento #'+orcId+' — Total: <strong style="color:#1B5E3B">'+fmtBrl(valorLiq)+'</strong>'+(desconto>0?' (desconto: '+fmtBrl(desconto)+')':'')+'</div>'+
+
+      // Entrada
+      '<div style="background:#F5F5F5;border-radius:8px;padding:16px;margin-bottom:16px">'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'+
+          '<input type="checkbox" id="cp-tem-entrada" onchange="cpAtualizarPreview()" style="accent-color:#034030">'+
+          '<label for="cp-tem-entrada" style="font-size:14px;font-weight:500;color:var(--text)">Entrada (pagamento inicial)</label>'+
+        '</div>'+
+        '<div id="cp-entrada-fields" style="display:none;display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
+          '<div>'+
+            '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Valor da Entrada</label>'+
+            '<input type="number" id="cp-entrada-valor" value="0" min="0" step="100" oninput="cpAtualizarPreview()" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box">'+
+          '</div>'+
+          '<div>'+
+            '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Forma da Entrada</label>'+
+            '<select id="cp-entrada-forma" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none">'+
+              '<option value="pix">PIX</option><option value="dinheiro">Dinheiro</option><option value="debito">Cartão de Débito</option><option value="credito">Cartão de Crédito</option><option value="boleto">Boleto</option>'+
+            '</select>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+
+      // Parcelas config
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">'+
+        '<div>'+
+          '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Nº de Parcelas</label>'+
+          '<input type="number" id="cp-num-parcelas" value="'+(orcData.parcelas||1)+'" min="1" max="60" oninput="cpAtualizarPreview()" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box">'+
+        '</div>'+
+        '<div>'+
+          '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Dia de Vencimento</label>'+
+          '<input type="number" id="cp-dia-venc" value="10" min="1" max="28" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" oninput="cpAtualizarPreview()">'+
+        '</div>'+
+        '<div>'+
+          '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Forma de Pagamento</label>'+
+          '<select id="cp-forma-pag" onchange="cpAtualizarPreview()" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none">'+
+            '<option value="boleto">Boleto</option><option value="pix">PIX</option><option value="credito">Cartão de Crédito</option><option value="debito">Cartão de Débito</option><option value="dinheiro">Dinheiro</option>'+
+          '</select>'+
+        '</div>'+
+      '</div>'+
+
+      // Gerar cobranças
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">'+
+        '<input type="checkbox" id="cp-gerar-asaas" checked style="accent-color:#034030">'+
+        '<label for="cp-gerar-asaas" style="font-size:13px;color:var(--text2)">Gerar cobranças automaticamente (Asaas) e enviar link ao paciente</label>'+
+      '</div>'+
+
+      // Preview
+      '<div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Preview das Parcelas</div>'+
+      '<div id="cp-preview" style="max-height:200px;overflow:auto;border:1px solid var(--border);border-radius:6px;margin-bottom:20px"></div>'+
+
+      // Buttons
+      '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+        '<button onclick="fecharConfigParcelas(true)" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Pular (sem parcelas)</button>'+
+        '<button onclick="confirmarGeracaoParcelas('+orcId+')" style="background:#E65100;color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Gerar Parcelas</button>'+
+      '</div>'+
+    '</div>'
+
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)return}
+
+  // Toggle entrada fields
+  var cbEntrada=document.getElementById('cp-tem-entrada')
+  if(cbEntrada){
+    cbEntrada.addEventListener('change',function(){
+      document.getElementById('cp-entrada-fields').style.display=this.checked?'grid':'none'
+      cpAtualizarPreview()
+    })
+    document.getElementById('cp-entrada-fields').style.display='none'
+  }
+
+  // Store valorLiq for preview
+  m.dataset.valorLiq=valorLiq
+  cpAtualizarPreview()
+}
+
+function cpAtualizarPreview(){
+  var modal=document.getElementById('config-parcelas-modal')
+  if(!modal)return
+  var valorLiq=parseFloat(modal.dataset.valorLiq)||0
+  var temEntrada=document.getElementById('cp-tem-entrada').checked
+  var entradaValor=temEntrada?parseFloat(document.getElementById('cp-entrada-valor').value)||0:0
+  var entradaForma=document.getElementById('cp-entrada-forma').value
+  var numParc=parseInt(document.getElementById('cp-num-parcelas').value)||1
+  var diaVenc=parseInt(document.getElementById('cp-dia-venc').value)||10
+  var formaPag=document.getElementById('cp-forma-pag').value
+
+  var restante=valorLiq-entradaValor
+  if(restante<0)restante=0
+  var valorParc=numParc>0?Math.round((restante/numParc)*100)/100:restante
+
+  var formaLabel={'pix':'PIX','boleto':'Boleto','credito':'Cartão Crédito','debito':'Cartão Débito','dinheiro':'Dinheiro'}
+  var html='<table style="width:100%;font-size:13px;border-collapse:collapse">'
+  html+='<tr style="background:#F5F5F5"><th style="padding:8px 12px;text-align:left;font-weight:500;color:var(--text3)">#</th><th style="padding:8px 12px;text-align:left;font-weight:500;color:var(--text3)">Tipo</th><th style="padding:8px 12px;text-align:left;font-weight:500;color:var(--text3)">Forma</th><th style="padding:8px 12px;text-align:left;font-weight:500;color:var(--text3)">Vencimento</th><th style="padding:8px 12px;text-align:right;font-weight:500;color:var(--text3)">Valor</th></tr>'
+
+  var n=0
+  if(temEntrada&&entradaValor>0){
+    n++
+    html+='<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:8px 12px">'+n+'</td><td style="padding:8px 12px;color:#1565C0;font-weight:500">ENTRADA</td><td style="padding:8px 12px">'+(formaLabel[entradaForma]||entradaForma)+'</td><td style="padding:8px 12px">Hoje</td><td style="padding:8px 12px;text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(entradaValor)+'</td></tr>'
+  }
+
+  var hoje=new Date()
+  for(var i=0;i<numParc;i++){
+    n++
+    var dt=new Date(hoje.getFullYear(),hoje.getMonth()+i+1,1)
+    var lastDay=new Date(dt.getFullYear(),dt.getMonth()+1,0).getDate()
+    dt.setDate(Math.min(diaVenc,lastDay))
+    var dtStr=('0'+dt.getDate()).slice(-2)+'/'+('0'+(dt.getMonth()+1)).slice(-2)+'/'+dt.getFullYear()
+    var val=(i===numParc-1)?Math.round((restante-valorParc*(numParc-1))*100)/100:valorParc
+    html+='<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:8px 12px">'+n+'</td><td style="padding:8px 12px">Parcela '+(i+1)+'/'+numParc+'</td><td style="padding:8px 12px">'+(formaLabel[formaPag]||formaPag)+'</td><td style="padding:8px 12px">'+dtStr+'</td><td style="padding:8px 12px;text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(val)+'</td></tr>'
+  }
+  html+='</table>'
+
+  var prev=document.getElementById('cp-preview')
+  if(prev)prev.innerHTML=html
+}
+
+function fecharConfigParcelas(skipParcelas){
+  var m=document.getElementById('config-parcelas-modal');if(m)m.remove()
+  fecharOrcModal()
+  reloadOrcamentos()
+}
+
+async function confirmarGeracaoParcelas(orcId){
+  var temEntrada=document.getElementById('cp-tem-entrada').checked
+  var entradaValor=temEntrada?parseFloat(document.getElementById('cp-entrada-valor').value)||0:0
+  var entradaForma=document.getElementById('cp-entrada-forma').value
+  var numParc=parseInt(document.getElementById('cp-num-parcelas').value)||1
+  var diaVenc=parseInt(document.getElementById('cp-dia-venc').value)||10
+  var formaPag=document.getElementById('cp-forma-pag').value
+  var gerarAsaas=document.getElementById('cp-gerar-asaas').checked
+
+  var btn=event.target;btn.disabled=true;btn.textContent='Gerando...'
+  try{
+    var r=await apiPost('gerar-parcelas',{
+      orcamento_id:orcId,
+      entrada_valor:entradaValor,
+      entrada_forma:entradaForma,
+      parcelas:numParc,
+      dia_vencimento:diaVenc,
+      forma_pagamento:formaPag,
+      gerar_cobrancas:gerarAsaas
+    })
+    if(r.success){
+      fecharConfigParcelas(false)
+      alert('Parcelas geradas com sucesso! '+(r.parcelas?r.parcelas.length:0)+' parcelas criadas.')
+    }else{
+      alert(r.error||'Erro ao gerar parcelas')
+      btn.disabled=false;btn.textContent='Gerar Parcelas'
+    }
+  }catch(e){
+    alert('Erro: '+e.message)
+    btn.disabled=false;btn.textContent='Gerar Parcelas'
+  }
 }
 
 async function reprovarOrcamento(){
@@ -3203,6 +3482,79 @@ async function reprovarOrcamento(){
     fecharOrcModal()
     await reloadOrcamentos()
   }catch(e){alert('Erro: '+e.message)}
+}
+
+async function abrirDesaprovarModal(orcId){
+  // First check executed items
+  var old=document.getElementById('modal-desaprovar');if(old)old.remove()
+  var itens=(_orcEditData&&_orcEditData.itens)||[]
+
+  var m=document.createElement('div')
+  m.id='modal-desaprovar'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10002;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+
+  var execCount=itens.filter(function(i){return i.executado===1||i.executado==='1'}).length
+  var naoExecCount=itens.length-execCount
+
+  var itensHtml='<div style="max-height:200px;overflow:auto;margin-bottom:16px"><table style="width:100%;font-size:13px;border-collapse:collapse">'
+  itensHtml+='<tr style="background:#F5F5F5"><th style="padding:8px 12px;text-align:left">Procedimento</th><th style="padding:8px 12px;text-align:left">Dente</th><th style="padding:8px 12px;text-align:right">Valor</th><th style="padding:8px 12px;text-align:center">Status</th></tr>'
+  itens.forEach(function(i){
+    var exec=i.executado===1||i.executado==='1'
+    itensHtml+='<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:6px 12px">'+(i.procedimento_nome||'—')+'</td><td style="padding:6px 12px">'+(i.dente||'—')+'</td><td style="padding:6px 12px;text-align:right">'+fmtBrl(i.valor_unitario*(i.quantidade||1))+'</td><td style="padding:6px 12px;text-align:center"><span class="badge badge-'+(exec?'green':'orange')+'">'+(exec?'EXECUTADO':'PENDENTE')+'</span></td></tr>'
+  })
+  itensHtml+='</table></div>'
+
+  var alertHtml=''
+  if(execCount>0){
+    alertHtml='<div style="background:#FFF3E0;border-radius:6px;padding:12px;margin-bottom:16px;font-size:13px;color:#E65100"><strong>Atenção:</strong> '+execCount+' procedimento(s) ja foram executados. A desaprovacao sera <strong>parcial</strong>: apenas os '+naoExecCount+' itens pendentes serao cancelados. Se o paciente pagou a mais, sera gerado um estorno.</div>'
+  }
+
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:560px;max-height:90vh;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
+      '<div style="font-size:18px;font-weight:500;color:#C62828;margin-bottom:16px">Desaprovar Orcamento #'+orcId+'</div>'+
+      alertHtml+
+      '<div style="font-size:13px;font-weight:500;color:var(--text3);margin-bottom:8px">Itens do Orcamento</div>'+
+      itensHtml+
+      '<div style="margin-bottom:16px">'+
+        '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Motivo da Desaprovacao *</label>'+
+        '<textarea id="da-motivo" rows="3" placeholder="Informe o motivo..." style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;resize:vertical;font-family:Roboto,sans-serif;box-sizing:border-box"></textarea>'+
+      '</div>'+
+      '<div style="background:#FFEBEE;border-radius:6px;padding:12px;margin-bottom:16px;font-size:12px;color:#C62828">'+
+        'Esta acao cancelara parcelas pendentes, cobrancas e comissoes nao pagas.'+(execCount>0?' Valores ja pagos a mais serao registrados como estorno.':' Valores ja pagos serao registrados como estorno.')+
+      '</div>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+        '<button onclick="document.getElementById(\'modal-desaprovar\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+        '<button onclick="confirmarDesaprovacao('+orcId+','+(execCount>0?'true':'false')+')" style="background:#C62828;color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Confirmar Desaprovacao</button>'+
+      '</div>'+
+    '</div>'
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)m.remove()}
+}
+
+async function confirmarDesaprovacao(orcId,parcial){
+  var motivo=document.getElementById('da-motivo').value
+  if(!motivo){alert('Informe o motivo da desaprovacao');return}
+  if(!confirm('Tem certeza que deseja desaprovar este orcamento? Esta acao '+(parcial?'cancelara os itens pendentes':'cancelara todos os itens')+'.'))return
+
+  var btn=event.target;btn.disabled=true;btn.textContent='Processando...'
+  try{
+    var r=await apiPost('desaprovar-orcamento',{id:orcId,motivo:motivo,parcial:parcial})
+    if(r.success){
+      document.getElementById('modal-desaprovar').remove()
+      var msg='Orcamento desaprovado ('+(r.tipo==='parcial'?'parcialmente':'totalmente')+')'
+      if(r.estorno>0)msg+='. Estorno de '+fmtBrl(r.estorno)+' registrado.'
+      alert(msg)
+      fecharOrcModal()
+      await reloadOrcamentos()
+    }else{
+      if(r.requer_parcial){
+        alert(r.error+'. Use a opcao de desaprovacao parcial.')
+      }else{
+        alert(r.error||'Erro')
+      }
+      btn.disabled=false;btn.textContent='Confirmar Desaprovacao'
+    }
+  }catch(e){alert('Erro: '+e.message);btn.disabled=false;btn.textContent='Confirmar Desaprovacao'}
 }
 
 function abrirPagamentoModal(){
@@ -3668,7 +4020,7 @@ function verProfissional(idx){
   renderProfDados(p,cor)
   renderProfContato(p)
   renderProfAgendaTrabalho()
-  renderProfConfigComissao()
+  renderProfConfigComissao(p)
   renderProfAnaliseComissao(p)
   renderProfComissoes(p)
 }
@@ -3931,87 +4283,210 @@ function renderProfAgendaTrabalho(){
   document.getElementById('pdt-agenda-trabalho').innerHTML=html
 }
 
-function renderProfConfigComissao(){
-  document.getElementById('pdt-config-comissao').innerHTML=
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'+
+async function renderProfConfigComissao(p){
+  var el=document.getElementById('pdt-config-comissao')
+  var profId=p.id||((ST.profissionais||[])[_profDetIdx]||{}).id
+  el.innerHTML='<div style="text-align:center;padding:30px;color:#9e9e9e">Carregando...</div>'
+  try{
+    var d=await apiData('comissoes-config',{profissional_id:profId})
+    var configs=d.configs||[]
+    var tabelas=['PARTICULAR','CASSEMS','SULAMERICA','VIVENTERIS','PREVIDENT','TODAS']
+    var momentoLabel={'aprovacao':'Aprovação','execucao':'Execução'}
+    var tipoLabel={'percentual':'Percentual','fixo':'Valor Fixo'}
+
+    var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'+
       '<div style="font-size:16px;font-weight:500;color:#212121">Configurações de Comissão</div>'+
-      '<div style="display:flex;gap:8px"><button class="pdt-btn-outline">Tabela de preços</button><button class="pdt-btn-fill">+ Nova Configuração</button></div>'+
-    '</div>'+
-    '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#212121;color:#fff;font-size:13px">'+
-      '<th style="padding:12px 14px;text-align:left">Válido desde</th><th style="padding:12px 14px;text-align:left">Válido até</th><th style="padding:12px 14px;text-align:left">Momento da Comissão</th><th style="padding:12px 14px;text-align:left">Tipo da com...</th><th style="padding:12px 14px;text-align:left">Geral</th><th style="padding:12px 14px;text-align:left">Plano</th><th style="padding:12px 14px;text-align:left">Valor</th><th style="padding:12px 14px;text-align:left">Editado por</th><th style="padding:12px 14px;text-align:left">Data de Edição</th><th style="padding:12px 14px;text-align:left">Ações</th>'+
-    '</tr></thead><tbody>'+
-    '<tr style="border-bottom:1px solid #f0f0f0;font-size:13px"><td style="padding:12px 14px">01/03/2026</td><td style="padding:12px 14px">—</td><td style="padding:12px 14px">Checkout</td><td style="padding:12px 14px">Percentual</td><td style="padding:12px 14px">—</td><td style="padding:12px 14px">—</td><td style="padding:12px 14px">40%</td><td style="padding:12px 14px">Admin</td><td style="padding:12px 14px">01/03/2026</td><td style="padding:12px 14px"><span style="color:#757575;cursor:pointer">👁 ≡+ ✏ 🗑</span></td></tr>'+
-    '</tbody></table>'
+      '<button onclick="abrirModalComConfig('+profId+')" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">+ Nova Configuração</button>'+
+    '</div>'
+
+    if(!configs.length){html+='<div style="text-align:center;padding:40px;color:#9e9e9e">Nenhuma regra configurada. Adicione uma configuração de comissão.</div>'}
+    else{
+      html+='<table class="tbl" style="width:100%"><thead><tr><th>Tabela de Preço</th><th>Momento</th><th>Tipo</th><th>Valor</th><th>Válido desde</th><th>Válido até</th><th>Editado por</th><th>Ações</th></tr></thead><tbody>'
+      configs.forEach(function(c){
+        var valStr=c.tipo==='percentual'?c.valor+'%':fmtBrl(c.valor)
+        html+='<tr><td><span class="badge badge-blue">'+(c.tabela_preco||'PARTICULAR')+'</span></td><td>'+(momentoLabel[c.momento]||c.momento)+'</td><td>'+(tipoLabel[c.tipo]||c.tipo)+'</td><td style="font-weight:600;color:#1B5E3B">'+valStr+'</td><td>'+(c.valido_desde?fmtDt(c.valido_desde):'—')+'</td><td>'+(c.valido_ate?fmtDt(c.valido_ate):'—')+'</td><td style="font-size:12px;color:var(--text3)">'+(c.editado_por||'—')+'</td><td><button onclick="excluirComConfig('+c.id+','+profId+')" style="background:transparent;color:var(--red);border:1px solid var(--red);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Excluir</button></td></tr>'
+      })
+      html+='</tbody></table>'
+    }
+    el.innerHTML=html
+  }catch(e){el.innerHTML='<div style="color:#D32F2F;padding:20px">'+e.message+'</div>'}
+}
+
+function abrirModalComConfig(profId){
+  var old=document.getElementById('modal-com-config');if(old)old.remove()
+  var tabelas=['PARTICULAR','CASSEMS','SULAMERICA','VIVENTERIS','PREVIDENT','TODAS']
+  var m=document.createElement('div')
+  m.id='modal-com-config'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:480px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
+      '<div style="font-size:18px;font-weight:500;color:#1A1A1A;margin-bottom:20px">Nova Regra de Comissão</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Tabela de Preço</label><select id="cc-tabela" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none">'+tabelas.map(function(t){return '<option value="'+t+'">'+t+'</option>'}).join('')+'</select></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Momento da Comissão</label><select id="cc-momento" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none"><option value="aprovacao">Na Aprovação do Orçamento</option><option value="execucao">Na Execução do Procedimento</option></select></div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Tipo</label><select id="cc-tipo" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none"><option value="percentual">Percentual (%)</option><option value="fixo">Valor Fixo (R$)</option></select></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Valor</label><input id="cc-valor" type="number" step="0.01" placeholder="Ex: 30 para 30%" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Válido desde</label><input id="cc-desde" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Válido até (opcional)</label><input id="cc-ate" type="date" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+        '<button onclick="document.getElementById(\'modal-com-config\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+        '<button onclick="salvarComConfig('+profId+')" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Salvar</button>'+
+      '</div>'+
+    '</div>'
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)m.remove()}
+}
+
+async function salvarComConfig(profId){
+  var tabela=document.getElementById('cc-tabela').value
+  var momento=document.getElementById('cc-momento').value
+  var tipo=document.getElementById('cc-tipo').value
+  var valor=document.getElementById('cc-valor').value
+  var desde=document.getElementById('cc-desde').value
+  var ate=document.getElementById('cc-ate').value
+  if(!valor){alert('Informe o valor');return}
+  try{
+    var r=await apiPost('comissoes-config',{profissional_id:profId,tabela_preco:tabela,momento:momento,tipo:tipo,valor:parseFloat(valor),valido_desde:desde,valido_ate:ate,editado_por:(ST.user||{}).nome||''})
+    if(r.success){document.getElementById('modal-com-config').remove();renderProfConfigComissao(_profDetData)}
+    else alert(r.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function excluirComConfig(id,profId){
+  if(!confirm('Excluir esta regra de comissão?'))return
+  try{
+    await apiPost('comissoes-config',{action:'delete',id:id})
+    renderProfConfigComissao(_profDetData)
+  }catch(e){alert('Erro: '+e.message)}
 }
 
 async function renderProfAnaliseComissao(p){
   var el=document.getElementById('pdt-analise-comissao')
+  var profId=p.id||((ST.profissionais||[])[_profDetIdx]||{}).id
   el.innerHTML='<div style="text-align:center;padding:30px;color:#9e9e9e">Carregando...</div>'
   try{
-    var profId=p.id||((ST.profissionais||[])[_profDetIdx]||{}).id
-    if(!profId){el.innerHTML='<div style="color:#9e9e9e;padding:20px">ID não disponível</div>';return}
-    var d=await apiData('agendamentos',{profissional:profId,limit:50})
-    var ag=d.agendamentos||[]
-    // Filtro
+    var mesAtual=new Date().toISOString().slice(0,7)
+    var d=await apiData('comissoes-profissional',{profissional_id:profId,mes:mesAtual})
+    var comissoes=d.comissoes||[],tots=d.totais||{}
+    var momentoLabel={'aprovacao':'Aprovação','execucao':'Execução'}
+
     var html='<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px">'+
-      '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:#9e9e9e">De</span><input type="date" style="border:1px solid #e0e0e0;border-radius:4px;padding:6px 10px;font-size:13px"></div>'+
-      '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:#9e9e9e">Até</span><input type="date" style="border:1px solid #e0e0e0;border-radius:4px;padding:6px 10px;font-size:13px"></div>'+
-      '<label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" checked style="accent-color:#E65100">Pagamento Recebido</label>'+
-      '<label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" checked style="accent-color:#E65100">Checkout</label>'+
-      '<label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" checked style="accent-color:#E65100">Proc. Executado</label>'+
-      '<label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" checked style="accent-color:#E65100">Orç. Aprovado</label>'+
-      '<button class="pdt-btn-outline">▶ Listar</button></div>'
-    // Cards
-    if(!ag.length){html+='<div style="text-align:center;padding:40px;color:#9e9e9e">Nenhum lançamento</div>'}
-    else{ag.forEach(function(a){
-      var dt=(a.data_hora||'').slice(0,10);var hora=(a.data_hora||'').slice(11,16)||''
-      var v=+(a.valor||0)
-      html+='<div class="comissao-card"><div class="comissao-card-head">'+
-        '<div style="font-size:13px;color:#616161;min-width:120px">'+fmtDt(dt)+' '+hora+'</div>'+
-        '<div class="comissao-badge" style="background:#2E7D32">Pagamento Recebido</div>'+
-        '<div class="comissao-col"><div class="comissao-col-label">Paciente</div><div class="comissao-col-val">'+(a.paciente_nome||'—')+'</div></div>'+
-        '<div class="comissao-col"><div class="comissao-col-label">Valor Pago</div><div class="comissao-col-val">'+fmtBrl(v)+'</div></div>'+
-        '<div class="comissao-col"><div class="comissao-col-label">Comissão</div><div class="comissao-col-val">'+fmtBrl(v*0.4)+'</div></div>'+
-        '<div class="comissao-col"><div class="comissao-col-label">Forma</div><div class="comissao-col-val">'+(a.forma_pagamento||'—')+'</div></div>'+
-      '</div>'+
-      '<div style="padding:10px 16px;background:#fafafa;border-top:1px solid #e0e0e0;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;font-size:13px">'+
-        '<div><div style="font-size:11px;color:#9e9e9e">Profissional</div><div>'+(a.profissional_nome||'—')+'</div></div>'+
-        '<div><div style="font-size:11px;color:#9e9e9e">Procedimento</div><div>'+(a.procedimento||a.tipo||'—')+' ✏</div></div>'+
-        '<div><div style="font-size:11px;color:#9e9e9e">Tipo</div><div>'+(a.tipo||'—')+'</div></div>'+
-        '<div><div style="font-size:11px;color:#9e9e9e">Status</div><div>'+(a.status||'agendado')+'</div></div>'+
-      '</div></div>'
-    })}
+      '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:#9e9e9e">De</span><input type="date" id="ca-de" style="border:1px solid #e0e0e0;border-radius:4px;padding:6px 10px;font-size:13px"></div>'+
+      '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:#9e9e9e">Até</span><input type="date" id="ca-ate" style="border:1px solid #e0e0e0;border-radius:4px;padding:6px 10px;font-size:13px"></div>'+
+      '<select id="ca-status" style="border:1px solid #e0e0e0;border-radius:4px;padding:6px 10px;font-size:13px"><option value="todas">Todos Status</option><option value="pendente">Pendentes</option><option value="pago">Pagas</option></select>'+
+      '<button onclick="filtrarAnaliseComissao('+profId+')" class="pdt-btn-outline">Listar</button></div>'
+
+    // Summary cards
+    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">'+
+      '<div style="background:#FFF3E0;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#E65100;text-transform:uppercase;margin-bottom:4px">Pendente</div><div style="font-size:18px;font-weight:700;color:#E65100">'+fmtBrl(tots.pendente||0)+'</div></div>'+
+      '<div style="background:#E8F5E9;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#2E7D52;text-transform:uppercase;margin-bottom:4px">Pago</div><div style="font-size:18px;font-weight:700;color:#1B5E3B">'+fmtBrl(tots.pago||0)+'</div></div>'+
+      '<div style="background:#E3F2FD;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#1565C0;text-transform:uppercase;margin-bottom:4px">Total</div><div style="font-size:18px;font-weight:700;color:#1565C0">'+fmtBrl((tots.pendente||0)+(tots.pago||0))+'</div></div>'+
+    '</div>'
+
+    if(!comissoes.length){html+='<div style="text-align:center;padding:40px;color:#9e9e9e">Nenhuma comissão no período</div>'}
+    else{
+      comissoes.forEach(function(c){
+        var stClass=c.status==='pago'?'green':c.status==='cancelado'?'gray':'orange'
+        var stLabel=c.status==='pago'?'PAGO':c.status==='cancelado'?'CANCELADO':'PENDENTE'
+        var tipoStr=c.tipo==='percentual'?c.percentual+'%':'Fixo'
+        html+='<div class="comissao-card"><div class="comissao-card-head">'+
+          '<div style="font-size:13px;color:#616161;min-width:100px">'+fmtDt(c.data_referencia)+'</div>'+
+          '<div class="comissao-badge" style="background:'+(c.momento==='aprovacao'?'#1565C0':'#2E7D32')+'">'+(momentoLabel[c.momento]||c.momento)+'</div>'+
+          '<div class="comissao-col"><div class="comissao-col-label">Paciente</div><div class="comissao-col-val">'+(c.paciente_nome||'—')+'</div></div>'+
+          '<div class="comissao-col"><div class="comissao-col-label">Procedimento</div><div class="comissao-col-val">'+(c.procedimento_nome||'—')+'</div></div>'+
+          '<div class="comissao-col"><div class="comissao-col-label">Valor Base</div><div class="comissao-col-val">'+fmtBrl(c.valor_base)+'</div></div>'+
+          '<div class="comissao-col"><div class="comissao-col-label">'+tipoStr+'</div><div class="comissao-col-val" style="color:#1B5E3B;font-weight:600">'+fmtBrl(c.valor_comissao)+'</div></div>'+
+          '<span class="badge badge-'+stClass+'" style="margin-left:auto">'+stLabel+'</span>'+
+        '</div></div>'
+      })
+    }
     el.innerHTML=html
+  }catch(e){el.innerHTML='<div style="color:#D32F2F;padding:20px">'+e.message+'</div>'}
+}
+
+async function filtrarAnaliseComissao(profId){
+  var de=(document.getElementById('ca-de')||{}).value||''
+  var ate=(document.getElementById('ca-ate')||{}).value||''
+  var status=(document.getElementById('ca-status')||{}).value||'todas'
+  var el=document.getElementById('pdt-analise-comissao')
+  el.innerHTML='<div style="text-align:center;padding:30px;color:#9e9e9e">Carregando...</div>'
+  try{
+    var params={profissional_id:profId,status:status}
+    if(de)params.de=de;if(ate)params.ate=ate
+    if(!de&&!ate)params.mes=new Date().toISOString().slice(0,7)
+    var d=await apiData('comissoes-profissional',params)
+    // Re-render with results - reuse analysis render
+    _profDetData.id=profId
+    renderProfAnaliseComissao(_profDetData)
   }catch(e){el.innerHTML='<div style="color:#D32F2F;padding:20px">'+e.message+'</div>'}
 }
 
 async function renderProfComissoes(p){
   var el=document.getElementById('pdt-comissoes')
+  var profId=p.id||((ST.profissionais||[])[_profDetIdx]||{}).id
   el.innerHTML='<div style="text-align:center;padding:30px;color:#9e9e9e">Carregando...</div>'
   try{
-    var profId=p.id||((ST.profissionais||[])[_profDetIdx]||{}).id
-    var d=await apiData('agendamentos',{profissional:profId,limit:100})
-    var ag=d.agendamentos||[];var comissoes=ag.filter(function(a){return +(a.valor||0)>0})
-    var total=comissoes.reduce(function(s,a){return s+(+(a.valor||0)*0.4)},0)
-    // Filtro
+    var mesAtual=new Date().toISOString().slice(0,7)
+    var d=await apiData('comissoes-profissional',{profissional_id:profId,status:'pendente'})
+    var comissoes=d.comissoes||[],tots=d.totais||{}
+    var totalPend=tots.pendente||0
+
     var html='<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">'+
-      '<select style="border:1px solid #e0e0e0;border-radius:4px;padding:7px 12px;font-size:13px;min-width:200px"><option>Lançamentos de Comissão</option></select>'+
-      '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:#9e9e9e">De</span><input type="date" style="border:1px solid #e0e0e0;border-radius:4px;padding:6px 10px;font-size:13px"></div>'+
-      '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:#9e9e9e">Até</span><input type="date" style="border:1px solid #e0e0e0;border-radius:4px;padding:6px 10px;font-size:13px"></div>'+
-      '<button class="pdt-btn-outline">▶ Listar</button>'+
-      '<div style="margin-left:auto"><button class="pdt-btn-outline">+ Adicionar Lançamento</button></div>'+
-    '</div>'
-    if(!comissoes.length){html+='<div style="text-align:center;padding:40px;color:#9e9e9e">Sem comissões</div>'}
+      '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:#9e9e9e">De</span><input type="date" id="cp-de" style="border:1px solid #e0e0e0;border-radius:4px;padding:6px 10px;font-size:13px"></div>'+
+      '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:#9e9e9e">Até</span><input type="date" id="cp-ate" style="border:1px solid #e0e0e0;border-radius:4px;padding:6px 10px;font-size:13px"></div>'+
+      '<button onclick="renderProfComissoes(_profDetData)" class="pdt-btn-outline">Listar</button>'
+    if(comissoes.length>0){
+      html+='<div style="margin-left:auto"><button onclick="pagarComissoesLote('+profId+')" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Pagar Todas Pendentes ('+fmtBrl(totalPend)+')</button></div>'
+    }
+    html+='</div>'
+
+    if(!comissoes.length){html+='<div style="text-align:center;padding:40px;color:#9e9e9e">Sem comissões pendentes</div>'}
     else{
-      html+='<table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:2px solid #212121"><th style="padding:10px 14px;text-align:left;font-size:13px;font-weight:500">Data</th><th style="padding:10px 14px;text-align:left;font-size:13px;font-weight:500">Tipo</th><th style="padding:10px 14px;text-align:left;font-size:13px;font-weight:500">Descrição</th><th style="padding:10px 14px;text-align:left;font-size:13px;font-weight:500">Paciente</th><th style="padding:10px 14px;text-align:right;font-size:13px;font-weight:500">Valor</th></tr></thead><tbody>'
-      comissoes.forEach(function(a){
-        var dt=(a.data_hora||'').slice(0,10)
-        html+='<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:10px 14px;font-size:13px;color:#616161">'+fmtDt(dt)+'</td><td style="padding:10px 14px;font-size:13px;color:#616161">'+(a.tipo||'—')+'</td><td style="padding:10px 14px;font-size:13px"><div>'+(a.procedimento||'Atendimento')+'</div><div style="font-size:11px;color:#9e9e9e">Procedimento: '+(a.tipo||'—')+'</div></td><td style="padding:10px 14px;font-size:13px">'+(a.paciente_nome||'—')+'</td><td style="padding:10px 14px;font-size:13px;font-weight:500;text-align:right">'+fmtBrl(+(a.valor||0)*0.4)+'</td></tr>'
+      html+='<table class="tbl" style="width:100%"><thead><tr><th><input type="checkbox" id="cp-check-all" onchange="cpToggleAll()" style="accent-color:#034030"></th><th>Data</th><th>Momento</th><th>Procedimento</th><th>Paciente</th><th>Tabela</th><th style="text-align:right">Valor Base</th><th style="text-align:right">Comissão</th><th>Ações</th></tr></thead><tbody>'
+      comissoes.forEach(function(c){
+        var momentoLabel=c.momento==='aprovacao'?'Aprovação':'Execução'
+        html+='<tr><td><input type="checkbox" class="cp-check" value="'+c.id+'" style="accent-color:#034030"></td><td>'+fmtDt(c.data_referencia)+'</td><td><span class="badge badge-'+(c.momento==='aprovacao'?'blue':'green')+'">'+momentoLabel+'</span></td><td style="font-size:12px">'+(c.procedimento_nome||'—')+'</td><td>'+(c.paciente_nome||'—')+'</td><td style="font-size:12px">'+(c.tabela_preco||'—')+'</td><td style="text-align:right">'+fmtBrl(c.valor_base)+'</td><td style="text-align:right;font-weight:600;color:#1B5E3B">'+fmtBrl(c.valor_comissao)+'</td><td><button onclick="pagarComissao('+c.id+','+profId+')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Pagar</button></td></tr>'
       })
-      html+='</tbody><tfoot><tr style="border-top:2px solid #212121"><td colspan="4" style="padding:12px 14px;text-align:right;font-weight:700">Total</td><td style="padding:12px 14px;text-align:right;font-weight:700">'+fmtBrl(total)+'</td></tr></tfoot></table>'
+      html+='</tbody><tfoot><tr style="border-top:2px solid var(--border)"><td colspan="7" style="padding:12px 14px;text-align:right;font-weight:700">Total Pendente</td><td style="padding:12px 14px;text-align:right;font-weight:700;color:#1B5E3B">'+fmtBrl(totalPend)+'</td><td></td></tr></tfoot></table>'
     }
     el.innerHTML=html
   }catch(e){el.innerHTML='<div style="color:#D32F2F;padding:20px">'+e.message+'</div>'}
+}
+
+function cpToggleAll(){
+  var checked=document.getElementById('cp-check-all').checked
+  document.querySelectorAll('.cp-check').forEach(function(cb){cb.checked=checked})
+}
+
+async function pagarComissao(id,profId){
+  if(!confirm('Confirma pagamento desta comissão?'))return
+  try{
+    var r=await apiPost('comissoes-pagar',{id:id})
+    if(r.success)renderProfComissoes(_profDetData)
+    else alert(r.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function pagarComissoesLote(profId){
+  var checks=document.querySelectorAll('.cp-check:checked')
+  var ids=[]
+  checks.forEach(function(cb){ids.push(parseInt(cb.value))})
+  if(!ids.length){
+    // If none checked, pay all
+    document.querySelectorAll('.cp-check').forEach(function(cb){ids.push(parseInt(cb.value))})
+  }
+  if(!ids.length){alert('Nenhuma comissão selecionada');return}
+  if(!confirm('Confirma pagamento de '+ids.length+' comissões?'))return
+  try{
+    var r=await apiPost('comissoes-pagar',{ids:ids})
+    if(r.success)renderProfComissoes(_profDetData)
+    else alert(r.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
 }
 
 // ── ANIVERSARIANTES ──────────────────────────────────────────────
@@ -4544,6 +5019,121 @@ async function excluirUsuario(id,nome){
   }catch(e){alert('Erro: '+e.message)}
 }
 
+// ── PERMISSÕES POR PERFIL ────────────────────────────────────────
+var _permData=null
+var _permRecursoLabels={
+  'agenda.ver':'Ver Agenda','agenda.editar':'Criar/Editar Agendamentos',
+  'pacientes.ver':'Ver Pacientes','pacientes.editar':'Editar Cadastro de Pacientes',
+  'prontuario.ver':'Ver Prontuario','prontuario.editar':'Editar Prontuario Clinico',
+  'orcamento.criar':'Criar Orcamento','orcamento.aprovar':'Aprovar Orcamento','orcamento.desaprovar':'Desaprovar Orcamento',
+  'financeiro.ver':'Ver Modulo Financeiro','financeiro.dre':'Ver DRE','financeiro.contas_pagar':'Contas a Pagar','financeiro.dar_baixa':'Dar Baixa em Parcelas','financeiro.comissoes':'Gestao de Comissoes',
+  'usuarios.gerenciar':'Gerenciar Usuarios','configuracoes.editar':'Editar Configuracoes',
+  'relatorios.ver':'Ver Relatorios','marketing.ver':'Ver Marketing',
+  'estoque.ver':'Ver Estoque','estoque.editar':'Editar Estoque'
+}
+var _permGrupos={
+  'Agenda':['agenda.ver','agenda.editar'],
+  'Pacientes':['pacientes.ver','pacientes.editar'],
+  'Prontuario':['prontuario.ver','prontuario.editar'],
+  'Orcamentos':['orcamento.criar','orcamento.aprovar','orcamento.desaprovar'],
+  'Financeiro':['financeiro.ver','financeiro.dre','financeiro.contas_pagar','financeiro.dar_baixa','financeiro.comissoes'],
+  'Sistema':['usuarios.gerenciar','configuracoes.editar','relatorios.ver','marketing.ver'],
+  'Estoque':['estoque.ver','estoque.editar']
+}
+
+async function loadPermissoesPerfil(){
+  var perfil=(document.getElementById('perm-perfil-sel')||{}).value||'recepcionista'
+  var el=document.getElementById('perm-grid');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">Carregando...</div>'
+  try{
+    var d=await apiData('permissoes-perfil',{perfil:perfil})
+    _permData=d.permissoes||{}
+
+    var html=''
+    for(var grupo in _permGrupos){
+      var recursos=_permGrupos[grupo]
+      html+='<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;padding:8px 0;border-bottom:1px solid var(--border)">'+grupo+'</div>'
+      html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">'
+      for(var ri=0;ri<recursos.length;ri++){
+        var rec=recursos[ri]
+        var permitido=_permData[rec]===1||_permData[rec]===true
+        var label=_permRecursoLabels[rec]||rec
+        html+='<label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;cursor:pointer;transition:background .1s;background:'+(permitido?'#E8F5E9':'#fff')+'" onmouseover="this.style.background=\'#F5F5F5\'" onmouseout="this.style.background=\''+(permitido?'#E8F5E9':'#fff')+'\'">'+
+          '<div style="position:relative;width:40px;height:22px;flex-shrink:0">'+
+            '<input type="checkbox" data-recurso="'+rec+'" '+(permitido?'checked':'')+' onchange="permToggle(this)" style="opacity:0;width:0;height:0;position:absolute">'+
+            '<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:'+(permitido?'#4CAF7D':'#ccc')+';border-radius:11px;transition:background .2s;cursor:pointer" onclick="this.previousElementSibling.click()"></div>'+
+            '<div style="position:absolute;top:2px;'+(permitido?'left:20px':'left:2px')+';width:18px;height:18px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);pointer-events:none"></div>'+
+          '</div>'+
+          '<span style="font-size:13px;color:'+(permitido?'var(--text)':'var(--text3)')+'">'+label+'</span>'+
+        '</label>'
+      }
+      html+='</div></div>'
+    }
+
+    el.innerHTML=html
+    document.getElementById('perm-actions').style.display='block'
+  }catch(e){el.innerHTML='<div style="text-align:center;padding:20px;color:var(--red)">'+e.message+'</div>'}
+}
+
+function permToggle(cb){
+  var rec=cb.getAttribute('data-recurso')
+  var on=cb.checked
+  // Update visual toggle
+  var container=cb.parentElement
+  var track=container.querySelector('div:nth-child(2)')
+  var thumb=container.querySelector('div:nth-child(3)')
+  if(track){track.style.background=on?'#4CAF7D':'#ccc'}
+  if(thumb){thumb.style.left=on?'20px':'2px'}
+  var label=cb.closest('label')
+  if(label){
+    label.style.background=on?'#E8F5E9':'#fff'
+    label.querySelector('span').style.color=on?'var(--text)':'var(--text3)'
+  }
+  if(_permData)_permData[rec]=on?1:0
+}
+
+async function salvarPermissoes(){
+  var perfil=(document.getElementById('perm-perfil-sel')||{}).value
+  if(!perfil||!_permData){alert('Selecione um perfil');return}
+  try{
+    var r=await apiPost('permissoes-salvar',{perfil:perfil,permissoes:_permData})
+    if(r.success){alert('Permissoes salvas para '+perfil.toUpperCase())}
+    else alert(r.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+// Load permissions on app start for current user
+async function loadMinhasPermissoes(){
+  try{
+    var d=await apiData('permissoes-usuario',{})
+    if(d.success){
+      ST.permissoes=d.permissoes||{}
+      ST.perfil=d.perfil||'recepcionista'
+      aplicarPermissoesFrontend()
+    }
+  }catch(e){}
+}
+
+function aplicarPermissoesFrontend(){
+  var p=ST.permissoes||{}
+  // Hide sidebar items based on permissions
+  var menuMap={
+    'financeiro':'financeiro.ver',
+    'relatorios':'relatorios.ver',
+    'marketing':'marketing.ver',
+    'usuarios':'usuarios.gerenciar',
+    'configuracoes':'configuracoes.editar',
+    'estoque':'estoque.ver'
+  }
+  document.querySelectorAll('.sidebar-item[data-page]').forEach(function(item){
+    var page=item.getAttribute('data-page')
+    var recurso=menuMap[page]
+    if(recurso&&p[recurso]===0){
+      item.style.display='none'
+    }
+  })
+}
+
 // ── METAS ───────────────────────────────────────────────────────
 async function loadMetas(){
   var el=document.getElementById('metas-content');if(!el)return
@@ -4609,6 +5199,64 @@ function daChart(id,cfg){
 }
 var DA_MESES=['Janeiro','Fevereiro','Março']
 
+async function loadDashFinanceiro(){
+  var el=document.getElementById('da-fin-summary');if(!el)return
+  try{
+    var d=await apiData('dashboard-financeiro',{})
+    if(!d.success)return
+
+    var resultado=d.resultado_mes||0
+    var resCor=resultado>=0?'#1B5E3B':'#C62828'
+    var resBg=resultado>=0?'#E8F5E9':'#FFEBEE'
+
+    var html='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:12px">'
+
+    // Receita
+    html+='<div style="background:#E8F5E9;border-radius:8px;padding:16px">'+
+      '<div style="font-size:11px;font-weight:500;color:#2E7D52;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Receita do Mês</div>'+
+      '<div style="font-size:20px;font-weight:700;color:#1B5E3B">'+fmtBrl(d.receita_mes)+'</div></div>'
+
+    // Despesas
+    html+='<div style="background:#FFEBEE;border-radius:8px;padding:16px">'+
+      '<div style="font-size:11px;font-weight:500;color:#C62828;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Despesas do Mês</div>'+
+      '<div style="font-size:20px;font-weight:700;color:#C62828">'+fmtBrl(d.despesas_mes)+'</div></div>'
+
+    // Resultado
+    html+='<div style="background:'+resBg+';border-radius:8px;padding:16px">'+
+      '<div style="font-size:11px;font-weight:500;color:'+resCor+';text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Resultado</div>'+
+      '<div style="font-size:20px;font-weight:700;color:'+resCor+'">'+fmtBrl(resultado)+'</div></div>'
+
+    // A Receber 30d
+    html+='<div style="background:#E3F2FD;border-radius:8px;padding:16px">'+
+      '<div style="font-size:11px;font-weight:500;color:#1565C0;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">A Receber (30d)</div>'+
+      '<div style="font-size:20px;font-weight:700;color:#1565C0">'+fmtBrl(d.projecao_30d.a_receber)+'</div>'+
+      '<div style="font-size:11px;color:#1565C0;margin-top:2px">'+d.projecao_30d.a_receber_qtd+' parcelas</div></div>'
+
+    // A Pagar 30d
+    html+='<div style="background:#FFF3E0;border-radius:8px;padding:16px">'+
+      '<div style="font-size:11px;font-weight:500;color:#E65100;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">A Pagar (30d)</div>'+
+      '<div style="font-size:20px;font-weight:700;color:#E65100">'+fmtBrl(d.projecao_30d.a_pagar)+'</div>'+
+      '<div style="font-size:11px;color:#E65100;margin-top:2px">'+d.projecao_30d.a_pagar_qtd+' contas</div></div>'
+
+    html+='</div>'
+
+    // Alerts row
+    var alerts=[]
+    if(d.inadimplencia.qtd>0) alerts.push('<div style="display:flex;align-items:center;gap:8px;background:#FFEBEE;border-radius:6px;padding:10px 16px;font-size:13px;color:#C62828"><strong>'+d.inadimplencia.qtd+'</strong> parcelas vencidas — Total: <strong>'+fmtBrl(d.inadimplencia.valor)+'</strong><button onclick="nav(\'financeiro\');setTimeout(function(){finNavTo(\'contasreceber\')},100)" style="margin-left:auto;background:#C62828;color:#fff;border:none;border-radius:4px;padding:4px 12px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Ver</button></div>')
+    if(d.contas_vencidas.qtd>0) alerts.push('<div style="display:flex;align-items:center;gap:8px;background:#FFF3E0;border-radius:6px;padding:10px 16px;font-size:13px;color:#E65100"><strong>'+d.contas_vencidas.qtd+'</strong> contas a pagar vencidas — Total: <strong>'+fmtBrl(d.contas_vencidas.valor)+'</strong><button onclick="nav(\'financeiro\');setTimeout(function(){finNavTo(\'contaspagar\')},100)" style="margin-left:auto;background:#E65100;color:#fff;border:none;border-radius:4px;padding:4px 12px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Ver</button></div>')
+
+    if(alerts.length) html+='<div style="display:flex;flex-direction:column;gap:8px">'+alerts.join('')+'</div>'
+
+    // Projeção
+    var proj=d.projecao_30d.saldo_projetado||0
+    html+='<div style="margin-top:12px;background:#fff;border-radius:8px;padding:14px 20px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+      '<div style="font-size:13px;color:var(--text2)">Saldo projetado (30 dias): receita atual + a receber - despesas - a pagar</div>'+
+      '<div style="font-size:18px;font-weight:700;color:'+(proj>=0?'#1B5E3B':'#C62828')+'">'+fmtBrl(proj)+'</div></div>'
+
+    el.innerHTML=html
+  }catch(e){console.error('[dashFinanceiro]',e.message)}
+}
+
 async function loadAnalytics(){
   var el=document.getElementById('da-charts');if(!el)return
   el.innerHTML='<div style="text-align:center;padding:60px;color:#9e9e9e">Carregando gráficos...</div>'
@@ -4624,8 +5272,11 @@ async function loadAnalytics(){
     var labels=meses.map(function(m){var mi=parseInt(m.split('-')[1]);return MESES_ABR[mi-1]||m})
     var vals=meses.map(function(m){return pm[m]||{}})
 
+    // Financial summary cards at the top
+    var h='<div id="da-fin-summary" style="margin-bottom:20px"></div>'
+
     // Build HTML grid
-    var h='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">'
+    h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">'
     h+=daCard('Fluxo de Caixa (R$)','da-fluxo')
     h+=daCard('Emissão de Notas Fiscais e Recibos (R$)','da-nf')
     h+=daCard('Análise de Inadimplência','da-inadimp','Referência: '+labels.join(' - '))
@@ -4648,6 +5299,9 @@ async function loadAnalytics(){
     h+='</div>'
     h+='<div style="background:#fff;border-radius:8px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,.1)"><div style="font-size:14px;font-weight:500;color:#212121;margin-bottom:16px">Orçamentos e Conversão de Orçamentos (R$)</div><div id="da-orcamentos"></div></div>'
     el.innerHTML=h
+
+    // Load financial summary async
+    loadDashFinanceiro()
 
     // Extrair arrays de dados reais
     var entradas=vals.map(function(v){return v.receita_entrada||0})
@@ -5310,6 +5964,177 @@ function gerarPixPayload(chave,nome,cidade,valor,txid){
 // Render cobrancas tab in patient prontuário
 var _cobrancasFormVisible=false
 
+// ── FINANCEIRO DO PACIENTE (parcelas) ──────────────────────────
+var _finPacData=null
+async function loadFinanceiroPaciente(pacId){
+  var el=document.getElementById('fin-pac-container')
+  if(!el)return
+  try{
+    var d=await apiData('parcelas-paciente',{paciente_id:pacId})
+    if(!d.success){el.innerHTML='<div style="color:var(--text3);text-align:center;padding:30px">Erro ao carregar financeiro</div>';return}
+    _finPacData=d.orcamentos||[]
+    renderFinanceiroPaciente(el,pacId)
+  }catch(e){el.innerHTML='<div style="color:var(--text3);text-align:center;padding:30px">Erro: '+e.message+'</div>'}
+}
+
+function renderFinanceiroPaciente(el,pacId){
+  var orcs=_finPacData||[]
+
+  // Calculate totals across all orcamentos
+  var totalGeral=0,totalPago=0,totalPendente=0,totalVencido=0
+  for(var oi=0;oi<orcs.length;oi++){
+    var parcs=orcs[oi].parcelas||[]
+    for(var pi=0;pi<parcs.length;pi++){
+      var pp=parcs[pi]
+      if(pp.status==='cancelado')continue
+      totalGeral+=+(pp.valor||0)
+      if(pp.status==='pago')totalPago+=+(pp.valor||0)
+      else if(pp.status==='vencido')totalVencido+=+(pp.valor||0)
+      else totalPendente+=+(pp.valor||0)
+    }
+  }
+  var pctPago=totalGeral>0?Math.round((totalPago/totalGeral)*100):0
+
+  var html=''
+
+  // Summary cards
+  html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px">'+
+    '<div style="background:#E8F5E9;border-radius:8px;padding:16px;text-align:center">'+
+      '<div style="font-size:12px;font-weight:500;color:#2E7D52;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Valor Total</div>'+
+      '<div style="font-size:22px;font-weight:700;color:#1B5E3B">'+fmtBrl(totalGeral)+'</div>'+
+    '</div>'+
+    '<div style="background:#E8F5E9;border-radius:8px;padding:16px;text-align:center">'+
+      '<div style="font-size:12px;font-weight:500;color:#2E7D52;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Pago</div>'+
+      '<div style="font-size:22px;font-weight:700;color:#1B5E3B">'+fmtBrl(totalPago)+'</div>'+
+    '</div>'+
+    '<div style="background:'+(totalPendente>0?'#FFF3E0':'#E8F5E9')+';border-radius:8px;padding:16px;text-align:center">'+
+      '<div style="font-size:12px;font-weight:500;color:'+(totalPendente>0?'#E65100':'#2E7D52')+';text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Pendente</div>'+
+      '<div style="font-size:22px;font-weight:700;color:'+(totalPendente>0?'#E65100':'#1B5E3B')+'">'+fmtBrl(totalPendente)+'</div>'+
+    '</div>'+
+    '<div style="background:'+(totalVencido>0?'#FFEBEE':'#E8F5E9')+';border-radius:8px;padding:16px;text-align:center">'+
+      '<div style="font-size:12px;font-weight:500;color:'+(totalVencido>0?'#C62828':'#2E7D52')+';text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Vencido</div>'+
+      '<div style="font-size:22px;font-weight:700;color:'+(totalVencido>0?'#C62828':'#1B5E3B')+'">'+fmtBrl(totalVencido)+'</div>'+
+    '</div>'+
+  '</div>'
+
+  // Progress bar
+  html+='<div style="margin-bottom:24px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+      '<span style="font-size:13px;font-weight:500;color:var(--text2)">Progresso de Pagamento</span>'+
+      '<span style="font-size:13px;font-weight:600;color:#1B5E3B">'+pctPago+'%</span>'+
+    '</div>'+
+    '<div style="background:#E0E0E0;border-radius:4px;height:10px;overflow:hidden">'+
+      '<div style="background:linear-gradient(90deg,#2E7D52,#4CAF7D);height:100%;border-radius:4px;width:'+pctPago+'%;transition:width .5s ease"></div>'+
+    '</div>'+
+  '</div>'
+
+  if(!orcs.length){
+    html+='<div style="text-align:center;padding:40px;color:#9e9e9e">'+
+      '<div style="font-size:14px;margin-bottom:8px">Nenhum orçamento aprovado com parcelas</div>'+
+      '<div style="font-size:12px">Aprove um orçamento na aba Orçamentos para gerar parcelas</div></div>'
+    el.innerHTML=html;return
+  }
+
+  // Each orcamento accordion
+  for(var oi=0;oi<orcs.length;oi++){
+    var orc=orcs[oi]
+    var parcs=orc.parcelas||[]
+    var orcPago=0,orcTotal=0,orcAtivas=0
+    for(var pi=0;pi<parcs.length;pi++){
+      if(parcs[pi].status==='cancelado')continue
+      orcTotal+=+(parcs[pi].valor||0);orcAtivas++
+      if(parcs[pi].status==='pago')orcPago+=+(parcs[pi].valor||0)
+    }
+    var orcPct=orcTotal>0?Math.round((orcPago/orcTotal)*100):0
+    var procNomes=(orc.procedimentos||'Tratamento').length>60?(orc.procedimentos||'').substring(0,57)+'...':orc.procedimentos||'Tratamento'
+
+    html+='<div class="card" style="border:1px solid var(--border);border-radius:8px;margin-bottom:16px;overflow:hidden">'+
+      '<div onclick="toggleFinPacOrc('+orc.orcamento_id+')" style="padding:16px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:#FAFAFA;border-bottom:1px solid var(--border)">'+
+        '<div style="display:flex;align-items:center;gap:12px">'+
+          '<span id="fin-pac-arrow-'+orc.orcamento_id+'" style="font-size:11px;color:var(--text3);transition:transform .2s">&#9654;</span>'+
+          '<div>'+
+            '<div style="font-size:14px;font-weight:500;color:var(--text)">Orçamento #'+orc.orcamento_id+' — '+procNomes+'</div>'+
+            '<div style="font-size:12px;color:var(--text3);margin-top:2px">Aprovado em '+(orc.data_aprovacao?fmtDt(orc.data_aprovacao.slice(0,10)):'—')+' | '+orc.forma_pagamento+' | '+orcAtivas+' parcelas</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="text-align:right">'+
+          '<div style="font-size:15px;font-weight:600;color:#1B5E3B">'+fmtBrl(orcTotal)+'</div>'+
+          '<div style="font-size:11px;color:'+(orcPct===100?'#2E7D52':'#E65100')+'">'+orcPct+'% pago</div>'+
+        '</div>'+
+      '</div>'+
+      '<div id="fin-pac-orc-'+orc.orcamento_id+'" style="display:none;padding:16px 20px">'
+
+    // Mini progress
+    html+='<div style="background:#E0E0E0;border-radius:4px;height:6px;overflow:hidden;margin-bottom:16px">'+
+      '<div style="background:#4CAF7D;height:100%;border-radius:4px;width:'+orcPct+'%"></div></div>'
+
+    // Parcelas table
+    html+='<table class="tbl" style="width:100%"><thead><tr>'+
+      '<th style="width:40px">#</th>'+
+      '<th>Tipo</th>'+
+      '<th>Forma</th>'+
+      '<th>Vencimento</th>'+
+      '<th>Pagamento</th>'+
+      '<th style="text-align:right">Valor</th>'+
+      '<th style="text-align:center">Status</th>'+
+      '<th style="text-align:center">Ações</th>'+
+    '</tr></thead><tbody>'
+
+    for(var pi=0;pi<parcs.length;pi++){
+      var pp=parcs[pi]
+      var stClass=pp.status==='pago'?'green':pp.status==='vencido'?'red':'orange'
+      var stLabel=pp.status==='pago'?'PAGO':pp.status==='vencido'?'VENCIDO':pp.status==='cancelado'?'CANCELADO':'PENDENTE'
+      if(pp.status==='cancelado')stClass='gray'
+      var formaLabel={'pix':'PIX','boleto':'Boleto','credito':'Cartão Crédito','debito':'Cartão Débito','dinheiro':'Dinheiro','cheque':'Cheque'}
+      var tipoLabel=pp.tipo==='entrada'?'Entrada':'Parcela'
+      var acoes=''
+      if(pp.status==='pendente'||pp.status==='vencido'){
+        acoes='<button onclick="darBaixaParcela('+pp.id+','+pacId+')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif;margin-right:4px" title="Dar baixa manual">Baixa</button>'
+      }
+
+      html+='<tr style="'+(pp.status==='cancelado'?'opacity:.5;text-decoration:line-through':'')+'">'+
+        '<td style="font-weight:500;color:var(--text3)">'+pp.numero_parcela+'</td>'+
+        '<td><span style="font-size:11px;font-weight:500;color:'+(pp.tipo==='entrada'?'#1565C0':'var(--text2)')+';text-transform:uppercase">'+tipoLabel+'</span></td>'+
+        '<td style="font-size:13px">'+(formaLabel[pp.forma_pagamento]||pp.forma_pagamento||'—')+'</td>'+
+        '<td>'+fmtDt(pp.data_vencimento)+'</td>'+
+        '<td>'+(pp.data_pagamento?fmtDt(pp.data_pagamento):'—')+'</td>'+
+        '<td style="text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(pp.valor)+'</td>'+
+        '<td style="text-align:center"><span class="badge badge-'+stClass+'">'+stLabel+'</span></td>'+
+        '<td style="text-align:center">'+acoes+'</td>'+
+      '</tr>'
+    }
+    html+='</tbody></table>'
+
+    // Totals row
+    html+='<div style="display:flex;justify-content:flex-end;gap:24px;padding:12px 0;border-top:1px solid var(--border);margin-top:8px;font-size:13px">'+
+      '<span style="color:var(--text3)">Pago: <strong style="color:#1B5E3B">'+fmtBrl(orcPago)+'</strong></span>'+
+      '<span style="color:var(--text3)">Restante: <strong style="color:#E65100">'+fmtBrl(orcTotal-orcPago)+'</strong></span>'+
+    '</div>'
+
+    html+='</div></div>'
+  }
+
+  el.innerHTML=html
+}
+
+function toggleFinPacOrc(orcId){
+  var el=document.getElementById('fin-pac-orc-'+orcId)
+  var arrow=document.getElementById('fin-pac-arrow-'+orcId)
+  if(!el)return
+  if(el.style.display==='none'){el.style.display='block';if(arrow)arrow.style.transform='rotate(90deg)'}
+  else{el.style.display='none';if(arrow)arrow.style.transform='rotate(0deg)'}
+}
+
+async function darBaixaParcela(parcelaId,pacId){
+  if(!confirm('Confirma a baixa manual desta parcela?'))return
+  try{
+    var r=await apiPost('parcela-baixa',{id:parcelaId})
+    if(r.success){
+      loadFinanceiroPaciente(pacId)
+    }else{alert(r.error||'Erro ao dar baixa')}
+  }catch(e){alert('Erro: '+e.message)}
+}
+
 function renderCobrancasTab(el,p){
   var pacId=p.id
   var html='<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">'+
@@ -5605,6 +6430,7 @@ async function confirmarSaque(){
 // ── INIT ────────────────────────────────────────────────────────
 renderMiniCal()
 loadDashboard()
+loadMinhasPermissoes()
 </script>
 
 <style>
@@ -5787,7 +6613,7 @@ function closeNovoDrop(){document.getElementById('novo-drop').classList.remove('
 // Navega do card Geral para a aba — encontra o htab pelo ID
 function finNavTo(id){
   var tabs=document.querySelectorAll('.fin-htab')
-  var map={geral:0,contacorrente:1,fluxocaixa:2,boletos:3,cheques:4,cartoes:5,planos:6,recebiveis:7,contaspagar:8,contasreceber:9,extrato:10,conciliacoes:11,receitasaude:12,carteira:13}
+  var map={geral:0,contacorrente:1,fluxocaixa:2,boletos:3,cheques:4,cartoes:5,planos:6,recebiveis:7,contaspagar:8,contasreceber:9,extrato:10,dre:11,conciliacoes:12,receitasaude:13,carteira:14}
   var idx=map[id]
   var el=(idx!==undefined&&tabs[idx])?tabs[idx]:null
   finTab(id,el)
@@ -5810,23 +6636,61 @@ function finTab(id,el){
   if(id==='cheques')renderCheques()
   if(id==='recebiveis')renderRecebiveis()
   if(id==='carteira')renderCarteira()
+  if(id==='dre')loadDRE()
+  if(id==='conciliacoes')loadConciliacoes()
+  if(id==='receitasaude')loadReceitaSaude()
 }
 
-function renderBoletos(){
-  var dt=getTabDates('dp-bol-de','dp-bol-ate')
-  apiData('pagamentos',{forma:'Boleto',de:dt.de,ate:dt.ate}).then(function(d){
-    var rows=d.data||[]
-    var parent=document.querySelector('#fin-boletos .empty-state')||document.querySelector('#fin-boletos .ctrl-tbl-head+div')
-    if(!parent)return
-    if(!rows.length){parent.innerHTML='<div class="empty-state"><svg width="80" height="80" viewBox="0 0 100 100" fill="none"><rect x="20" y="15" width="35" height="45" rx="3" fill="#8B4513" transform="rotate(-15 20 15)"/><rect x="35" y="20" width="35" height="45" rx="3" fill="#E65100" transform="rotate(-7 35 20)"/><rect x="50" y="25" width="35" height="45" rx="3" fill="#FF6D00"/></svg><span>Sem boletos no período</span></div>';return}
-    parent.innerHTML=rows.map(function(r){
-      return '<div style="display:grid;grid-template-columns:130px 130px 1fr 1fr 120px 100px 80px 100px 80px 80px;padding:10px 14px;border-bottom:1px solid var(--border2);font-size:12px;background:var(--white);align-items:center">'+
-        '<span>'+fmtDt(r.data_vencimento)+'</span><span>'+fmtDt(r.data_recebimento)+'</span><span>—</span>'+
-        '<span style="color:var(--blue)">'+(r.paciente_nome||'—')+'</span><span>—</span>'+
-        '<span style="font-weight:500">'+fmtBrl(r.valor)+'</span><span>—</span><span>'+fmtBrl(r.valor)+'</span>'+
-        '<span style="color:'+(r.confirmado?'var(--green)':'var(--orange)')+'">'+( r.confirmado?'Pago':'Em Aberto')+'</span><span></span></div>'
-    }).join('')
-  }).catch(function(){})
+async function renderBoletos(){
+  var parent=document.querySelector('#fin-boletos .ctrl-tbl-head+div')||document.querySelector('#fin-boletos .empty-state')
+  if(!parent){
+    var fp=document.getElementById('fin-boletos');if(!fp)return
+    fp.innerHTML='<div style="padding:24px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+        '<div style="font-size:16px;font-weight:500;color:var(--text)">Controle de Boletos</div>'+
+        '<div style="display:flex;gap:8px">'+
+          '<select id="bol-status-filter" onchange="renderBoletos()" style="border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--text);background:#fff;outline:none">'+
+            '<option value="todas">Todos</option><option value="pendente">Em Aberto</option><option value="pago">Pagos</option><option value="vencido">Vencidos</option>'+
+          '</select>'+
+        '</div>'+
+      '</div>'+
+      '<div id="bol-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px"></div>'+
+      '<div id="bol-list"></div>'+
+    '</div>'
+    parent=document.getElementById('bol-list')
+  }
+  parent=document.getElementById('bol-list')||parent
+  parent.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var statusFilter=(document.getElementById('bol-status-filter')||{}).value||'todas'
+    var d=await apiData('boletos-dashboard',{status:statusFilter})
+    var rows=d.boletos||[],tots=d.totais||[]
+
+    // Summary cards
+    var cardsEl=document.getElementById('bol-cards')
+    if(cardsEl){
+      var aberto=0,pago=0,vencido=0
+      tots.forEach(function(t){
+        if(t.status==='pendente')aberto=t.total||0
+        if(t.status==='pago')pago=t.total||0
+        if(t.status==='vencido')vencido=t.total||0
+      })
+      cardsEl.innerHTML=
+        '<div style="background:#FFF3E0;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#E65100;text-transform:uppercase;margin-bottom:4px">Em Aberto</div><div style="font-size:18px;font-weight:700;color:#E65100">'+fmtBrl(aberto)+'</div></div>'+
+        '<div style="background:#E8F5E9;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#2E7D52;text-transform:uppercase;margin-bottom:4px">Pagos</div><div style="font-size:18px;font-weight:700;color:#1B5E3B">'+fmtBrl(pago)+'</div></div>'+
+        '<div style="background:#FFEBEE;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#C62828;text-transform:uppercase;margin-bottom:4px">Vencidos</div><div style="font-size:18px;font-weight:700;color:#C62828">'+fmtBrl(vencido)+'</div></div>'
+    }
+
+    if(!rows.length){parent.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum boleto encontrado</div>';return}
+    var html='<table class="tbl" style="width:100%"><thead><tr><th>Paciente</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Pagamento</th><th>Status</th><th>Ações</th></tr></thead><tbody>'
+    rows.forEach(function(r){
+      var stClass=r.status==='pago'?'green':r.status==='vencido'?'red':'orange'
+      var acoes=r.invoice_url?'<a href="'+r.invoice_url+'" target="_blank" style="color:var(--green);font-size:12px;text-decoration:none">Ver Boleto</a>':''
+      html+='<tr><td style="color:var(--blue)">'+(r.paciente_nome||'—')+'</td><td>'+(r.descricao||'—')+'</td><td style="font-weight:500;color:#1B5E3B">'+fmtBrl(r.valor)+'</td><td>'+fmtDt(r.data_vencimento)+'</td><td>'+(r.data_pagamento?fmtDt(r.data_pagamento):'—')+'</td><td><span class="badge badge-'+stClass+'">'+r.status.toUpperCase()+'</span></td><td>'+acoes+'</td></tr>'
+    })
+    html+='</tbody></table>'
+    parent.innerHTML=html
+  }catch(e){parent.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">'+e.message+'</div>'}
 }
 
 function renderCheques(){
@@ -5862,6 +6726,349 @@ async function renderRecebiveis(){
     if(inds[0])inds[0].textContent=fmtBrl(conf)
     if(inds[2])inds[2].textContent=fmtBrl(pend)
   }catch(e){target.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">'+e.message+'</div>'}
+}
+
+// ══════════════════════════════════════════════════════
+// CONCILIAÇÃO BANCÁRIA
+// ══════════════════════════════════════════════════════
+async function loadConciliacoes(){
+  var el=document.getElementById('conciliacao-content');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var d=await apiData('conciliacoes-listar',{})
+    var rows=d.conciliacoes||[]
+
+    // Cards
+    var cardsEl=document.getElementById('conciliacao-cards')
+    if(cardsEl){
+      var total=rows.length,concluidas=rows.filter(function(r){return r.status==='concluida'}).length,pendentes=rows.filter(function(r){return r.status!=='concluida'}).length
+      cardsEl.innerHTML=
+        '<div style="background:#E8F5E9;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#2E7D52;text-transform:uppercase;margin-bottom:4px">Concluídas</div><div style="font-size:22px;font-weight:700;color:#1B5E3B">'+concluidas+'</div></div>'+
+        '<div style="background:#FFF3E0;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#E65100;text-transform:uppercase;margin-bottom:4px">Pendentes</div><div style="font-size:22px;font-weight:700;color:#E65100">'+pendentes+'</div></div>'+
+        '<div style="background:#E3F2FD;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#1565C0;text-transform:uppercase;margin-bottom:4px">Total</div><div style="font-size:22px;font-weight:700;color:#1565C0">'+total+'</div></div>'
+    }
+
+    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">Nenhuma conciliação realizada. Importe um extrato CSV para começar.</div>';return}
+    var html='<table class="tbl" style="width:100%"><thead><tr><th>Data</th><th>Descrição</th><th>Período</th><th>Itens</th><th>Conciliados</th><th>Status</th><th>Ações</th></tr></thead><tbody>'
+    rows.forEach(function(r){
+      var stClass=r.status==='concluida'?'green':r.status==='parcial'?'blue':'orange'
+      var pct=r.total_itens>0?Math.round((r.total_conciliados/r.total_itens)*100):0
+      html+='<tr><td>'+fmtDt(r.created_at)+'</td><td>'+(r.descricao||'—')+'</td><td>'+fmtDt(r.periodo_de)+' a '+fmtDt(r.periodo_ate)+'</td><td style="text-align:center">'+r.total_itens+'</td><td style="text-align:center">'+r.total_conciliados+' ('+pct+'%)</td><td><span class="badge badge-'+stClass+'">'+(r.status||'pendente').toUpperCase()+'</span></td><td><button onclick="abrirConciliacao('+r.id+')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Detalhar</button></td></tr>'
+    })
+    html+='</tbody></table>'
+    el.innerHTML=html
+  }catch(e){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">'+e.message+'</div>'}
+}
+
+function abrirImportExtrato(){
+  var old=document.getElementById('modal-import-extrato');if(old)old.remove()
+  var m=document.createElement('div')
+  m.id='modal-import-extrato'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:520px;max-height:80vh;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
+      '<div style="font-size:18px;font-weight:500;color:#1A1A1A;margin-bottom:8px">Importar Extrato Bancário</div>'+
+      '<div style="font-size:13px;color:var(--text3);margin-bottom:16px">Faça upload de um arquivo CSV com colunas: Data, Descrição, Valor. Valores negativos são débitos.</div>'+
+      '<div style="margin-bottom:16px">'+
+        '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Descrição da Importação</label>'+
+        '<input id="ext-desc" placeholder="Ex: Extrato Santander Março/2026" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box">'+
+      '</div>'+
+      '<div style="margin-bottom:16px">'+
+        '<input type="file" id="ext-file" accept=".csv,.txt" style="font-size:13px">'+
+      '</div>'+
+      '<div id="ext-preview" style="max-height:200px;overflow:auto;margin-bottom:16px"></div>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+        '<button onclick="document.getElementById(\'modal-import-extrato\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+        '<button id="ext-btn-importar" onclick="processarImportExtrato()" disabled style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;opacity:.5">Importar e Conciliar</button>'+
+      '</div>'+
+    '</div>'
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)m.remove()}
+
+  document.getElementById('ext-file').addEventListener('change',function(e){
+    var file=e.target.files[0];if(!file)return
+    var reader=new FileReader()
+    reader.onload=function(ev){
+      var text=ev.target.result
+      var lines=text.split(/\r?\n/).filter(Boolean)
+      if(lines.length<2){document.getElementById('ext-preview').innerHTML='<div style="color:var(--red);font-size:13px">Arquivo vazio ou formato inválido</div>';return}
+
+      // Try to detect separator
+      var sep=lines[0].indexOf(';')>=0?';':','
+      var header=lines[0].split(sep).map(function(h){return h.replace(/"/g,'').trim().toLowerCase()})
+      var dataIdx=header.findIndex(function(h){return h.match(/data|date/)})
+      var descIdx=header.findIndex(function(h){return h.match(/desc|hist|memo/)})
+      var valIdx=header.findIndex(function(h){return h.match(/valor|value|amount|saldo/)===null&&h.match(/valor|value|amount/)})
+      if(valIdx===-1)valIdx=header.findIndex(function(h){return h.match(/valor|value|amount|credito|débito/)})
+      if(dataIdx===-1)dataIdx=0;if(descIdx===-1)descIdx=1;if(valIdx===-1)valIdx=2
+
+      window._extItens=[]
+      var previewHtml='<table style="width:100%;font-size:12px;border-collapse:collapse"><tr style="background:#f5f5f5"><th style="padding:6px 8px;text-align:left">Data</th><th style="padding:6px 8px;text-align:left">Descrição</th><th style="padding:6px 8px;text-align:right">Valor</th></tr>'
+      for(var i=1;i<Math.min(lines.length,100);i++){
+        var cols=lines[i].split(sep).map(function(c){return c.replace(/"/g,'').trim()})
+        if(cols.length<3)continue
+        var rawDate=cols[dataIdx]||''
+        // Parse date: try DD/MM/YYYY or YYYY-MM-DD
+        var dt=rawDate
+        if(rawDate.match(/^\d{2}\/\d{2}\/\d{4}$/)){dt=rawDate.split('/').reverse().join('-')}
+        var val=parseFloat((cols[valIdx]||'0').replace(/\./g,'').replace(',','.'))||0
+        var desc=cols[descIdx]||''
+        if(!dt||!desc)continue
+        window._extItens.push({data:dt,descricao:desc,valor:Math.abs(val),tipo:val>=0?'credito':'debito'})
+        previewHtml+='<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:4px 8px">'+fmtDt(dt)+'</td><td style="padding:4px 8px">'+desc+'</td><td style="padding:4px 8px;text-align:right;color:'+(val>=0?'#1B5E3B':'#C62828')+'">'+fmtBrl(val)+'</td></tr>'
+      }
+      previewHtml+='</table>'
+      document.getElementById('ext-preview').innerHTML=previewHtml
+      var btn=document.getElementById('ext-btn-importar')
+      if(window._extItens.length>0){btn.disabled=false;btn.style.opacity='1'}
+    }
+    reader.readAsText(file,'UTF-8')
+  })
+}
+
+async function processarImportExtrato(){
+  if(!window._extItens||!window._extItens.length){alert('Nenhum item para importar');return}
+  var btn=document.getElementById('ext-btn-importar');btn.disabled=true;btn.textContent='Importando...'
+  try{
+    var desc=document.getElementById('ext-desc').value||'Importação CSV'
+    var r=await apiPost('conciliacao-importar',{descricao:desc,itens:window._extItens})
+    if(r.success){
+      document.getElementById('modal-import-extrato').remove()
+      alert('Importação concluída! '+r.total+' itens importados, '+r.conciliados+' conciliados automaticamente.')
+      loadConciliacoes()
+    }else{alert(r.error||'Erro');btn.disabled=false;btn.textContent='Importar e Conciliar'}
+  }catch(e){alert('Erro: '+e.message);btn.disabled=false;btn.textContent='Importar e Conciliar'}
+}
+
+async function abrirConciliacao(concId){
+  var el=document.getElementById('conciliacao-content');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando itens...</div>'
+  try{
+    var d=await apiData('conciliacao-itens',{conciliacao_id:concId})
+    var itens=d.itens||[]
+    if(!itens.length){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum item</div>';return}
+
+    var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><button onclick="loadConciliacoes()" style="background:transparent;color:var(--green);border:none;font-size:13px;cursor:pointer;font-family:Roboto,sans-serif">&larr; Voltar</button><span style="font-size:13px;color:var(--text3)">'+itens.length+' itens</span></div>'
+    html+='<table class="tbl" style="width:100%"><thead><tr><th>Data</th><th>Descrição</th><th style="text-align:right">Valor</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead><tbody>'
+    itens.forEach(function(it){
+      var stClass=it.status==='conciliado'?'green':it.status==='ignorado'?'gray':'orange'
+      var acoes=''
+      if(it.status==='pendente'){
+        acoes='<button onclick="conciliarItem('+it.id+',\'conciliar\')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif;margin-right:4px">Conciliar</button>'+
+          '<button onclick="conciliarItem('+it.id+',\'ignorar\')" style="background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Ignorar</button>'
+      }
+      html+='<tr><td>'+fmtDt(it.data)+'</td><td>'+(it.descricao||'—')+'</td><td style="text-align:right;font-weight:500;color:'+(it.tipo==='credito'?'#1B5E3B':'#C62828')+'">'+fmtBrl(it.valor)+'</td><td><span style="font-size:11px;color:var(--text3);text-transform:uppercase">'+(it.tipo||'—')+'</span></td><td><span class="badge badge-'+stClass+'">'+(it.status||'pendente').toUpperCase()+'</span></td><td>'+acoes+'</td></tr>'
+    })
+    html+='</tbody></table>'
+    el.innerHTML=html
+  }catch(e){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">'+e.message+'</div>'}
+}
+
+async function conciliarItem(itemId,action){
+  try{
+    var r=await apiPost('conciliacao-conciliar',{item_id:itemId,action:action})
+    if(r.success){
+      // Reload the current view
+      var btn=event.target;var tr=btn.closest('tr')
+      if(tr){
+        var statusCell=tr.querySelector('td:nth-child(5)')
+        var acaoCell=tr.querySelector('td:nth-child(6)')
+        if(statusCell)statusCell.innerHTML='<span class="badge badge-'+(action==='ignorar'?'gray':'green')+'">'+(action==='ignorar'?'IGNORADO':'CONCILIADO')+'</span>'
+        if(acaoCell)acaoCell.innerHTML=''
+      }
+    }else alert(r.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+// ══════════════════════════════════════════════════════
+// RECEITA SAÚDE
+// ══════════════════════════════════════════════════════
+async function loadReceitaSaude(){
+  var el=document.getElementById('receita-saude-list');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var d=await apiData('receitas-saude',{})
+    var rows=d.recibos||[]
+    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">Nenhum recibo emitido. Clique em "+ Novo Recibo" para criar.</div>';return}
+    var html='<table class="tbl" style="width:100%"><thead><tr><th>Data</th><th>Paciente</th><th>CPF Paciente</th><th>Profissional</th><th>CRO</th><th>Descrição</th><th style="text-align:right">Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody>'
+    rows.forEach(function(r){
+      var stClass=r.status==='emitido'?'green':'orange'
+      var acoes=''
+      if(r.status==='rascunho'){
+        acoes='<button onclick="emitirReceitaSaude('+r.id+')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Emitir</button>'
+      }
+      html+='<tr><td>'+fmtDt(r.data_emissao)+'</td><td>'+(r.nome_paciente||'—')+'</td><td style="font-size:12px">'+(r.cpf_paciente||'—')+'</td><td>'+(r.nome_profissional||'—')+'</td><td style="font-size:12px">'+(r.cro_profissional||'—')+'</td><td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis">'+(r.descricao_servico||'—')+'</td><td style="text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(r.valor)+'</td><td><span class="badge badge-'+stClass+'">'+(r.status||'rascunho').toUpperCase()+'</span></td><td>'+acoes+'</td></tr>'
+    })
+    html+='</tbody></table>'
+    el.innerHTML=html
+  }catch(e){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">'+e.message+'</div>'}
+}
+
+function abrirModalReceitaSaude(){
+  var old=document.getElementById('modal-receita-saude');if(old)old.remove()
+  var m=document.createElement('div')
+  m.id='modal-receita-saude'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:560px;max-height:90vh;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
+      '<div style="font-size:18px;font-weight:500;color:#1A1A1A;margin-bottom:20px">Novo Recibo - Receita Saude</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Nome do Paciente *</label><input id="rs-pac-nome" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">CPF do Paciente *</label><input id="rs-pac-cpf" placeholder="000.000.000-00" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Nome do Profissional *</label><input id="rs-prof-nome" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">CPF Profissional</label><input id="rs-prof-cpf" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">CRO *</label><input id="rs-prof-cro" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Valor *</label><input id="rs-valor" type="number" step="0.01" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Data de Emissão</label><input id="rs-data" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+      '</div>'+
+      '<div style="margin-bottom:16px">'+
+        '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Descrição dos Serviços Prestados *</label>'+
+        '<textarea id="rs-desc" rows="3" placeholder="Ex: Tratamento endodôntico, restauração em resina..." style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;resize:vertical;font-family:Roboto,sans-serif;box-sizing:border-box"></textarea>'+
+      '</div>'+
+      '<div style="background:#FFF3E0;border-radius:6px;padding:12px;margin-bottom:16px;font-size:12px;color:#E65100">'+
+        'Os dados serao salvos como rascunho. Apos conferir, clique em "Emitir" para marcar como emitido e utilizar os dados no portal Receita Saude (gov.br).'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+        '<button onclick="document.getElementById(\'modal-receita-saude\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+        '<button onclick="salvarReceitaSaude()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Salvar Rascunho</button>'+
+      '</div>'+
+    '</div>'
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)m.remove()}
+}
+
+async function salvarReceitaSaude(){
+  var nome=document.getElementById('rs-pac-nome').value
+  var cpf=document.getElementById('rs-pac-cpf').value
+  var profNome=document.getElementById('rs-prof-nome').value
+  var profCpf=document.getElementById('rs-prof-cpf').value
+  var profCro=document.getElementById('rs-prof-cro').value
+  var valor=document.getElementById('rs-valor').value
+  var data=document.getElementById('rs-data').value
+  var desc=document.getElementById('rs-desc').value
+
+  if(!nome||!cpf||!profNome||!profCro||!valor||!desc){alert('Preencha os campos obrigatórios');return}
+  try{
+    var r=await apiPost('receitas-saude',{
+      nome_paciente:nome,cpf_paciente:cpf,
+      nome_profissional:profNome,cpf_profissional:profCpf,cro_profissional:profCro,
+      valor:parseFloat(valor),data_emissao:data,descricao_servico:desc
+    })
+    if(r.success){
+      document.getElementById('modal-receita-saude').remove()
+      loadReceitaSaude()
+    }else alert(r.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function emitirReceitaSaude(id){
+  if(!confirm('Confirma a emissão deste recibo? Após emitido, os dados devem ser lançados no portal Receita Saúde (gov.br).'))return
+  try{
+    var r=await apiPost('receita-saude-emitir',{id:id})
+    if(r.success)loadReceitaSaude()
+    else alert(r.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+// ══════════════════════════════════════════════════════
+// DRE
+// ══════════════════════════════════════════════════════
+var dreChart=null
+async function loadDRE(){
+  var anoSel=document.getElementById('dre-ano')
+  var periodoSel=document.getElementById('dre-periodo')
+  var el=document.getElementById('dre-content')
+  if(!anoSel||!el)return
+
+  // Populate year selector if empty
+  if(!anoSel.options.length){
+    var anoAtual=new Date().getFullYear()
+    for(var a=anoAtual;a>=anoAtual-3;a--){
+      var opt=document.createElement('option');opt.value=a;opt.textContent=a
+      anoSel.appendChild(opt)
+    }
+  }
+
+  var ano=parseInt(anoSel.value)||new Date().getFullYear()
+  var periodo=periodoSel?periodoSel.value:'anual'
+  var mesIni=1,mesFim=12
+  if(periodo==='trimestre1'){mesIni=1;mesFim=3}
+  if(periodo==='trimestre2'){mesIni=4;mesFim=6}
+  if(periodo==='trimestre3'){mesIni=7;mesFim=9}
+  if(periodo==='trimestre4'){mesIni=10;mesFim=12}
+
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando DRE...</div>'
+
+  try{
+    var d=await apiData('dre',{ano:ano,mes_inicio:mesIni,mes_fim:mesFim})
+    if(!d.success){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">Erro ao carregar DRE</div>';return}
+    var meses=d.meses||[],anual=d.anual||{}
+    var mesesNomes=['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+
+    // Build DRE table
+    var html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">'
+
+    // Header
+    html+='<thead><tr style="background:#F5F5F5"><th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text);border-bottom:2px solid var(--border)">Conta</th>'
+    meses.forEach(function(m){html+='<th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text);border-bottom:2px solid var(--border)">'+mesesNomes[m.mes]+'/'+ano+'</th>'})
+    if(meses.length>1)html+='<th style="padding:10px 14px;text-align:right;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);background:#EEEEEE">Total</th>'
+    html+='</tr></thead><tbody>'
+
+    function dreRow(label,key,color,bold,border){
+      var s='<tr style="'+(border?'border-top:2px solid var(--border)':'')+'">'
+      s+='<td style="padding:8px 14px;color:'+(color||'var(--text2)')+';font-weight:'+(bold?'600':'400')+'">'+label+'</td>'
+      meses.forEach(function(m){
+        var v=m[key]||0
+        s+='<td style="padding:8px 14px;text-align:right;color:'+(v<0?'#C62828':color||'var(--text2)')+';font-weight:'+(bold?'600':'400')+'">'+fmtBrl(v)+'</td>'
+      })
+      if(meses.length>1){
+        var tot=anual[key]||0
+        s+='<td style="padding:8px 14px;text-align:right;color:'+(tot<0?'#C62828':color||'var(--text)')+';font-weight:700;background:#EEEEEE">'+fmtBrl(tot)+'</td>'
+      }
+      s+='</tr>';return s
+    }
+
+    html+=dreRow('(+) Receita Bruta','receita_bruta','#1B5E3B',true,false)
+    html+=dreRow('(-) Impostos','impostos','#C62828',false,false)
+    html+=dreRow('(=) Receita Líquida','receita_liquida','#1B5E3B',true,true)
+    html+=dreRow('(-) Custos Fixos','custos_fixos','#C62828',false,false)
+    html+=dreRow('(-) Custos Variáveis','custos_variaveis','#C62828',false,false)
+    html+=dreRow('(-) Marketing','marketing','#C62828',false,false)
+    html+=dreRow('(=) Resultado Operacional','resultado_operacional','#1565C0',true,true)
+    html+=dreRow('(-) Investimentos','investimentos','#C62828',false,false)
+    html+=dreRow('(=) RESULTADO FINAL','resultado_final',null,true,true)
+
+    html+='</tbody></table></div>'
+    el.innerHTML=html
+
+    // Chart
+    var canvas=document.getElementById('dre-canvas')
+    if(canvas){
+      if(dreChart){dreChart.destroy();dreChart=null}
+      var labels=meses.map(function(m){return mesesNomes[m.mes]})
+      dreChart=new Chart(canvas,{
+        type:'bar',
+        data:{labels:labels,datasets:[
+          {label:'Receita Bruta',data:meses.map(function(m){return m.receita_bruta}),backgroundColor:'#4CAF50'},
+          {label:'Custos Totais',data:meses.map(function(m){return -(m.custos_fixos+m.custos_variaveis+m.impostos+m.marketing)}),backgroundColor:'#F44336'},
+          {label:'Resultado Final',data:meses.map(function(m){return m.resultado_final}),backgroundColor:meses.map(function(m){return m.resultado_final>=0?'#1565C0':'#E53935'}),type:'bar'}
+        ]},
+        options:{
+          responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{display:true,position:'bottom',labels:{font:{size:11},boxWidth:12}},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+fmtBrl(Math.abs(ctx.raw))}}}},
+          scales:{
+            x:{grid:{display:false}},
+            y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{callback:function(v){var abs=Math.abs(v);return (v<0?'-':'')+(abs>=1000?(abs/1000).toFixed(0)+'k':abs)}}}
+          },
+          animation:{duration:400}
+        }
+      })
+    }
+  }catch(e){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">Erro: '+e.message+'</div>'}
 }
 
 // ══════════════════════════════════════════════════════
@@ -6135,41 +7342,58 @@ function ccImprimir(){ccExportar()}
 // FLUXO DE CAIXA — Chart.js
 // ══════════════════════════════════════════════════════
 let fdcChart=null
-function renderFDC(){
-  const canvas=document.getElementById('fdc-canvas')
+async function renderFDC(){
+  var canvas=document.getElementById('fdc-canvas')
   if(!canvas)return
   if(fdcChart){fdcChart.destroy();fdcChart=null}
-  const labels=['02/MAR','03/MAR','04/MAR','05/MAR','06/MAR','07/MAR','08/MAR','09/MAR','10/MAR','11/MAR','12/MAR','13/MAR','14/MAR','16/MAR','17/MAR','19/MAR','21/MAR','24/MAR','26/MAR','28/MAR','31/MAR']
-  const ent=[800,1200,2500,0,500,0,427,4741,810,743,1099,6711,350,0,1200,800,600,500,300,200,100]
-  const sai=[1200,3800,4200,500,300,0,0,0,4240,882,0,0,0,5500,3200,2800,2100,1500,900,600,300]
-  const arec=[0,0,0,0,0,0,0,0,0,0,0,0,0,2500,1800,1400,1200,900,700,500,300]
-  const apag=[0,0,0,0,0,0,0,0,0,0,0,0,0,8000,5500,4200,3000,2000,1200,800,400]
-  let ac=0;const sacum=ent.map((e,i)=>{ac+=e-sai[i];return ac})
-  fdcChart=new Chart(canvas,{
-    data:{labels,datasets:[
-      {type:'bar',label:'Entrada',data:ent,backgroundColor:'#4CAF50',yAxisID:'y'},
-      {type:'bar',label:'Saída',data:sai.map(v=>-v),backgroundColor:'#F44336',yAxisID:'y'},
-      {type:'bar',label:'A Receber',data:arec,backgroundColor:'#2196F3',yAxisID:'y'},
-      {type:'bar',label:'A Pagar',data:apag.map(v=>-v),backgroundColor:'#F8BBD0',yAxisID:'y'},
-      {type:'line',label:'Saldo Acumulado',data:sacum,borderColor:'#1565C0',backgroundColor:'transparent',pointBackgroundColor:'#1565C0',pointRadius:3,tension:0.3,yAxisID:'y'},
-    ]},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
-      scales:{
-        x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{maxRotation:0,font:{size:9},color:'#9E9E9E',maxTicksLimit:10}},
-        y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:9},color:'#9E9E9E',callback:v=>v>=0?(v>=1000?v/1000+'k':v):(v<=-1000?v/1000+'k':v)}}
-      },
-      animation:{duration:400}
+
+  // Get month/year from selectors or default
+  var hoje=new Date()
+  var fcMes=hoje.getMonth()+1, fcAno=hoje.getFullYear()
+  try{
+    var d=await apiData('fluxo-caixa-real',{mes:fcMes,ano:fcAno})
+    if(!d.success)return
+    var dias=d.por_dia||[], tots=d.totais||{}
+
+    // Update summary cards if they exist
+    var fcSumEl=document.getElementById('fdc-summary')
+    if(fcSumEl){
+      fcSumEl.innerHTML=
+        '<div style="background:#E8F5E9;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#2E7D52;text-transform:uppercase;margin-bottom:4px">Entradas</div><div style="font-size:18px;font-weight:700;color:#1B5E3B">'+fmtBrl(tots.entradas)+'</div></div>'+
+        '<div style="background:#FFEBEE;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#C62828;text-transform:uppercase;margin-bottom:4px">Saídas</div><div style="font-size:18px;font-weight:700;color:#C62828">'+fmtBrl(tots.saidas)+'</div></div>'+
+        '<div style="background:#E3F2FD;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#1565C0;text-transform:uppercase;margin-bottom:4px">A Receber</div><div style="font-size:18px;font-weight:700;color:#1565C0">'+fmtBrl(tots.a_receber)+'</div></div>'+
+        '<div style="background:'+(tots.saldo>=0?'#E8F5E9':'#FFEBEE')+';border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:'+(tots.saldo>=0?'#2E7D52':'#C62828')+';text-transform:uppercase;margin-bottom:4px">Saldo</div><div style="font-size:18px;font-weight:700;color:'+(tots.saldo>=0?'#1B5E3B':'#C62828')+'">'+fmtBrl(tots.saldo)+'</div></div>'
     }
-  })
-  try{Chart.register({id:'vline_'+Date.now(),afterDraw(chart){
-    const meta=chart.getDatasetMeta(0)
-    if(!meta.data[12])return
-    const x=meta.data[12].x,ctx=chart.ctx,{top,bottom}=chart.chartArea
-    ctx.save();ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,bottom)
-    ctx.strokeStyle='#E53935';ctx.lineWidth=1.5;ctx.stroke();ctx.restore()
-  }})}catch(e){}
+
+    var labels=[],ent=[],sai=[],arec=[],apag=[],sacum=[]
+    dias.forEach(function(dd){
+      labels.push(String(dd.dia).padStart(2,'0'))
+      ent.push(dd.entradas||0)
+      sai.push(dd.saidas||0)
+      arec.push(dd.a_receber||0)
+      apag.push(dd.a_pagar||0)
+      sacum.push(dd.acumulado||0)
+    })
+
+    fdcChart=new Chart(canvas,{
+      data:{labels:labels,datasets:[
+        {type:'bar',label:'Entrada',data:ent,backgroundColor:'#4CAF50',yAxisID:'y'},
+        {type:'bar',label:'Saída',data:sai.map(function(v){return -v}),backgroundColor:'#F44336',yAxisID:'y'},
+        {type:'bar',label:'A Receber',data:arec,backgroundColor:'#2196F3',yAxisID:'y'},
+        {type:'bar',label:'A Pagar',data:apag.map(function(v){return -v}),backgroundColor:'#F8BBD0',yAxisID:'y'},
+        {type:'line',label:'Saldo Acumulado',data:sacum,borderColor:'#1565C0',backgroundColor:'transparent',pointBackgroundColor:'#1565C0',pointRadius:2,tension:0.3,yAxisID:'y'},
+      ]},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:true,position:'bottom',labels:{font:{size:11},boxWidth:12}},tooltip:{mode:'index',intersect:false,callbacks:{label:function(ctx){return ctx.dataset.label+': '+fmtBrl(Math.abs(ctx.raw))}}}},
+        scales:{
+          x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{maxRotation:0,font:{size:9},color:'#9E9E9E'}},
+          y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:9},color:'#9E9E9E',callback:function(v){return v>=0?(v>=1000?(v/1000).toFixed(0)+'k':v):(v<=-1000?(v/1000).toFixed(0)+'k':v)}}}
+        },
+        animation:{duration:400}
+      }
+    })
+  }catch(e){console.error('[renderFDC]',e.message)}
 }
 
 // ══════════════════════════════════════════════════════
@@ -6194,75 +7418,261 @@ async function renderCartoes(){
     }).join('')
   }catch(e){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">'+e.message+'</div>'}
 }
-function renderPlanos(){
-  const data=[
-    {dt:'02/03/2026',pac:'JOSILDA FERREIRA DE SIQUEIRA',guia:'34605...',proc:'85200158 - TRATAMENTO ENDODÔNTICO MULTIRRADICULAR (47)',conv:'SULAMÉRICA',val:'R$ 291,61'},
-    {dt:'02/03/2026',pac:'LAURA CARVALHO PEREIRA M...',guia:'34616...',proc:'85200140 - TRATAMENTO ENDODÔNTICO BIRRADICULAR (15)',conv:'SULAMÉRICA',val:'R$ 207,14'},
-    {dt:'02/03/2026',pac:'GIOVANNA SOTELO DE LIMA D...',guia:'179662',proc:'85200140 - TRATAMENTO ENDODÔNTICO BIRRADICULAR (25)',conv:'VIVENTERIS',val:'R$ 150,00'},
-    {dt:'03/03/2026',pac:'CARLOS EDUARDO CORDEIRO...',guia:'34632...',proc:'85200107 - RETRATAMENTO ENDODÔNTICO MULTIRRADICULAR (36)',conv:'SULAMÉRICA',val:'R$ 419,52'},
-    {dt:'03/03/2026',pac:'WILLIAM MENEGATTI SANCHEZ',guia:'34636...',proc:'85100218 - RESTAURAÇÃO EM RESINA FOTOPOLIMERIZÁVEL 3 FACE',conv:'SULAMÉRICA',val:'R$ 49,05'},
-    {dt:'03/03/2026',pac:'MERCIA MIRANDA MELO',guia:'180319',proc:'85100200 - RESTAURAÇÃO EM RESINA FOTOPOLIMERIZÁVEL 2 FACES',conv:'VIVENTERIS',val:'R$ 36,38'},
-  ]
-  document.getElementById('planos-list').innerHTML=data.map(r=>`<div style="display:grid;grid-template-columns:100px 1fr 80px 1fr 100px 80px;padding:10px 14px;border-bottom:1px solid var(--border2);font-size:12px;background:var(--white);align-items:center;gap:8px">
-    <span style="color:var(--text3)">${r.dt}</span>
-    <span style="color:var(--blue);cursor:pointer;font-weight:500">${r.pac}</span>
-    <span style="color:var(--text3)">${r.guia}</span>
-    <div><div>${r.proc}</div><div style="font-size:10px;color:var(--text3);margin-top:2px">${r.conv}</div></div>
-    <span style="font-weight:500;color:var(--green)">${r.val}</span>
-    <div style="display:flex;gap:6px"><button class="btn-icon-sm" style="color:var(--green)">⬇</button><button class="btn-icon-sm" style="color:var(--red)">🗑</button></div>
-  </div>`).join('')
-}
-function renderCPagar(){
-  const lanc=[
-    {classif:'Custo Fixo',cat:'COMISSÃO',desc:'DR JOÃO PAULO SCHUS...',val:'R$ 825,00'},
-    {classif:'Custo Fixo',cat:'COMISSÃO',desc:'DRA CAROLINE PREUS',val:'R$ 805,00'},
-    {classif:'Custo Variável',cat:'Funcionários',desc:'RESCISÃO COMPLEMEN...',val:'R$ 622,53'},
-    {classif:'Custo Fixo',cat:'COMISSÃO',desc:'DR NELSON OSHIRO',val:'R$ 825,00'},
-    {classif:'Custo Variável',cat:'COMISSÃO',desc:'DRA ELOISA AMARAL',val:'R$ 160,00'},
-    {classif:'Custo Fixo',cat:'Fornecedores',desc:'SOS ALARMES',val:'R$ 247,07'},
-    {classif:'Custo Variável',cat:'Fornecedores',desc:'JP PRODUTOS ODONTO...',val:'R$ 414,33'},
-    {classif:'Custo Variável',cat:'Materiais',desc:'LSI - CREMER - 10/12',val:'R$ 340,94'},
-  ]
-  document.getElementById('cpagar-list').innerHTML=`<div class="cpagar-day">
-    <div class="cpagar-day-badge"><div class="cc-day-num">10</div><div class="cc-day-mon">MAR</div></div>
-    <div class="cpagar-day-rows">
-      <div style="display:grid;grid-template-columns:70px 60px 100px 110px 120px 1fr 80px;padding:8px 14px;background:var(--gray1);font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border)">
-        <span>Status</span><span>Ação</span><span>Classif.</span><span>Categoria</span><span>Vencimento</span><span>Descrição</span><span style="text-align:right">Valor</span>
-      </div>
-      ${lanc.map(l=>`<div class="cpagar-row" style="grid-template-columns:70px 60px 100px 110px 120px 1fr 80px">
-        <span class="realizado">✓ REALIZADO</span>
-        <div style="display:flex;gap:2px"><button class="btn-icon-sm">👁</button><button class="btn-icon-sm">⊗</button></div>
-        <span>${l.classif}</span><span style="color:var(--text3)">${l.cat}</span><span>10/03/2026</span>
-        <span>${l.desc}</span><span style="text-align:right;font-weight:500">${l.val}</span>
-      </div>`).join('')}
-      <div style="display:flex;justify-content:flex-end;padding:10px 14px;font-size:13px;font-weight:600;border-top:1px solid var(--border)">R$ 4.239,87</div>
-    </div>
-  </div>`
-}
-async function renderCReceber(){
-  var el=document.getElementById('creceber-list');if(!el)return
+async function renderPlanos(){
+  var el=document.getElementById('planos-list')
+  if(!el){
+    var fp=document.getElementById('fin-planos');if(!fp)return
+    fp.innerHTML='<div style="padding:24px">'+
+      '<div style="font-size:16px;font-weight:500;color:var(--text);margin-bottom:16px">Controle de Planos / Convênios</div>'+
+      '<div style="font-size:13px;color:var(--text3);margin-bottom:16px">Procedimentos executados via convênio. Dê baixa quando o pagamento do plano for recebido.</div>'+
+      '<div id="planos-list"></div>'+
+    '</div>'
+    el=document.getElementById('planos-list')
+  }
   el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
   try{
-    var dt=getTabDates('dp-crec-de','dp-crec-ate')
-    var d=await apiData('pagamentos',{cancelado:'0',de:dt.de,ate:dt.ate})
-    var rows=d.data||[]
-    var total=0
-    el.innerHTML=rows.map(function(r){
-      var v=+(r.valor||0);total+=v
-      var hoje=new Date().toISOString().slice(0,10)
-      var venc=r.data_vencimento||''
-      var status=r.confirmado?'Recebido':(venc&&venc<hoje?'Vencido':'Em Aberto')
-      var cor=status==='Vencido'?'var(--red)':status==='Recebido'?'var(--green)':'var(--text2)'
-      return '<div style="display:grid;grid-template-columns:100px 100px 1fr 1fr 80px 60px;padding:10px 14px;border-bottom:1px solid var(--border2);font-size:13px;background:var(--white);align-items:center;gap:8px">'+
-        '<span style="color:'+cor+'">'+status+'</span>'+
-        '<span style="color:var(--text3)">'+fmtDt(r.data_pagamento)+'</span>'+
-        '<span style="color:var(--blue);cursor:pointer">'+(r.paciente_nome||'—')+'</span>'+
-        '<span style="color:var(--text3)">'+(r.forma_pagamento||'—')+'</span>'+
-        '<span style="font-weight:500">'+fmtBrl(v)+'</span>'+
-        '<span style="color:var(--green);font-weight:700">'+(r.confirmado?'✓':'')+'</span></div>'
-    }).join('')
-    var telTot=el.parentElement.querySelector('[style*="Total R$"]')||el.nextElementSibling
-    if(telTot)telTot.innerHTML='Total '+fmtBrl(total)
+    var d=await apiData('planos-convenio',{})
+    var rows=d.planos||[]
+    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">Nenhum procedimento de convênio registrado</div>';return}
+    var html='<table class="tbl" style="width:100%"><thead><tr><th>Data</th><th>Paciente</th><th>Guia</th><th>Procedimento</th><th>Convênio</th><th style="text-align:right">Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody>'
+    rows.forEach(function(r){
+      var st=r.status||'aberto'
+      var stClass=st==='recebido'?'green':st==='enviado'?'blue':'orange'
+      var stLabel=st==='recebido'?'RECEBIDO':st==='enviado'?'ENVIADO':'ABERTO'
+      var acoes=''
+      if(st!=='recebido'){
+        acoes='<button onclick="darBaixaPlano('+r.id+',\''+((r.valor||0))+'\')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Baixa</button>'
+      }
+      html+='<tr><td>'+fmtDt(r.created_at||r.data_execucao)+'</td><td style="color:var(--blue)">'+(r.paciente_nome||'—')+'</td><td>'+(r.guia||'—')+'</td><td>'+(r.procedimento||'—')+'</td><td>'+(r.convenio||'—')+'</td><td style="text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(r.valor)+'</td><td><span class="badge badge-'+stClass+'">'+stLabel+'</span></td><td>'+acoes+'</td></tr>'
+    })
+    html+='</tbody></table>'
+    el.innerHTML=html
+  }catch(e){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">'+e.message+'</div>'}
+}
+
+async function darBaixaPlano(id,valor){
+  if(!confirm('Confirma recebimento deste convênio?'))return
+  try{
+    await apiPost('planos-convenio',{action:'atualizar-status',id:id,status:'recebido',valor_recebido:parseFloat(valor)||0})
+    renderPlanos()
+  }catch(e){alert('Erro: '+e.message)}
+}
+async function renderCPagar(){
+  var el=document.getElementById('cpagar-list')
+  if(!el){
+    var fp=document.getElementById('fin-contaspagar');if(!fp)return
+    fp.innerHTML='<div style="padding:24px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+        '<div style="font-size:16px;font-weight:500;color:var(--text)">Contas a Pagar</div>'+
+        '<div style="display:flex;gap:8px">'+
+          '<select id="cpagar-status" onchange="renderCPagar()" style="border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--text);background:#fff;outline:none">'+
+            '<option value="todas">Todas</option><option value="aberta" selected>Abertas</option><option value="paga">Pagas</option><option value="vencida">Vencidas</option>'+
+          '</select>'+
+          '<select id="cpagar-classif" onchange="renderCPagar()" style="border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--text);background:#fff;outline:none">'+
+            '<option value="">Todas Classif.</option><option>Custo Fixo</option><option>Custo Variável</option><option>Investimento</option><option>Marketing</option><option>Impostos</option>'+
+          '</select>'+
+          '<button onclick="abrirModalCPagar()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">+ Nova Conta</button>'+
+        '</div>'+
+      '</div>'+
+      '<div id="cpagar-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px"></div>'+
+      '<div id="cpagar-list"></div>'+
+    '</div>'
+    el=document.getElementById('cpagar-list')
+  }
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var status=(document.getElementById('cpagar-status')||{}).value||'aberta'
+    var classif=(document.getElementById('cpagar-classif')||{}).value||''
+    var params={status:status}
+    if(classif)params.classificacao=classif
+    var d=await apiData('contas-pagar-crud',params)
+    var rows=d.contas||[],totClass=d.totais_classificacao||[]
+
+    // Cards
+    var cardsEl=document.getElementById('cpagar-cards')
+    if(cardsEl){
+      var totGeral=0;totClass.forEach(function(t){totGeral+=t.total||0})
+      var fixo=0,variavel=0,invest=0,mkt=0
+      totClass.forEach(function(t){
+        if(t.classificacao==='Custo Fixo')fixo=t.total
+        if(t.classificacao==='Custo Variável')variavel=t.total
+        if(t.classificacao==='Investimento')invest=t.total
+        if(t.classificacao==='Marketing')mkt=t.total
+      })
+      cardsEl.innerHTML=
+        '<div style="background:#FFEBEE;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#C62828;text-transform:uppercase;margin-bottom:4px">Total</div><div style="font-size:18px;font-weight:700;color:#C62828">'+fmtBrl(totGeral)+'</div></div>'+
+        '<div style="background:#FFF3E0;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#E65100;text-transform:uppercase;margin-bottom:4px">Custos Fixos</div><div style="font-size:18px;font-weight:700;color:#E65100">'+fmtBrl(fixo)+'</div></div>'+
+        '<div style="background:#FFF3E0;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#E65100;text-transform:uppercase;margin-bottom:4px">Custos Variáveis</div><div style="font-size:18px;font-weight:700;color:#E65100">'+fmtBrl(variavel)+'</div></div>'+
+        '<div style="background:#E3F2FD;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#1565C0;text-transform:uppercase;margin-bottom:4px">Investimentos</div><div style="font-size:18px;font-weight:700;color:#1565C0">'+fmtBrl(invest+mkt)+'</div></div>'
+    }
+
+    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Nenhuma conta a pagar encontrada</div>';return}
+    var html='<table class="tbl" style="width:100%"><thead><tr><th>Status</th><th>Classificação</th><th>Categoria</th><th>Descrição</th><th>Fornecedor</th><th>Vencimento</th><th style="text-align:right">Valor</th><th>Ações</th></tr></thead><tbody>'
+    rows.forEach(function(r){
+      var st=r.status||'aberta'
+      var stClass=st==='paga'?'green':st==='vencida'?'red':'orange'
+      var stLabel=st==='paga'?'PAGA':st==='vencida'?'VENCIDA':st==='cancelada'?'CANCELADA':'ABERTA'
+      var acoes=''
+      if(st==='aberta'){
+        acoes='<button onclick="darBaixaCPagar('+r.id+')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif;margin-right:4px">Pagar</button>'+
+          '<button onclick="cancelarCPagar('+r.id+')" style="background:transparent;color:var(--red);border:1px solid var(--red);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">X</button>'
+      }
+      html+='<tr><td><span class="badge badge-'+stClass+'">'+stLabel+'</span></td><td style="font-size:12px">'+(r.classificacao||'—')+'</td><td style="font-size:12px;color:var(--text3)">'+(r.categoria||'—')+'</td><td>'+(r.descricao||'—')+'</td><td style="color:var(--text3)">'+(r.fornecedor||'—')+'</td><td>'+fmtDt(r.vencimento)+'</td><td style="text-align:right;font-weight:500;color:#C62828">'+fmtBrl(r.valor)+'</td><td>'+acoes+'</td></tr>'
+    })
+    html+='</tbody></table>'
+    el.innerHTML=html
+  }catch(e){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">'+e.message+'</div>'}
+}
+
+async function darBaixaCPagar(id){
+  if(!confirm('Confirma pagamento desta conta?'))return
+  try{
+    var r=await apiPost('conta-pagar-baixa',{id:id})
+    if(r.success)renderCPagar()
+    else alert(r.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function cancelarCPagar(id){
+  if(!confirm('Cancelar esta conta?'))return
+  try{
+    var r=await apiPost('conta-pagar-cancelar',{id:id})
+    if(r.success)renderCPagar()
+    else alert(r.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+var _cpCategorias=null
+async function abrirModalCPagar(){
+  // Load categories
+  if(!_cpCategorias){
+    try{var d=await apiData('categorias-financeiras',{});_cpCategorias=d.categorias||[]}catch(e){_cpCategorias=[]}
+  }
+  var old=document.getElementById('modal-cpagar');if(old)old.remove()
+  var classifs=['Custo Fixo','Custo Variável','Investimento','Marketing','Impostos']
+  var freqs=['mensal','semanal','quinzenal']
+
+  var m=document.createElement('div')
+  m.id='modal-cpagar'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:520px;max-height:90vh;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
+      '<div style="font-size:18px;font-weight:500;color:#1A1A1A;margin-bottom:20px">Nova Conta a Pagar</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Descrição *</label><input id="cp-desc" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Fornecedor</label><input id="cp-forn" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Valor *</label><input id="cp-val" type="number" step="0.01" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Vencimento *</label><input id="cp-venc" type="date" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Classificação</label><select id="cp-classif" onchange="cpClassifChange()" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none">'+classifs.map(function(c){return '<option>'+c+'</option>'}).join('')+'</select></div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Categoria</label><select id="cp-cat" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none"><option value="">Selecione...</option></select></div>'+
+        '<div style="display:flex;flex-direction:column;justify-content:flex-end">'+
+          '<div style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="cp-recor" style="accent-color:#034030"><label for="cp-recor" style="font-size:13px;color:var(--text2)">Recorrente</label></div>'+
+        '</div>'+
+      '</div>'+
+      '<div id="cp-recor-fields" style="display:none;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Frequência</label><select id="cp-freq" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none">'+freqs.map(function(f){return '<option value="'+f+'">'+f.charAt(0).toUpperCase()+f.slice(1)+'</option>'}).join('')+'</select></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Nº de Repetições</label><input id="cp-reps" type="number" value="12" min="2" max="60" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">'+
+        '<button onclick="document.getElementById(\'modal-cpagar\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+        '<button onclick="salvarCPagar()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Salvar</button>'+
+      '</div>'+
+    '</div>'
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)m.remove()}
+
+  // Toggle recorrente fields
+  document.getElementById('cp-recor').addEventListener('change',function(){
+    document.getElementById('cp-recor-fields').style.display=this.checked?'grid':'none'
+  })
+  document.getElementById('cp-recor-fields').style.display='none'
+
+  // Set default date
+  document.getElementById('cp-venc').value=new Date().toISOString().slice(0,10)
+
+  // Load categories for selected classification
+  cpClassifChange()
+}
+
+function cpClassifChange(){
+  var classif=(document.getElementById('cp-classif')||{}).value||''
+  var cats=(_cpCategorias||[]).filter(function(c){return c.classificacao===classif})
+  var sel=document.getElementById('cp-cat');if(!sel)return
+  sel.innerHTML='<option value="">Selecione...</option>'+cats.map(function(c){return '<option value="'+c.id+'" data-nome="'+c.nome+'">'+c.nome+'</option>'}).join('')
+}
+
+async function salvarCPagar(){
+  var desc=document.getElementById('cp-desc').value
+  var forn=document.getElementById('cp-forn').value
+  var val=document.getElementById('cp-val').value
+  var venc=document.getElementById('cp-venc').value
+  var classif=document.getElementById('cp-classif').value
+  var catSel=document.getElementById('cp-cat')
+  var catId=catSel.value
+  var catNome=catSel.options[catSel.selectedIndex]?catSel.options[catSel.selectedIndex].getAttribute('data-nome')||catSel.options[catSel.selectedIndex].textContent:''
+  var recor=document.getElementById('cp-recor').checked
+  var freq=document.getElementById('cp-freq').value
+  var reps=parseInt(document.getElementById('cp-reps').value)||12
+
+  if(!desc||!val||!venc){alert('Preencha os campos obrigatórios');return}
+  try{
+    var r=await apiPost('contas-pagar-crud',{
+      descricao:desc,fornecedor:forn,valor:parseFloat(val),vencimento:venc,
+      classificacao:classif,categoria:catNome,categoria_id:catId?parseInt(catId):null,
+      recorrente:recor,frequencia:freq,total_parcelas:recor?reps:1,parcela_atual:1
+    })
+    if(r.success){
+      document.getElementById('modal-cpagar').remove()
+      renderCPagar()
+    }else alert(r.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
+}
+async function renderCReceber(){
+  var el=document.getElementById('creceber-list')
+  if(!el){
+    var fp=document.getElementById('fin-contasreceber');if(!fp)return
+    fp.innerHTML='<div style="padding:24px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+        '<div style="font-size:16px;font-weight:500;color:var(--text)">Contas a Receber</div>'+
+        '<select id="creceber-status" onchange="renderCReceber()" style="border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--text);background:#fff;outline:none">'+
+          '<option value="todas">Todas</option><option value="pendente" selected>Pendentes</option><option value="vencido">Vencidas</option><option value="pago">Recebidas</option>'+
+        '</select>'+
+      '</div>'+
+      '<div id="creceber-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px"></div>'+
+      '<div id="creceber-list"></div>'+
+    '</div>'
+    el=document.getElementById('creceber-list')
+  }
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var status=(document.getElementById('creceber-status')||{}).value||'pendente'
+    var d=await apiData('contas-receber-real',{status:status})
+    var rows=d.parcelas||[],tots=d.totais||{}
+
+    // Cards
+    var cardsEl=document.getElementById('creceber-cards')
+    if(cardsEl){
+      cardsEl.innerHTML=
+        '<div style="background:#FFF3E0;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#E65100;text-transform:uppercase;margin-bottom:4px">Pendente</div><div style="font-size:18px;font-weight:700;color:#E65100">'+fmtBrl(tots.pendente||0)+'</div></div>'+
+        '<div style="background:#FFEBEE;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#C62828;text-transform:uppercase;margin-bottom:4px">Vencido</div><div style="font-size:18px;font-weight:700;color:#C62828">'+fmtBrl(tots.vencido||0)+'</div></div>'+
+        '<div style="background:#E8F5E9;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#2E7D52;text-transform:uppercase;margin-bottom:4px">Recebido</div><div style="font-size:18px;font-weight:700;color:#1B5E3B">'+fmtBrl(tots.pago||0)+'</div></div>'
+    }
+
+    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Nenhuma conta a receber encontrada</div>';return}
+    var formaLabel={'pix':'PIX','boleto':'Boleto','credito':'Cartão Crédito','debito':'Cartão Débito','dinheiro':'Dinheiro'}
+    var html='<table class="tbl" style="width:100%"><thead><tr><th>Paciente</th><th>Parcela</th><th>Procedimentos</th><th>Forma</th><th>Vencimento</th><th style="text-align:right">Valor</th><th>Status</th></tr></thead><tbody>'
+    rows.forEach(function(r){
+      var stClass=r.status==='pago'?'green':r.status==='vencido'?'red':'orange'
+      var stLabel=r.status==='pago'?'RECEBIDO':r.status==='vencido'?'VENCIDO':'PENDENTE'
+      var procText=(r.procedimentos||'').length>40?r.procedimentos.substring(0,37)+'...':r.procedimentos||'—'
+      html+='<tr><td style="color:var(--blue)">'+(r.paciente_nome||'—')+'</td><td style="font-size:12px">'+r.numero_parcela+'/'+r.total_parcelas+(r.tipo==='entrada'?' (Entrada)':'')+'</td><td style="font-size:12px;color:var(--text3)">'+procText+'</td><td style="font-size:12px">'+(formaLabel[r.forma_pagamento]||r.forma_pagamento||'—')+'</td><td>'+fmtDt(r.data_vencimento)+'</td><td style="text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(r.valor)+'</td><td><span class="badge badge-'+stClass+'">'+stLabel+'</span></td></tr>'
+    })
+    html+='</tbody></table>'
+    el.innerHTML=html
   }catch(e){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">'+e.message+'</div>'}
 }
 async function renderExtrato(){
