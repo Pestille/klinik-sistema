@@ -2656,15 +2656,7 @@ function renderProntTab(){
       '<div style="text-align:right;padding:12px 0;font-weight:700;border-top:1px solid #e0e0e0;margin-top:8px">Saldo: '+fmtBrl(allFin.reduce(function(s,f){return s+(+(f.valor||0))},0))+'</div>'
   }
   else if(_prontTab==='orcamentos'){
-    el.innerHTML='<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px"><button class="pdt-btn-outline">+ Novo Orçamento</button></div>'+
-      (pgs.length?pgs.filter(function(pg2){return pg2.treatment_id}).map(function(pg2){
-        var v=+(pg2.valor||0)*(Math.max(+(pg2.parcelas||1),1))
-        return '<div style="border:1px solid #e0e0e0;border-radius:4px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px">'+
-          '<span class="badge badge-green">Aprovado</span>'+
-          '<span style="font-size:13px;color:#424242">'+fmtDt(pg2.data_checkout||pg2.data_pagamento)+'</span>'+
-          '<span style="flex:1;font-size:13px;color:#757575;font-style:italic">'+(pg2.descricao||'Tratamento Odontológico')+'</span>'+
-          '<span style="font-size:15px;font-weight:600;color:#2E7D32">'+fmtBrl(v)+'</span></div>'
-      }).join(''):'<div style="text-align:center;padding:40px;color:#9e9e9e">Nenhum orçamento</div>')
+    renderOrcamentosTab(el,p)
   }
   else if(_prontTab==='odontograma'){
     renderOdontograma(el,p,ag)
@@ -2674,6 +2666,411 @@ function renderProntTab(){
     var nomes={'fotos':'Fotos','plano-clinico':'Plano e Ficha Clínica','fichas-esp':'Fichas Especialidades','anamnese':'Anamnese','documentos':'Documentos','exames':'Exames','recibos':'Recibos','indicacoes':'Indicações'}
     el.innerHTML='<div style="text-align:center;padding:60px;color:#9e9e9e"><div style="font-size:15px;font-weight:500;margin-bottom:8px">'+(nomes[_prontTab]||_prontTab)+'</div><div style="font-size:13px">Dados não encontrados.</div></div>'
   }
+}
+
+// ── ORÇAMENTOS ──────────────────────────────────────────────────
+var _orcExpanded={},_orcEditData=null
+
+function renderOrcamentosTab(el,p){
+  var orcs=(_prontData.orcamentos||[])
+  var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+    '<div style="font-size:13px;color:#757575;text-transform:uppercase;letter-spacing:.04em;font-weight:500">Orçamentos ('+orcs.length+')</div>'+
+    '<button onclick="abrirOrcamentoModal(null)" style="background:#E65100;color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;transition:background .15s">+ Novo Orçamento</button>'+
+  '</div>'
+  if(!orcs.length){
+    h+='<div style="text-align:center;padding:40px;color:#9e9e9e">Nenhum orçamento cadastrado</div>'
+  } else {
+    orcs.forEach(function(orc){
+      var stColor=orc.status==='aprovado'?'green':orc.status==='reprovado'?'red':'orange'
+      var stLabel=orc.status==='aprovado'?'APROVADO':orc.status==='reprovado'?'REPROVADO':'ABERTO'
+      var stInfo=orc.status==='aprovado'?'Aprovado por '+(orc.aprovado_por||'—'):orc.status==='reprovado'?'Reprovado'+(orc.motivo_reprovacao?' - '+orc.motivo_reprovacao:''):'Em aberto'
+      var expanded=_orcExpanded[orc.id]
+      var itens=orc.itens||[]
+      h+='<div style="border:1px solid #E0E0E0;border-radius:8px;margin-bottom:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)">'+
+        '<div style="padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="toggleOrcExpand('+orc.id+')">'+
+          '<span style="font-size:16px;color:#757575;transition:transform .15s;transform:rotate('+(expanded?'90':'0')+'deg)">&#9654;</span>'+
+          '<span style="cursor:pointer;color:#757575;font-size:14px" onclick="event.stopPropagation();abrirOrcamentoModal('+orc.id+')" title="Editar">&#9998;</span>'+
+          '<span class="badge badge-'+stColor+'">'+stLabel+'</span>'+
+          '<span style="font-size:13px;color:#424242">'+fmtDt(orc.data_criacao)+'</span>'+
+          '<span style="flex:1;font-size:13px;color:#757575;font-style:italic">'+stInfo+'</span>'+
+          '<span style="cursor:pointer;color:#757575;font-size:14px" onclick="event.stopPropagation();excluirOrcamento('+orc.id+')" title="Excluir">&#128465;</span>'+
+          '<span style="font-size:15px;font-weight:600;color:#1B5E3B">'+fmtBrl(orc.valor_total)+'</span>'+
+        '</div>'
+      if(expanded&&itens.length){
+        h+='<div style="padding:0 16px 14px;border-top:1px solid #F0F0F0">'+
+          '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px"><thead><tr>'+
+            '<th style="text-align:left;padding:6px 8px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:#757575;border-bottom:1px solid #E0E0E0">Código</th>'+
+            '<th style="text-align:left;padding:6px 8px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:#757575;border-bottom:1px solid #E0E0E0">Procedimento</th>'+
+            '<th style="text-align:left;padding:6px 8px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:#757575;border-bottom:1px solid #E0E0E0">Dente/Região</th>'+
+            '<th style="text-align:left;padding:6px 8px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:#757575;border-bottom:1px solid #E0E0E0">Profissional</th>'+
+            '<th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:#757575;border-bottom:1px solid #E0E0E0">Valor</th>'+
+          '</tr></thead><tbody>'
+        itens.forEach(function(it){
+          h+='<tr><td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242">'+(it.procedimento_codigo||'—')+'</td>'+
+            '<td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242">'+(it.procedimento_nome||'—')+'</td>'+
+            '<td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242">'+(it.dente||it.regiao||'—')+'</td>'+
+            '<td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242">'+(it.profissional_nome||'—')+'</td>'+
+            '<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(it.valor_unitario)+'</td></tr>'
+        })
+        h+='</tbody></table></div>'
+      }
+      h+='</div>'
+    })
+  }
+  el.innerHTML=h
+}
+
+function toggleOrcExpand(id){
+  _orcExpanded[id]=!_orcExpanded[id]
+  var el=document.getElementById('pront-content');if(el)renderOrcamentosTab(el,(_prontData||{}).paciente||{})
+}
+
+async function excluirOrcamento(id){
+  if(!confirm('Excluir este orçamento?'))return
+  try{
+    await apiPost('excluir-orcamento',{id:id})
+    await reloadOrcamentos()
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function reloadOrcamentos(){
+  if(!_prontData||!_prontData.paciente)return
+  try{
+    var d=await apiData('orcamentos-paciente',{paciente_id:_prontData.paciente.id})
+    _prontData.orcamentos=d.orcamentos||[]
+    renderProntTab()
+  }catch(e){}
+}
+
+async function abrirOrcamentoModal(orcId){
+  var p=(_prontData||{}).paciente||{}
+  var profs=ST.profissionais||(ST.dashboard&&ST.dashboard.profissionais)||[]
+  if(!profs.length){try{await loadProfissionais()}catch(e){}}
+  profs=ST.profissionais||[]
+  var orc=null
+  if(orcId){
+    var orcs=(_prontData.orcamentos||[])
+    for(var oi=0;oi<orcs.length;oi++){if(orcs[oi].id===orcId){orc=orcs[oi];break}}
+  }
+  _orcEditData={
+    id:orc?orc.id:null,
+    paciente_id:p.id,
+    profissional_id:orc?orc.profissional_id:(profs[0]?profs[0].id:null),
+    profissional_nome:orc?orc.profissional_nome:(profs[0]?profs[0].nome:''),
+    data_criacao:orc?(orc.data_criacao||'').slice(0,10):new Date().toISOString().slice(0,10),
+    observacoes:orc?orc.observacoes||'':'',
+    tabela_preco:orc?orc.tabela_preco:'PARTICULAR',
+    status:orc?orc.status:'aberto',
+    forma_pagamento:orc?orc.forma_pagamento:null,
+    tipo_pagamento:orc?orc.tipo_pagamento:'valor_total',
+    itens:orc?(orc.itens||[]).map(function(it){return {procedimento_codigo:it.procedimento_codigo,procedimento_nome:it.procedimento_nome,dente:it.dente||'',regiao:it.regiao||'',profissional_id:it.profissional_id,profissional_nome:it.profissional_nome,valor_unitario:+(it.valor_unitario||0),valor_plano:+(it.valor_plano||0),quantidade:+(it.quantidade||1)}}):[]
+  }
+  renderOrcModal()
+}
+
+function renderOrcModal(){
+  var d=_orcEditData;if(!d)return
+  var profs=ST.profissionais||[]
+  var tabelas=['PARTICULAR','PREVIDENT','SULAMERICA','CASSEMS','AMIL']
+  // Remove old modal if present
+  var old=document.getElementById('orc-modal');if(old)old.remove()
+
+  var totalPart=d.itens.reduce(function(s,it){return s+(+(it.valor_unitario||0)*(+(it.quantidade||1)))},0)
+  var totalPlano=d.itens.reduce(function(s,it){return s+(+(it.valor_plano||0)*(+(it.quantidade||1)))},0)
+
+  var profOpts=profs.map(function(pr){return '<option value="'+pr.id+'" '+(pr.id==d.profissional_id?'selected':'')+'>'+pr.nome+'</option>'}).join('')
+  var tabOpts=tabelas.map(function(t){return '<option value="'+t+'" '+(t===d.tabela_preco?'selected':'')+'>'+t+'</option>'}).join('')
+
+  // Items list HTML
+  var itensHtml=''
+  d.itens.forEach(function(it,idx){
+    itensHtml+='<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #F0F0F0;font-size:13px">'+
+      '<div style="flex:1">'+
+        '<div style="font-weight:500;color:#1A1A1A">'+(it.procedimento_codigo?it.procedimento_codigo+' - ':'')+it.procedimento_nome+'</div>'+
+        '<div style="font-size:12px;color:#757575;margin-top:2px">'+(it.dente?'Dente: '+it.dente:'')+(it.regiao?' | Região: '+it.regiao:'')+(it.profissional_nome?' | '+it.profissional_nome:'')+'</div>'+
+      '</div>'+
+      '<span style="background:#E8F5E9;color:#034030;padding:3px 10px;border-radius:4px;font-size:12px;font-weight:500">'+fmtBrl(it.valor_unitario)+'</span>'+
+      '<span onclick="orcRemoveItem('+idx+')" style="cursor:pointer;color:#C62828;font-size:16px;padding:4px" title="Remover">&times;</span>'+
+    '</div>'
+  })
+
+  var modal=document.createElement('div')
+  modal.id='orc-modal'
+  modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+  modal.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:95%;max-width:1100px;max-height:90vh;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.12);display:flex;flex-direction:column">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid #E0E0E0">'+
+        '<span style="font-size:20px;font-weight:500;color:#1A1A1A">'+(d.id?'Editar Orçamento #'+d.id:'Novo Orçamento')+'</span>'+
+        '<span onclick="fecharOrcModal()" style="cursor:pointer;font-size:22px;color:#757575;padding:4px 8px">&times;</span>'+
+      '</div>'+
+      '<div style="display:flex;flex:1;overflow:auto">'+
+        // LEFT PANEL
+        '<div style="flex:1;padding:20px 24px;border-right:1px solid #E0E0E0;overflow-y:auto">'+
+          '<div style="font-size:13px;font-weight:500;color:#757575;text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px">Dados do Orçamento</div>'+
+          '<div style="margin-bottom:16px">'+
+            '<label style="display:block;font-size:13px;font-weight:500;color:#1A1A1A;margin-bottom:4px">Clínica</label>'+
+            '<input type="text" value="Klinik Odontologia" readonly style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#757575;background:#FAFAFA;font-family:Roboto,sans-serif">'+
+          '</div>'+
+          '<div style="margin-bottom:16px">'+
+            '<label style="display:block;font-size:13px;font-weight:500;color:#1A1A1A;margin-bottom:4px">Orçamento criado por</label>'+
+            '<select id="orc-prof" onchange="orcUpdateProf(this)" style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#1A1A1A;background:#fff;font-family:Roboto,sans-serif">'+profOpts+'</select>'+
+          '</div>'+
+          '<div style="margin-bottom:16px">'+
+            '<label style="display:block;font-size:13px;font-weight:500;color:#1A1A1A;margin-bottom:4px">Data</label>'+
+            '<input type="date" id="orc-data" value="'+d.data_criacao+'" style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#1A1A1A;font-family:Roboto,sans-serif">'+
+          '</div>'+
+          '<div style="margin-bottom:16px">'+
+            '<label style="display:block;font-size:13px;font-weight:500;color:#1A1A1A;margin-bottom:4px">Observações</label>'+
+            '<textarea id="orc-obs" rows="3" style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#1A1A1A;font-family:Roboto,sans-serif;resize:vertical">'+d.observacoes+'</textarea>'+
+          '</div>'+
+          '<div style="margin-bottom:20px">'+
+            '<label style="display:block;font-size:13px;font-weight:500;color:#1A1A1A;margin-bottom:4px">Tabela de Preço</label>'+
+            '<select id="orc-tabela" onchange="_orcEditData.tabela_preco=this.value" style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#1A1A1A;background:#fff;font-family:Roboto,sans-serif">'+tabOpts+'</select>'+
+          '</div>'+
+          '<div style="border-top:1px solid #E0E0E0;padding-top:20px">'+
+            '<div style="font-size:13px;font-weight:500;color:#757575;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Adicionar Procedimento</div>'+
+            '<div style="position:relative;margin-bottom:12px">'+
+              '<input type="text" id="orc-proc-search" placeholder="Buscar procedimento..." oninput="orcSearchProc(this.value)" autocomplete="off" style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#1A1A1A;font-family:Roboto,sans-serif">'+
+              '<div id="orc-proc-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #E0E0E0;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>'+
+            '</div>'+
+            '<div id="orc-proc-form" style="display:none">'+
+              '<div style="margin-bottom:8px">'+
+                '<label style="display:block;font-size:12px;color:#757575;margin-bottom:2px">Procedimento selecionado</label>'+
+                '<div id="orc-proc-selected" style="font-size:14px;font-weight:500;color:#1A1A1A;padding:4px 0"></div>'+
+              '</div>'+
+              '<div style="display:flex;gap:12px;margin-bottom:8px">'+
+                '<div style="flex:1">'+
+                  '<label style="display:block;font-size:12px;color:#757575;margin-bottom:2px">Dente/Região</label>'+
+                  '<input type="text" id="orc-proc-dente" placeholder="Ex: 11, 21-28" style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;font-family:Roboto,sans-serif">'+
+                '</div>'+
+                '<div style="flex:1">'+
+                  '<label style="display:block;font-size:12px;color:#757575;margin-bottom:2px">Dentista</label>'+
+                  '<select id="orc-proc-prof" style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;background:#fff;font-family:Roboto,sans-serif">'+profOpts+'</select>'+
+                '</div>'+
+              '</div>'+
+              '<div style="display:flex;gap:12px;margin-bottom:12px">'+
+                '<div style="flex:1">'+
+                  '<label style="display:block;font-size:12px;color:#757575;margin-bottom:2px">Valor Unitário</label>'+
+                  '<input type="number" id="orc-proc-valor" step="0.01" min="0" style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;font-family:Roboto,sans-serif">'+
+                '</div>'+
+                '<div style="flex:1">'+
+                  '<label style="display:block;font-size:12px;color:#757575;margin-bottom:2px">Qtd</label>'+
+                  '<input type="number" id="orc-proc-qtd" value="1" min="1" style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;font-family:Roboto,sans-serif">'+
+                '</div>'+
+              '</div>'+
+              '<button onclick="orcAddItem()" style="background:#E65100;color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;width:100%;transition:background .15s">Adicionar ao Orçamento</button>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        // RIGHT PANEL
+        '<div style="width:380px;flex-shrink:0;padding:20px 24px;display:flex;flex-direction:column;overflow-y:auto;background:#FAFAFA">'+
+          '<div style="font-size:13px;font-weight:500;color:#757575;text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px">Orçamento</div>'+
+          '<div id="orc-itens-list" style="flex:1;overflow-y:auto;margin-bottom:16px;border:1px solid #E0E0E0;border-radius:8px;background:#fff">'+
+            (itensHtml||'<div style="text-align:center;padding:30px;color:#9e9e9e;font-size:13px">Nenhum procedimento adicionado</div>')+
+          '</div>'+
+          '<div style="background:#fff;border:1px solid #E0E0E0;border-radius:8px;padding:16px;margin-bottom:16px">'+
+            '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:13px;color:#757575">Total Particular</span><span style="font-size:16px;font-weight:600;color:#1A1A1A">'+fmtBrl(totalPart)+'</span></div>'+
+            '<div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:#757575">Total Plano</span><span style="font-size:16px;font-weight:600;color:#1A1A1A">'+fmtBrl(totalPlano)+'</span></div>'+
+          '</div>'+
+          '<div onclick="abrirPagamentoModal()" style="color:#1565C0;font-size:13px;cursor:pointer;margin-bottom:16px;text-align:center">Definir Forma de Pagamento'+(d.forma_pagamento?' ('+d.forma_pagamento+')':'')+'</div>'+
+          '<div style="display:flex;gap:8px">'+
+            (d.id&&d.status==='aberto'?'<button onclick="aprovarOrcamento()" style="flex:1;background:#034030;color:#fff;border:none;border-radius:6px;padding:12px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;transition:background .15s">Aprovar</button>'+
+            '<button onclick="reprovarOrcamento()" style="flex:1;background:#C62828;color:#fff;border:none;border-radius:6px;padding:12px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;transition:background .15s">Reprovar</button>':'')+
+          '</div>'+
+          '<div style="display:flex;gap:8px;margin-top:12px">'+
+            '<button onclick="fecharOrcModal()" style="flex:1;background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:10px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;transition:background .15s">Cancelar</button>'+
+            '<button onclick="salvarOrcamento()" style="flex:1;background:#E65100;color:#fff;border:none;border-radius:6px;padding:10px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;transition:background .15s">Salvar</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'
+  document.body.appendChild(modal)
+  modal.onclick=function(ev){if(ev.target===modal)fecharOrcModal()}
+}
+
+function fecharOrcModal(){
+  var m=document.getElementById('orc-modal');if(m)m.remove()
+  _orcEditData=null
+}
+
+function orcUpdateProf(sel){
+  if(!_orcEditData)return
+  var profs=ST.profissionais||[]
+  var pid=parseInt(sel.value)
+  _orcEditData.profissional_id=pid
+  for(var i=0;i<profs.length;i++){if(profs[i].id===pid){_orcEditData.profissional_nome=profs[i].nome;break}}
+}
+
+var _orcSearchTimer=null
+function orcSearchProc(val){
+  clearTimeout(_orcSearchTimer)
+  var rDiv=document.getElementById('orc-proc-results');if(!rDiv)return
+  if(!val||val.length<2){rDiv.style.display='none';return}
+  var tabela=(document.getElementById('orc-tabela')||{}).value||''
+  _orcSearchTimer=setTimeout(async function(){
+    try{
+      var d=await apiData('buscar-procedimento',{q:val,tabela:tabela})
+      var procs=d.procedimentos||[]
+      if(!procs.length){rDiv.innerHTML='<div style="padding:12px;color:#9e9e9e;font-size:13px">Nenhum resultado</div>';rDiv.style.display='block';return}
+      rDiv.innerHTML=procs.map(function(pr){
+        return '<div onclick="orcSelectProc(\''+((pr.codigo||'').replace(/'/g,"\\'"))+'\',\''+((pr.nome||'').replace(/'/g,"\\'"))+'\','+(+(pr.valor||0))+')" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #F0F0F0;font-size:13px;transition:background .12s" onmouseover="this.style.background=\'#FAFAFA\'" onmouseout="this.style.background=\'#fff\'">'+
+          '<div style="font-weight:500;color:#1A1A1A">'+(pr.codigo?pr.codigo+' - ':'')+pr.nome+'</div>'+
+          '<div style="font-size:12px;color:#757575;margin-top:2px">'+(pr.tabela||'—')+' | '+fmtBrl(pr.valor)+'</div>'+
+        '</div>'
+      }).join('')
+      rDiv.style.display='block'
+    }catch(e){rDiv.style.display='none'}
+  },300)
+}
+
+function orcSelectProc(codigo,nome,valor){
+  var rDiv=document.getElementById('orc-proc-results');if(rDiv)rDiv.style.display='none'
+  var sInput=document.getElementById('orc-proc-search');if(sInput)sInput.value=''
+  var form=document.getElementById('orc-proc-form');if(form)form.style.display='block'
+  var sel=document.getElementById('orc-proc-selected');if(sel)sel.textContent=(codigo?codigo+' - ':'')+nome
+  var vInput=document.getElementById('orc-proc-valor');if(vInput)vInput.value=valor
+  // Store selected proc data
+  _orcEditData._selectedProc={codigo:codigo,nome:nome,valor:valor}
+}
+
+function orcAddItem(){
+  if(!_orcEditData||!_orcEditData._selectedProc)return
+  var sp=_orcEditData._selectedProc
+  var profs=ST.profissionais||[]
+  var denteEl=document.getElementById('orc-proc-dente')
+  var profEl=document.getElementById('orc-proc-prof')
+  var valorEl=document.getElementById('orc-proc-valor')
+  var qtdEl=document.getElementById('orc-proc-qtd')
+  var profId=profEl?parseInt(profEl.value):null
+  var profNome=''
+  for(var i=0;i<profs.length;i++){if(profs[i].id===profId){profNome=profs[i].nome;break}}
+  _orcEditData.itens.push({
+    procedimento_codigo:sp.codigo,
+    procedimento_nome:sp.nome,
+    dente:denteEl?denteEl.value:'',
+    regiao:'',
+    profissional_id:profId,
+    profissional_nome:profNome,
+    valor_unitario:valorEl?+(valorEl.value||0):+(sp.valor||0),
+    valor_plano:0,
+    quantidade:qtdEl?+(qtdEl.value||1):1
+  })
+  _orcEditData._selectedProc=null
+  var form=document.getElementById('orc-proc-form');if(form)form.style.display='none'
+  renderOrcModal()
+}
+
+function orcRemoveItem(idx){
+  if(!_orcEditData)return
+  _orcEditData.itens.splice(idx,1)
+  renderOrcModal()
+}
+
+async function salvarOrcamento(){
+  if(!_orcEditData)return
+  var d=_orcEditData
+  var dataEl=document.getElementById('orc-data')
+  var obsEl=document.getElementById('orc-obs')
+  try{
+    await apiPost('salvar-orcamento',{
+      id:d.id,
+      paciente_id:d.paciente_id,
+      profissional_id:d.profissional_id,
+      profissional_nome:d.profissional_nome,
+      data_criacao:dataEl?dataEl.value:d.data_criacao,
+      observacoes:obsEl?obsEl.value:d.observacoes,
+      tabela_preco:d.tabela_preco,
+      forma_pagamento:d.forma_pagamento,
+      tipo_pagamento:d.tipo_pagamento,
+      itens:d.itens
+    })
+    fecharOrcModal()
+    await reloadOrcamentos()
+  }catch(e){alert('Erro ao salvar: '+e.message)}
+}
+
+async function aprovarOrcamento(){
+  if(!_orcEditData||!_orcEditData.id)return
+  var nome=prompt('Aprovado por (nome):')
+  if(!nome)return
+  var orcId=_orcEditData.id
+  var d=_orcEditData
+  var dataEl=document.getElementById('orc-data')
+  var obsEl=document.getElementById('orc-obs')
+  try{
+    // Save first, then approve
+    await apiPost('salvar-orcamento',{
+      id:d.id,paciente_id:d.paciente_id,profissional_id:d.profissional_id,profissional_nome:d.profissional_nome,
+      data_criacao:dataEl?dataEl.value:d.data_criacao,observacoes:obsEl?obsEl.value:d.observacoes,
+      tabela_preco:d.tabela_preco,forma_pagamento:d.forma_pagamento,tipo_pagamento:d.tipo_pagamento,itens:d.itens
+    })
+    await apiPost('aprovar-orcamento',{id:orcId,aprovado_por:nome})
+    fecharOrcModal()
+    await reloadOrcamentos()
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function reprovarOrcamento(){
+  if(!_orcEditData||!_orcEditData.id)return
+  var motivo=prompt('Motivo da reprovação:')
+  try{
+    await apiPost('reprovar-orcamento',{id:_orcEditData.id,motivo:motivo||''})
+    fecharOrcModal()
+    await reloadOrcamentos()
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+function abrirPagamentoModal(){
+  if(!_orcEditData)return
+  var old=document.getElementById('orc-pag-modal');if(old)old.remove()
+  var formas=['A Definir','Boleto','Cartão de Crédito','Cartão de Débito','Cheque','Dinheiro','Múltiplas','Pix','Transferência']
+  var curForma=_orcEditData.forma_pagamento||'A Definir'
+  var curTipo=_orcEditData.tipo_pagamento||'valor_total'
+
+  var formasHtml=formas.map(function(f){
+    var checked=f===curForma?'checked':''
+    return '<label style="display:flex;align-items:center;gap:8px;padding:8px 0;font-size:14px;color:#424242;cursor:pointer">'+
+      '<input type="radio" name="orc-forma-pag" value="'+f+'" '+checked+' style="accent-color:#034030">'+f+'</label>'
+  }).join('')
+
+  var m=document.createElement('div')
+  m.id='orc-pag-modal'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:400px;max-height:80vh;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
+      '<div style="font-size:18px;font-weight:500;color:#1A1A1A;margin-bottom:20px">Forma de Pagamento</div>'+
+      '<div style="margin-bottom:20px">'+
+        '<div style="font-size:13px;font-weight:500;color:#757575;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Tipo de Cobrança</div>'+
+        '<div style="display:flex;gap:0;border:1.5px solid #E0E0E0;border-radius:6px;overflow:hidden">'+
+          '<label style="flex:1;text-align:center;padding:10px;font-size:13px;cursor:pointer;background:'+(curTipo==='valor_total'?'#E8F5E9':'#fff')+';color:'+(curTipo==='valor_total'?'#034030':'#424242')+';font-weight:'+(curTipo==='valor_total'?'500':'400')+'"><input type="radio" name="orc-tipo-pag" value="valor_total" '+(curTipo==='valor_total'?'checked':'')+' style="display:none"> Valor Total</label>'+
+          '<label style="flex:1;text-align:center;padding:10px;font-size:13px;cursor:pointer;background:'+(curTipo==='por_procedimento'?'#E8F5E9':'#fff')+';color:'+(curTipo==='por_procedimento'?'#034030':'#424242')+';font-weight:'+(curTipo==='por_procedimento'?'500':'400')+';border-left:1px solid #E0E0E0"><input type="radio" name="orc-tipo-pag" value="por_procedimento" '+(curTipo==='por_procedimento'?'checked':'')+' style="display:none"> Por procedimento</label>'+
+        '</div>'+
+      '</div>'+
+      '<div style="margin-bottom:20px">'+
+        '<div style="font-size:13px;font-weight:500;color:#757575;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Método</div>'+
+        formasHtml+
+      '</div>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+        '<button onclick="fecharPagModal()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Fechar</button>'+
+        '<button onclick="salvarPagModal()" style="background:#E65100;color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">OK</button>'+
+      '</div>'+
+    '</div>'
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)fecharPagModal()}
+}
+
+function fecharPagModal(){
+  var m=document.getElementById('orc-pag-modal');if(m)m.remove()
+}
+
+function salvarPagModal(){
+  if(!_orcEditData)return
+  var formaRadios=document.querySelectorAll('input[name="orc-forma-pag"]')
+  var tipoRadios=document.querySelectorAll('input[name="orc-tipo-pag"]')
+  formaRadios.forEach(function(r){if(r.checked)_orcEditData.forma_pagamento=r.value})
+  tipoRadios.forEach(function(r){if(r.checked)_orcEditData.tipo_pagamento=r.value})
+  fecharPagModal()
+  renderOrcModal()
 }
 
 // ── ODONTOGRAMA ──────────────────────────────────────────────────

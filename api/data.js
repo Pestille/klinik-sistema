@@ -119,7 +119,20 @@ module.exports = async function handler(req, res) {
                 var odR = await client.execute({ sql: "SELECT * FROM odontograma WHERE paciente_id=? AND clinica_id=? ORDER BY dente", args: [rpId, clinica_id] })
                 odontRows = odR.rows
             } catch(e) { /* tabela não existe, retorna vazio */ }
-            return res.status(200).json({ success: true, paciente: pac, agendamentos: rs5[0].rows, pagamentos: rs5[1].rows, financeiro: rs5[2].rows, odontograma: odontRows })
+            // Orçamentos
+            var orcRows = []
+            try {
+                var orcR = await client.execute({ sql: "SELECT * FROM orcamentos WHERE paciente_id=? AND clinica_id=? ORDER BY data_criacao DESC", args: [rpId, clinica_id] })
+                orcRows = orcR.rows
+                var orcIds2 = orcRows.map(function(o) { return o.id })
+                if (orcIds2.length) {
+                    var itR = await client.execute({ sql: "SELECT * FROM orcamento_itens WHERE orcamento_id IN (" + orcIds2.join(',') + ") ORDER BY id", args: [] })
+                    var itMap2 = {}
+                    itR.rows.forEach(function(it) { if (!itMap2[it.orcamento_id]) itMap2[it.orcamento_id] = []; itMap2[it.orcamento_id].push(it) })
+                    orcRows.forEach(function(o) { o.itens = itMap2[o.id] || [] })
+                }
+            } catch(e) { /* tabela não existe */ }
+            return res.status(200).json({ success: true, paciente: pac, agendamentos: rs5[0].rows, pagamentos: rs5[1].rows, financeiro: rs5[2].rows, odontograma: odontRows, orcamentos: orcRows })
         }
 
         if (route === 'pacientes') {
@@ -1176,6 +1189,112 @@ module.exports = async function handler(req, res) {
             }
 
             return res.status(200).json({ success: true, summary: summary })
+        }
+
+        // ── ORÇAMENTOS — MIGRATE ─────────────────────────────────────
+        if (route === 'orcamentos-migrate') {
+            await client.execute("CREATE TABLE IF NOT EXISTS orcamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, profissional_id INTEGER, profissional_nome TEXT, data_criacao TEXT DEFAULT (datetime('now')), observacoes TEXT, tabela_preco TEXT DEFAULT 'PARTICULAR', status TEXT DEFAULT 'aberto', aprovado_por TEXT, data_aprovacao TEXT, motivo_reprovacao TEXT, forma_pagamento TEXT, tipo_pagamento TEXT DEFAULT 'valor_total', parcelas INTEGER DEFAULT 1, desconto REAL DEFAULT 0, valor_total REAL DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))")
+            await client.execute("CREATE TABLE IF NOT EXISTS orcamento_itens (id INTEGER PRIMARY KEY AUTOINCREMENT, orcamento_id INTEGER REFERENCES orcamentos(id), procedimento_codigo TEXT, procedimento_nome TEXT, dente TEXT, regiao TEXT, profissional_id INTEGER, profissional_nome TEXT, valor_unitario REAL DEFAULT 0, valor_plano REAL DEFAULT 0, quantidade INTEGER DEFAULT 1, executado INTEGER DEFAULT 0, data_execucao TEXT, created_at TEXT DEFAULT (datetime('now')))")
+            return res.status(200).json({ success: true, msg: 'Tabelas orcamentos e orcamento_itens criadas' })
+        }
+
+        // ── ORÇAMENTOS — LISTAR POR PACIENTE ─────────────────────────
+        if (route === 'orcamentos-paciente') {
+            var opId = parseInt(q.paciente_id) || 0
+            if (!opId) return res.status(400).json({ success: false, error: 'paciente_id obrigatório' })
+            // Ensure tables exist
+            try { await client.execute("CREATE TABLE IF NOT EXISTS orcamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, profissional_id INTEGER, profissional_nome TEXT, data_criacao TEXT DEFAULT (datetime('now')), observacoes TEXT, tabela_preco TEXT DEFAULT 'PARTICULAR', status TEXT DEFAULT 'aberto', aprovado_por TEXT, data_aprovacao TEXT, motivo_reprovacao TEXT, forma_pagamento TEXT, tipo_pagamento TEXT DEFAULT 'valor_total', parcelas INTEGER DEFAULT 1, desconto REAL DEFAULT 0, valor_total REAL DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))") } catch(e) {}
+            try { await client.execute("CREATE TABLE IF NOT EXISTS orcamento_itens (id INTEGER PRIMARY KEY AUTOINCREMENT, orcamento_id INTEGER REFERENCES orcamentos(id), procedimento_codigo TEXT, procedimento_nome TEXT, dente TEXT, regiao TEXT, profissional_id INTEGER, profissional_nome TEXT, valor_unitario REAL DEFAULT 0, valor_plano REAL DEFAULT 0, quantidade INTEGER DEFAULT 1, executado INTEGER DEFAULT 0, data_execucao TEXT, created_at TEXT DEFAULT (datetime('now')))") } catch(e) {}
+            var orcRows = await client.execute({ sql: "SELECT * FROM orcamentos WHERE paciente_id=? AND clinica_id=? ORDER BY data_criacao DESC", args: [opId, clinica_id] })
+            var orcList = orcRows.rows
+            // Load items for each orcamento
+            var orcIds = orcList.map(function(o) { return o.id })
+            var itensMap = {}
+            if (orcIds.length) {
+                var itensRows = await client.execute({ sql: "SELECT * FROM orcamento_itens WHERE orcamento_id IN (" + orcIds.join(',') + ") ORDER BY id", args: [] })
+                itensRows.rows.forEach(function(it) {
+                    if (!itensMap[it.orcamento_id]) itensMap[it.orcamento_id] = []
+                    itensMap[it.orcamento_id].push(it)
+                })
+            }
+            orcList.forEach(function(o) { o.itens = itensMap[o.id] || [] })
+            return res.status(200).json({ success: true, orcamentos: orcList })
+        }
+
+        // ── ORÇAMENTOS — SALVAR (criar ou atualizar) ─────────────────
+        if (route === 'salvar-orcamento') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var so = req.body || {}
+            if (!so.paciente_id) return res.status(400).json({ success: false, error: 'paciente_id obrigatório' })
+            // Ensure tables exist
+            try { await client.execute("CREATE TABLE IF NOT EXISTS orcamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, profissional_id INTEGER, profissional_nome TEXT, data_criacao TEXT DEFAULT (datetime('now')), observacoes TEXT, tabela_preco TEXT DEFAULT 'PARTICULAR', status TEXT DEFAULT 'aberto', aprovado_por TEXT, data_aprovacao TEXT, motivo_reprovacao TEXT, forma_pagamento TEXT, tipo_pagamento TEXT DEFAULT 'valor_total', parcelas INTEGER DEFAULT 1, desconto REAL DEFAULT 0, valor_total REAL DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))") } catch(e) {}
+            try { await client.execute("CREATE TABLE IF NOT EXISTS orcamento_itens (id INTEGER PRIMARY KEY AUTOINCREMENT, orcamento_id INTEGER REFERENCES orcamentos(id), procedimento_codigo TEXT, procedimento_nome TEXT, dente TEXT, regiao TEXT, profissional_id INTEGER, profissional_nome TEXT, valor_unitario REAL DEFAULT 0, valor_plano REAL DEFAULT 0, quantidade INTEGER DEFAULT 1, executado INTEGER DEFAULT 0, data_execucao TEXT, created_at TEXT DEFAULT (datetime('now')))") } catch(e) {}
+            var soItens = so.itens || []
+            var soValorTotal = soItens.reduce(function(s, it) { return s + (+(it.valor_unitario || 0) * (+(it.quantidade || 1))) }, 0)
+            var orcId
+            if (so.id) {
+                // Update existing
+                await client.execute({ sql: "UPDATE orcamentos SET profissional_id=?,profissional_nome=?,data_criacao=?,observacoes=?,tabela_preco=?,forma_pagamento=?,tipo_pagamento=?,parcelas=?,desconto=?,valor_total=?,updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [so.profissional_id||null, so.profissional_nome||'', so.data_criacao||new Date().toISOString().slice(0,10), so.observacoes||'', so.tabela_preco||'PARTICULAR', so.forma_pagamento||null, so.tipo_pagamento||'valor_total', so.parcelas||1, so.desconto||0, soValorTotal, so.id, clinica_id] })
+                orcId = so.id
+                // Delete old items and re-insert
+                await client.execute({ sql: "DELETE FROM orcamento_itens WHERE orcamento_id=?", args: [orcId] })
+            } else {
+                // Insert new
+                var insResult = await client.execute({ sql: "INSERT INTO orcamentos (clinica_id,paciente_id,profissional_id,profissional_nome,data_criacao,observacoes,tabela_preco,forma_pagamento,tipo_pagamento,parcelas,desconto,valor_total) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", args: [clinica_id, so.paciente_id, so.profissional_id||null, so.profissional_nome||'', so.data_criacao||new Date().toISOString().slice(0,10), so.observacoes||'', so.tabela_preco||'PARTICULAR', so.forma_pagamento||null, so.tipo_pagamento||'valor_total', so.parcelas||1, so.desconto||0, soValorTotal] })
+                orcId = Number(insResult.lastInsertRowid)
+            }
+            // Insert items
+            for (var si = 0; si < soItens.length; si++) {
+                var it = soItens[si]
+                await client.execute({ sql: "INSERT INTO orcamento_itens (orcamento_id,procedimento_codigo,procedimento_nome,dente,regiao,profissional_id,profissional_nome,valor_unitario,valor_plano,quantidade) VALUES (?,?,?,?,?,?,?,?,?,?)", args: [orcId, it.procedimento_codigo||'', it.procedimento_nome||'', it.dente||'', it.regiao||'', it.profissional_id||null, it.profissional_nome||'', +(it.valor_unitario||0), +(it.valor_plano||0), +(it.quantidade||1)] })
+            }
+            return res.status(200).json({ success: true, id: orcId, msg: 'Orçamento salvo' })
+        }
+
+        // ── ORÇAMENTOS — APROVAR ─────────────────────────────────────
+        if (route === 'aprovar-orcamento') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var ao = req.body || {}
+            if (!ao.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
+            await client.execute({ sql: "UPDATE orcamentos SET status='aprovado',aprovado_por=?,data_aprovacao=datetime('now'),updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [ao.aprovado_por||'', ao.id, clinica_id] })
+            return res.status(200).json({ success: true, msg: 'Orçamento aprovado' })
+        }
+
+        // ── ORÇAMENTOS — REPROVAR ────────────────────────────────────
+        if (route === 'reprovar-orcamento') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var ro = req.body || {}
+            if (!ro.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
+            await client.execute({ sql: "UPDATE orcamentos SET status='reprovado',motivo_reprovacao=?,updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [ro.motivo||'', ro.id, clinica_id] })
+            return res.status(200).json({ success: true, msg: 'Orçamento reprovado' })
+        }
+
+        // ── ORÇAMENTOS — EXCLUIR ─────────────────────────────────────
+        if (route === 'excluir-orcamento') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var eo = req.body || {}
+            if (!eo.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
+            await client.execute({ sql: "DELETE FROM orcamento_itens WHERE orcamento_id=?", args: [eo.id] })
+            await client.execute({ sql: "DELETE FROM orcamentos WHERE id=? AND clinica_id=?", args: [eo.id, clinica_id] })
+            return res.status(200).json({ success: true, msg: 'Orçamento excluído' })
+        }
+
+        // ── BUSCAR PROCEDIMENTO (autocomplete) ───────────────────────
+        if (route === 'buscar-procedimento') {
+            var bpq = q.q || ''
+            var bpTab = q.tabela || ''
+            if (bpq.length < 2) return res.status(400).json({ success: false, error: 'Mínimo 2 caracteres' })
+            // Search in tabelas_preco_itens first, fallback to procedimentos
+            var bpSql, bpArgs
+            if (bpTab) {
+                bpSql = "SELECT tpi.id,tpi.codigo,tpi.descricao as nome,tpi.valor,tp.nome as tabela FROM tabelas_preco_itens tpi JOIN tabelas_preco tp ON tp.id=tpi.tabela_id WHERE (tpi.descricao LIKE ? OR tpi.codigo LIKE ?) AND tp.nome LIKE ? AND tp.clinica_id=? ORDER BY tpi.descricao LIMIT 20"
+                bpArgs = ['%'+bpq+'%', '%'+bpq+'%', '%'+bpTab+'%', clinica_id]
+            } else {
+                bpSql = "SELECT tpi.id,tpi.codigo,tpi.descricao as nome,tpi.valor,tp.nome as tabela FROM tabelas_preco_itens tpi JOIN tabelas_preco tp ON tp.id=tpi.tabela_id WHERE (tpi.descricao LIKE ? OR tpi.codigo LIKE ?) AND tp.clinica_id=? ORDER BY tpi.descricao LIMIT 20"
+                bpArgs = ['%'+bpq+'%', '%'+bpq+'%', clinica_id]
+            }
+            var bpResult = await client.execute({ sql: bpSql, args: bpArgs })
+            return res.status(200).json({ success: true, procedimentos: bpResult.rows })
         }
 
         return res.status(400).json({ success: false, error: 'Rota inválida: r=' + route })
