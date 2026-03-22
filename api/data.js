@@ -1397,9 +1397,7 @@ module.exports = async function handler(req, res) {
                 // Cancel all parcelas
                 await client.execute({ sql: "UPDATE parcelas_orcamento SET status='cancelado', updated_at=datetime('now') WHERE orcamento_id=? AND status='pendente'", args: [da.id] })
 
-                // Cancel pending Asaas charges
-                var daCobs = await client.execute({ sql: "SELECT c.asaas_id FROM cobrancas c JOIN parcelas_orcamento po ON po.cobranca_id=c.id WHERE po.orcamento_id=? AND c.status='pendente'", args: [da.id] })
-                // Mark as cancelled in DB (Asaas cancellation would need API call)
+                // Cancel pending Asaas charges in DB
                 await client.execute({ sql: "UPDATE cobrancas SET status='cancelado', updated_at=datetime('now') WHERE id IN (SELECT cobranca_id FROM parcelas_orcamento WHERE orcamento_id=? AND cobranca_id IS NOT NULL) AND status='pendente'", args: [da.id] })
 
                 // Cancel pending commissions

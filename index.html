@@ -6132,13 +6132,7 @@ function renderFinanceiroPaciente(el,pacId){
   el.innerHTML=html
 }
 
-function toggleFinPacOrc(orcId){
-  var el=document.getElementById('fin-pac-orc-'+orcId)
-  var arrow=document.getElementById('fin-pac-arrow-'+orcId)
-  if(!el)return
-  if(el.style.display==='none'){el.style.display='block';if(arrow)arrow.style.transform='rotate(90deg)'}
-  else{el.style.display='none';if(arrow)arrow.style.transform='rotate(0deg)'}
-}
+
 
 async function darBaixaParcela(parcelaId,pacId){
   if(!confirm('Confirma a baixa manual desta parcela?'))return
