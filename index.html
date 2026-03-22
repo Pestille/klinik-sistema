@@ -96,13 +96,15 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 #p-agenda{display:none;height:calc(100vh - 52px - 32px);overflow:hidden;flex-direction:column}
 #p-agenda.active{display:flex}
 .agenda-topbar{height:52px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0}
-.btn-novo{background:var(--orange);color:#fff;border:none;border-radius:4px;padding:7px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Roboto',sans-serif;display:flex;align-items:center;gap:6px}
+.btn-novo{background:var(--orange);color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Roboto',sans-serif;display:flex;align-items:center;gap:6px;transition:background .12s}
 .btn-novo:hover{background:var(--orange2)}
-.btn-ico{background:none;border:1px solid var(--border);border-radius:4px;padding:6px 8px;cursor:pointer;color:var(--text2);display:flex;align-items:center;gap:4px;font-size:12px;font-family:'Roboto',sans-serif;transition:all .15s}
+.btn-ico{background:none;border:1px solid var(--border);border-radius:6px;padding:6px 8px;cursor:pointer;color:var(--text2);display:flex;align-items:center;gap:4px;font-size:12px;font-family:'Roboto',sans-serif;transition:all .12s}
 .btn-ico:hover{background:var(--gray2)}
-.btn-hoje{background:var(--orange);color:#fff;border:none;border-radius:4px;padding:5px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Roboto',sans-serif}
+.btn-hoje{background:var(--orange);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Roboto',sans-serif;transition:background .12s}
+.btn-hoje:hover{background:var(--orange2)}
 .agenda-date{font-size:16px;font-weight:500;color:var(--text)}
-.agenda-view-sel{margin-left:auto;background:none;border:1px solid var(--border);border-radius:4px;padding:5px 10px;font-size:12px;font-family:'Roboto',sans-serif;color:var(--text2);cursor:pointer}
+.agenda-view-sel{background:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;font-family:'Roboto',sans-serif;color:var(--text2);cursor:pointer}
+.agenda-interval-sel{background:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;font-family:'Roboto',sans-serif;color:var(--text2);cursor:pointer}
 .agenda-warn{font-size:12px;color:var(--orange);cursor:pointer}
 .agenda-body{flex:1;display:flex;overflow:hidden}
 .agenda-left{width:240px;min-width:240px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
@@ -128,7 +130,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 .agenda-profs-header{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px}
 .agenda-profs-all{font-size:11px;color:var(--green);cursor:pointer}
 .prof-check{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer}
-.prof-check-box{width:14px;height:14px;border-radius:3px;border:2px solid;flex-shrink:0}
+.prof-check-box{width:14px;height:14px;border-radius:3px;border:2px solid;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .prof-check-name{font-size:12px;color:var(--text2)}
 .agenda-alerts{padding:10px 12px;border-top:1px solid var(--border)}
 .agenda-alerts-header{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px}
@@ -136,34 +138,56 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 .alert-row:hover{color:var(--green)}
 .alert-date{color:var(--gray5)}
 
-/* Agenda grid */
-.agenda-grid-wrap{flex:1;overflow:auto;position:relative}
+/* Agenda grid — vertical time, horizontal professionals */
+.agenda-grid-wrap{flex:1;overflow:auto;position:relative;display:flex;flex-direction:column}
 .agenda-grid-wrap::-webkit-scrollbar{width:6px;height:6px}
 .agenda-grid-wrap::-webkit-scrollbar-thumb{background:var(--gray4);border-radius:3px}
-.agenda-grid{min-width:900px}
-.agenda-header-row{display:flex;position:sticky;top:0;z-index:10;background:var(--white);border-bottom:2px solid var(--border)}
-.agenda-prof-label{width:130px;min-width:130px;flex-shrink:0;border-right:1px solid var(--border);font-size:10px;font-weight:700;color:var(--text3);padding:6px 8px;text-transform:uppercase;letter-spacing:.04em}
-.agenda-hour-col{flex:0 0 80px;text-align:center;padding:6px 0;font-size:10px;font-weight:500;color:var(--text3);border-right:1px solid var(--border);position:relative}
-.agenda-hour-col:last-child{border-right:none}
-.agenda-hour-col.now{color:var(--orange);font-weight:700}
-.agenda-q-marks{display:flex;position:absolute;bottom:0;left:0;right:0}
-.agenda-q-mark{flex:1;text-align:center;font-size:8px;color:var(--gray4);border-right:1px solid var(--border2)}
-.agenda-q-mark:last-child{border-right:none}
-.agenda-slots{position:relative}
-.agenda-prof-row{display:flex;border-bottom:1px solid var(--border);min-height:56px;position:relative}
-.agenda-prof-info{width:130px;min-width:130px;flex-shrink:0;border-right:1px solid var(--border);padding:6px 8px;display:flex;align-items:center;gap:6px;background:var(--white);position:sticky;left:0;z-index:3}
-.agenda-prof-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
-.agenda-prof-name{font-size:11px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px}
-.agenda-prof-count{font-size:9px;color:var(--text3)}
-.agenda-slots-row{flex:1;display:flex;position:relative;overflow:visible}
-.slot-cell{flex:0 0 40px;height:100%;min-height:56px;border-right:1px solid var(--border2);position:relative;cursor:pointer}
-.slot-cell:hover{background:rgba(27,94,59,.04)}
-.slot-cell.q0{border-right-color:var(--border)}
-.appt-block{position:absolute;top:3px;bottom:3px;border-radius:4px;padding:4px 8px;font-size:11px;overflow:hidden;cursor:pointer;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.15);display:flex;flex-direction:column;justify-content:center;min-width:60px}
+.agenda-grid{display:flex;flex-direction:column;flex:1;min-height:0}
+.agenda-prof-headers{display:flex;position:sticky;top:0;z-index:12;background:var(--white);border-bottom:2px solid var(--border);flex-shrink:0}
+.agenda-time-spacer{width:60px;min-width:60px;flex-shrink:0;border-right:1px solid var(--border)}
+.agenda-prof-header{flex:1;min-width:140px;border-right:1px solid var(--border);padding:10px 8px 8px;text-align:center;position:relative}
+.agenda-prof-header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.agenda-prof-header-name{font-size:12px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agenda-prof-header-count{font-size:10px;color:var(--text3);margin-top:2px}
+.agenda-grid-body{flex:1;overflow:auto;position:relative}
+.agenda-grid-body::-webkit-scrollbar{width:6px;height:6px}
+.agenda-grid-body::-webkit-scrollbar-thumb{background:var(--gray4);border-radius:3px}
+.agenda-grid-inner{position:relative;display:flex}
+.agenda-time-col{width:60px;min-width:60px;flex-shrink:0;position:sticky;left:0;z-index:5;background:var(--white)}
+.agenda-time-label{font-size:11px;font-weight:400;color:var(--text3);text-align:right;padding-right:8px;position:relative;transform:translateY(-7px)}
+.agenda-time-label.now-time{color:var(--orange);font-weight:700}
+.agenda-cols-area{flex:1;display:flex;position:relative}
+.agenda-col{flex:1;min-width:140px;border-right:1px solid var(--border2);position:relative}
+.agenda-col:last-child{border-right:none}
+.agenda-slot-line{border-top:1px solid var(--border2);position:relative;cursor:pointer;transition:background .1s}
+.agenda-slot-line:hover{background:rgba(27,94,59,.04)}
+.agenda-slot-line.hour-line{border-top-color:var(--border)}
+.appt-block{position:absolute;left:3px;right:3px;border-radius:4px;padding:4px 8px;font-size:11px;overflow:hidden;cursor:pointer;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.12);display:flex;flex-direction:column;justify-content:flex-start;transition:box-shadow .12s}
+.appt-block:hover{box-shadow:0 2px 8px rgba(0,0,0,.18)}
 .appt-name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
-.appt-time{font-size:10px;opacity:.85}
-.now-marker{position:absolute;top:0;bottom:0;width:2px;background:var(--orange);z-index:5;pointer-events:none}
-.now-marker::before{content:'';position:absolute;top:-4px;left:-4px;width:10px;height:10px;border-radius:50%;background:var(--orange)}
+.appt-time{font-size:10px;opacity:.85;white-space:nowrap}
+.appt-status{font-size:9px;opacity:.7;margin-top:1px}
+.now-line{position:absolute;left:0;right:0;height:2px;background:var(--orange);z-index:8;pointer-events:none}
+.now-line::before{content:'';position:absolute;top:-4px;left:-5px;width:10px;height:10px;border-radius:50%;background:var(--orange)}
+/* Month view */
+.agenda-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);padding:0}
+.agenda-month-hdr{background:var(--white);font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;padding:8px;text-align:center}
+.agenda-month-cell{background:var(--white);min-height:90px;padding:6px 8px;cursor:pointer;transition:background .1s}
+.agenda-month-cell:hover{background:var(--gray1)}
+.agenda-month-cell.other-month{background:var(--gray1)}
+.agenda-month-cell.today{background:#E8F5E9}
+.agenda-month-day{font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px}
+.agenda-month-cell.other-month .agenda-month-day{color:var(--gray4)}
+.agenda-month-count{font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px;margin-top:2px}
+.agenda-month-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+/* Week view */
+.agenda-week-grid{display:grid;grid-template-columns:60px repeat(7,1fr);border-top:1px solid var(--border)}
+.agenda-week-day-hdr{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;padding:8px;text-align:center;border-bottom:2px solid var(--border);border-right:1px solid var(--border2);background:var(--white);position:sticky;top:0;z-index:5}
+.agenda-week-day-hdr.today{color:var(--orange);font-weight:700}
+.agenda-week-time{font-size:11px;color:var(--text3);text-align:right;padding:2px 8px 0 0;border-right:1px solid var(--border);border-bottom:1px solid var(--border2)}
+.agenda-week-cell{border-right:1px solid var(--border2);border-bottom:1px solid var(--border2);position:relative;min-height:40px;cursor:pointer;transition:background .1s}
+.agenda-week-cell:hover{background:rgba(27,94,59,.04)}
+.agenda-week-appt{font-size:10px;padding:2px 4px;border-radius:3px;margin:1px 2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#fff;cursor:pointer}
 
 /* ── GENERIC PAGE ── */
 .gpage{padding:0}
@@ -750,17 +774,21 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
           </div>
         </div>
       </div>
-        <button class="btn-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h6v-2H3v2zm0-5h12v-2H3v2zm0-7v2h18V6H3z"/></svg></button>
         <button class="btn-ico" onclick="agendaPrev()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
         <button class="btn-hoje" onclick="agendaHoje()">Hoje</button>
         <button class="btn-ico" onclick="agendaNext()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
-        <div class="agenda-date" id="agenda-date-title">Sábado, 14 de Março de 2026</div>
+        <div class="agenda-date" id="agenda-date-title">Sábado, 21 de Março de 2026</div>
         <button class="btn-ico" title="Recarregar" onclick="loadAgenda()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button>
         <span class="agenda-warn" id="agenda-warn-txt" onclick="nav('confirmacoes')"></span>
         <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+          <select class="agenda-interval-sel" id="agenda-interval-sel" onchange="setAgendaInterval(Number(this.value))" title="Intervalo de tempo">
+            <option value="5">5 min</option>
+            <option value="10">10 min</option>
+            <option value="15" selected>15 min</option>
+            <option value="20">20 min</option>
+            <option value="30">30 min</option>
+          </select>
           <select class="agenda-view-sel" id="agenda-view-sel" onchange="agendaChangeView(this.value)"><option value="dia">Dia</option><option value="semana">Semana</option><option value="mes">Mês</option></select>
-          <button class="btn-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg></button>
-          <button class="btn-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></button>
         </div>
       </div>
       <div class="agenda-body">
@@ -780,7 +808,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
           <div class="agenda-profs" id="profs-panel">
             <div class="agenda-profs-header">
               Profissionais
-              <span class="agenda-profs-all">Todos</span>
+              <span class="agenda-profs-all" onclick="toggleAllProfs()">Todos</span>
             </div>
             <div id="profs-list"></div>
           </div>
@@ -798,7 +826,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         </div>
         <div class="agenda-grid-wrap">
           <div id="agenda-loading" class="loading"><div class="spin"></div><div>Carregando agenda...</div></div>
-          <div id="agenda-grid" class="hidden"></div>
+          <div id="agenda-grid" class="agenda-grid hidden"></div>
         </div>
       </div>
     </div>
@@ -1957,6 +1985,10 @@ const DIAS_FULL = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quin
 let agendaDate = new Date()
 let miniCalDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
 let curPage = 'home'
+var agendaInterval = 15
+var agendaView = 'dia'
+var agendaProfsFilter = {}
+var PX_PER_SLOT = 40
 
 const PROF_CORES = ['#9C27B0','#4CAF50','#FF9800','#795548','#2196F3','#E91E63','#00BCD4','#F44336']
 
@@ -2025,10 +2057,8 @@ async function loadAgenda() {
   if (loadEl) loadEl.classList.remove('hidden')
   if (gridEl) gridEl.classList.add('hidden')
   try {
-    // Busca agendamentos do Turso
     var d = await apiData('agendamentos')
     var rows = d.agendamentos || []
-    // Converte para formato compatível com renderAgendaGrid
     ST.agendamentos = rows.map(function(a) {
       var dh = a.data_hora || ''
       return {
@@ -2053,29 +2083,40 @@ async function loadAgenda() {
 }
 
 function formatAgendaDate(d) {
-  return `${DIAS_FULL[d.getDay()]}, ${d.getDate()} de ${MESES_PT[d.getMonth()]} de ${d.getFullYear()}`
+  return DIAS_FULL[d.getDay()]+', '+d.getDate()+' de '+MESES_PT[d.getMonth()]+' de '+d.getFullYear()
 }
 
-function agendaPrev() { agendaDate.setDate(agendaDate.getDate()-1); renderAgendaGrid() }
-function agendaNext() { agendaDate.setDate(agendaDate.getDate()+1); renderAgendaGrid() }
-function agendaHoje() { agendaDate = new Date(); renderAgendaGrid() }
-function agendaChangeView(v) { renderAgendaGrid() }
+function agendaPrev() {
+  if(agendaView==='semana'){agendaDate.setDate(agendaDate.getDate()-7)}
+  else if(agendaView==='mes'){agendaDate.setMonth(agendaDate.getMonth()-1)}
+  else{agendaDate.setDate(agendaDate.getDate()-1)}
+  renderAgendaGrid()
+}
+function agendaNext() {
+  if(agendaView==='semana'){agendaDate.setDate(agendaDate.getDate()+7)}
+  else if(agendaView==='mes'){agendaDate.setMonth(agendaDate.getMonth()+1)}
+  else{agendaDate.setDate(agendaDate.getDate()+1)}
+  renderAgendaGrid()
+}
+function agendaHoje() { agendaDate = new Date(); renderMiniCal(); renderAgendaGrid() }
+function agendaChangeView(v) { agendaView = v; renderAgendaGrid() }
+function setAgendaInterval(min) { agendaInterval = min; renderAgendaGrid() }
 
 function renderMiniCal() {
-  const ano = miniCalDate.getFullYear(), mes = miniCalDate.getMonth()
-  document.getElementById('mini-cal-month').textContent = `${MESES_PT[mes]} ${ano}`
-  const hoje = new Date()
-  const primeiro = new Date(ano,mes,1)
-  const ultimo = new Date(ano,mes+1,0)
-  let html = ''
-  for (let i=0;i<primeiro.getDay();i++) {
-    const d=new Date(ano,mes,1-primeiro.getDay()+i)
-    html+=`<div class="mini-cal-d other">${d.getDate()}</div>`
+  var ano = miniCalDate.getFullYear(), mes = miniCalDate.getMonth()
+  document.getElementById('mini-cal-month').textContent = MESES_PT[mes]+' '+ano
+  var hoje = new Date()
+  var primeiro = new Date(ano,mes,1)
+  var ultimo = new Date(ano,mes+1,0)
+  var html = ''
+  for (var i=0;i<primeiro.getDay();i++) {
+    var dd=new Date(ano,mes,1-primeiro.getDay()+i)
+    html+='<div class="mini-cal-d other">'+dd.getDate()+'</div>'
   }
-  for (let d=1;d<=ultimo.getDate();d++) {
-    const isToday = d===hoje.getDate()&&mes===hoje.getMonth()&&ano===hoje.getFullYear()
-    const isSel = d===agendaDate.getDate()&&mes===agendaDate.getMonth()&&ano===agendaDate.getFullYear()
-    html+=`<div class="mini-cal-d ${isToday&&!isSel?'today':''} ${isSel?'selected':''}" onclick="selectMiniCalDay(${d},${mes},${ano})">${d}</div>`
+  for (var d=1;d<=ultimo.getDate();d++) {
+    var isToday = d===hoje.getDate()&&mes===hoje.getMonth()&&ano===hoje.getFullYear()
+    var isSel = d===agendaDate.getDate()&&mes===agendaDate.getMonth()&&ano===agendaDate.getFullYear()
+    html+='<div class="mini-cal-d '+(isToday&&!isSel?'today':'')+' '+(isSel?'selected':'')+'" onclick="selectMiniCalDay('+d+','+mes+','+ano+')">'+d+'</div>'
   }
   document.getElementById('mini-cal-grid').innerHTML = html
 }
@@ -2085,121 +2126,337 @@ function miniCalNext() { miniCalDate.setMonth(miniCalDate.getMonth()+1); renderM
 function selectMiniCalDay(d,m,y) { agendaDate=new Date(y,m,d); renderMiniCal(); renderAgendaGrid() }
 
 function renderProfsList() {
-  const profs = ST.profissionais || (ST.dashboard?.profissionais) || []
-  document.getElementById('profs-list').innerHTML = profs.map((p,i)=>{
-    const nome = p.name||p.Name||'Profissional'
-    const cor = PROF_CORES[i%PROF_CORES.length]
-    return `<div class="prof-check">
-      <div class="prof-check-box" style="border-color:${cor};background:${cor}"><svg width="8" height="8" viewBox="0 0 12 12" fill="white"><path d="M1 6l4 4 6-6" stroke="white" stroke-width="2" fill="none"/></svg></div>
-      <div class="prof-check-name">${nome.toUpperCase().substring(0,20)}...</div>
-    </div>`
+  var profs = ST.profissionais || (ST.dashboard&&ST.dashboard.profissionais) || []
+  // Initialize filter if empty
+  if(Object.keys(agendaProfsFilter).length===0){
+    profs.forEach(function(p,i){ agendaProfsFilter[String(p.id||p.Id||i)] = true })
+  }
+  document.getElementById('profs-list').innerHTML = profs.map(function(p,i){
+    var nome = p.name||p.Name||p.nome||'Profissional'
+    var cor = PROF_CORES[i%PROF_CORES.length]
+    var profKey = String(p.id||p.Id||i)
+    var checked = agendaProfsFilter[profKey] !== false
+    return '<div class="prof-check" onclick="toggleProfFilter(\''+profKey+'\')">'+
+      '<div class="prof-check-box" style="border-color:'+cor+';'+(checked?'background:'+cor:'background:transparent')+'">'+
+      (checked?'<svg width="8" height="8" viewBox="0 0 12 12" fill="white"><path d="M1 6l4 4 6-6" stroke="white" stroke-width="2" fill="none"/></svg>':'')+
+      '</div>'+
+      '<div class="prof-check-name">'+nome.toUpperCase().substring(0,20)+'</div>'+
+    '</div>'
   }).join('')
+}
+
+function toggleProfFilter(key) {
+  agendaProfsFilter[key] = !agendaProfsFilter[key]
+  renderProfsList()
+  renderAgendaGrid()
+}
+
+function toggleAllProfs() {
+  var profs = ST.profissionais || (ST.dashboard&&ST.dashboard.profissionais) || []
+  var allOn = profs.every(function(p,i){ return agendaProfsFilter[String(p.id||p.Id||i)] !== false })
+  profs.forEach(function(p,i){ agendaProfsFilter[String(p.id||p.Id||i)] = !allOn })
+  renderProfsList()
+  renderAgendaGrid()
+}
+
+function getStatusIcon(status) {
+  if(!status) return ''
+  var s = status.toLowerCase()
+  if(s==='confirmado'||s==='confirmed') return '<span style="font-size:9px">&#10003;</span>'
+  if(s==='atendido'||s==='completed') return '<span style="font-size:9px">&#9679;</span>'
+  if(s==='cancelado'||s==='cancelled') return '<span style="font-size:9px">&#10007;</span>'
+  if(s==='faltou'||s==='no_show') return '<span style="font-size:9px">&#9888;</span>'
+  return ''
+}
+
+function agendaDblClick(profId, timeStr) {
+  openNovaConsulta(profId, timeStr)
 }
 
 function renderAgendaGrid() {
   var el = document.getElementById('agenda-grid')
+  if(!el) return
   document.getElementById('agenda-date-title').textContent = formatAgendaDate(agendaDate)
   renderMiniCal()
+
+  if(agendaView==='mes') { renderAgendaMonth(el); return }
+  if(agendaView==='semana') { renderAgendaWeek(el); return }
+
+  // Day view: professionals as COLUMNS, time as ROWS
   var ag = ST.agendamentos||[]
   var dtStr = agendaDate.toISOString().slice(0,10)
-  var profs = ST.dashboard?.profissionais || []
-  var START_H=7, END_H=20, PX_PER_15=40 // 40px por slot de 15min = 160px/hora
+  var allProfs = ST.profissionais || (ST.dashboard&&ST.dashboard.profissionais) || []
+  var profs = allProfs.filter(function(p,i){ return agendaProfsFilter[String(p.id||p.Id||i)] !== false })
+  var START_H=7, END_H=21
+  var interval = agendaInterval
+  var slotsPerHour = 60/interval
+  var totalSlots = (END_H-START_H)*slotsPerHour
   var now = new Date()
   var nowH = now.getHours(), nowM = now.getMinutes()
-
-  // Header: horários no topo com marcas de 15min
-  var html = '<div class="agenda-header-row"><div class="agenda-prof-label">Profissional</div>'
-  for(var hh=START_H;hh<=END_H;hh++){
-    var isNow = hh === nowH
-    html+='<div class="agenda-hour-col'+(isNow?' now':'')+'" style="flex:0 0 '+(PX_PER_15*4)+'px">'+String(hh).padStart(2,'0')+':00'
-    html+='<div class="agenda-q-marks"><div class="agenda-q-mark">00</div><div class="agenda-q-mark">15</div><div class="agenda-q-mark">30</div><div class="agenda-q-mark">45</div></div>'
-    html+='</div>'
-  }
-  html += '</div><div class="agenda-slots">'
-
-  // Agendamentos do dia
   var todayAg = ag.filter(function(a){return !a.Deleted&&a.date&&a.date.slice(0,10)===dtStr})
 
-  // Marca quais agendamentos têm profissional atribuído
-  var atribuidos = {}
+  // Build prof ID to color/index map
+  var profMap = {}
+  allProfs.forEach(function(p,i){
+    profMap[String(p.id||p.Id||'')] = { idx: i, cor: PROF_CORES[i%PROF_CORES.length], name: p.name||p.Name||p.nome||'Profissional' }
+  })
 
-  // Uma linha por profissional
+  // Column headers
+  var html = '<div class="agenda-prof-headers">'
+  html += '<div class="agenda-time-spacer"></div>'
   profs.forEach(function(p,pi){
     var nome = p.name||p.Name||p.nome||'Profissional'
-    var ini = nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
-    var cor = PROF_CORES[pi%PROF_CORES.length]
     var profId = String(p.id||p.Id||'')
-    var profAg = todayAg.filter(function(a){
-      var aid = String(a.ProfessionalId||a.professionalId||'')
-      if(aid && aid===profId){atribuidos[a.id||a.date+a.fromTime]=true;return true}
-      return false
-    })
+    var globalIdx = allProfs.indexOf(p)
+    if(globalIdx<0) globalIdx = pi
+    var cor = PROF_CORES[globalIdx%PROF_CORES.length]
+    var count = todayAg.filter(function(a){ return String(a.ProfessionalId||a.professionalId||'')===profId }).length
+    html += '<div class="agenda-prof-header" style="border-top:3px solid '+cor+'">'
+    html += '<div class="agenda-prof-header-name" title="'+nome+'">'+nome.split(' ').slice(0,2).join(' ')+'</div>'
+    html += '<div class="agenda-prof-header-count">Pacientes: '+count+'</div>'
+    html += '</div>'
+  })
+  if(!profs.length){
+    html += '<div class="agenda-prof-header"><div class="agenda-prof-header-name" style="color:var(--text3)">Nenhum profissional selecionado</div></div>'
+  }
+  html += '</div>'
 
-    html+='<div class="agenda-prof-row">'
-    html+='<div class="agenda-prof-info"><div class="agenda-prof-av" style="background:'+cor+'">'+ini+'</div><div><div class="agenda-prof-name" title="'+nome+'">'+nome.split(' ').slice(0,2).join(' ')+'</div><div class="agenda-prof-count">'+profAg.length+' pac.</div></div></div>'
-    html+='<div class="agenda-slots-row">'
+  // Grid body
+  html += '<div class="agenda-grid-body">'
+  html += '<div class="agenda-grid-inner" style="position:relative">'
 
-    // 4 slots por hora (15min cada)
-    for(var sh=START_H;sh<=END_H;sh++){
-      for(var sq=0;sq<4;sq++){
-        html+='<div class="slot-cell'+(sq===0?' q0':'')+'" style="flex:0 0 '+PX_PER_15+'px" onclick="openNovaConsulta()"></div>'
-      }
+  // Time column
+  html += '<div class="agenda-time-col">'
+  for(var s=0;s<totalSlots;s++){
+    var slotMin = s*interval
+    var h = START_H + Math.floor(slotMin/60)
+    var m = slotMin%60
+    var isHour = m===0
+    var timeLabel = ''
+    if(isHour){
+      var isNowH = h===nowH && agendaDate.toDateString()===now.toDateString()
+      timeLabel = '<div class="agenda-time-label'+(isNowH?' now-time':'')+'" style="height:'+PX_PER_SLOT+'px;line-height:'+PX_PER_SLOT+'px">'+String(h).padStart(2,'0')+':00</div>'
+    } else {
+      timeLabel = '<div class="agenda-time-label" style="height:'+PX_PER_SLOT+'px;line-height:'+PX_PER_SLOT+'px;font-size:9px;color:var(--gray4)">'+String(m).padStart(2,'0')+'</div>'
+    }
+    html += timeLabel
+  }
+  html += '</div>'
+
+  // Columns area
+  html += '<div class="agenda-cols-area">'
+
+  profs.forEach(function(p,pi){
+    var profId = String(p.id||p.Id||'')
+    var globalIdx = allProfs.indexOf(p)
+    if(globalIdx<0) globalIdx = pi
+    var cor = PROF_CORES[globalIdx%PROF_CORES.length]
+    var profAg = todayAg.filter(function(a){ return String(a.ProfessionalId||a.professionalId||'')===profId })
+
+    html += '<div class="agenda-col">'
+
+    // Slot lines (for click targets and grid lines)
+    for(var s=0;s<totalSlots;s++){
+      var slotMin = s*interval
+      var h = START_H + Math.floor(slotMin/60)
+      var m = slotMin%60
+      var isHour = m===0
+      var timeStr = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')
+      html += '<div class="agenda-slot-line'+(isHour?' hour-line':'')+'" style="height:'+PX_PER_SLOT+'px" ondblclick="agendaDblClick(\''+profId+'\',\''+timeStr+'\')"></div>'
     }
 
-    // Blocos de agendamento posicionados em px
+    // Appointment blocks (absolute positioned)
     profAg.forEach(function(a){
       var parts = (a.fromTime||'9:00').split(':').map(Number)
       var aH=parts[0], aM=parts[1]||0
-      var parts2 = (a.toTime||((aH+1)+':'+aM)).replace(/h$/,'').split(':').map(Number)
+      var parts2 = (a.toTime||((aH+1)+':'+String(aM).padStart(2,'0'))).replace(/h$/,'').split(':').map(Number)
       var aH2=parts2[0], aM2=parts2[1]||0
-      var durMin = (aH2*60+aM2)-(aH*60+aM); if(durMin<=0) durMin=60
-      var startMin = (aH-START_H)*60 + aM
-      var left = (startMin/15)*PX_PER_15
-      var width = Math.max(PX_PER_15,(durMin/15)*PX_PER_15)
-      html+='<div class="appt-block" style="left:'+left+'px;width:'+width+'px;background:'+cor+'dd;color:#fff">'
-      html+='<div class="appt-name">'+(a.PatientName||a.patientName||'Paciente')+'</div>'
-      html+='<div class="appt-time">'+(a.fromTime||'—')+' - '+aH2+':'+String(aM2).padStart(2,'0')+'</div>'
-      html+='</div>'
+      var durMin = (aH2*60+aM2)-(aH*60+aM)
+      if(durMin<=0) durMin=30
+      var startMinFromTop = (aH-START_H)*60 + aM
+      var top = (startMinFromTop/interval)*PX_PER_SLOT
+      var height = Math.max(PX_PER_SLOT, (durMin/interval)*PX_PER_SLOT)
+      var statusIcon = getStatusIcon(a.status)
+      html += '<div class="appt-block" style="top:'+top+'px;height:'+height+'px;background:'+cor+'dd;color:#fff" onclick="event.stopPropagation()">'
+      html += '<div class="appt-name">'+statusIcon+' '+(a.PatientName||a.patientName||'Paciente')+'</div>'
+      html += '<div class="appt-time">'+(a.fromTime||'--')+' - '+String(aH2).padStart(2,'0')+':'+String(aM2).padStart(2,'0')+'</div>'
+      if(height>50) html += '<div class="appt-status">'+((a.status||'').charAt(0).toUpperCase()+(a.status||'').slice(1))+'</div>'
+      html += '</div>'
     })
 
-    html+='</div></div>'
+    html += '</div>'
   })
 
-  // Linha para agendamentos sem profissional atribuído
-  var semProf = todayAg.filter(function(a){ return !atribuidos[a.id||a.date+a.fromTime] })
-  if(semProf.length){
-    html+='<div class="agenda-prof-row">'
-    html+='<div class="agenda-prof-info"><div class="agenda-prof-av" style="background:var(--gray5)">?</div><div><div class="agenda-prof-name">Sem profissional</div><div class="agenda-prof-count">'+semProf.length+' pac.</div></div></div>'
-    html+='<div class="agenda-slots-row">'
-    for(var sh2=START_H;sh2<=END_H;sh2++){for(var sq2=0;sq2<4;sq2++){html+='<div class="slot-cell'+(sq2===0?' q0':'')+'" style="flex:0 0 '+PX_PER_15+'px" onclick="openNovaConsulta()"></div>'}}
-    semProf.forEach(function(a){
-      var parts3=(a.fromTime||'9:00').split(':').map(Number);var aH3=parts3[0],aM3=parts3[1]||0
-      var parts4=(a.toTime||((aH3+1)+':'+aM3)).replace(/h$/,'').split(':').map(Number);var aH4=parts4[0],aM4=parts4[1]||0
-      var durMin3=(aH4*60+aM4)-(aH3*60+aM3);if(durMin3<=0)durMin3=60
-      var left3=((aH3-START_H)*60+aM3)/15*PX_PER_15
-      var width3=Math.max(PX_PER_15,(durMin3/15)*PX_PER_15)
-      html+='<div class="appt-block" style="left:'+left3+'px;width:'+width3+'px;background:var(--gray5)dd;color:#fff"><div class="appt-name">'+(a.PatientName||a.patientName||'Paciente')+'</div><div class="appt-time">'+(a.fromTime||'—')+'</div></div>'
+  // If no profs, show unassigned appointments
+  if(!profs.length){
+    html += '<div class="agenda-col">'
+    for(var s2=0;s2<totalSlots;s2++){
+      var slotMin2 = s2*interval
+      var isHour2 = (slotMin2%60)===0
+      html += '<div class="agenda-slot-line'+(isHour2?' hour-line':'')+'" style="height:'+PX_PER_SLOT+'px"></div>'
+    }
+    todayAg.forEach(function(a){
+      var parts=(a.fromTime||'9:00').split(':').map(Number)
+      var aH=parts[0],aM=parts[1]||0
+      var parts2=(a.toTime||((aH+1)+':'+String(aM).padStart(2,'0'))).replace(/h$/,'').split(':').map(Number)
+      var aH2=parts2[0],aM2=parts2[1]||0
+      var durMin=(aH2*60+aM2)-(aH*60+aM);if(durMin<=0)durMin=30
+      var startMin=(aH-START_H)*60+aM
+      var top=(startMin/interval)*PX_PER_SLOT
+      var height=Math.max(PX_PER_SLOT,(durMin/interval)*PX_PER_SLOT)
+      html+='<div class="appt-block" style="top:'+top+'px;height:'+height+'px;background:var(--gray5)dd;color:#fff"><div class="appt-name">'+(a.PatientName||a.patientName||'Paciente')+'</div><div class="appt-time">'+(a.fromTime||'--')+'</div></div>'
     })
-    html+='</div></div>'
+    html += '</div>'
   }
 
-  if(!profs.length && !semProf.length){
-    html+='<div style="text-align:center;padding:40px;color:var(--text3)">Nenhum agendamento para este dia</div>'
+  html += '</div>' // end cols-area
+
+  // Now line (current time)
+  if(nowH>=START_H && nowH<END_H && agendaDate.toDateString()===now.toDateString()){
+    var nowMinFromTop = (nowH-START_H)*60 + nowM
+    var nowTop = (nowMinFromTop/interval)*PX_PER_SLOT
+    html += '<div class="now-line" style="top:'+nowTop+'px;left:60px"></div>'
   }
 
-  // Marcador de hora atual
-  if(nowH>=START_H && nowH<=END_H){
-    var nowMin = (nowH-START_H)*60 + nowM
-    var nowLeft = 130 + (nowMin/15)*PX_PER_15
-    html+='<div class="now-marker" style="left:'+nowLeft+'px"></div>'
-  }
+  html += '</div>' // end grid-inner
+  html += '</div>' // end grid-body
 
-  html+='</div>'
   el.innerHTML = html
+  el.classList.remove('hidden')
 
-  // Profissionais para modal
-  var sel = document.getElementById('ag-prof-sel')
-  if (sel) sel.innerHTML = '<option>Selecione...</option>'+(profs.map(function(p){return '<option>'+(p.name||p.Name||p.nome||'')+'</option>'}).join(''))
+  // Auto-scroll to current time or 8am
+  var bodyEl = el.querySelector('.agenda-grid-body')
+  if(bodyEl){
+    if(nowH>=START_H && nowH<END_H && agendaDate.toDateString()===now.toDateString()){
+      var scrollTo = Math.max(0, ((nowH-START_H)*60+nowM-30)/interval*PX_PER_SLOT)
+      bodyEl.scrollTop = scrollTo
+    } else {
+      bodyEl.scrollTop = ((8-START_H)*60/interval)*PX_PER_SLOT
+    }
+  }
+}
+
+function renderAgendaWeek(el) {
+  var ag = ST.agendamentos||[]
+  var allProfs = ST.profissionais || (ST.dashboard&&ST.dashboard.profissionais) || []
+  var now = new Date()
+  var START_H=7, END_H=21
+  var DIAS_CURTO = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
+
+  // Find start of week (Sunday)
+  var weekStart = new Date(agendaDate)
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+
+  var days = []
+  for(var i=0;i<7;i++){
+    var d = new Date(weekStart)
+    d.setDate(d.getDate()+i)
+    days.push(d)
+  }
+
+  // Build prof color map
+  var profColorMap = {}
+  allProfs.forEach(function(p,idx){ profColorMap[String(p.id||p.Id||'')] = PROF_CORES[idx%PROF_CORES.length] })
+
+  var html = '<div class="agenda-week-grid" style="overflow:auto;max-height:100%">'
+
+  // Header row
+  html += '<div class="agenda-week-day-hdr"></div>'
+  days.forEach(function(d){
+    var isToday = d.toDateString()===now.toDateString()
+    html += '<div class="agenda-week-day-hdr'+(isToday?' today':'')+'">'+DIAS_CURTO[d.getDay()]+' '+d.getDate()+'/'+String(d.getMonth()+1).padStart(2,'0')+'</div>'
+  })
+
+  // Hour rows
+  for(var h=START_H;h<END_H;h++){
+    html += '<div class="agenda-week-time">'+String(h).padStart(2,'0')+':00</div>'
+    days.forEach(function(d){
+      var dtStr = d.toISOString().slice(0,10)
+      var hourAg = ag.filter(function(a){
+        if(a.Deleted||!a.date||a.date.slice(0,10)!==dtStr) return false
+        var parts = (a.fromTime||'').split(':').map(Number)
+        return parts[0]===h
+      })
+      html += '<div class="agenda-week-cell" ondblclick="selectMiniCalDay('+d.getDate()+','+d.getMonth()+','+d.getFullYear()+')">'
+      hourAg.slice(0,3).forEach(function(a){
+        var profId = String(a.ProfessionalId||a.professionalId||'')
+        var cor = profColorMap[profId]||'var(--gray5)'
+        html += '<div class="agenda-week-appt" style="background:'+cor+'dd" title="'+(a.PatientName||a.patientName||'')+' '+(a.fromTime||'')+'">'+(a.PatientName||a.patientName||'').split(' ')[0]+' '+(a.fromTime||'')+'</div>'
+      })
+      if(hourAg.length>3) html += '<div style="font-size:9px;color:var(--text3);padding:1px 4px">+'+(hourAg.length-3)+' mais</div>'
+      html += '</div>'
+    })
+  }
+
+  html += '</div>'
+  el.innerHTML = html
+  el.classList.remove('hidden')
+}
+
+function renderAgendaMonth(el) {
+  var ag = ST.agendamentos||[]
+  var allProfs = ST.profissionais || (ST.dashboard&&ST.dashboard.profissionais) || []
+  var now = new Date()
+  var year = agendaDate.getFullYear(), month = agendaDate.getMonth()
+  var firstDay = new Date(year,month,1)
+  var lastDay = new Date(year,month+1,0)
+  var DIAS_CURTO = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB']
+
+  // Build prof color map
+  var profColorMap = {}
+  allProfs.forEach(function(p,idx){ profColorMap[String(p.id||p.Id||'')] = PROF_CORES[idx%PROF_CORES.length] })
+
+  // Count appointments per day
+  var countByDay = {}
+  var profsByDay = {}
+  ag.forEach(function(a){
+    if(a.Deleted||!a.date) return
+    var dKey = a.date.slice(0,10)
+    if(!countByDay[dKey]) countByDay[dKey]=0
+    countByDay[dKey]++
+    if(!profsByDay[dKey]) profsByDay[dKey]={}
+    var pid = String(a.ProfessionalId||a.professionalId||'')
+    if(pid) profsByDay[dKey][pid] = (profsByDay[dKey][pid]||0)+1
+  })
+
+  var html = '<div class="agenda-month-grid">'
+
+  // Day headers
+  DIAS_CURTO.forEach(function(d){ html += '<div class="agenda-month-hdr">'+d+'</div>' })
+
+  // Calendar cells
+  var startOffset = firstDay.getDay()
+  var totalCells = Math.ceil((startOffset + lastDay.getDate())/7)*7
+
+  for(var i=0;i<totalCells;i++){
+    var cellDate = new Date(year,month,1-startOffset+i)
+    var isOther = cellDate.getMonth()!==month
+    var isToday = cellDate.toDateString()===now.toDateString()
+    var dStr = cellDate.toISOString().slice(0,10)
+    var count = countByDay[dStr]||0
+    var profCounts = profsByDay[dStr]||{}
+
+    html += '<div class="agenda-month-cell'+(isOther?' other-month':'')+(isToday?' today':'')+'" onclick="selectMiniCalDay('+cellDate.getDate()+','+cellDate.getMonth()+','+cellDate.getFullYear()+');agendaChangeView(\'dia\');document.getElementById(\'agenda-view-sel\').value=\'dia\'">'
+    html += '<div class="agenda-month-day">'+cellDate.getDate()+'</div>'
+    if(count>0){
+      html += '<div class="agenda-month-count" style="font-weight:500;color:var(--text2)">'+count+' agendamentos</div>'
+      // Show top 3 prof color dots
+      var pids = Object.keys(profCounts).slice(0,4)
+      if(pids.length){
+        html += '<div style="display:flex;gap:3px;margin-top:4px;flex-wrap:wrap">'
+        pids.forEach(function(pid){
+          var cor = profColorMap[pid]||'var(--gray5)'
+          html += '<div class="agenda-month-dot" style="background:'+cor+'" title="'+profCounts[pid]+' agendamentos"></div>'
+        })
+        html += '</div>'
+      }
+    }
+    html += '</div>'
+  }
+
+  html += '</div>'
+  el.innerHTML = html
+  el.classList.remove('hidden')
 }
 
 // ── PACIENTES ──────────────────────────────────────────────────
@@ -4926,11 +5183,25 @@ async function renderExtrato(){
 // ══════════════════════════════════════════════════════
 const HORAS_NC=['8:00','8:15','8:30','8:45','9:00','9:15','9:30','9:45','10:00','10:15','10:30','10:45','11:00','11:15','11:30','11:45','12:00','12:15','12:30','12:45','13:00','13:15','13:30','13:45','14:00','14:15','14:30','14:45','15:00','15:15','15:30','15:45','16:00','16:15','16:30','16:45','17:00','17:15','17:30','17:45','18:00','18:15','18:30','18:45','19:00','19:15','19:30','19:45']
 let ncSelectedPac=null,ncSelectedHora=null
-function openNovaConsulta(){
+function openNovaConsulta(prefillProfId, prefillTime){
   document.getElementById('modal-nova-consulta').classList.add('open')
-  const profs=ST.dashboard?.profissionais||ST.profissionais||[]
-  const sel=document.getElementById('nc-prof-sel')
-  if(sel){sel.innerHTML='<option value="">Selecione...</option>'+profs.map((p,i)=>`<option value="${i}">${p.name||p.Name||'Profissional'}</option>`).join('');if(profs.length>0)sel.selectedIndex=1}
+  var profs=ST.dashboard&&ST.dashboard.profissionais||ST.profissionais||[]
+  var sel=document.getElementById('nc-prof-sel')
+  if(sel){
+    sel.innerHTML='<option value="">Selecione...</option>'+profs.map(function(p,i){return '<option value="'+i+'">'+(p.name||p.Name||'Profissional')+'</option>'}).join('')
+    if(prefillProfId){
+      for(var i=0;i<profs.length;i++){
+        if(String(profs[i].id||profs[i].Id||'')===String(prefillProfId)){sel.selectedIndex=i+1;break}
+      }
+    } else if(profs.length>0){sel.selectedIndex=1}
+  }
+  // Update date display
+  var dtEl=document.getElementById('nc-data-txt')
+  if(dtEl){
+    var dd=agendaDate.getDate(),mm=MESES_PT[agendaDate.getMonth()].substring(0,3),yy=agendaDate.getFullYear()
+    dtEl.textContent=dd+' '+mm+', '+yy
+  }
+  if(prefillTime){ncSelectedHora=prefillTime}
   renderNcHorarios()
 }
 function closeNovaConsulta(){document.getElementById('modal-nova-consulta').classList.remove('open');ncReset()}
@@ -4983,8 +5254,8 @@ function ncDeselectPac(){
 function ncPrimeiraChange(el){const s=document.getElementById('nc-como-conheceu');if(s)s.style.display=el.checked?'inline-block':'none'}
 function ncProfChange(){renderNcHorarios()}
 function renderNcHorarios(){
-  const ag=ST.agendamentos||[],hojeStr='2026-03-14'
-  const ocu=new Set(ag.filter(a=>!a.Deleted&&a.date&&a.date.slice(0,10)===hojeStr).map(a=>a.fromTime))
+  var ag=ST.agendamentos||[],hojeStr=agendaDate.toISOString().slice(0,10)
+  var ocu=new Set(ag.filter(function(a){return !a.Deleted&&a.date&&a.date.slice(0,10)===hojeStr}).map(function(a){return a.fromTime}))
   const el=document.getElementById('nc-horarios');if(!el)return
   el.innerHTML=HORAS_NC.map(h=>{
     const occ=ocu.has(h),sel=h===ncSelectedHora
