@@ -1750,8 +1750,14 @@ module.exports = async function handler(req, res) {
 
             try {
                 // Search for existing customer by CPF
-                var gcCpf = (gcPaciente && gcPaciente.cpf) || ''
+                var gcCpf = (gcPaciente && gcPaciente.cpf) ? gcPaciente.cpf.replace(/\D/g, '') : ''
                 var gcCustomerId = ''
+
+                // Boleto requires CPF
+                if ((gc.tipo === 'boleto') && !gcCpf) {
+                    return res.status(400).json({ success: false, error: 'CPF do paciente é obrigatório para gerar boleto. Cadastre o CPF no prontuário do paciente.' })
+                }
+
                 if (gcCpf) {
                     var gcCustSearch = await fetch('https://api.asaas.com/v3/customers?cpfCnpj=' + encodeURIComponent(gcCpf), {
                         headers: { 'access_token': gcApiKey }
@@ -1761,31 +1767,38 @@ module.exports = async function handler(req, res) {
                 }
                 if (!gcCustomerId) {
                     // Create customer
+                    var gcCustBody = { name: (gcPaciente && gcPaciente.nome) || gc.paciente_nome || 'Cliente' }
+                    if (gcCpf) gcCustBody.cpfCnpj = gcCpf
+                    if (gcPaciente && gcPaciente.email) gcCustBody.email = gcPaciente.email
+                    if (gcPaciente && gcPaciente.telefone) gcCustBody.mobilePhone = gcPaciente.telefone.replace(/\D/g, '')
+
+                    console.log('[gerar-cobranca] Criando cliente Asaas:', JSON.stringify(gcCustBody))
                     var gcNewCust = await fetch('https://api.asaas.com/v3/customers', {
                         method: 'POST',
                         headers: { 'access_token': gcApiKey, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            name: (gcPaciente && gcPaciente.nome) || gc.paciente_nome || 'Cliente',
-                            cpfCnpj: gcCpf || undefined,
-                            email: (gcPaciente && gcPaciente.email) || undefined
-                        })
+                        body: JSON.stringify(gcCustBody)
                     })
                     var gcNewCustData = await gcNewCust.json()
-                    if (gcNewCustData.errors) return res.status(400).json({ success: false, error: 'Asaas cliente: ' + (gcNewCustData.errors[0] && gcNewCustData.errors[0].description || '') })
+                    console.log('[gerar-cobranca] Resposta criar cliente:', JSON.stringify(gcNewCustData))
+                    if (gcNewCustData.errors) return res.status(400).json({ success: false, error: 'Asaas cliente: ' + (gcNewCustData.errors[0] && gcNewCustData.errors[0].description || JSON.stringify(gcNewCustData.errors)) })
                     gcCustomerId = gcNewCustData.id || ''
                 }
-                if (!gcCustomerId) return res.status(400).json({ success: false, error: 'Não foi possível criar/encontrar cliente no Asaas' })
+                if (!gcCustomerId) return res.status(400).json({ success: false, error: 'Não foi possível criar/encontrar cliente no Asaas. Verifique o CPF do paciente.' })
 
                 // Map tipo to Asaas billingType
                 var gcBillingMap = { pix: 'PIX', boleto: 'BOLETO', credito: 'CREDIT_CARD', debito: 'DEBIT_CARD' }
                 var gcBillingType = gcBillingMap[gc.tipo] || 'BOLETO'
 
-                // Build payment body
+                // Build payment body - ensure dueDate is today or future
+                var gcDueDate = gc.data_vencimento || new Date().toISOString().slice(0, 10)
+                var gcToday = new Date().toISOString().slice(0, 10)
+                if (gcDueDate < gcToday) gcDueDate = gcToday // Asaas rejects past dates
+
                 var gcPayBody = {
                     customer: gcCustomerId,
                     billingType: gcBillingType,
                     value: parseFloat(gc.valor),
-                    dueDate: gc.data_vencimento || new Date().toISOString().slice(0, 10),
+                    dueDate: gcDueDate,
                     description: gc.descricao || 'Cobrança Klinik'
                 }
                 // Credit card: add installment count
@@ -1794,14 +1807,16 @@ module.exports = async function handler(req, res) {
                     gcPayBody.installmentValue = parseFloat((parseFloat(gc.valor) / parseInt(gc.parcelas)).toFixed(2))
                 }
 
+                console.log('[gerar-cobranca] Criando pagamento Asaas:', JSON.stringify(gcPayBody))
                 var gcPayment = await fetch('https://api.asaas.com/v3/payments', {
                     method: 'POST',
                     headers: { 'access_token': gcApiKey, 'Content-Type': 'application/json' },
                     body: JSON.stringify(gcPayBody)
                 })
                 var gcPayData = await gcPayment.json()
+                console.log('[gerar-cobranca] Resposta pagamento:', JSON.stringify({ id: gcPayData.id, status: gcPayData.status, invoiceUrl: gcPayData.invoiceUrl, errors: gcPayData.errors }))
                 if (gcPayData.errors) {
-                    return res.status(400).json({ success: false, error: 'Asaas: ' + (gcPayData.errors[0] && gcPayData.errors[0].description || JSON.stringify(gcPayData.errors)) })
+                    return res.status(400).json({ success: false, error: 'Asaas pagamento: ' + (gcPayData.errors[0] && gcPayData.errors[0].description || JSON.stringify(gcPayData.errors)), detalhes: gcPayData.errors })
                 }
                 gcAsaasId = gcPayData.id || ''
                 gcBoletoUrl = gcPayData.bankSlipUrl || ''
