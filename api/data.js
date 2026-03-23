@@ -1468,6 +1468,49 @@ module.exports = async function handler(req, res) {
             }
         }
 
+        // ── RENEGOCIAR-ORCAMENTO ────────────────────────────────────
+        if (route === 'renegociar-orcamento') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var rn = req.body || {}
+            if (!rn.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
+
+            // Verify orcamento exists and is approved
+            var rnOrc = await client.execute({ sql: "SELECT * FROM orcamentos WHERE id=? AND clinica_id=?", args: [rn.id, clinica_id] })
+            if (!rnOrc.rows.length) return res.status(404).json({ success: false, error: 'Orçamento não encontrado' })
+
+            // Cancel pending parcelas
+            var rnParc = await client.execute({ sql: "UPDATE parcelas_orcamento SET status='cancelado', updated_at=datetime('now') WHERE orcamento_id=? AND status IN ('pendente','vencido') AND clinica_id=?", args: [rn.id, clinica_id] })
+
+            // Cancel pending cobrancas in DB
+            var rnCob = await client.execute({ sql: "UPDATE cobrancas SET status='cancelado', updated_at=datetime('now') WHERE id IN (SELECT cobranca_id FROM parcelas_orcamento WHERE orcamento_id=? AND cobranca_id IS NOT NULL AND status='cancelado') AND status IN ('pendente','vencido')", args: [rn.id] })
+
+            // Cancel pending commissions
+            try { await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_id=? AND status='pendente'", args: [rn.id] }) } catch(e) {}
+
+            // Try to cancel in Asaas API
+            var rnApiKey = ''
+            try {
+                var rnAk = await client.execute({ sql: "SELECT asaas_api_key FROM clinicas WHERE id=?", args: [clinica_id] })
+                rnApiKey = (rnAk.rows.length && rnAk.rows[0].asaas_api_key) ? rnAk.rows[0].asaas_api_key : (process.env.ASAAS_API_KEY || '')
+            } catch(e) {}
+            if (rnApiKey) {
+                var rnAsaasIds = await client.execute({ sql: "SELECT DISTINCT c.asaas_id FROM cobrancas c JOIN parcelas_orcamento po ON po.cobranca_id=c.id WHERE po.orcamento_id=? AND c.asaas_id IS NOT NULL AND c.asaas_id!='' AND c.status='cancelado'", args: [rn.id] })
+                for (var rni = 0; rni < rnAsaasIds.rows.length; rni++) {
+                    try {
+                        await fetch('https://api.asaas.com/v3/payments/' + rnAsaasIds.rows[rni].asaas_id, {
+                            method: 'DELETE',
+                            headers: { 'access_token': rnApiKey }
+                        })
+                    } catch(e) {}
+                }
+            }
+
+            // Log
+            try { await client.execute({ sql: "INSERT INTO activity_log(clinica_id, usuario_id, acao, detalhes, created_at) VALUES(?,?,?,?,datetime('now'))", args: [clinica_id, auth.usuario_id, 'renegociar_orcamento', 'Orçamento #' + rn.id + ' renegociado. Parcelas canceladas: ' + (rnParc.rowsAffected || 0)] }) } catch(e) {}
+
+            return res.status(200).json({ success: true, msg: 'Orçamento pronto para renegociação', parcelas_canceladas: rnParc.rowsAffected || 0, cobrancas_canceladas: rnCob.rowsAffected || 0 })
+        }
+
         // ── ORÇAMENTOS — EXCLUIR ─────────────────────────────────────
         if (route === 'excluir-orcamento') {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })

@@ -6135,6 +6135,7 @@ function renderFinanceiroPaciente(el,pacId){
         '<div style="font-size:11px;color:#bbb">Valor total</div>'+
         '<div style="font-size:15px;font-weight:600">'+fmtBrl(orcTotal)+'</div>'+
       '</div>'+
+      (!semParcelas?'<button onclick="renegociarOrcamento('+orc.orcamento_id+','+pacId+')" style="background:#E65100;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif" title="Cancela parcelas/cobrancas pendentes e permite renegociar">Renegociar</button>':'')+
     '</div>'
 
     if(semParcelas){
@@ -6235,6 +6236,25 @@ function renderFinanceiroPaciente(el,pacId){
 }
 
 
+
+async function renegociarOrcamento(orcId,pacId){
+  if(!confirm('Cancelar a forma de pagamento atual e renegociar?\n\nParcelas e cobrancas pendentes serao canceladas.\nParcelas ja pagas serao mantidas.\n\nO orcamento voltara ao status aprovado para nova configuracao de pagamento.'))return
+  try{
+    var r=await apiPost('renegociar-orcamento',{id:orcId})
+    if(r.success){
+      alert('Renegociacao iniciada.'+(r.parcelas_canceladas>0?' '+r.parcelas_canceladas+' parcela(s) cancelada(s).':'')+(r.cobrancas_canceladas>0?' '+r.cobrancas_canceladas+' cobranca(s) cancelada(s).':''))
+      // Open payment config modal for new negotiation
+      var d=await apiData('orcamentos-paciente',{paciente_id:pacId})
+      var orcs=(d.orcamentos||[]).filter(function(o){return o.id===orcId})
+      if(orcs.length){
+        var orc=orcs[0]
+        abrirConfigParcelas(orcId,{id:orc.id,valor_total:orc.valor_total,desconto:orc.desconto||0,forma_pagamento:orc.forma_pagamento,parcelas:orc.parcelas||1,paciente_id:pacId},'Renegociacao')
+      }else{
+        loadFinanceiroPaciente(pacId)
+      }
+    }else{alert(r.error||'Erro')}
+  }catch(e){alert('Erro: '+e.message)}
+}
 
 async function gerarParcelasRetroativo(orcId,pacId){
   // Reuse the config parcelas modal from approval flow
