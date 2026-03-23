@@ -3382,6 +3382,8 @@ async function confirmarAprovacao(){
     })
     await apiPost('aprovar-orcamento',{id:orcId,aprovado_por:nome,profissional_aprovador_id:profId})
     document.getElementById('modal-aprovador').remove()
+    // Calculate valor_total from items before opening parcelas modal
+    d.valor_total=(d.itens||[]).reduce(function(s,it){return s+(+(it.valor_unitario||0))*(+(it.quantidade||1))},0)
     // Open payment config modal to generate installments
     abrirConfigParcelas(orcId,d,nome)
   }catch(e){alert('Erro: '+e.message);btn.disabled=false;btn.textContent='Aprovar'}
