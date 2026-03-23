@@ -2915,12 +2915,14 @@ async function reloadOrcamentos(){
 
 async function abrirOrcamentoModal(orcId){
   var p=(_prontData||{}).paciente||{}
-  var profs=ST.profissionais||[]
-  if(!profs.length||!(profs[0].nome||profs[0].name)){
-    try{await loadProfissionais()}catch(e){}
-    profs=ST.profissionais||[]
+  // Ensure profissionais are loaded
+  if(!ST.profissionais||!ST.profissionais.length){
+    try{
+      var pd=await apiData('profissionais')
+      ST.profissionais=(pd.data||[]).map(function(p){return {id:p.id,nome:p.nome,name:p.nome,Name:p.nome,especialidade:p.especialidade,cpf:p.cpf||'',email:p.email||'',telefone:p.telefone||'',cro:p.cro||''}})
+    }catch(e2){ST.profissionais=[]}
   }
-  if(!profs.length&&ST.dashboard&&ST.dashboard.profissionais){profs=ST.dashboard.profissionais}
+  var profs=ST.profissionais||[]
   var orc=null
   if(orcId){
     var orcs=(_prontData.orcamentos||[])
@@ -2952,7 +2954,7 @@ function renderOrcModal(){
   var totalPart=d.itens.reduce(function(s,it){return s+(+(it.valor_unitario||0)*(+(it.quantidade||1)))},0)
   var totalPlano=d.itens.reduce(function(s,it){return s+(+(it.valor_plano||0)*(+(it.quantidade||1)))},0)
 
-  var profOpts=profs.map(function(pr){return '<option value="'+pr.id+'" '+(pr.id==d.profissional_id?'selected':'')+'>'+(pr.nome||pr.name||pr.Name||'')+'</option>'}).join('')
+  var profOpts='<option value="">Selecione o profissional</option>'+profs.map(function(pr){return '<option value="'+pr.id+'" '+(pr.id==d.profissional_id?'selected':'')+'>'+(pr.nome||pr.name||pr.Name||'Profissional')+'</option>'}).join('')
   var tabOpts=tabelas.map(function(t){return '<option value="'+t+'" '+(t===d.tabela_preco?'selected':'')+'>'+t+'</option>'}).join('')
 
   // Items list HTML
