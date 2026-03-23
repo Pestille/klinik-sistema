@@ -2927,7 +2927,7 @@ async function abrirOrcamentoModal(orcId){
     id:orc?orc.id:null,
     paciente_id:p.id,
     profissional_id:orc?orc.profissional_id:(profs[0]?profs[0].id:null),
-    profissional_nome:orc?orc.profissional_nome:(profs[0]?profs[0].nome:''),
+    profissional_nome:orc?orc.profissional_nome:(profs[0]?(profs[0].nome||profs[0].name||''):''),
     data_criacao:orc?(orc.data_criacao||'').slice(0,10):new Date().toISOString().slice(0,10),
     observacoes:orc?orc.observacoes||'':'',
     tabela_preco:orc?orc.tabela_preco:'PARTICULAR',
@@ -2949,7 +2949,7 @@ function renderOrcModal(){
   var totalPart=d.itens.reduce(function(s,it){return s+(+(it.valor_unitario||0)*(+(it.quantidade||1)))},0)
   var totalPlano=d.itens.reduce(function(s,it){return s+(+(it.valor_plano||0)*(+(it.quantidade||1)))},0)
 
-  var profOpts=profs.map(function(pr){return '<option value="'+pr.id+'" '+(pr.id==d.profissional_id?'selected':'')+'>'+pr.nome+'</option>'}).join('')
+  var profOpts=profs.map(function(pr){return '<option value="'+pr.id+'" '+(pr.id==d.profissional_id?'selected':'')+'>'+(pr.nome||pr.name||pr.Name||'')+'</option>'}).join('')
   var tabOpts=tabelas.map(function(t){return '<option value="'+t+'" '+(t===d.tabela_preco?'selected':'')+'>'+t+'</option>'}).join('')
 
   // Items list HTML
@@ -3994,7 +3994,7 @@ async function loadProfissionais() {
     var d=await apiData('profissionais')
     var data=d.data||[]
     // Converte para formato compatível
-    ST.profissionais=data.map(function(p){return {id:p.id,name:p.nome,Name:p.nome,specialty:p.especialidade,especialidade:p.especialidade,cpf:p.cpf||'',email:p.email||'',telefone:p.telefone||'',cro:p.cro||'',total_agendamentos:p.total_agendamentos||0}})
+    ST.profissionais=data.map(function(p){return {id:p.id,nome:p.nome,name:p.nome,Name:p.nome,specialty:p.especialidade,especialidade:p.especialidade,cpf:p.cpf||'',email:p.email||'',telefone:p.telefone||'',cro:p.cro||'',total_agendamentos:p.total_agendamentos||0}})
     document.getElementById('prof-sub').textContent=data.length+' profissionais cadastrados'
     document.getElementById('prof-grid').innerHTML=data.map(function(p,i){
       var nome=p.nome||'Profissional'
