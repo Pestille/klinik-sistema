@@ -6147,7 +6147,7 @@ function renderFinanceiroPaciente(el,pacId){
       '</div>'
     }else{
       // Column headers
-      html+='<div style="display:grid;grid-template-columns:90px 70px 80px 100px 90px 90px 80px 70px;background:#F5F5F5;border-bottom:1px solid var(--border);padding:0">'+
+      html+='<div style="display:grid;grid-template-columns:90px 60px 70px 90px 80px 80px 70px 100px;background:#F5F5F5;border-bottom:1px solid var(--border);padding:0">'+
         '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase">Data</div>'+
         '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase">Tipo</div>'+
         '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase">Parcela</div>'+
@@ -6155,7 +6155,7 @@ function renderFinanceiroPaciente(el,pacId){
         '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase">Forma</div>'+
         '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase;text-align:right">Valor</div>'+
         '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase;text-align:center">Status</div>'+
-        '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase;text-align:center">Acao</div>'+
+        '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase;text-align:center">Acoes</div>'+
       '</div>'
 
       // Rows
@@ -6168,10 +6168,14 @@ function renderFinanceiroPaciente(el,pacId){
         var tipoLabel=pp.tipo==='entrada'?'Entrada':'Parcela'
         var acoes=''
         if(pp.status==='pendente'||pp.status==='vencido'){
-          acoes='<button onclick="darBaixaParcela('+pp.id+','+pacId+')" style="background:none;border:none;color:var(--green);font-size:11px;cursor:pointer;font-family:Roboto,sans-serif;text-decoration:underline" title="Dar baixa manual">Baixa</button>'
+          acoes='<button onclick="darBaixaParcela('+pp.id+','+pacId+')" style="background:none;border:none;color:var(--green);font-size:10px;cursor:pointer;font-family:Roboto,sans-serif;text-decoration:underline" title="Dar baixa manual">Baixa</button> '+
+            '<button onclick="enviarCobrancaParcela('+pp.id+','+pacId+',\''+pp.forma_pagamento+'\','+pp.valor+',\''+pp.data_vencimento+'\')" style="background:none;border:none;color:#1565C0;font-size:10px;cursor:pointer;font-family:Roboto,sans-serif;text-decoration:underline" title="Enviar cobranca/link de pagamento">Cobrar</button>'
+        }
+        if(pp.status==='pago'&&pp.cobranca_id){
+          acoes='<button onclick="verComprovanteParcela('+pp.cobranca_id+')" style="background:none;border:none;color:#1565C0;font-size:10px;cursor:pointer;font-family:Roboto,sans-serif;text-decoration:underline" title="Ver comprovante/link">Ver</button>'
         }
 
-        html+='<div style="display:grid;grid-template-columns:90px 70px 80px 100px 90px 90px 80px 70px;border-bottom:1px solid #F0F0F0;background:'+stBg+';align-items:center">'+
+        html+='<div style="display:grid;grid-template-columns:90px 60px 70px 90px 80px 80px 70px 100px;border-bottom:1px solid #F0F0F0;background:'+stBg+';align-items:center">'+
           '<div style="padding:8px 10px;font-size:12px;color:var(--text3)">'+fmtDt(pp.data_vencimento)+'</div>'+
           '<div style="padding:8px 10px;font-size:11px;font-weight:500;color:'+(pp.tipo==='entrada'?'#1565C0':'var(--text2)')+'">'+tipoLabel+'</div>'+
           '<div style="padding:8px 10px;font-size:12px;color:var(--text)">'+pp.numero_parcela+'/'+pp.total_parcelas+'</div>'+
@@ -6269,6 +6273,102 @@ async function gerarParcelasRetroativo(orcId,pacId){
       paciente_id:pacId
     }
     abrirConfigParcelas(orcId,orcData,'Retroativo')
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function enviarCobrancaParcela(parcelaId,pacId,forma,valor,vencimento){
+  var old=document.getElementById('modal-cobrar-parcela');if(old)old.remove()
+  var pacNome=((_prontData||{}).paciente||{}).nome||''
+
+  var m=document.createElement('div')
+  m.id='modal-cobrar-parcela'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10003;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:440px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-size:18px;font-weight:500;color:#1A1A1A">Enviar Cobranca</div><span onclick="document.getElementById(\'modal-cobrar-parcela\').remove()" style="cursor:pointer;font-size:22px;color:#757575">&times;</span></div>'+
+      '<div style="font-size:13px;color:var(--text3);margin-bottom:16px">Parcela de <strong>'+fmtBrl(valor)+'</strong> — Venc: '+fmtDt(vencimento)+'</div>'+
+      '<div style="margin-bottom:12px">'+
+        '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Tipo de Cobranca</label>'+
+        '<select id="cob-parc-tipo" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none">'+
+          '<option value="pix"'+(forma==='pix'?' selected':'')+'>PIX</option>'+
+          '<option value="boleto"'+(forma==='boleto'?' selected':'')+'>Boleto</option>'+
+          '<option value="credito"'+(forma==='credito'?' selected':'')+'>Cartao de Credito</option>'+
+        '</select>'+
+      '</div>'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">'+
+        '<input type="checkbox" id="cob-parc-enviar" checked style="accent-color:#034030">'+
+        '<label for="cob-parc-enviar" style="font-size:13px;color:var(--text2)">Enviar link ao paciente (WhatsApp/Email)</label>'+
+      '</div>'+
+      '<div id="cob-parc-result" style="display:none;margin-bottom:16px"></div>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+        '<button onclick="document.getElementById(\'modal-cobrar-parcela\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+        '<button id="cob-parc-btn" onclick="executarCobrancaParcela('+parcelaId+','+pacId+','+valor+',\''+vencimento+'\')" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Gerar e Enviar</button>'+
+      '</div>'+
+    '</div>'
+  document.body.appendChild(m)
+}
+
+async function executarCobrancaParcela(parcelaId,pacId,valor,vencimento){
+  var tipo=document.getElementById('cob-parc-tipo').value
+  var enviar=document.getElementById('cob-parc-enviar').checked
+  var btn=document.getElementById('cob-parc-btn');btn.disabled=true;btn.textContent='Gerando...'
+  var resultEl=document.getElementById('cob-parc-result')
+
+  try{
+    var r=await apiPost('gerar-cobranca',{
+      tipo:tipo,
+      valor:valor,
+      descricao:'Parcela - Orcamento',
+      data_vencimento:vencimento,
+      paciente_id:pacId,
+      paciente_nome:((_prontData||{}).paciente||{}).nome||'',
+      enviar_link:enviar
+    })
+    if(r.success){
+      // Update parcela with cobranca_id
+      if(r.cobranca&&r.cobranca.id){
+        try{await apiPost('parcela-vincular-cobranca',{parcela_id:parcelaId,cobranca_id:r.cobranca.id})}catch(e){}
+      }
+
+      // Show result
+      var resHtml='<div style="background:#E8F5E9;border:1px solid #1B5E3B;border-radius:8px;padding:16px">'
+      resHtml+='<div style="font-size:13px;font-weight:500;color:#034030;margin-bottom:8px">Cobranca gerada com sucesso!</div>'
+      if(r.invoice_url){
+        resHtml+='<div style="margin-bottom:8px"><a href="'+r.invoice_url+'" target="_blank" style="color:#1565C0;font-size:13px">Link de pagamento</a></div>'
+      }
+      if(r.cobranca&&r.cobranca.pix_copia_cola){
+        resHtml+='<div style="font-size:11px;color:var(--text3);margin-bottom:4px">PIX Copia e Cola:</div>'+
+          '<div style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:8px;font-size:11px;word-break:break-all;cursor:pointer" onclick="navigator.clipboard.writeText(this.textContent).then(function(){alert(\'Codigo PIX copiado!\')})">'+r.cobranca.pix_copia_cola+'</div>'
+      }
+      if(r.cobranca&&r.cobranca.boleto_url){
+        resHtml+='<div style="margin-top:8px"><a href="'+r.cobranca.boleto_url+'" target="_blank" style="color:#1565C0;font-size:13px">Ver Boleto</a></div>'
+      }
+      resHtml+='</div>'
+      resultEl.innerHTML=resHtml;resultEl.style.display='block'
+      btn.textContent='Enviado!';btn.style.background='#2E7D52'
+
+      // Reload financial tab
+      setTimeout(function(){loadFinanceiroPaciente(pacId)},2000)
+    }else{
+      alert(r.error||'Erro ao gerar cobranca')
+      btn.disabled=false;btn.textContent='Gerar e Enviar'
+    }
+  }catch(e){alert('Erro: '+e.message);btn.disabled=false;btn.textContent='Gerar e Enviar'}
+}
+
+async function verComprovanteParcela(cobrancaId){
+  try{
+    var d=await apiData('cobrancas-clinica',{})
+    var cobs=(d.cobrancas||[]).filter(function(c){return c.id===cobrancaId})
+    if(!cobs.length){alert('Cobranca nao encontrada');return}
+    var c=cobs[0]
+    var msg='Status: '+(c.status||'—').toUpperCase()
+    if(c.invoice_url)msg+='\n\nLink: '+c.invoice_url
+    if(c.boleto_url)msg+='\nBoleto: '+c.boleto_url
+    if(c.pix_copia_cola)msg+='\nPIX: '+c.pix_copia_cola.substring(0,50)+'...'
+    if(c.invoice_url){
+      if(confirm(msg+'\n\nAbrir link de pagamento?'))window.open(c.invoice_url,'_blank')
+    }else{alert(msg)}
   }catch(e){alert('Erro: '+e.message)}
 }
 

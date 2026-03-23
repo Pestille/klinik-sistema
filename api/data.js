@@ -2943,6 +2943,15 @@ module.exports = async function handler(req, res) {
         }
 
         // ── PARCELA-CANCELAR ──────────────────────────────────────────
+        // ── PARCELA-VINCULAR-COBRANCA ──────────────────────────────
+        if (route === 'parcela-vincular-cobranca') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var pvc = req.body || {}
+            if (!pvc.parcela_id || !pvc.cobranca_id) return res.status(400).json({ success: false, error: 'parcela_id e cobranca_id obrigatórios' })
+            await client.execute({ sql: "UPDATE parcelas_orcamento SET cobranca_id=?, updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [pvc.cobranca_id, pvc.parcela_id, clinica_id] })
+            return res.status(200).json({ success: true, msg: 'Cobrança vinculada à parcela' })
+        }
+
         if (route === 'parcela-cancelar') {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var pc = req.body || {}
