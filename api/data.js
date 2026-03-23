@@ -2318,7 +2318,8 @@ module.exports = async function handler(req, res) {
             await client.execute("CREATE TABLE IF NOT EXISTS conciliacao_itens (id INTEGER PRIMARY KEY AUTOINCREMENT, conciliacao_id INTEGER, data TEXT, descricao TEXT, valor REAL, tipo TEXT, lancamento_id INTEGER, status TEXT DEFAULT 'pendente', created_at TEXT DEFAULT (datetime('now')))")
             fm3Summary.tables.push('conciliacao_itens: ok')
 
-            await client.execute("CREATE TABLE IF NOT EXISTS receitas_saude (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, profissional_id INTEGER, orcamento_id INTEGER, valor REAL NOT NULL, data_emissao TEXT, numero_recibo TEXT, cpf_paciente TEXT, nome_paciente TEXT, cpf_profissional TEXT, nome_profissional TEXT, cro_profissional TEXT, descricao_servico TEXT, status TEXT DEFAULT 'rascunho', created_at TEXT DEFAULT (datetime('now')))")
+            await client.execute("CREATE TABLE IF NOT EXISTS receitas_saude (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, profissional_id INTEGER, orcamento_id INTEGER, valor REAL NOT NULL, data_emissao TEXT, numero_recibo TEXT, cpf_paciente TEXT, nome_paciente TEXT, cpf_profissional TEXT, nome_profissional TEXT, cro_profissional TEXT, descricao_servico TEXT, tipo TEXT DEFAULT 'recibo', status TEXT DEFAULT 'rascunho', created_at TEXT DEFAULT (datetime('now')))")
+            try { await client.execute("ALTER TABLE receitas_saude ADD COLUMN tipo TEXT DEFAULT 'recibo'") } catch(e) {}
             fm3Summary.tables.push('receitas_saude: ok')
 
             try { await client.execute("CREATE INDEX IF NOT EXISTS idx_conc_clinica ON conciliacoes(clinica_id)") } catch(e) {}
@@ -2422,21 +2423,29 @@ module.exports = async function handler(req, res) {
                 if (rs.id) {
                     // Update
                     await client.execute({
-                        sql: "UPDATE receitas_saude SET paciente_id=?, profissional_id=?, orcamento_id=?, valor=?, data_emissao=?, numero_recibo=?, cpf_paciente=?, nome_paciente=?, cpf_profissional=?, nome_profissional=?, cro_profissional=?, descricao_servico=?, status=? WHERE id=? AND clinica_id=?",
-                        args: [rs.paciente_id || null, rs.profissional_id || null, rs.orcamento_id || null, parseFloat(rs.valor) || 0, rs.data_emissao || '', rs.numero_recibo || '', rs.cpf_paciente || '', rs.nome_paciente || '', rs.cpf_profissional || '', rs.nome_profissional || '', rs.cro_profissional || '', rs.descricao_servico || '', rs.status || 'rascunho', rs.id, clinica_id]
+                        sql: "UPDATE receitas_saude SET paciente_id=?, profissional_id=?, orcamento_id=?, valor=?, data_emissao=?, numero_recibo=?, cpf_paciente=?, nome_paciente=?, cpf_profissional=?, nome_profissional=?, cro_profissional=?, descricao_servico=?, tipo=?, status=? WHERE id=? AND clinica_id=?",
+                        args: [rs.paciente_id || null, rs.profissional_id || null, rs.orcamento_id || null, parseFloat(rs.valor) || 0, rs.data_emissao || '', rs.numero_recibo || '', rs.cpf_paciente || '', rs.nome_paciente || '', rs.cpf_profissional || '', rs.nome_profissional || '', rs.cro_profissional || '', rs.descricao_servico || '', rs.tipo || 'recibo', rs.status || 'rascunho', rs.id, clinica_id]
                     })
                     return res.status(200).json({ success: true, msg: 'Recibo atualizado' })
                 }
                 // Create
                 var rsIns = await client.execute({
-                    sql: "INSERT INTO receitas_saude(clinica_id, paciente_id, profissional_id, orcamento_id, valor, data_emissao, numero_recibo, cpf_paciente, nome_paciente, cpf_profissional, nome_profissional, cro_profissional, descricao_servico, status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                    args: [clinica_id, rs.paciente_id || null, rs.profissional_id || null, rs.orcamento_id || null, parseFloat(rs.valor) || 0, rs.data_emissao || new Date().toISOString().slice(0, 10), rs.numero_recibo || '', rs.cpf_paciente || '', rs.nome_paciente || '', rs.cpf_profissional || '', rs.nome_profissional || '', rs.cro_profissional || '', rs.descricao_servico || '', 'rascunho']
+                    sql: "INSERT INTO receitas_saude(clinica_id, paciente_id, profissional_id, orcamento_id, valor, data_emissao, numero_recibo, cpf_paciente, nome_paciente, cpf_profissional, nome_profissional, cro_profissional, descricao_servico, tipo, status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    args: [clinica_id, rs.paciente_id || null, rs.profissional_id || null, rs.orcamento_id || null, parseFloat(rs.valor) || 0, rs.data_emissao || new Date().toISOString().slice(0, 10), rs.numero_recibo || '', rs.cpf_paciente || '', rs.nome_paciente || '', rs.cpf_profissional || '', rs.nome_profissional || '', rs.cro_profissional || '', rs.descricao_servico || '', rs.tipo || 'recibo', 'rascunho']
                 })
                 return res.status(200).json({ success: true, id: Number(rsIns.lastInsertRowid), msg: 'Recibo criado' })
             }
             // GET
             var rsRows = await client.execute({ sql: "SELECT * FROM receitas_saude WHERE clinica_id=? ORDER BY created_at DESC LIMIT 200", args: [clinica_id] })
             return res.status(200).json({ success: true, recibos: rsRows.rows })
+        }
+
+        // ── RECIBOS-PACIENTE ──────────────────────────────────────────
+        if (route === 'recibos-paciente') {
+            var rpPacId = parseInt(q.paciente_id) || 0
+            if (!rpPacId) return res.status(400).json({ success: false, error: 'paciente_id obrigatório' })
+            var rpRows = await client.execute({ sql: "SELECT * FROM receitas_saude WHERE paciente_id=? AND clinica_id=? ORDER BY created_at DESC", args: [rpPacId, clinica_id] })
+            return res.status(200).json({ success: true, recibos: rpRows.rows })
         }
 
         // ── RECEITA-SAUDE-EMITIR (marca como emitido) ──────────────

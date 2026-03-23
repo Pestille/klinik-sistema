@@ -2661,9 +2661,12 @@ function renderProntTab(){
   else if(_prontTab==='anamnese'){
     renderAnamneseTab(el,p)
   }
+  else if(_prontTab==='recibos'){
+    renderRecibosTab(el,p)
+  }
   else{
     // Abas placeholder
-    var nomes={'fotos':'Fotos','plano-clinico':'Plano e Ficha Clínica','fichas-esp':'Fichas Especialidades','documentos':'Documentos','exames':'Exames','recibos':'Recibos','indicacoes':'Indicações'}
+    var nomes={'fotos':'Fotos','plano-clinico':'Plano e Ficha Clínica','fichas-esp':'Fichas Especialidades','documentos':'Documentos','exames':'Exames','indicacoes':'Indicações'}
     el.innerHTML='<div style="text-align:center;padding:60px;color:#9e9e9e"><div style="font-size:15px;font-weight:500;margin-bottom:8px">'+(nomes[_prontTab]||_prontTab)+'</div><div style="font-size:13px">Dados não encontrados.</div></div>'
   }
 }
@@ -6396,6 +6399,160 @@ async function darBaixaParcela(parcelaId,pacId){
     if(r.success){
       loadFinanceiroPaciente(pacId)
     }else{alert(r.error||'Erro ao dar baixa')}
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+// ── RECIBOS E NFS-e ──────────────────────────────────────────
+async function renderRecibosTab(el,p){
+  var pacId=p.id
+  var pacNome=p.nome||''
+  var pacCpf=p.cpf||''
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var d=await apiData('recibos-paciente',{paciente_id:pacId})
+    var recibos=d.recibos||[]
+    var profs=ST.profissionais||[]
+
+    var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+      '<div style="font-size:16px;font-weight:500;color:var(--text)">Recibos e Notas Fiscais</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button onclick="abrirNovoRecibo('+pacId+',\'recibo\')" style="background:var(--green3);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">+ Recibo</button>'+
+        '<button onclick="abrirNovoRecibo('+pacId+',\'nfse\')" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">+ NFS-e</button>'+
+      '</div>'+
+    '</div>'
+
+    if(!recibos.length){
+      html+='<div style="text-align:center;padding:40px;color:#9e9e9e">Nenhum recibo ou nota fiscal emitida para este paciente.</div>'
+      el.innerHTML=html;return
+    }
+
+    html+='<table class="tbl" style="width:100%"><thead><tr><th>Data</th><th>Tipo</th><th>N. Documento</th><th>Profissional</th><th>CRO</th><th>Descricao</th><th style="text-align:right">Valor (R$)</th><th>Status</th><th>Acoes</th></tr></thead><tbody>'
+    recibos.forEach(function(r){
+      var tipoLabel=r.tipo==='nfse'?'NFS-e':'Recibo'
+      var tipoCor=r.tipo==='nfse'?'blue':'green'
+      var stClass=r.status==='emitido'?'green':'orange'
+      var acoes=''
+      if(r.status==='rascunho'){
+        acoes='<button onclick="emitirReciboNfse('+r.id+','+pacId+')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Emitir</button>'
+      }
+      html+='<tr><td>'+fmtDt(r.data_emissao)+'</td>'+
+        '<td><span class="badge badge-'+tipoCor+'">'+tipoLabel+'</span></td>'+
+        '<td style="font-size:12px">'+(r.numero_recibo||'—')+'</td>'+
+        '<td>'+(r.nome_profissional||'—')+'</td>'+
+        '<td style="font-size:12px">'+(r.cro_profissional||'—')+'</td>'+
+        '<td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis">'+(r.descricao_servico||'—')+'</td>'+
+        '<td style="text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(r.valor)+'</td>'+
+        '<td><span class="badge badge-'+stClass+'">'+(r.status||'rascunho').toUpperCase()+'</span></td>'+
+        '<td>'+acoes+'</td></tr>'
+    })
+    html+='</tbody></table>'
+    el.innerHTML=html
+  }catch(e){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">Erro: '+e.message+'</div>'}
+}
+
+function abrirNovoRecibo(pacId,tipo){
+  var old=document.getElementById('modal-novo-recibo');if(old)old.remove()
+  var p=((_prontData||{}).paciente)||{}
+  var profs=ST.profissionais||[]
+  var profOpts='<option value="">Selecione...</option>'+profs.map(function(pr){return '<option value="'+(pr.nome||pr.name)+'|'+(pr.cro||'')+'|'+pr.id+'">'+(pr.nome||pr.name||'')+(pr.cro?' - CRO: '+pr.cro:'')+'</option>'}).join('')
+  var tipoLabel=tipo==='nfse'?'Nota Fiscal de Servico (NFS-e)':'Recibo de Servico Odontologico'
+
+  var m=document.createElement('div')
+  m.id='modal-novo-recibo'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10003;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:560px;max-height:90vh;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-size:18px;font-weight:500;color:#1A1A1A">'+tipoLabel+'</div><span onclick="document.getElementById(\'modal-novo-recibo\').remove()" style="cursor:pointer;font-size:22px;color:#757575">&times;</span></div>'+
+
+      '<div style="background:#F5F5F5;border-radius:6px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--text2)">'+
+        '<strong>Paciente:</strong> '+(p.nome||'')+(p.cpf?' — CPF: '+p.cpf:' — <span style="color:#C62828">CPF nao cadastrado</span>')+
+      '</div>'+
+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Profissional *</label>'+
+          '<select id="rec-prof" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none">'+profOpts+'</select></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">N. do Documento</label>'+
+          '<input id="rec-numero" placeholder="Numero do recibo/NFS-e" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+      '</div>'+
+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Valor (R$) *</label>'+
+          '<input id="rec-valor" type="number" step="0.01" placeholder="R$ 0,00" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Data de Emissao</label>'+
+          '<input id="rec-data" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+      '</div>'+
+
+      '<div style="margin-bottom:16px">'+
+        '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Descricao dos Servicos *</label>'+
+        '<textarea id="rec-desc" rows="3" placeholder="Descreva os procedimentos realizados..." style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;resize:vertical;font-family:Roboto,sans-serif;box-sizing:border-box"></textarea>'+
+      '</div>'+
+
+      (tipo==='nfse'?
+        '<div style="background:#FFF3E0;border-radius:6px;padding:12px;margin-bottom:16px;font-size:12px;color:#E65100">'+
+          '<strong>NFS-e:</strong> Os dados serao preparados para emissao da Nota Fiscal de Servico Eletronica. '+
+          'Para emissao efetiva, acesse o portal da prefeitura do seu municipio com os dados gerados.'+
+        '</div>'
+      :
+        '<div style="background:#E3F2FD;border-radius:6px;padding:12px;margin-bottom:16px;font-size:12px;color:#1565C0">'+
+          '<strong>Recibo:</strong> Documento para declaracao de imposto de renda do paciente (Receita Saude). '+
+          'Apos salvar, clique em "Emitir" para finalizar.'+
+        '</div>'
+      )+
+
+      '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+        '<button onclick="document.getElementById(\'modal-novo-recibo\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+        '<button onclick="salvarRecibo('+pacId+',\''+tipo+'\')" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Salvar</button>'+
+      '</div>'+
+    '</div>'
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)m.remove()}
+}
+
+async function salvarRecibo(pacId,tipo){
+  var profSel=document.getElementById('rec-prof')
+  var numero=document.getElementById('rec-numero').value
+  var valor=document.getElementById('rec-valor').value
+  var data=document.getElementById('rec-data').value
+  var desc=document.getElementById('rec-desc').value
+
+  if(!profSel.value){alert('Selecione o profissional');return}
+  if(!valor||!desc){alert('Valor e descricao sao obrigatorios');return}
+
+  var profParts=profSel.value.split('|')
+  var profNome=profParts[0]||''
+  var profCro=profParts[1]||''
+  var profId=parseInt(profParts[2])||null
+  var p=((_prontData||{}).paciente)||{}
+
+  try{
+    var r=await apiPost('receitas-saude',{
+      paciente_id:pacId,
+      profissional_id:profId,
+      valor:parseFloat(valor),
+      data_emissao:data,
+      numero_recibo:numero,
+      cpf_paciente:p.cpf||'',
+      nome_paciente:p.nome||'',
+      cpf_profissional:'',
+      nome_profissional:profNome,
+      cro_profissional:profCro,
+      descricao_servico:desc,
+      tipo:tipo
+    })
+    if(r.success){
+      document.getElementById('modal-novo-recibo').remove()
+      renderRecibosTab(document.getElementById('pront-content'),p)
+    }else{alert(r.error||'Erro')}
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function emitirReciboNfse(id,pacId){
+  var p=((_prontData||{}).paciente)||{}
+  if(!confirm('Confirma a emissao deste documento?'))return
+  try{
+    var r=await apiPost('receita-saude-emitir',{id:id})
+    if(r.success){renderRecibosTab(document.getElementById('pront-content'),p)}
+    else{alert(r.error||'Erro')}
   }catch(e){alert('Erro: '+e.message)}
 }
 
