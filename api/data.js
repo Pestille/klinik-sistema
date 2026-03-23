@@ -1847,13 +1847,18 @@ module.exports = async function handler(req, res) {
 
         // ── SINCRONIZAR-COBRANCAS (consulta Asaas e atualiza status) ──
         if (route === 'sincronizar-cobrancas') {
-            // Get Asaas API key
+            // Get Asaas API key (try clinic-specific, then env var)
             var scAsaas = await client.execute({ sql: "SELECT asaas_api_key FROM clinicas WHERE id=?", args: [clinica_id] })
-            var scApiKey = (scAsaas.rows.length && scAsaas.rows[0].asaas_api_key) ? scAsaas.rows[0].asaas_api_key : ''
-            if (!scApiKey) return res.status(400).json({ success: false, error: 'Asaas API Key não configurada' })
+            var scApiKey = (scAsaas.rows.length && scAsaas.rows[0].asaas_api_key) ? scAsaas.rows[0].asaas_api_key : (process.env.ASAAS_API_KEY || '')
+            if (!scApiKey) return res.status(200).json({ success: false, error: 'Asaas API Key não configurada. Vá em Configurações > Dados da Clínica.' })
 
-            // Get all pending/overdue cobrancas with asaas_id
-            var scPendentes = await client.execute({ sql: "SELECT id, asaas_id, status, valor FROM cobrancas WHERE clinica_id=? AND asaas_id IS NOT NULL AND asaas_id!='' AND status IN ('pendente','vencido') ORDER BY created_at DESC LIMIT 100", args: [clinica_id] })
+            // If specific cobranca_id provided, sync only that one
+            var scSingleId = q.cobranca_id ? parseInt(q.cobranca_id) : null
+            var scSql = scSingleId
+                ? "SELECT id, asaas_id, status, valor FROM cobrancas WHERE id=? AND clinica_id=? AND asaas_id IS NOT NULL AND asaas_id!=''"
+                : "SELECT id, asaas_id, status, valor FROM cobrancas WHERE clinica_id=? AND asaas_id IS NOT NULL AND asaas_id!='' AND status IN ('pendente','vencido') ORDER BY created_at DESC LIMIT 50"
+            var scArgs = scSingleId ? [scSingleId, clinica_id] : [clinica_id]
+            var scPendentes = await client.execute({ sql: scSql, args: scArgs })
 
             var scAtualizado = 0, scErros = 0, scDetalhes = []
             for (var sci = 0; sci < scPendentes.rows.length; sci++) {
@@ -1862,33 +1867,38 @@ module.exports = async function handler(req, res) {
                     var scRes = await fetch('https://api.asaas.com/v3/payments/' + scCob.asaas_id, {
                         headers: { 'access_token': scApiKey }
                     })
+                    if (!scRes.ok) { scErros++; scDetalhes.push({ asaas_id: scCob.asaas_id, erro: 'HTTP ' + scRes.status }); continue }
                     var scData = await scRes.json()
-                    if (scData.errors) { scErros++; continue }
+                    if (scData.errors) { scErros++; scDetalhes.push({ asaas_id: scCob.asaas_id, erro: scData.errors[0] && scData.errors[0].description || 'Asaas error' }); continue }
 
                     // Map Asaas status to our status
                     var scNovoStatus = null
-                    if (scData.status === 'RECEIVED' || scData.status === 'CONFIRMED' || scData.status === 'RECEIVED_IN_CASH') {
+                    if (scData.status === 'RECEIVED' || scData.status === 'CONFIRMED' || scData.status === 'RECEIVED_IN_CASH' || scData.status === 'BILLING_PROCESS_FINISHED') {
                         scNovoStatus = 'pago'
                     } else if (scData.status === 'OVERDUE') {
                         scNovoStatus = 'vencido'
-                    } else if (scData.status === 'REFUNDED' || scData.status === 'DELETED' || scData.status === 'REFUND_REQUESTED') {
+                    } else if (scData.status === 'REFUNDED' || scData.status === 'DELETED' || scData.status === 'REFUND_REQUESTED' || scData.status === 'REFUND_IN_PROGRESS') {
                         scNovoStatus = 'cancelado'
                     }
+                    // PENDING, AWAITING_RISK_ANALYSIS = still pending, no update needed
 
                     if (scNovoStatus && scNovoStatus !== scCob.status) {
                         await client.execute({ sql: "UPDATE cobrancas SET status=?, data_pagamento=CASE WHEN ?='pago' THEN datetime('now') ELSE data_pagamento END, updated_at=datetime('now') WHERE id=?", args: [scNovoStatus, scNovoStatus, scCob.id] })
 
                         // Cascade to parcelas
-                        if (scNovoStatus === 'pago') {
-                            await client.execute({ sql: "UPDATE parcelas_orcamento SET status='pago', data_pagamento=datetime('now'), updated_at=datetime('now') WHERE cobranca_id=? AND status!='pago'", args: [scCob.id] })
-                            // Update clinic balance
-                            await client.execute({ sql: "UPDATE clinicas SET saldo=saldo+? WHERE id=?", args: [scCob.valor, clinica_id] })
-                        } else if (scNovoStatus === 'vencido') {
-                            await client.execute({ sql: "UPDATE parcelas_orcamento SET status='vencido', updated_at=datetime('now') WHERE cobranca_id=? AND status='pendente'", args: [scCob.id] })
-                        }
+                        try {
+                            if (scNovoStatus === 'pago') {
+                                await client.execute({ sql: "UPDATE parcelas_orcamento SET status='pago', data_pagamento=datetime('now'), updated_at=datetime('now') WHERE cobranca_id=? AND status!='pago'", args: [scCob.id] })
+                                await client.execute({ sql: "UPDATE clinicas SET saldo=saldo+? WHERE id=?", args: [scCob.valor, clinica_id] })
+                            } else if (scNovoStatus === 'vencido') {
+                                await client.execute({ sql: "UPDATE parcelas_orcamento SET status='vencido', updated_at=datetime('now') WHERE cobranca_id=? AND status='pendente'", args: [scCob.id] })
+                            }
+                        } catch(ep) {}
 
                         scAtualizado++
-                        scDetalhes.push({ asaas_id: scCob.asaas_id, de: scCob.status, para: scNovoStatus })
+                        scDetalhes.push({ asaas_id: scCob.asaas_id, de: scCob.status, para: scNovoStatus, asaas_status: scData.status })
+                    } else {
+                        scDetalhes.push({ asaas_id: scCob.asaas_id, status_atual: scCob.status, asaas_status: scData.status, msg: 'sem alteração' })
                     }
                 } catch(e) { scErros++; console.error('[sincronizar] Erro asaas_id=' + scCob.asaas_id + ':', e.message) }
             }

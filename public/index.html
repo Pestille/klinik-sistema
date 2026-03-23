@@ -2012,6 +2012,7 @@ function toggleSidebar() {
 
 // ── NAVEGAÇÃO ──────────────────────────────────────────────────
 function nav(id) {
+  pararPollingAsaas()
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
   const pg = document.getElementById('p-'+id)
   if (pg) pg.classList.add('active')
@@ -2620,6 +2621,7 @@ function prontTab(id,el){
 }
 
 function renderProntTab(){
+  pararPollingAsaas()
   var el=document.getElementById('pront-content');if(!el||!_prontData)return
   var p=_prontData.paciente||{};var ag=_prontData.agendamentos||[];var pgs=_prontData.pagamentos||[];var fin=_prontData.financeiro||[]
   var UFS='<option value="">—</option><option>AC</option><option>AL</option><option>AM</option><option>AP</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option><option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option><option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option><option>SP</option><option>TO</option>'
@@ -2645,8 +2647,9 @@ function renderProntTab(){
       '</tbody></table>'
   }
   else if(_prontTab==='financeiro-pac'){
-    el.innerHTML='<div style="display:flex;justify-content:flex-end;padding:4px 4px 0"><button onclick="sincronizarCobrancas('+p.id+')" style="background:var(--green3);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif" title="Consulta o Asaas e atualiza status">Sincronizar Asaas</button></div><div id="fin-pac-container" style="padding:4px"><div style="text-align:center;padding:40px;color:#9e9e9e">Carregando financeiro...</div></div>'
+    el.innerHTML='<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:4px 4px 0"><div id="asaas-poll-status" style="font-size:11px;color:var(--green)"></div><button onclick="sincronizarCobrancas('+p.id+')" style="background:var(--green3);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif" title="Consulta o Asaas e atualiza status">Sincronizar Asaas</button></div><div id="fin-pac-container" style="padding:4px"><div style="text-align:center;padding:40px;color:#9e9e9e">Carregando financeiro...</div></div>'
     loadFinanceiroPaciente(p.id)
+    iniciarPollingAsaas(p.id)
   }
   else if(_prontTab==='orcamentos'){
     renderOrcamentosTab(el,p)
@@ -6413,20 +6416,41 @@ function copiarPix(){
 }
 
 async function sincronizarCobrancas(pacId){
-  var btn=event.target;btn.disabled=true;var origText=btn.textContent;btn.textContent='Sincronizando...'
+  var btn=event?event.target:null
+  if(btn){btn.disabled=true;btn.textContent='Sincronizando...'}
   try{
     var r=await apiData('sincronizar-cobrancas',{})
     if(r.success){
-      var msg='Sincronização concluída: '+r.verificados+' cobranças verificadas'
-      if(r.atualizados>0)msg+=', '+r.atualizados+' atualizadas'
-      if(r.erros>0)msg+=', '+r.erros+' erros'
-      alert(msg)
-      // Reload cobranças and financeiro
-      carregarCobrancasPaciente(pacId)
-      if(typeof loadFinanceiroPaciente==='function')loadFinanceiroPaciente(pacId)
-    }else{alert(r.error||'Erro na sincronização')}
-  }catch(e){alert('Erro: '+e.message)}
-  btn.disabled=false;btn.textContent=origText
+      if(r.atualizados>0){
+        // Reload views silently
+        carregarCobrancasPaciente(pacId)
+        if(typeof loadFinanceiroPaciente==='function')loadFinanceiroPaciente(pacId)
+        if(btn)alert('Atualizado! '+r.atualizados+' cobranca(s) sincronizada(s).')
+      }else if(btn){
+        alert('Nenhuma alteracao. '+r.verificados+' cobranca(s) verificada(s).'+(r.erros>0?' ('+r.erros+' erros)':''))
+      }
+    }else if(btn){alert(r.error||'Erro na sincronização')}
+  }catch(e){if(btn)alert('Erro: '+e.message)}
+  if(btn){btn.disabled=false;btn.textContent='Sincronizar Asaas'}
+}
+
+// Auto-polling: check Asaas every 10s while financial tab is open
+var _asaasPolling=null
+function iniciarPollingAsaas(pacId){
+  pararPollingAsaas()
+  _asaasPolling=setInterval(async function(){
+    try{
+      var r=await apiData('sincronizar-cobrancas',{})
+      if(r.success&&r.atualizados>0){
+        // Silently reload financial data
+        if(typeof loadFinanceiroPaciente==='function')loadFinanceiroPaciente(pacId)
+        carregarCobrancasPaciente(pacId)
+      }
+    }catch(e){}
+  },10000)
+}
+function pararPollingAsaas(){
+  if(_asaasPolling){clearInterval(_asaasPolling);_asaasPolling=null}
 }
 
 async function carregarCobrancasPaciente(pacId){
