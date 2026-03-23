@@ -2012,7 +2012,6 @@ function toggleSidebar() {
 
 // ── NAVEGAÇÃO ──────────────────────────────────────────────────
 function nav(id) {
-  pararPollingAsaas()
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
   const pg = document.getElementById('p-'+id)
   if (pg) pg.classList.add('active')
@@ -2621,7 +2620,6 @@ function prontTab(id,el){
 }
 
 function renderProntTab(){
-  pararPollingAsaas()
   var el=document.getElementById('pront-content');if(!el||!_prontData)return
   var p=_prontData.paciente||{};var ag=_prontData.agendamentos||[];var pgs=_prontData.pagamentos||[];var fin=_prontData.financeiro||[]
   var UFS='<option value="">—</option><option>AC</option><option>AL</option><option>AM</option><option>AP</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option><option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option><option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option><option>SP</option><option>TO</option>'
@@ -6443,23 +6441,31 @@ async function sincronizarCobrancas(pacId){
 }
 
 // Auto-polling: check Asaas every 10s while financial tab is open
+// Global Asaas sync - runs every 5 seconds while app is open
 var _asaasPolling=null
-function iniciarPollingAsaas(pacId){
-  pararPollingAsaas()
+var _asaasSyncRunning=false
+function iniciarPollingAsaasGlobal(){
+  if(_asaasPolling)return // already running
   _asaasPolling=setInterval(async function(){
+    if(_asaasSyncRunning)return // skip if previous still running
+    _asaasSyncRunning=true
     try{
       var r=await apiData('sincronizar-cobrancas',{})
       if(r.success&&r.atualizados>0){
-        // Silently reload financial data
-        if(typeof loadFinanceiroPaciente==='function')loadFinanceiroPaciente(pacId)
-        carregarCobrancasPaciente(pacId)
+        // Refresh whichever view is currently open
+        if(_prontData&&_prontData.paciente){
+          var pacId=_prontData.paciente.id
+          if(_prontTab==='financeiro-pac'&&typeof loadFinanceiroPaciente==='function')loadFinanceiroPaciente(pacId)
+          if(_prontTab==='cobrancas-pac')carregarCobrancasPaciente(pacId)
+        }
       }
     }catch(e){}
-  },10000)
+    _asaasSyncRunning=false
+  },5000)
 }
-function pararPollingAsaas(){
-  if(_asaasPolling){clearInterval(_asaasPolling);_asaasPolling=null}
-}
+// Keep for backward compat - now just starts global
+function iniciarPollingAsaas(pacId){iniciarPollingAsaasGlobal()}
+function pararPollingAsaas(){/* no longer stops - global polling runs always */}
 
 async function carregarCobrancasPaciente(pacId){
   var el=document.getElementById('cobrancas-lista')
@@ -6599,6 +6605,7 @@ async function confirmarSaque(){
 renderMiniCal()
 loadDashboard()
 loadMinhasPermissoes()
+iniciarPollingAsaasGlobal()
 </script>
 
 <style>
