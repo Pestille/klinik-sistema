@@ -6434,6 +6434,8 @@ async function renderRecibosTab(el,p){
       var acoes=''
       if(r.status==='rascunho'){
         acoes='<button onclick="emitirReciboNfse('+r.id+','+pacId+')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Emitir</button>'
+      }else{
+        acoes='<button onclick="abrirEspelhoReceitaSaude('+r.id+','+pacId+')" style="background:none;border:none;color:#1565C0;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif;text-decoration:underline">Espelho</button>'
       }
       html+='<tr><td>'+fmtDt(r.data_emissao)+'</td>'+
         '<td><span class="badge badge-'+tipoCor+'">'+tipoLabel+'</span></td>'+
@@ -6548,12 +6550,121 @@ async function salvarRecibo(pacId,tipo){
 
 async function emitirReciboNfse(id,pacId){
   var p=((_prontData||{}).paciente)||{}
-  if(!confirm('Confirma a emissao deste documento?'))return
+  if(!confirm('Confirma a emissao deste documento?\n\nApos emitir, sera exibido o espelho com todos os dados para lancar no app Receita Saude (gov.br).'))return
   try{
     var r=await apiPost('receita-saude-emitir',{id:id})
-    if(r.success){renderRecibosTab(document.getElementById('pront-content'),p)}
+    if(r.success){
+      renderRecibosTab(document.getElementById('pront-content'),p)
+      // Show the mirror/copy screen
+      abrirEspelhoReceitaSaude(id,pacId)
+    }
     else{alert(r.error||'Erro')}
   }catch(e){alert('Erro: '+e.message)}
+}
+
+async function abrirEspelhoReceitaSaude(id,pacId){
+  // Fetch the receipt data
+  try{
+    var d=await apiData('recibos-paciente',{paciente_id:pacId})
+    var rec=(d.recibos||[]).filter(function(r){return r.id===id})[0]
+    if(!rec){alert('Recibo nao encontrado');return}
+
+    var old=document.getElementById('modal-espelho-rs');if(old)old.remove()
+    var m=document.createElement('div')
+    m.id='modal-espelho-rs'
+    m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10003;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+
+    function campoCopiavel(label,valor){
+      return '<div style="margin-bottom:12px">'+
+        '<div style="font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">'+label+'</div>'+
+        '<div style="display:flex;align-items:center;gap:8px">'+
+          '<div style="flex:1;background:#fff;border:1.5px solid var(--border);border-radius:6px;padding:10px 12px;font-size:14px;color:var(--text);user-select:all">'+(valor||'—')+'</div>'+
+          '<button onclick="copiarCampo(this,\''+String(valor||'').replace(/'/g,"\\'").replace(/\n/g,' ')+'\')" style="background:var(--green3);color:#fff;border:none;border-radius:6px;padding:8px 12px;font-size:11px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;white-space:nowrap">Copiar</button>'+
+        '</div>'+
+      '</div>'
+    }
+
+    m.innerHTML=
+      '<div style="background:#fff;border-radius:8px;width:560px;max-height:90vh;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+          '<div style="font-size:18px;font-weight:500;color:#1A1A1A">Espelho para Receita Saude</div>'+
+          '<span onclick="document.getElementById(\'modal-espelho-rs\').remove()" style="cursor:pointer;font-size:22px;color:#757575">&times;</span>'+
+        '</div>'+
+        '<div style="font-size:12px;color:var(--text3);margin-bottom:16px">Copie os campos abaixo e lance no app <strong>Receita Federal</strong> &gt; <strong>Receita Saude</strong>. Clique em "Copiar" ao lado de cada campo.</div>'+
+
+        '<div style="background:#E3F2FD;border-radius:8px;padding:16px;margin-bottom:16px">'+
+          '<div style="font-size:12px;font-weight:600;color:#1565C0;text-transform:uppercase;margin-bottom:12px">Dados do Paciente</div>'+
+          campoCopiavel('Nome Completo',rec.nome_paciente)+
+          campoCopiavel('CPF',rec.cpf_paciente)+
+        '</div>'+
+
+        '<div style="background:#E8F5E9;border-radius:8px;padding:16px;margin-bottom:16px">'+
+          '<div style="font-size:12px;font-weight:600;color:#2E7D52;text-transform:uppercase;margin-bottom:12px">Dados do Profissional</div>'+
+          campoCopiavel('Nome do Profissional',rec.nome_profissional)+
+          campoCopiavel('CPF do Profissional',rec.cpf_profissional)+
+          campoCopiavel('CRO',rec.cro_profissional)+
+        '</div>'+
+
+        '<div style="background:#FFF3E0;border-radius:8px;padding:16px;margin-bottom:16px">'+
+          '<div style="font-size:12px;font-weight:600;color:#E65100;text-transform:uppercase;margin-bottom:12px">Dados do Servico</div>'+
+          campoCopiavel('Valor (R$)',rec.valor?fmtBrl(rec.valor):'')+
+          campoCopiavel('Data da Prestacao do Servico',rec.data_emissao?fmtDt(rec.data_emissao):'')+
+          campoCopiavel('Descricao do Servico',rec.descricao_servico)+
+          (rec.numero_recibo?campoCopiavel('Numero do Documento',rec.numero_recibo):'') +
+        '</div>'+
+
+        '<div style="background:#F5F5F5;border-radius:8px;padding:14px;margin-bottom:16px;font-size:12px;color:var(--text2)">'+
+          '<strong>Passo a passo:</strong><br>'+
+          '1. Abra o app <strong>Receita Federal</strong> no celular<br>'+
+          '2. Acesse <strong>Receita Saude</strong><br>'+
+          '3. Clique em <strong>Emitir Recibo</strong><br>'+
+          '4. Preencha com os dados acima (use os botoes Copiar)<br>'+
+          '5. Confirme a emissao no app'+
+        '</div>'+
+
+        '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+          '<button onclick="copiarTodosReceitaSaude()" style="background:#1565C0;color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Copiar Tudo</button>'+
+          '<button onclick="document.getElementById(\'modal-espelho-rs\').remove()" style="background:var(--green3);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Concluido</button>'+
+        '</div>'+
+      '</div>'
+
+    // Store data for "copy all"
+    m.dataset.recibo=JSON.stringify(rec)
+    document.body.appendChild(m)
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+function copiarCampo(btn,texto){
+  navigator.clipboard.writeText(texto).then(function(){
+    var orig=btn.textContent;btn.textContent='Copiado!';btn.style.background='#2E7D52'
+    setTimeout(function(){btn.textContent=orig;btn.style.background='var(--green3)'},1500)
+  }).catch(function(){
+    // Fallback
+    var ta=document.createElement('textarea');ta.value=texto;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta)
+    var orig=btn.textContent;btn.textContent='Copiado!';setTimeout(function(){btn.textContent=orig},1500)
+  })
+}
+
+function copiarTodosReceitaSaude(){
+  var modal=document.getElementById('modal-espelho-rs')
+  if(!modal)return
+  try{
+    var rec=JSON.parse(modal.dataset.recibo)
+    var texto='RECEITA SAUDE - ESPELHO\n\n'+
+      'PACIENTE:\n'+
+      'Nome: '+(rec.nome_paciente||'')+'\n'+
+      'CPF: '+(rec.cpf_paciente||'')+'\n\n'+
+      'PROFISSIONAL:\n'+
+      'Nome: '+(rec.nome_profissional||'')+'\n'+
+      'CPF: '+(rec.cpf_profissional||'')+'\n'+
+      'CRO: '+(rec.cro_profissional||'')+'\n\n'+
+      'SERVICO:\n'+
+      'Valor: '+fmtBrl(rec.valor||0)+'\n'+
+      'Data: '+(rec.data_emissao?fmtDt(rec.data_emissao):'')+'\n'+
+      'Descricao: '+(rec.descricao_servico||'')+'\n'+
+      (rec.numero_recibo?'Documento: '+rec.numero_recibo+'\n':'')
+    navigator.clipboard.writeText(texto).then(function(){alert('Todos os dados copiados para a area de transferencia!')})
+  }catch(e){alert('Erro ao copiar')}
 }
 
 function renderCobrancasTab(el,p){
