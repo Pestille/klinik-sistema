@@ -3469,6 +3469,10 @@ function fecharConfigParcelas(skipParcelas){
   var m=document.getElementById('config-parcelas-modal');if(m)m.remove()
   fecharOrcModal()
   reloadOrcamentos()
+  // Reload financeiro tab if open
+  if(_prontData&&_prontData.paciente&&_prontTab==='financeiro-pac'){
+    loadFinanceiroPaciente(_prontData.paciente.id)
+  }
 }
 
 async function confirmarGeracaoParcelas(orcId){
@@ -6022,46 +6026,57 @@ function renderFinanceiroPaciente(el,pacId){
       else if(pp.status==='vencido')totalVencido+=+(pp.valor||0)
       else totalPendente+=+(pp.valor||0)
     }
+    // For orcamentos without parcelas, add their total
+    if(!parcs.length&&orcs[oi].valor_total){
+      totalGeral+=+(orcs[oi].valor_total||0)-(+(orcs[oi].desconto||0))
+      totalPendente+=+(orcs[oi].valor_total||0)-(+(orcs[oi].desconto||0))
+    }
   }
 
   var html=''
 
   if(!orcs.length){
     html+='<div style="text-align:center;padding:40px;color:#9e9e9e">'+
-      '<div style="font-size:14px;margin-bottom:8px">Nenhum orcamento aprovado com parcelas</div>'+
-      '<div style="font-size:12px">Aprove um orcamento na aba Orcamentos para gerar parcelas</div></div>'
+      '<div style="font-size:14px;margin-bottom:8px">Nenhum orcamento aprovado</div>'+
+      '<div style="font-size:12px">Aprove um orcamento na aba Orcamentos para gerar o financeiro</div></div>'
     el.innerHTML=html;return
   }
 
   // Saldo total footer
   var saldoHtml='<div style="text-align:right;padding:12px 20px;font-size:14px;color:var(--text2);border-top:2px solid var(--border);margin-top:8px">Saldo a pagar: <strong style="color:'+(totalPendente+totalVencido>0?'#C62828':'#1B5E3B')+';font-size:16px">'+fmtBrl(totalPendente+totalVencido)+'</strong></div>'
 
+  var formaLabel={'pix':'PIX','boleto':'Boleto','credito':'Cartao Credito','debito':'Cartao Debito','dinheiro':'Dinheiro','cheque':'Cheque','Pix':'PIX','Boleto':'Boleto','Cartão de Crédito':'Cartao Credito','Cartão de Débito':'Cartao Debito','Dinheiro':'Dinheiro'}
+
   // Each orcamento as a section
   for(var oi=0;oi<orcs.length;oi++){
     var orc=orcs[oi]
     var parcs=orc.parcelas||[]
+    var semParcelas=orc.sem_parcelas||parcs.length===0
     var orcPago=0,orcTotal=0,orcPagas=0,orcAtivas=0
-    for(var pi=0;pi<parcs.length;pi++){
-      if(parcs[pi].status==='cancelado')continue
-      orcTotal+=+(parcs[pi].valor||0);orcAtivas++
-      if(parcs[pi].status==='pago'){orcPago+=+(parcs[pi].valor||0);orcPagas++}
+
+    if(semParcelas){
+      orcTotal=+(orc.valor_total||0)-(+(orc.desconto||0))
+    }else{
+      for(var pi=0;pi<parcs.length;pi++){
+        if(parcs[pi].status==='cancelado')continue
+        orcTotal+=+(parcs[pi].valor||0);orcAtivas++
+        if(parcs[pi].status==='pago'){orcPago+=+(parcs[pi].valor||0);orcPagas++}
+      }
     }
 
-    var formaLabel={'pix':'PIX','boleto':'Boleto','credito':'Cartao Credito','debito':'Cartao Debito','dinheiro':'Dinheiro','cheque':'Cheque'}
-    var formaOrc=formaLabel[orc.forma_pagamento]||orc.forma_pagamento||'—'
+    var formaOrc=formaLabel[orc.forma_pagamento]||orc.forma_pagamento||'A definir'
     var procNomes=(orc.procedimentos||'Tratamento').length>50?(orc.procedimentos||'').substring(0,47)+'...':orc.procedimentos||'Tratamento'
 
-    // Header with budget info
+    // Card container
     html+='<div style="margin-bottom:20px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff">'
 
-    // Top bar: budget info + visual circles
     html+='<div style="display:flex;align-items:stretch">'
 
     // LEFT: Table section
     html+='<div style="flex:1;overflow-x:auto">'
 
     // Budget header row
-    html+='<div style="background:#2E2E2E;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center">'+
+    html+='<div style="background:#2E2E2E;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">'+
       '<div>'+
         '<div style="font-size:14px;font-weight:500">Orcamento #'+orc.orcamento_id+'</div>'+
         '<div style="font-size:11px;color:#bbb;margin-top:2px">'+procNomes+'</div>'+
@@ -6076,84 +6091,95 @@ function renderFinanceiroPaciente(el,pacId){
       '</div>'+
     '</div>'
 
-    // Column headers
-    html+='<div style="display:grid;grid-template-columns:90px 70px 80px 100px 90px 90px 80px 70px;background:#F5F5F5;border-bottom:1px solid var(--border);padding:0">'+
-      '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase">Data</div>'+
-      '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase">Tipo</div>'+
-      '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase">Parcela</div>'+
-      '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase">Vencimento</div>'+
-      '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase">Forma</div>'+
-      '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase;text-align:right">Valor</div>'+
-      '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase;text-align:center">Status</div>'+
-      '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase;text-align:center">Acao</div>'+
-    '</div>'
+    if(semParcelas){
+      // No parcelas yet - show action to generate
+      html+='<div style="padding:30px 20px;text-align:center">'+
+        '<div style="font-size:14px;color:var(--text2);margin-bottom:8px">Orcamento aprovado — parcelas ainda nao foram geradas</div>'+
+        '<div style="font-size:12px;color:var(--text3);margin-bottom:16px">Configure a forma de pagamento e gere as parcelas para controlar o financeiro deste orcamento.</div>'+
+        '<button onclick="gerarParcelasRetroativo('+orc.orcamento_id+','+pacId+')" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Configurar Pagamento e Gerar Parcelas</button>'+
+      '</div>'
+    }else{
+      // Column headers
+      html+='<div style="display:grid;grid-template-columns:90px 70px 80px 100px 90px 90px 80px 70px;background:#F5F5F5;border-bottom:1px solid var(--border);padding:0">'+
+        '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase">Data</div>'+
+        '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase">Tipo</div>'+
+        '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase">Parcela</div>'+
+        '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase">Vencimento</div>'+
+        '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase">Forma</div>'+
+        '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase;text-align:right">Valor</div>'+
+        '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase;text-align:center">Status</div>'+
+        '<div style="padding:8px 10px;font-size:10px;font-weight:600;color:#757575;text-transform:uppercase;text-align:center">Acao</div>'+
+      '</div>'
 
-    // Rows
-    for(var pi=0;pi<parcs.length;pi++){
-      var pp=parcs[pi]
-      if(pp.status==='cancelado')continue
-      var stBg=pp.status==='pago'?'#E8F5E9':pp.status==='vencido'?'#FFEBEE':'#fff'
-      var stColor=pp.status==='pago'?'#2E7D52':pp.status==='vencido'?'#C62828':'#E65100'
-      var stLabel=pp.status==='pago'?'PAGO':pp.status==='vencido'?'VENCIDO':'PENDENTE'
-      var tipoLabel=pp.tipo==='entrada'?'Entrada':'Parcela'
-      var acoes=''
-      if(pp.status==='pendente'||pp.status==='vencido'){
-        acoes='<button onclick="darBaixaParcela('+pp.id+','+pacId+')" style="background:none;border:none;color:var(--green);font-size:11px;cursor:pointer;font-family:Roboto,sans-serif;text-decoration:underline" title="Dar baixa manual">Baixa</button>'
+      // Rows
+      for(var pi=0;pi<parcs.length;pi++){
+        var pp=parcs[pi]
+        if(pp.status==='cancelado')continue
+        var stBg=pp.status==='pago'?'#E8F5E9':pp.status==='vencido'?'#FFEBEE':'#fff'
+        var stColor=pp.status==='pago'?'#2E7D52':pp.status==='vencido'?'#C62828':'#E65100'
+        var stLabel=pp.status==='pago'?'PAGO':pp.status==='vencido'?'VENCIDO':'PENDENTE'
+        var tipoLabel=pp.tipo==='entrada'?'Entrada':'Parcela'
+        var acoes=''
+        if(pp.status==='pendente'||pp.status==='vencido'){
+          acoes='<button onclick="darBaixaParcela('+pp.id+','+pacId+')" style="background:none;border:none;color:var(--green);font-size:11px;cursor:pointer;font-family:Roboto,sans-serif;text-decoration:underline" title="Dar baixa manual">Baixa</button>'
+        }
+
+        html+='<div style="display:grid;grid-template-columns:90px 70px 80px 100px 90px 90px 80px 70px;border-bottom:1px solid #F0F0F0;background:'+stBg+';align-items:center">'+
+          '<div style="padding:8px 10px;font-size:12px;color:var(--text3)">'+fmtDt(pp.data_vencimento)+'</div>'+
+          '<div style="padding:8px 10px;font-size:11px;font-weight:500;color:'+(pp.tipo==='entrada'?'#1565C0':'var(--text2)')+'">'+tipoLabel+'</div>'+
+          '<div style="padding:8px 10px;font-size:12px;color:var(--text)">'+pp.numero_parcela+'/'+pp.total_parcelas+'</div>'+
+          '<div style="padding:8px 10px;font-size:12px;color:var(--text3)">'+fmtDt(pp.data_vencimento)+'</div>'+
+          '<div style="padding:8px 10px;font-size:11px;color:var(--text2)">'+(formaLabel[pp.forma_pagamento]||pp.forma_pagamento||'—')+'</div>'+
+          '<div style="padding:8px 10px;font-size:12px;font-weight:600;color:#1B5E3B;text-align:right">'+fmtBrl(pp.valor)+'</div>'+
+          '<div style="padding:8px 10px;text-align:center"><span style="font-size:10px;font-weight:600;color:'+stColor+';background:'+(pp.status==='pago'?'#C8E6C9':pp.status==='vencido'?'#FFCDD2':'#FFE0B2')+';padding:3px 8px;border-radius:4px">'+stLabel+'</span></div>'+
+          '<div style="padding:8px 10px;text-align:center">'+acoes+'</div>'+
+        '</div>'
       }
 
-      html+='<div style="display:grid;grid-template-columns:90px 70px 80px 100px 90px 90px 80px 70px;border-bottom:1px solid #F0F0F0;background:'+stBg+';align-items:center">'+
-        '<div style="padding:8px 10px;font-size:12px;color:var(--text3)">'+fmtDt(pp.data_vencimento)+'</div>'+
-        '<div style="padding:8px 10px;font-size:11px;font-weight:500;color:'+(pp.tipo==='entrada'?'#1565C0':'var(--text2)')+'">'+tipoLabel+'</div>'+
-        '<div style="padding:8px 10px;font-size:12px;color:var(--text)">'+pp.numero_parcela+'/'+pp.total_parcelas+'</div>'+
-        '<div style="padding:8px 10px;font-size:12px;color:var(--text3)">'+fmtDt(pp.data_vencimento)+'</div>'+
-        '<div style="padding:8px 10px;font-size:11px;color:var(--text2)">'+(formaLabel[pp.forma_pagamento]||pp.forma_pagamento||'—')+'</div>'+
-        '<div style="padding:8px 10px;font-size:12px;font-weight:600;color:#1B5E3B;text-align:right">'+fmtBrl(pp.valor)+'</div>'+
-        '<div style="padding:8px 10px;text-align:center"><span style="font-size:10px;font-weight:600;color:'+stColor+';background:'+(pp.status==='pago'?'#C8E6C9':pp.status==='vencido'?'#FFCDD2':'#FFE0B2')+';padding:3px 8px;border-radius:4px">'+stLabel+'</span></div>'+
-        '<div style="padding:8px 10px;text-align:center">'+acoes+'</div>'+
+      // Bottom totals
+      html+='<div style="display:flex;justify-content:space-between;padding:10px 16px;background:#FAFAFA;border-top:1px solid var(--border);font-size:12px">'+
+        '<span style="color:var(--text3)">Aprovado em '+(orc.data_aprovacao?fmtDt(orc.data_aprovacao.slice(0,10)):'—')+'</span>'+
+        '<div style="display:flex;gap:16px">'+
+          '<span style="color:var(--text3)">Pago: <strong style="color:#1B5E3B">'+fmtBrl(orcPago)+'</strong></span>'+
+          '<span style="color:var(--text3)">Restante: <strong style="color:#E65100">'+fmtBrl(orcTotal-orcPago)+'</strong></span>'+
+        '</div>'+
       '</div>'
     }
 
-    // Bottom totals
-    html+='<div style="display:flex;justify-content:space-between;padding:10px 16px;background:#FAFAFA;border-top:1px solid var(--border);font-size:12px">'+
-      '<span style="color:var(--text3)">Aprovado em '+(orc.data_aprovacao?fmtDt(orc.data_aprovacao.slice(0,10)):'—')+'</span>'+
-      '<div style="display:flex;gap:16px">'+
-        '<span style="color:var(--text3)">Pago: <strong style="color:#1B5E3B">'+fmtBrl(orcPago)+'</strong></span>'+
-        '<span style="color:var(--text3)">Restante: <strong style="color:#E65100">'+fmtBrl(orcTotal-orcPago)+'</strong></span>'+
-      '</div>'+
-    '</div>'
-
     html+='</div>' // end left table
 
-    // RIGHT: Visual circles timeline
-    html+='<div style="width:180px;flex-shrink:0;background:#FAFAFA;border-left:1px solid var(--border);padding:12px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start">'
-    html+='<div style="font-size:10px;font-weight:600;color:#757575;text-transform:uppercase;margin-bottom:8px;letter-spacing:.04em">Parcelas</div>'
+    // RIGHT: Visual circles timeline (only if has parcelas)
+    if(!semParcelas&&parcs.length>0){
+      html+='<div style="width:180px;flex-shrink:0;background:#FAFAFA;border-left:1px solid var(--border);padding:12px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start">'
+      html+='<div style="font-size:10px;font-weight:600;color:#757575;text-transform:uppercase;margin-bottom:8px;letter-spacing:.04em">Parcelas</div>'
 
-    // Circles grid - arrange in rows of 5
-    html+='<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center">'
-    for(var ci=0;ci<parcs.length;ci++){
-      var cp=parcs[ci]
-      if(cp.status==='cancelado')continue
-      var circleColor=cp.status==='pago'?'#2196F3':cp.status==='vencido'?'#F44336':'transparent'
-      var circleBorder=cp.status==='pago'?'#2196F3':cp.status==='vencido'?'#F44336':'#90CAF9'
-      var circleSize='28px'
-      var circleNum=cp.numero_parcela
-      var circleTitle=(cp.tipo==='entrada'?'Entrada':'Parcela '+cp.numero_parcela)+' - '+fmtBrl(cp.valor)+' - '+(cp.status==='pago'?'Pago':cp.status==='vencido'?'Vencido':'Pendente')
+      // Circles grid
+      html+='<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center">'
+      for(var ci=0;ci<parcs.length;ci++){
+        var cp=parcs[ci]
+        if(cp.status==='cancelado')continue
+        var circleColor=cp.status==='pago'?'#2196F3':cp.status==='vencido'?'#F44336':'transparent'
+        var circleBorder=cp.status==='pago'?'#2196F3':cp.status==='vencido'?'#F44336':'#90CAF9'
+        var circleNum=cp.numero_parcela
+        var circleTitle=(cp.tipo==='entrada'?'Entrada':'Parcela '+cp.numero_parcela)+' - '+fmtBrl(cp.valor)+' - '+(cp.status==='pago'?'Pago':cp.status==='vencido'?'Vencido':'Pendente')
 
-      html+='<div title="'+circleTitle+'" style="width:'+circleSize+';height:'+circleSize+';border-radius:50%;background:'+circleColor+';border:2.5px solid '+circleBorder+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:'+(cp.status==='pago'||cp.status==='vencido'?'#fff':'#90CAF9')+';cursor:pointer;transition:transform .15s" onmouseover="this.style.transform=\'scale(1.15)\'" onmouseout="this.style.transform=\'scale(1)\'">'+circleNum+'</div>'
-    }
-    html+='</div>'
+        html+='<div title="'+circleTitle+'" style="width:28px;height:28px;border-radius:50%;background:'+circleColor+';border:2.5px solid '+circleBorder+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:'+(cp.status==='pago'||cp.status==='vencido'?'#fff':'#90CAF9')+';cursor:pointer;transition:transform .15s" onmouseover="this.style.transform=\'scale(1.15)\'" onmouseout="this.style.transform=\'scale(1)\'">'+circleNum+'</div>'
+      }
+      html+='</div>'
 
-    // Legend
-    html+='<div style="margin-top:12px;display:flex;flex-direction:column;gap:4px;font-size:10px;color:#757575">'
-    html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:50%;background:#2196F3"></div>Pago</div>'
-    html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:50%;border:2px solid #90CAF9"></div>Pendente</div>'
-    html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:50%;background:#F44336"></div>Vencido</div>'
-    html+='</div>'
+      // Legend
+      html+='<div style="margin-top:12px;display:flex;flex-direction:column;gap:4px;font-size:10px;color:#757575">'
+      html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:50%;background:#2196F3"></div>Pago</div>'
+      html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:50%;border:2px solid #90CAF9"></div>Pendente</div>'
+      html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:50%;background:#F44336"></div>Vencido</div>'
+      html+='</div>'
 
-    // Summary text
-    html+='<div style="margin-top:12px;text-align:center;font-size:11px;color:var(--text3)">'+orcPagas+'/'+orcAtivas+' pagas</div>'
+      // Summary text
+      html+='<div style="margin-top:12px;text-align:center;font-size:11px;color:var(--text3)">'+orcPagas+'/'+orcAtivas+' pagas</div>'
 
-    html+='</div>' // end right circles
+      html+='</div>' // end right circles
+    } // end if has parcelas
+
     html+='</div>' // end flex row
     html+='</div>' // end card
   }
@@ -6163,6 +6189,22 @@ function renderFinanceiroPaciente(el,pacId){
 }
 
 
+
+async function gerarParcelasRetroativo(orcId,pacId){
+  // Reuse the config parcelas modal from approval flow
+  try{
+    var d=await apiData('orcamentos-paciente',{paciente_id:pacId})
+    var orcs=(d.orcamentos||[]).filter(function(o){return o.id===orcId})
+    if(!orcs.length){alert('Orcamento nao encontrado');return}
+    var orc=orcs[0]
+    var orcData={
+      id:orc.id,valor_total:orc.valor_total,desconto:orc.desconto||0,
+      forma_pagamento:orc.forma_pagamento,parcelas:orc.parcelas||1,
+      paciente_id:pacId
+    }
+    abrirConfigParcelas(orcId,orcData,'Retroativo')
+  }catch(e){alert('Erro: '+e.message)}
+}
 
 async function darBaixaParcela(parcelaId,pacId){
   if(!confirm('Confirma a baixa manual desta parcela?'))return

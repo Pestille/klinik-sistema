@@ -2789,11 +2789,23 @@ module.exports = async function handler(req, res) {
         if (route === 'parcelas-paciente') {
             var ppPacId = parseInt(q.paciente_id) || 0
             if (!ppPacId) return res.status(400).json({ success: false, error: 'paciente_id obrigatório' })
-            var ppRows = await client.execute({
-                sql: "SELECT po.*, o.valor_total as orcamento_valor, o.desconto as orcamento_desconto, o.forma_pagamento as orcamento_forma, o.observacoes as orcamento_obs, o.data_aprovacao, (SELECT GROUP_CONCAT(oi.procedimento_nome, ', ') FROM orcamento_itens oi WHERE oi.orcamento_id=po.orcamento_id) as procedimentos FROM parcelas_orcamento po JOIN orcamentos o ON o.id=po.orcamento_id WHERE po.paciente_id=? AND po.clinica_id=? ORDER BY po.orcamento_id, po.numero_parcela",
+
+            // Get all approved orcamentos for this patient
+            var ppOrcs = await client.execute({
+                sql: "SELECT o.id, o.valor_total, o.desconto, o.forma_pagamento, o.observacoes, o.data_aprovacao, o.status, o.parcelas as num_parcelas, (SELECT GROUP_CONCAT(oi.procedimento_nome, ', ') FROM orcamento_itens oi WHERE oi.orcamento_id=o.id) as procedimentos FROM orcamentos o WHERE o.paciente_id=? AND o.clinica_id=? AND o.status='aprovado' ORDER BY o.data_aprovacao DESC",
                 args: [ppPacId, clinica_id]
             })
-            // Group by orcamento
+
+            // Try to get parcelas (table may not exist yet)
+            var ppRows = { rows: [] }
+            try {
+                ppRows = await client.execute({
+                    sql: "SELECT po.*, o.valor_total as orcamento_valor, o.desconto as orcamento_desconto, o.forma_pagamento as orcamento_forma, o.observacoes as orcamento_obs, o.data_aprovacao, (SELECT GROUP_CONCAT(oi.procedimento_nome, ', ') FROM orcamento_itens oi WHERE oi.orcamento_id=po.orcamento_id) as procedimentos FROM parcelas_orcamento po JOIN orcamentos o ON o.id=po.orcamento_id WHERE po.paciente_id=? AND po.clinica_id=? ORDER BY po.orcamento_id, po.numero_parcela",
+                    args: [ppPacId, clinica_id]
+                })
+            } catch(e) { /* table may not exist yet */ }
+
+            // Group parcelas by orcamento
             var ppGroups = {}
             for (var pi = 0; pi < ppRows.rows.length; pi++) {
                 var pr = ppRows.rows[pi]
@@ -2810,6 +2822,24 @@ module.exports = async function handler(req, res) {
                     }
                 }
                 ppGroups[pr.orcamento_id].parcelas.push(pr)
+            }
+
+            // Add approved orcamentos that have no parcelas yet
+            for (var poi = 0; poi < ppOrcs.rows.length; poi++) {
+                var ppOrc = ppOrcs.rows[poi]
+                if (!ppGroups[ppOrc.id]) {
+                    ppGroups[ppOrc.id] = {
+                        orcamento_id: ppOrc.id,
+                        valor_total: ppOrc.valor_total,
+                        desconto: ppOrc.desconto,
+                        forma_pagamento: ppOrc.forma_pagamento,
+                        procedimentos: ppOrc.procedimentos,
+                        observacoes: ppOrc.observacoes,
+                        data_aprovacao: ppOrc.data_aprovacao,
+                        parcelas: [],
+                        sem_parcelas: true
+                    }
+                }
             }
             var ppResult = Object.values(ppGroups)
             return res.status(200).json({ success: true, orcamentos: ppResult })
