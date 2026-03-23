@@ -3306,7 +3306,7 @@ async function salvarOrcamento(){
   var dataEl=document.getElementById('orc-data')
   var obsEl=document.getElementById('orc-obs')
   try{
-    await apiPost('salvar-orcamento',{
+    var result=await apiPost('salvar-orcamento',{
       id:d.id,
       paciente_id:d.paciente_id,
       profissional_id:d.profissional_id,
@@ -3319,8 +3319,14 @@ async function salvarOrcamento(){
       desconto:d.desconto||0,
       itens:d.itens
     })
-    fecharOrcModal()
-    await reloadOrcamentos()
+    if(result.success){
+      // Update _orcEditData with the saved ID and status
+      if(result.id)_orcEditData.id=result.id
+      if(!_orcEditData.status||_orcEditData.status==='')_orcEditData.status='aberto'
+      // Re-render modal in place (now with approve/reject buttons)
+      renderOrcModal()
+      reloadOrcamentos()
+    }
   }catch(e){alert('Erro ao salvar: '+e.message)}
 }
 
