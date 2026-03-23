@@ -3400,7 +3400,7 @@ function abrirConfigParcelas(orcId,orcData,aprovadoPor){
   m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10002;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
   m.innerHTML=
     '<div style="background:#fff;border-radius:8px;width:560px;max-height:90vh;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
-      '<div style="font-size:18px;font-weight:500;color:#1A1A1A;margin-bottom:4px">Configurar Pagamento</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-size:18px;font-weight:500;color:#1A1A1A">Configurar Pagamento</div><span onclick="fecharConfigParcelas(true)" style="cursor:pointer;font-size:22px;color:#757575;padding:4px 8px">&times;</span></div>'+
       '<div style="font-size:13px;color:var(--text3);margin-bottom:20px">Orçamento #'+orcId+' — Total: <strong style="color:#1B5E3B">'+fmtBrl(valorLiq)+'</strong>'+(desconto>0?' (desconto: '+fmtBrl(desconto)+')':'')+'</div>'+
 
       // Entrada
