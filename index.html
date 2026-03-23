@@ -2931,8 +2931,8 @@ async function abrirOrcamentoModal(orcId){
   _orcEditData={
     id:orc?orc.id:null,
     paciente_id:p.id,
-    profissional_id:orc?orc.profissional_id:(profs[0]?profs[0].id:null),
-    profissional_nome:orc?orc.profissional_nome:(profs[0]?(profs[0].nome||profs[0].name||''):''),
+    profissional_id:orc?orc.profissional_id:null,
+    profissional_nome:orc?orc.profissional_nome:(KLINIK_USER?KLINIK_USER.nome:''),
     data_criacao:orc?(orc.data_criacao||'').slice(0,10):new Date().toISOString().slice(0,10),
     observacoes:orc?orc.observacoes||'':'',
     tabela_preco:orc?orc.tabela_preco:'PARTICULAR',
@@ -2989,7 +2989,7 @@ function renderOrcModal(){
           '</div>'+
           '<div style="margin-bottom:16px">'+
             '<label style="display:block;font-size:13px;font-weight:500;color:#1A1A1A;margin-bottom:4px">Orçamento criado por</label>'+
-            '<select id="orc-prof" onchange="orcUpdateProf(this)" style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#1A1A1A;background:#fff;font-family:Roboto,sans-serif">'+profOpts+'</select>'+
+            '<input type="text" value="'+((d.id&&d.profissional_nome)?d.profissional_nome:(KLINIK_USER?KLINIK_USER.nome:''))+'" readonly style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#757575;background:#FAFAFA;font-family:Roboto,sans-serif">'+
           '</div>'+
           '<div style="margin-bottom:16px">'+
             '<label style="display:block;font-size:13px;font-weight:500;color:#1A1A1A;margin-bottom:4px">Data</label>'+
@@ -3321,14 +3321,49 @@ async function salvarOrcamento(){
   }catch(e){alert('Erro ao salvar: '+e.message)}
 }
 
-async function aprovarOrcamento(){
+function aprovarOrcamento(){
   if(!_orcEditData||!_orcEditData.id)return
-  var nome=prompt('Aprovado por (nome):')
-  if(!nome)return
+
+  // Open modal to select approving professional
+  var old=document.getElementById('modal-aprovador');if(old)old.remove()
+  var profs=ST.profissionais||[]
+  var profAprovOpts=profs.map(function(pr){return '<option value="'+(pr.nome||pr.name||'')+'|'+pr.id+'">'+(pr.nome||pr.name||'')+'</option>'}).join('')
+
+  var m=document.createElement('div')
+  m.id='modal-aprovador'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10003;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:400px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
+      '<div style="font-size:18px;font-weight:500;color:#1A1A1A;margin-bottom:16px">Aprovar Orcamento</div>'+
+      '<div style="margin-bottom:16px">'+
+        '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Profissional que aprovou *</label>'+
+        '<select id="aprov-prof" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none">'+
+          '<option value="">Selecione...</option>'+profAprovOpts+
+        '</select>'+
+        '<div style="font-size:11px;color:var(--text3);margin-top:4px">Este profissional recebera a comissao pela aprovacao do orcamento</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+        '<button onclick="document.getElementById(\'modal-aprovador\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+        '<button onclick="confirmarAprovacao()" style="background:#034030;color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Aprovar</button>'+
+      '</div>'+
+    '</div>'
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)m.remove()}
+}
+
+async function confirmarAprovacao(){
+  var sel=document.getElementById('aprov-prof')
+  if(!sel||!sel.value){alert('Selecione o profissional que aprovou');return}
+  var parts=sel.value.split('|')
+  var nome=parts[0]
+  var profId=parseInt(parts[1])||null
+
   var orcId=_orcEditData.id
   var d=_orcEditData
   var dataEl=document.getElementById('orc-data')
   var obsEl=document.getElementById('orc-obs')
+
+  var btn=event.target;btn.disabled=true;btn.textContent='Aprovando...'
   try{
     // Save first, then approve
     await apiPost('salvar-orcamento',{
@@ -3336,10 +3371,11 @@ async function aprovarOrcamento(){
       data_criacao:dataEl?dataEl.value:d.data_criacao,observacoes:obsEl?obsEl.value:d.observacoes,
       tabela_preco:d.tabela_preco,forma_pagamento:d.forma_pagamento,tipo_pagamento:d.tipo_pagamento,desconto:d.desconto||0,itens:d.itens
     })
-    await apiPost('aprovar-orcamento',{id:orcId,aprovado_por:nome})
+    await apiPost('aprovar-orcamento',{id:orcId,aprovado_por:nome,profissional_aprovador_id:profId})
+    document.getElementById('modal-aprovador').remove()
     // Open payment config modal to generate installments
     abrirConfigParcelas(orcId,d,nome)
-  }catch(e){alert('Erro: '+e.message)}
+  }catch(e){alert('Erro: '+e.message);btn.disabled=false;btn.textContent='Aprovar'}
 }
 
 function abrirConfigParcelas(orcId,orcData,aprovadoPor){
