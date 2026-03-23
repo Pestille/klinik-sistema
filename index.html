@@ -2915,9 +2915,12 @@ async function reloadOrcamentos(){
 
 async function abrirOrcamentoModal(orcId){
   var p=(_prontData||{}).paciente||{}
-  var profs=ST.profissionais||(ST.dashboard&&ST.dashboard.profissionais)||[]
-  if(!profs.length){try{await loadProfissionais()}catch(e){}}
-  profs=ST.profissionais||[]
+  var profs=ST.profissionais||[]
+  if(!profs.length||!(profs[0].nome||profs[0].name)){
+    try{await loadProfissionais()}catch(e){}
+    profs=ST.profissionais||[]
+  }
+  if(!profs.length&&ST.dashboard&&ST.dashboard.profissionais){profs=ST.dashboard.profissionais}
   var orc=null
   if(orcId){
     var orcs=(_prontData.orcamentos||[])
@@ -3917,8 +3920,7 @@ async function salvarCadastroPaciente(){
   var endereco=(document.getElementById('pc-endereco')?document.getElementById('pc-endereco').value:'').trim()
   var bairro=(document.getElementById('pc-bairro')?document.getElementById('pc-bairro').value:'').trim()
   try{
-    var r=await apiPost('salvar-paciente-edit',{id:id,nome:nome||_prontData.paciente.nome,telefone:cel,email:email,cpf:cpf,rg:rg,data_nascimento:nasc,cep:cep,cidade:cidade,endereco:endereco,bairro:bairro})
-    var d=await r.json()
+    var d=await apiPost('salvar-paciente-edit',{id:id,nome:nome||_prontData.paciente.nome,telefone:cel,email:email,cpf:cpf,rg:rg,data_nascimento:nasc,cep:cep,cidade:cidade,endereco:endereco,bairro:bairro})
     if(d.success){alert('Cadastro salvo!');_prontData.paciente.nome=nome||_prontData.paciente.nome;_prontData.paciente.telefone=cel;_prontData.paciente.email=email}
     else alert(d.error||'Erro')
   }catch(e){alert('Erro: '+e.message)}
@@ -4270,8 +4272,7 @@ async function salvarProfissional(){
   var cro=(document.getElementById('prof-f-cro').value||'').trim()
   var esp=(document.getElementById('prof-f-esp').value||'').trim()
   try{
-    var r=await apiPost('salvar-profissional',{id:p.id,nome:nome,especialidade:esp,cpf:cpf,email:email,telefone:tel,cro:cro})
-    var d=await r.json()
+    var d=await apiPost('salvar-profissional',{id:p.id,nome:nome,especialidade:esp,cpf:cpf,email:email,telefone:tel,cro:cro})
     if(d.success){
       p.nome=nome;p.name=nome;p.Name=nome;p.telefone=tel;p.email=email;p.cpf=cpf;p.cro=cro;p.especialidade=esp;p.specialty=esp
       alert('Profissional salvo!')
@@ -4943,8 +4944,7 @@ async function salvarPaciente(){
     alerta_medico:(document.getElementById('pac-f-alerta').value||'').trim()
   }
   try{
-    var r=await apiPost('salvar-paciente',body)
-    var d=await r.json()
+    var d=await apiPost('salvar-paciente',body)
     if(d.success){closeModal('paciente');alert('Paciente salvo!')}
     else{alert(d.error||'Erro ao salvar')}
   }catch(e){alert('Erro: '+e.message)}
@@ -4958,8 +4958,7 @@ async function salvarLancamento(){
   if(!data||!valor){alert('Data e Valor são obrigatórios');return}
   var body={tipo:tipo,data_pagamento:data,valor:tipo==='saida'?-Math.abs(valor):Math.abs(valor),forma_pagamento:document.getElementById('lanc-forma').value,descricao:document.getElementById('lanc-desc').value.trim()}
   try{
-    var r=await apiPost('salvar-lancamento',body)
-    var d=await r.json()
+    var d=await apiPost('salvar-lancamento',body)
     if(d.success){closeModal('lancamento');alert('Lançamento salvo!');if(typeof renderCC==='function')renderCC()}
     else{alert(d.error||'Erro ao salvar')}
   }catch(e){alert('Erro: '+e.message)}
