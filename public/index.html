@@ -1829,7 +1829,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     <div class="modal-head"><div class="modal-title">Novo Lançamento</div><button class="modal-close" onclick="closeModal('lancamento')">✕</button></div>
     <div class="modal-body">
       <div class="form-row c2"><div class="form-group"><label class="form-label">Tipo *</label><select class="form-input" id="lanc-tipo"><option value="entrada">Entrada</option><option value="saida">Saída</option></select></div><div class="form-group"><label class="form-label">Data *</label><input class="form-input" id="lanc-data" type="date"></div></div>
-      <div class="form-row c2"><div class="form-group"><label class="form-label">Valor *</label><input class="form-input" id="lanc-valor" type="number" step="0.01" placeholder="0,00"></div><div class="form-group"><label class="form-label">Forma de Pagamento</label><select class="form-input" id="lanc-forma"><option>Dinheiro</option><option>Cartão de Crédito</option><option>Cartão de Débito</option><option>PIX</option><option>Transferência</option><option>Boleto</option></select></div></div>
+      <div class="form-row c2"><div class="form-group"><label class="form-label">Valor (R$) *</label><input class="form-input" id="lanc-valor" type="number" step="0.01" placeholder="R$ 0,00"></div><div class="form-group"><label class="form-label">Forma de Pagamento</label><select class="form-input" id="lanc-forma"><option>Dinheiro</option><option>Cartão de Crédito</option><option>Cartão de Débito</option><option>PIX</option><option>Transferência</option><option>Boleto</option></select></div></div>
       <div class="form-group"><label class="form-label">Descrição</label><input class="form-input" id="lanc-desc" placeholder="Descrição do lançamento"></div>
       <div class="form-group"><label class="form-label">Paciente (opcional)</label><input class="form-input" id="lanc-pac" placeholder="Nome do paciente"></div>
     </div>
@@ -3027,8 +3027,8 @@ function renderOrcModal(){
               '</div>'+
               '<div style="display:flex;gap:12px;margin-bottom:12px">'+
                 '<div style="flex:1">'+
-                  '<label style="display:block;font-size:12px;color:#757575;margin-bottom:2px">Valor Unitário</label>'+
-                  '<input type="number" id="orc-proc-valor" step="0.01" min="0" style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;font-family:Roboto,sans-serif">'+
+                  '<label style="display:block;font-size:12px;color:#757575;margin-bottom:2px">Valor Unitário (R$)</label>'+
+                  '<input type="number" id="orc-proc-valor" step="0.01" min="0" placeholder="R$ 0,00" style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;font-family:Roboto,sans-serif">'+
                 '</div>'+
                 '<div style="flex:1">'+
                   '<label style="display:block;font-size:12px;color:#757575;margin-bottom:2px">Qtd</label>'+
@@ -3391,15 +3391,26 @@ function abrirConfigParcelas(orcId,orcData,aprovadoPor){
   var old=document.getElementById('config-parcelas-modal');if(old)old.remove()
   var valorTotal=+(orcData.valor_total||0)
   var desconto=+(orcData.desconto||0)
-  var valorLiq=valorTotal-desconto
+  var valorJaPago=+(orcData.valor_ja_pago||0)
+  var valorLiq=valorTotal-desconto-valorJaPago
+  if(valorLiq<0)valorLiq=0
 
   var m=document.createElement('div')
   m.id='config-parcelas-modal'
   m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10002;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+
+  var infoHtml='Orcamento #'+orcId
+  if(valorJaPago>0){
+    infoHtml+=' — Total: <strong>'+fmtBrl(valorTotal-desconto)+'</strong> | Ja pago: <strong style="color:#1B5E3B">'+fmtBrl(valorJaPago)+'</strong> | <strong style="color:#E65100">Saldo restante: '+fmtBrl(valorLiq)+'</strong>'
+  }else{
+    infoHtml+=' — Total: <strong style="color:#1B5E3B">'+fmtBrl(valorLiq)+'</strong>'+(desconto>0?' (desconto: '+fmtBrl(desconto)+')':'')
+  }
+
   m.innerHTML=
     '<div style="background:#fff;border-radius:8px;width:560px;max-height:90vh;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-size:18px;font-weight:500;color:#1A1A1A">Configurar Pagamento</div><span onclick="fecharConfigParcelas(true)" style="cursor:pointer;font-size:22px;color:#757575;padding:4px 8px">&times;</span></div>'+
-      '<div style="font-size:13px;color:var(--text3);margin-bottom:20px">Orçamento #'+orcId+' — Total: <strong style="color:#1B5E3B">'+fmtBrl(valorLiq)+'</strong>'+(desconto>0?' (desconto: '+fmtBrl(desconto)+')':'')+'</div>'+
+      '<div style="font-size:13px;color:var(--text3);margin-bottom:20px">'+infoHtml+'</div>'+
+      (valorJaPago>0?'<div style="background:#E8F5E9;border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#2E7D52">Parcelas ja pagas foram mantidas. Configure abaixo o pagamento do saldo restante de <strong>'+fmtBrl(valorLiq)+'</strong>.</div>':'')+
 
       // Entrada
       '<div style="background:#F5F5F5;border-radius:8px;padding:16px;margin-bottom:16px">'+
@@ -3409,8 +3420,8 @@ function abrirConfigParcelas(orcId,orcData,aprovadoPor){
         '</div>'+
         '<div id="cp-entrada-fields" style="display:none;display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
           '<div>'+
-            '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Valor da Entrada</label>'+
-            '<input type="number" id="cp-entrada-valor" value="0" min="0" step="100" oninput="cpAtualizarPreview()" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box">'+
+            '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Valor da Entrada (R$)</label>'+
+            '<input type="number" id="cp-entrada-valor" value="0" min="0" step="100" placeholder="R$ 0,00" oninput="cpAtualizarPreview()" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box">'+
           '</div>'+
           '<div>'+
             '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Forma da Entrada</label>'+
@@ -6135,7 +6146,8 @@ function renderFinanceiroPaciente(el,pacId){
         '<div style="font-size:11px;color:#bbb">Valor total</div>'+
         '<div style="font-size:15px;font-weight:600">'+fmtBrl(orcTotal)+'</div>'+
       '</div>'+
-      (!semParcelas?'<button onclick="renegociarOrcamento('+orc.orcamento_id+','+pacId+')" style="background:#E65100;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif" title="Cancela parcelas/cobrancas pendentes e permite renegociar">Renegociar</button>':'')+
+      (!semParcelas?'<button onclick="editarNegociacao('+orc.orcamento_id+','+pacId+','+orcPago+','+orcTotal+')" style="background:#1565C0;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;margin-right:6px" title="Editar forma de pagamento do saldo restante">Editar</button>'+
+        '<button onclick="renegociarOrcamento('+orc.orcamento_id+','+pacId+')" style="background:#C62828;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif" title="Cancela parcelas pendentes e cobrancas">Cancelar</button>':'')+
     '</div>'
 
     if(semParcelas){
@@ -6241,21 +6253,26 @@ function renderFinanceiroPaciente(el,pacId){
 
 
 
-async function renegociarOrcamento(orcId,pacId){
-  if(!confirm('Cancelar a forma de pagamento atual e renegociar?\n\nParcelas e cobrancas pendentes serao canceladas.\nParcelas ja pagas serao mantidas.\n\nO orcamento voltara ao status aprovado para nova configuracao de pagamento.'))return
+async function editarNegociacao(orcId,pacId,valorPago,valorTotal){
+  var saldoRestante=valorTotal-valorPago
+  // Cancel only pending parcelas, then open config with remaining balance
+  if(!confirm('Editar negociacao?\n\nParcelas pendentes serao canceladas para reconfigurar.\nParcelas ja pagas ('+fmtBrl(valorPago)+') serao mantidas.\n\nSaldo restante para negociar: '+fmtBrl(saldoRestante)))return
   try{
     var r=await apiPost('renegociar-orcamento',{id:orcId})
     if(r.success){
-      alert('Renegociacao iniciada.'+(r.parcelas_canceladas>0?' '+r.parcelas_canceladas+' parcela(s) cancelada(s).':'')+(r.cobrancas_canceladas>0?' '+r.cobrancas_canceladas+' cobranca(s) cancelada(s).':''))
-      // Open payment config modal for new negotiation
-      var d=await apiData('orcamentos-paciente',{paciente_id:pacId})
-      var orcs=(d.orcamentos||[]).filter(function(o){return o.id===orcId})
-      if(orcs.length){
-        var orc=orcs[0]
-        abrirConfigParcelas(orcId,{id:orc.id,valor_total:orc.valor_total,desconto:orc.desconto||0,forma_pagamento:orc.forma_pagamento,parcelas:orc.parcelas||1,paciente_id:pacId},'Renegociacao')
-      }else{
-        loadFinanceiroPaciente(pacId)
-      }
+      // Open config with saldo restante (not full total)
+      abrirConfigParcelas(orcId,{id:orcId,valor_total:valorTotal,desconto:0,valor_ja_pago:valorPago,forma_pagamento:null,parcelas:1,paciente_id:pacId},'Editar Negociacao')
+    }else{alert(r.error||'Erro')}
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function renegociarOrcamento(orcId,pacId){
+  if(!confirm('Cancelar toda a negociacao financeira?\n\nParcelas e cobrancas pendentes serao canceladas.\nParcelas ja pagas serao mantidas.'))return
+  try{
+    var r=await apiPost('renegociar-orcamento',{id:orcId})
+    if(r.success){
+      alert('Cancelamento realizado.'+(r.parcelas_canceladas>0?' '+r.parcelas_canceladas+' parcela(s) cancelada(s).':'')+(r.cobrancas_canceladas>0?' '+r.cobrancas_canceladas+' cobranca(s) cancelada(s).':''))
+      loadFinanceiroPaciente(pacId)
     }else{alert(r.error||'Erro')}
   }catch(e){alert('Erro: '+e.message)}
 }
@@ -6399,7 +6416,7 @@ function renderCobrancasTab(el,p){
             '<option value="pix">PIX</option><option value="boleto">Boleto</option><option value="credito">Cartão de Crédito</option><option value="debito">Cartão de Débito</option>'+
           '</select></div>'+
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Valor (R$)</label>'+
-          '<input id="cob-valor" type="number" step="0.01" min="0.01" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="0,00"></div>'+
+          '<input id="cob-valor" type="number" step="0.01" min="0.01" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="R$ 0,00"></div>'+
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Descrição</label>'+
           '<input id="cob-descricao" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="Ex: Consulta"></div>'+
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Vencimento</label>'+
@@ -6663,7 +6680,7 @@ async function renderCarteira(){
           '<div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px">Solicitar Saque</div>'+
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'+
             '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Valor (R$)</label>'+
-              '<input id="saque-valor" type="number" step="0.01" min="0.01" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="0,00"></div>'+
+              '<input id="saque-valor" type="number" step="0.01" min="0.01" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="R$ 0,00"></div>'+
             '<div style="display:flex;flex-direction:column;justify-content:flex-end">'+
               '<div style="font-size:12px;color:var(--text3);margin-bottom:4px">Taxa: <strong style="color:'+(gratiUsado?'var(--orange)':'#1B5E3B')+'">'+(gratiUsado?'R$ 2,50':'Grátis (1o do dia)')+'</strong></div>'+
               '<div style="font-size:12px;color:var(--text3)">Saldo disponível: <strong>'+fmtBrl(saldo)+'</strong></div>'+
@@ -7217,7 +7234,7 @@ function abrirModalReceitaSaude(){
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">CRO *</label><input id="rs-prof-cro" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
       '</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
-        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Valor *</label><input id="rs-valor" type="number" step="0.01" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Valor (R$) *</label><input id="rs-valor" type="number" step="0.01" placeholder="R$ 0,00" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Data de Emissão</label><input id="rs-data" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
       '</div>'+
       '<div style="margin-bottom:16px">'+
@@ -7858,7 +7875,7 @@ async function abrirModalCPagar(){
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Fornecedor</label><input id="cp-forn" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
       '</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">'+
-        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Valor *</label><input id="cp-val" type="number" step="0.01" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Valor (R$) *</label><input id="cp-val" type="number" step="0.01" placeholder="R$ 0,00" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Vencimento *</label><input id="cp-venc" type="date" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Classificação</label><select id="cp-classif" onchange="cpClassifChange()" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none">'+classifs.map(function(c){return '<option>'+c+'</option>'}).join('')+'</select></div>'+
       '</div>'+
