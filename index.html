@@ -2051,7 +2051,7 @@ async function loadDashboard() {
     ST.inativos = d.inativos || []
     // Converte profissionais para formato compatível
     if (d.profissionais) {
-      ST.dashboard.profissionais = d.profissionais.map(function(p){ return { id: p.id, name: p.nome, Name: p.nome, specialty: p.especialidade, total_agendamentos: p.total_agendamentos } })
+      ST.dashboard.profissionais = d.profissionais.map(function(p){ return { id: p.id, nome: p.nome, name: p.nome, Name: p.nome, specialty: p.especialidade, especialidade: p.especialidade, total_agendamentos: p.total_agendamentos } })
     }
     renderCRMCounts(d.inativos || [])
     if (curPage==='crm') renderCRM()
@@ -3224,7 +3224,7 @@ function orcUpdateProf(sel){
   var profs=ST.profissionais||[]
   var pid=parseInt(sel.value)
   _orcEditData.profissional_id=pid
-  for(var i=0;i<profs.length;i++){if(profs[i].id===pid){_orcEditData.profissional_nome=profs[i].nome;break}}
+  for(var i=0;i<profs.length;i++){if(profs[i].id===pid){_orcEditData.profissional_nome=profs[i].nome||profs[i].name||'';break}}
 }
 
 var _orcSearchTimer=null
@@ -3269,7 +3269,7 @@ function orcAddItem(){
   var qtdEl=document.getElementById('orc-proc-qtd')
   var profId=profEl?parseInt(profEl.value):null
   var profNome=''
-  for(var i=0;i<profs.length;i++){if(profs[i].id===profId){profNome=profs[i].nome;break}}
+  for(var i=0;i<profs.length;i++){if(profs[i].id===profId){profNome=profs[i].nome||profs[i].name||'';break}}
   _orcEditData.itens.push({
     procedimento_codigo:sp.codigo,
     procedimento_nome:sp.nome,
