@@ -1845,6 +1845,57 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: true, cobrancas: ccRows.rows, total: ccTotal.rows[0].total, page: ccPage, limit: ccLimit })
         }
 
+        // ── SINCRONIZAR-COBRANCAS (consulta Asaas e atualiza status) ──
+        if (route === 'sincronizar-cobrancas') {
+            // Get Asaas API key
+            var scAsaas = await client.execute({ sql: "SELECT asaas_api_key FROM clinicas WHERE id=?", args: [clinica_id] })
+            var scApiKey = (scAsaas.rows.length && scAsaas.rows[0].asaas_api_key) ? scAsaas.rows[0].asaas_api_key : ''
+            if (!scApiKey) return res.status(400).json({ success: false, error: 'Asaas API Key não configurada' })
+
+            // Get all pending/overdue cobrancas with asaas_id
+            var scPendentes = await client.execute({ sql: "SELECT id, asaas_id, status, valor FROM cobrancas WHERE clinica_id=? AND asaas_id IS NOT NULL AND asaas_id!='' AND status IN ('pendente','vencido') ORDER BY created_at DESC LIMIT 100", args: [clinica_id] })
+
+            var scAtualizado = 0, scErros = 0, scDetalhes = []
+            for (var sci = 0; sci < scPendentes.rows.length; sci++) {
+                var scCob = scPendentes.rows[sci]
+                try {
+                    var scRes = await fetch('https://api.asaas.com/v3/payments/' + scCob.asaas_id, {
+                        headers: { 'access_token': scApiKey }
+                    })
+                    var scData = await scRes.json()
+                    if (scData.errors) { scErros++; continue }
+
+                    // Map Asaas status to our status
+                    var scNovoStatus = null
+                    if (scData.status === 'RECEIVED' || scData.status === 'CONFIRMED' || scData.status === 'RECEIVED_IN_CASH') {
+                        scNovoStatus = 'pago'
+                    } else if (scData.status === 'OVERDUE') {
+                        scNovoStatus = 'vencido'
+                    } else if (scData.status === 'REFUNDED' || scData.status === 'DELETED' || scData.status === 'REFUND_REQUESTED') {
+                        scNovoStatus = 'cancelado'
+                    }
+
+                    if (scNovoStatus && scNovoStatus !== scCob.status) {
+                        await client.execute({ sql: "UPDATE cobrancas SET status=?, data_pagamento=CASE WHEN ?='pago' THEN datetime('now') ELSE data_pagamento END, updated_at=datetime('now') WHERE id=?", args: [scNovoStatus, scNovoStatus, scCob.id] })
+
+                        // Cascade to parcelas
+                        if (scNovoStatus === 'pago') {
+                            await client.execute({ sql: "UPDATE parcelas_orcamento SET status='pago', data_pagamento=datetime('now'), updated_at=datetime('now') WHERE cobranca_id=? AND status!='pago'", args: [scCob.id] })
+                            // Update clinic balance
+                            await client.execute({ sql: "UPDATE clinicas SET saldo=saldo+? WHERE id=?", args: [scCob.valor, clinica_id] })
+                        } else if (scNovoStatus === 'vencido') {
+                            await client.execute({ sql: "UPDATE parcelas_orcamento SET status='vencido', updated_at=datetime('now') WHERE cobranca_id=? AND status='pendente'", args: [scCob.id] })
+                        }
+
+                        scAtualizado++
+                        scDetalhes.push({ asaas_id: scCob.asaas_id, de: scCob.status, para: scNovoStatus })
+                    }
+                } catch(e) { scErros++; console.error('[sincronizar] Erro asaas_id=' + scCob.asaas_id + ':', e.message) }
+            }
+
+            return res.status(200).json({ success: true, verificados: scPendentes.rows.length, atualizados: scAtualizado, erros: scErros, detalhes: scDetalhes })
+        }
+
         // ── SOLICITAR-SAQUE ──────────────────────────────────────────────
         if (route === 'solicitar-saque') {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })

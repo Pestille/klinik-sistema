@@ -19,9 +19,10 @@ module.exports = async function handler(req, res) {
         var client = getClient()
         var body = req.body || {}
         var event = body.event || ''
-        var payment = body.payment || {}
+        // Asaas pode enviar payment como objeto direto ou dentro de body
+        var payment = body.payment || body || {}
 
-        console.log('[asaas-webhook] Event:', event, 'Payment ID:', payment.id || 'N/A')
+        console.log('[asaas-webhook] Event:', event, 'Payment ID:', payment.id || 'N/A', 'Full body keys:', Object.keys(body).join(','))
 
         // ── VALIDAÇÃO DE SAQUE ──
         // Asaas envia POST para validar se o saque deve ser autorizado

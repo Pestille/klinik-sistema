@@ -2645,7 +2645,7 @@ function renderProntTab(){
       '</tbody></table>'
   }
   else if(_prontTab==='financeiro-pac'){
-    el.innerHTML='<div id="fin-pac-container" style="padding:4px"><div style="text-align:center;padding:40px;color:#9e9e9e">Carregando financeiro...</div></div>'
+    el.innerHTML='<div style="display:flex;justify-content:flex-end;padding:4px 4px 0"><button onclick="sincronizarCobrancas('+p.id+')" style="background:var(--green3);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif" title="Consulta o Asaas e atualiza status">Sincronizar Asaas</button></div><div id="fin-pac-container" style="padding:4px"><div style="text-align:center;padding:40px;color:#9e9e9e">Carregando financeiro...</div></div>'
     loadFinanceiroPaciente(p.id)
   }
   else if(_prontTab==='orcamentos'){
@@ -6177,6 +6177,7 @@ async function darBaixaParcela(parcelaId,pacId){
 function renderCobrancasTab(el,p){
   var pacId=p.id
   var html='<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">'+
+    '<button onclick="sincronizarCobrancas('+pacId+')" style="background:var(--green3);color:#fff;border:none;border-radius:6px;padding:10px 16px;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s ease;font-family:Roboto,sans-serif" title="Consulta o Asaas e atualiza status das cobranças">Sincronizar Asaas</button>'+
     '<button onclick="toggleCobrancaForm()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s ease">Gerar Cobrança</button>'+
   '</div>'
 
@@ -6330,6 +6331,23 @@ function copiarPix(){
     var sel=window.getSelection();sel.removeAllRanges();sel.addRange(range)
     document.execCommand('copy');alert('Código PIX copiado!')
   }
+}
+
+async function sincronizarCobrancas(pacId){
+  var btn=event.target;btn.disabled=true;var origText=btn.textContent;btn.textContent='Sincronizando...'
+  try{
+    var r=await apiData('sincronizar-cobrancas',{})
+    if(r.success){
+      var msg='Sincronização concluída: '+r.verificados+' cobranças verificadas'
+      if(r.atualizados>0)msg+=', '+r.atualizados+' atualizadas'
+      if(r.erros>0)msg+=', '+r.erros+' erros'
+      alert(msg)
+      // Reload cobranças and financeiro
+      carregarCobrancasPaciente(pacId)
+      if(typeof loadFinanceiroPaciente==='function')loadFinanceiroPaciente(pacId)
+    }else{alert(r.error||'Erro na sincronização')}
+  }catch(e){alert('Erro: '+e.message)}
+  btn.disabled=false;btn.textContent=origText
 }
 
 async function carregarCobrancasPaciente(pacId){
