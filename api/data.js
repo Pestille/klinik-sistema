@@ -1295,7 +1295,7 @@ module.exports = async function handler(req, res) {
             var orcId
             if (so.id) {
                 // Update existing
-                await client.execute({ sql: "UPDATE orcamentos SET profissional_id=?,profissional_nome=?,data_criacao=?,observacoes=?,tabela_preco=?,forma_pagamento=?,tipo_pagamento=?,parcelas=?,desconto=?,valor_total=?,updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [so.profissional_id||null, so.profissional_nome||'', so.data_criacao||new Date().toISOString().slice(0,10), so.observacoes||'', so.tabela_preco||'PARTICULAR', so.forma_pagamento||null, so.tipo_pagamento||'valor_total', so.parcelas||1, so.desconto||0, soValorTotal, so.id, clinica_id] })
+                await client.execute({ sql: "UPDATE orcamentos SET profissional_id=?,profissional_nome=?,data_criacao=?,observacoes=?,tabela_preco=?,forma_pagamento=?,tipo_pagamento=?,parcelas=?,desconto=?,valor_total=?,status=CASE WHEN status IN ('desaprovado','reprovado') THEN 'aberto' ELSE status END,updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [so.profissional_id||null, so.profissional_nome||'', so.data_criacao||new Date().toISOString().slice(0,10), so.observacoes||'', so.tabela_preco||'PARTICULAR', so.forma_pagamento||null, so.tipo_pagamento||'valor_total', so.parcelas||1, so.desconto||0, soValorTotal, so.id, clinica_id] })
                 orcId = so.id
                 // Delete old items and re-insert
                 await client.execute({ sql: "DELETE FROM orcamento_itens WHERE orcamento_id=?", args: [orcId] })

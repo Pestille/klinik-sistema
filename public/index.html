@@ -3065,7 +3065,7 @@ function renderOrcModal(){
           '</div>'+
           '<div onclick="abrirPagamentoModal()" style="color:#1565C0;font-size:13px;cursor:pointer;margin-bottom:16px;text-align:center">Definir Forma de Pagamento'+(d.forma_pagamento?' ('+d.forma_pagamento+')':'')+'</div>'+
           '<div style="display:flex;gap:8px">'+
-            (d.id&&d.status==='aberto'?'<button onclick="aprovarOrcamento()" style="flex:1;background:#034030;color:#fff;border:none;border-radius:6px;padding:12px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;transition:background .15s">Aprovar</button>'+
+            (d.id&&(d.status==='aberto'||d.status==='desaprovado'||d.status==='reprovado')?'<button onclick="aprovarOrcamento()" style="flex:1;background:#034030;color:#fff;border:none;border-radius:6px;padding:12px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;transition:background .15s">Aprovar</button>'+
             '<button onclick="reprovarOrcamento()" style="flex:1;background:#C62828;color:#fff;border:none;border-radius:6px;padding:12px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;transition:background .15s">Reprovar</button>':'')+
             (d.id&&d.status==='aprovado'?'<button onclick="abrirDesaprovarModal('+d.id+')" style="flex:1;background:#C62828;color:#fff;border:none;border-radius:6px;padding:12px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;transition:background .15s">Desaprovar</button>':'')+
           '</div>'+
@@ -3320,7 +3320,7 @@ async function salvarOrcamento(){
     if(result.success){
       // Update _orcEditData with the saved ID and status
       if(result.id)_orcEditData.id=result.id
-      if(!_orcEditData.status||_orcEditData.status==='')_orcEditData.status='aberto'
+      _orcEditData.status='aberto'
       // Re-render modal in place (now with approve/reject buttons)
       renderOrcModal()
       reloadOrcamentos()
