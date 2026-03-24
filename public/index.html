@@ -6745,6 +6745,13 @@ async function renderPlanoFichaClinica(el,p){
   var pacId=p.id
   el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
   try{
+    // Ensure profissionais are loaded
+    if(!ST.profissionais||!ST.profissionais.length){
+      try{
+        var pd=await apiData('profissionais')
+        ST.profissionais=(pd.data||[]).map(function(pr){return {id:pr.id,nome:pr.nome,name:pr.nome,Name:pr.nome,especialidade:pr.especialidade,cro:pr.cro||''}})
+      }catch(e2){}
+    }
     var dOrc=await apiData('orcamentos-paciente',{paciente_id:pacId})
     var orcamentos=(dOrc.orcamentos||[]).filter(function(o){return o.status==='aprovado'||o.status==='desaprovado'})
     var dFicha=await apiData('ficha-clinica',{paciente_id:pacId})
