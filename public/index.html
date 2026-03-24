@@ -1342,7 +1342,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
       <div class="gpage-header"><div><div class="gpage-title">Aniversariantes</div><div class="gpage-sub">Próximos 60 dias</div></div><button class="btn btn-orange" onclick="openModal('script')">Gerar Mensagem IA</button></div>
       <div class="gpage-body">
         <div id="aniv-loading" class="loading"><div class="spin"></div></div>
-        <div id="aniv-data" class="hidden"><div class="card"><div class="card-body" id="aniv-list"></div></div></div>
+        <div id="aniv-data" class="hidden"><div class="card" style="max-width:800px;margin:0 auto"><div style="padding:16px 20px;font-size:13px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Aniversariantes do Mes</div><div id="aniv-list"></div></div></div>
       </div>
     </div>
 
@@ -4615,8 +4615,11 @@ async function loadAniversariantes() {
       var dd=dt?new Date(dt+'T12:00:00'):null;var dia=dd?dd.getDate():'—';var mes=dd?MMS[dd.getMonth()+1]:'—'
       var nome1=nome.split(' ')[0]
       var wa='https://wa.me/55'+tel.replace(/\D/g,'')+'?text='+encodeURIComponent('Feliz aniversário, '+nome1+'! A equipe Klinik te deseja um dia incrível!')
-      var dtFmt=dd?(String(dd.getDate()).padStart(2,'0')+'/'+String(dd.getMonth()+1).padStart(2,'0')):''
-      return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)"><div style="width:40px;text-align:center;background:rgba(27,94,59,.08);border-radius:6px;padding:4px"><div style="font-size:18px;font-weight:300;color:var(--green)">'+dia+'</div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">'+mes+'</div></div><div style="flex:1"><div style="font-weight:500;font-size:13px">'+nome+' <span style="font-weight:400;color:var(--text3);font-size:12px">'+dtFmt+'</span></div><div style="font-size:12px;color:var(--text3)">'+(tel||'—')+'</div></div>'+(tel?'<a href="'+wa+'" target="_blank" class="wa-btn">Parabenizar</a>':'')+'</div>'
+      return '<div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid #F0F0F0">'+
+        '<div style="width:42px;height:42px;border-radius:50%;background:#1976D2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;flex-shrink:0">'+dia+'</div>'+
+        '<div style="flex:1;font-size:14px;font-weight:500;color:#333;text-transform:uppercase">'+nome+'</div>'+
+        (tel?'<a href="'+wa+'" target="_blank" style="background:#E8F5E9;color:#2E7D52;border:1px solid #C8E6C9;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:500;text-decoration:none;font-family:Roboto,sans-serif;white-space:nowrap">WhatsApp</a>':'')+
+      '</div>'
     }).join(''):'<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum aniversariante nos próximos 60 dias</div>'
     if(loadEl)loadEl.classList.add('hidden')
     document.getElementById('aniv-data').classList.remove('hidden')
