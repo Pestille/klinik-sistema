@@ -2335,6 +2335,43 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: true, msg: 'Procedimento marcado como executado' })
         }
 
+        // ── EDITAR-EXECUCAO ──────────────────────────────────────────
+        if (route === 'editar-execucao') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var ee = req.body || {}
+            if (!ee.orcamento_item_id) return res.status(400).json({ success: false, error: 'orcamento_item_id obrigatório' })
+            // Check permission
+            if (auth.perfil !== 'admin' && auth.perfil !== 'dentista') {
+                try {
+                    var eePerm = await verificarPermissao(client, clinica_id, auth.perfil, 'prontuario.editar')
+                    if (!eePerm) return res.status(403).json({ success: false, error: 'Sem permissão para editar procedimentos executados' })
+                } catch(e) {}
+            }
+            await client.execute({
+                sql: "UPDATE orcamento_itens SET data_execucao=?, profissional_id=?, profissional_nome=? WHERE id=?",
+                args: [ee.data_execucao || new Date().toISOString().slice(0, 10), ee.profissional_id || null, ee.profissional_nome || '', ee.orcamento_item_id]
+            })
+            return res.status(200).json({ success: true, msg: 'Execução atualizada' })
+        }
+
+        // ── DESFAZER-EXECUCAO ──────────────────────────────────────────
+        if (route === 'desfazer-execucao') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var de2 = req.body || {}
+            if (!de2.orcamento_item_id) return res.status(400).json({ success: false, error: 'orcamento_item_id obrigatório' })
+            // Check permission
+            if (auth.perfil !== 'admin' && auth.perfil !== 'dentista') {
+                try {
+                    var dePerm = await verificarPermissao(client, clinica_id, auth.perfil, 'prontuario.editar')
+                    if (!dePerm) return res.status(403).json({ success: false, error: 'Sem permissão para desfazer execuções' })
+                } catch(e) {}
+            }
+            await client.execute({ sql: "UPDATE orcamento_itens SET executado=0, data_execucao=NULL WHERE id=?", args: [de2.orcamento_item_id] })
+            // Cancel related commission
+            try { await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_item_id=? AND momento='execucao' AND status='pendente'", args: [de2.orcamento_item_id] }) } catch(e) {}
+            return res.status(200).json({ success: true, msg: 'Execução desfeita' })
+        }
+
         // ── DASHBOARD-FINANCEIRO ──────────────────────────────────────
         if (route === 'dashboard-financeiro') {
             var dfHoje = new Date().toISOString().slice(0, 10)

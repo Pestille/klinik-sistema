@@ -6801,10 +6801,18 @@ async function renderPlanoFichaClinica(el,p){
           html+='<div style="background:#2E7D52;color:#fff;padding:8px 20px;font-size:13px;font-weight:500">Executados</div>'
           html+='<div style="padding:12px 20px">'
           executados.forEach(function(it){
+            var temPermissao=!ST.permissoes||ST.permissoes['prontuario.editar']===1||ST.perfil==='admin'||ST.perfil==='dentista'
             html+='<div style="display:flex;align-items:center;gap:16px;padding:10px 0;border-bottom:1px solid #E0E0E0;flex-wrap:wrap">'+
-              '<div style="cursor:pointer;color:var(--text3);font-size:14px" title="Remover execucao">&times;</div>'+
+              '<div style="position:relative">'+
+                '<span onclick="toggleMenuExec('+it.id+')" style="cursor:pointer;color:var(--text3);font-size:18px;padding:4px 6px" title="Opcoes">&#8942;</span>'+
+                '<div id="menu-exec-'+it.id+'" style="display:none;position:absolute;left:0;top:28px;background:#fff;border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.12);min-width:160px;z-index:10;overflow:hidden">'+
+                  (temPermissao?'<div onclick="editarExecucao('+it.id+','+pacId+',\''+((it.procedimento_nome||'').replace(/'/g,"\\'"))+'\',\''+( it.data_execucao||'')+'\',\''+((it.profissional_nome||'').replace(/'/g,"\\'"))+'\')" style="padding:10px 14px;font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px" onmouseover="this.style.background=\'#F5F5F5\'" onmouseout="this.style.background=\'#fff\'">&#9998; Editar Execucao</div>':'')+
+                  (temPermissao?'<div onclick="desfazerExecucao('+it.id+','+pacId+')" style="padding:10px 14px;font-size:13px;color:#C62828;cursor:pointer;display:flex;align-items:center;gap:8px;border-top:1px solid #F0F0F0" onmouseover="this.style.background=\'#FFF5F5\'" onmouseout="this.style.background=\'#fff\'">&#10005; Desfazer Execucao</div>':'')+
+                  (!temPermissao?'<div style="padding:10px 14px;font-size:12px;color:var(--text3)">Sem permissao para editar</div>':'')+
+                '</div>'+
+              '</div>'+
               '<div style="min-width:180px"><div style="font-size:10px;color:var(--text3)">Procedimento</div><div style="font-size:13px;color:var(--text);font-weight:500">'+(it.procedimento_nome||'—')+'</div></div>'+
-              '<div style="min-width:80px"><div style="font-size:10px;color:var(--text3)">Status</div><div style="font-size:13px;color:var(--text)">Aprovado</div></div>'+
+              '<div style="min-width:80px"><div style="font-size:10px;color:var(--text3)">Status</div><div style="font-size:13px;color:var(--text)">Executado</div></div>'+
               '<div style="min-width:90px"><div style="font-size:10px;color:var(--text3)">Data de Execucao</div><div style="font-size:13px;color:var(--text)">'+fmtDt(it.data_execucao)+'</div></div>'+
               '<div style="min-width:80px"><div style="font-size:10px;color:var(--text3)">Dente/Regiao</div><div style="font-size:13px;color:var(--text)">'+(it.dente||it.regiao||'—')+'</div></div>'+
               '<div style="min-width:150px"><div style="font-size:10px;color:var(--text3)">Profissional</div><div style="font-size:13px;color:#E65100;font-weight:500">'+(it.profissional_nome||'—')+'</div></div>'+
@@ -6934,6 +6942,91 @@ function novoRegistroFicha(pacId){
 
 function solicitarAssinatura(procId){
   alert('Funcao de assinatura digital em desenvolvimento.')
+}
+
+function toggleMenuExec(itemId){
+  var menu=document.getElementById('menu-exec-'+itemId)
+  if(!menu)return
+  var vis=menu.style.display!=='none'
+  // Close all other menus first
+  document.querySelectorAll('[id^="menu-exec-"]').forEach(function(m){m.style.display='none'})
+  menu.style.display=vis?'none':'block'
+  if(!vis){
+    setTimeout(function(){
+      document.addEventListener('click',function closeExecMenu(e){
+        if(!e.target.closest('#menu-exec-'+itemId)&&!e.target.closest('[onclick*="toggleMenuExec"]')){
+          menu.style.display='none';document.removeEventListener('click',closeExecMenu)
+        }
+      })
+    },10)
+  }
+}
+
+function editarExecucao(itemId,pacId,procNome,dataExec,profNome){
+  // Close menu
+  document.querySelectorAll('[id^="menu-exec-"]').forEach(function(m){m.style.display='none'})
+  // Reuse the executar modal but in edit mode
+  var old=document.getElementById('modal-executar');if(old)old.remove()
+  var profs=ST.profissionais||[]
+  var profOpts='<option value="">Selecione...</option>'+profs.map(function(pr){
+    var sel=(pr.nome||pr.name||'')===profNome?' selected':''
+    return '<option value="'+pr.id+'|'+(pr.nome||pr.name||'')+'"'+sel+'>'+(pr.nome||pr.name||'')+'</option>'
+  }).join('')
+
+  var m=document.createElement('div')
+  m.id='modal-executar'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10003;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:520px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:32px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px"><div style="font-size:20px;font-weight:500;color:#1A1A1A">Editar Execucao</div><span onclick="document.getElementById(\'modal-executar\').remove()" style="cursor:pointer;font-size:24px;color:#757575">&times;</span></div>'+
+      '<div style="margin-bottom:20px">'+
+        '<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);margin-bottom:6px">Data de Execucao *</label>'+
+        '<input id="exec-data" type="date" value="'+(dataExec||new Date().toISOString().slice(0,10))+'" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:var(--text);outline:none">'+
+      '</div>'+
+      '<div style="margin-bottom:20px">'+
+        '<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);margin-bottom:6px">Procedimento</label>'+
+        '<input type="text" value="'+procNome+'" readonly style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:#757575;background:#FAFAFA;font-family:Roboto,sans-serif">'+
+      '</div>'+
+      '<div style="margin-bottom:24px">'+
+        '<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);margin-bottom:6px">Profissional *</label>'+
+        '<select id="exec-prof" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:var(--text);background:#fff;outline:none">'+profOpts+'</select>'+
+      '</div>'+
+      '<div style="display:flex;gap:12px;justify-content:flex-end">'+
+        '<button onclick="document.getElementById(\'modal-executar\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:11px 28px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+        '<button onclick="salvarEdicaoExecucao('+itemId+','+pacId+')" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:12px 32px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Salvar</button>'+
+      '</div>'+
+    '</div>'
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)m.remove()}
+}
+
+async function salvarEdicaoExecucao(itemId,pacId){
+  var data=document.getElementById('exec-data').value
+  var profSelVal=(document.getElementById('exec-prof')||{}).value||''
+  var profParts=profSelVal.split('|')
+  var profId=parseInt(profParts[0])||null
+  var profNome=profParts[1]||''
+  if(!data||!profId){alert('Preencha data e profissional');return}
+  try{
+    var r=await apiPost('editar-execucao',{orcamento_item_id:itemId,data_execucao:data,profissional_id:profId,profissional_nome:profNome})
+    if(r.success){
+      document.getElementById('modal-executar').remove()
+      var p=((_prontData||{}).paciente)||{}
+      renderPlanoFichaClinica(document.getElementById('pront-content'),p)
+    }else{alert(r.error||'Erro')}
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function desfazerExecucao(itemId,pacId){
+  document.querySelectorAll('[id^="menu-exec-"]').forEach(function(m){m.style.display='none'})
+  if(!confirm('Desfazer a execucao deste procedimento?\n\nEle voltara ao status pendente.'))return
+  try{
+    var r=await apiPost('desfazer-execucao',{orcamento_item_id:itemId})
+    if(r.success){
+      var p=((_prontData||{}).paciente)||{}
+      renderPlanoFichaClinica(document.getElementById('pront-content'),p)
+    }else{alert(r.error||'Erro')}
+  }catch(e){alert('Erro: '+e.message)}
 }
 
 function abrirExecutarModal(itemId,pacId,procNome){
