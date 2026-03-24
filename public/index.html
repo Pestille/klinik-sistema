@@ -1483,9 +1483,15 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 
     <!-- METAS -->
     <div class="page gpage" id="p-metas">
-      <div class="gpage-header"><div><div class="gpage-title">Metas</div><div class="gpage-sub" id="metas-sub">Acompanhamento mensal por profissional</div></div></div>
-      <div class="gpage-body" style="max-width:900px;margin:0 auto;padding:20px 24px">
-        <div id="metas-content" style="color:var(--text3);text-align:center;padding:40px">Carregando...</div>
+      <div style="background:var(--white);border-bottom:1px solid var(--border);padding:0 20px">
+        <div class="fin-htabs" id="metas-tabs">
+          <div class="fin-htab active" onclick="metasTab('visualizar',this)">Visualizar Metas</div>
+          <div class="fin-htab" onclick="metasTab('config',this)">Configuração de Metas</div>
+        </div>
+      </div>
+      <div style="max-width:1100px;margin:0 auto;padding:24px">
+        <div id="metas-visualizar" class="fin-sub active" style="display:block"></div>
+        <div id="metas-config" class="fin-sub" style="display:none"></div>
       </div>
     </div>
 
@@ -5229,24 +5235,212 @@ function aplicarPermissoesFrontend(){
 }
 
 // ── METAS ───────────────────────────────────────────────────────
+var _metasTab='visualizar'
+function metasTab(id,el){
+  _metasTab=id
+  document.querySelectorAll('#metas-tabs .fin-htab').forEach(function(t){t.classList.remove('active')})
+  if(el)el.classList.add('active')
+  document.getElementById('metas-visualizar').style.display=id==='visualizar'?'block':'none'
+  document.getElementById('metas-config').style.display=id==='config'?'block':'none'
+  if(id==='visualizar')loadMetasVisualizar()
+  if(id==='config')loadMetasConfig()
+}
+
 async function loadMetas(){
-  var el=document.getElementById('metas-content');if(!el)return
+  loadMetasVisualizar()
+}
+
+async function loadMetasVisualizar(){
+  var el=document.getElementById('metas-visualizar');if(!el)return
   el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
   try{
-    var now=new Date()
-    var d=await apiData('metas',{mes:now.getMonth()+1,ano:now.getFullYear()})
-    var resumo=d.resumo_mes||{}
-    var profs=d.data||d.profissionais||[]
-    var mesNome=MESES_PT[now.getMonth()]||''
-    document.getElementById('metas-sub').textContent=mesNome.charAt(0).toUpperCase()+mesNome.slice(1)+' '+now.getFullYear()
-    var html='<div class="kpi-row c3" style="margin-bottom:20px"><div class="kpi green"><div class="kpi-label">Agendamentos do mês</div><div class="kpi-val">'+(resumo.agendamentos||0)+'</div></div><div class="kpi blue"><div class="kpi-label">Receita do mês</div><div class="kpi-val sm">'+fmtBrl(resumo.receita||0)+'</div></div><div class="kpi orange"><div class="kpi-label">Profissionais ativos</div><div class="kpi-val">'+(profs.length||0)+'</div></div></div>'
-    if(profs.length){
-      html+='<div class="card"><div class="card-header"><div class="card-title">Produção por Profissional</div></div><div class="card-body p0"><table class="tbl"><thead><tr><th>Profissional</th><th>Especialidade</th><th>Agendamentos</th></tr></thead><tbody>'
-      html+=profs.map(function(p){return '<tr><td class="pname">'+(p.nome||'—')+'</td><td style="color:var(--text3)">'+(p.especialidade||'—')+'</td><td style="font-weight:500">'+(p.agendamentos_mes||0)+'</td></tr>'}).join('')
-      html+='</tbody></table></div></div>'
+    var tipoFiltro=(document.getElementById('meta-vis-tipo')||{}).value||''
+    var d=await apiData('metas-visualizar',{tipo:tipoFiltro})
+    var metas=d.metas||[]
+
+    var html='<div style="font-size:18px;font-weight:500;color:var(--text);margin-bottom:16px">Visualizar Metas</div>'
+
+    // Filters
+    html+='<div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">'+
+      '<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">Tipo</div>'+
+        '<select id="meta-vis-tipo" onchange="loadMetasVisualizar()" style="border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;font-size:14px;color:var(--text);background:#fff;outline:none;min-width:160px">'+
+          '<option value="">Todos</option><option value="vendas"'+(tipoFiltro==='vendas'?' selected':'')+'>Vendas</option><option value="agendamentos"'+(tipoFiltro==='agendamentos'?' selected':'')+'>Agendamentos</option><option value="faltas"'+(tipoFiltro==='faltas'?' selected':'')+'>Faltas</option>'+
+        '</select></div>'+
+    '</div>'
+
+    if(!metas.length){
+      html+='<div style="text-align:center;padding:40px;color:#9e9e9e">Nenhuma meta configurada. Va em "Configuracao de Metas" para adicionar.</div>'
+      el.innerHTML=html;return
     }
+
+    // Group by tipo
+    html+='<div style="font-size:13px;color:var(--text3);margin-bottom:12px">Clinica</div>'
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px">'
+
+    metas.forEach(function(m){
+      var tipoLabel=m.tipo==='vendas'?'Vendas':m.tipo==='agendamentos'?'Agendamentos':'Faltas'
+      var isValor=m.tipo==='vendas'
+      var metaStr=isValor?fmtBrl(m.valor):Math.round(m.valor)
+      var alcStr=isValor?fmtBrl(m.alcancado):Math.round(m.alcancado)
+      var pct=m.percentual||0
+      var barColor=m.tipo==='faltas'?(pct>100?'#C62828':'#E65100'):'#E65100'
+      // For faltas, lower is better
+      var labelPct=m.tipo==='faltas'?(pct>100?'Acima da meta!':pct.toFixed(2)+'%'):pct.toFixed(2)+'%'
+
+      html+='<div style="background:#F5F5F5;border-radius:8px;padding:20px;border:1px solid var(--border)">'+
+        '<div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px">'+tipoLabel+'</div>'+
+        '<div style="font-size:13px;color:var(--text3);margin-bottom:4px">Clinica: <strong style="color:var(--text)">Klinik Odontologia</strong></div>'+
+        '<div style="font-size:13px;color:var(--text3);margin-bottom:4px">Periodo: '+fmtDt(m.data_inicio)+' ate '+fmtDt(m.data_fim)+'</div>'+
+        '<div style="font-size:13px;color:var(--text3);margin-bottom:4px">Meta: <strong style="color:var(--text)">'+metaStr+'</strong></div>'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+          '<span style="font-size:13px;color:var(--text3)">Valor Alcancado: <strong style="color:var(--text)">'+alcStr+'</strong></span>'+
+          '<span style="font-size:14px;font-weight:600;color:'+barColor+'">'+labelPct+'</span>'+
+        '</div>'+
+        '<div style="background:#E0E0E0;border-radius:4px;height:12px;overflow:hidden">'+
+          '<div style="background:'+barColor+';height:100%;border-radius:4px;width:'+Math.min(pct,100)+'%;transition:width .5s ease"></div>'+
+        '</div>'+
+      '</div>'
+    })
+    html+='</div>'
     el.innerHTML=html
   }catch(e){el.innerHTML='<div style="color:var(--red);text-align:center;padding:30px">'+e.message+'</div>'}
+}
+
+async function loadMetasConfig(){
+  var el=document.getElementById('metas-config');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var d=await apiData('metas-config',{})
+    var metas=d.metas||[]
+
+    var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'+
+      '<div style="font-size:18px;font-weight:500;color:var(--text)">Configuracao de Metas</div>'+
+      '<button onclick="abrirModalMeta()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">+ Adicionar Meta</button>'+
+    '</div>'
+
+    if(!metas.length){
+      html+='<div style="text-align:center;padding:40px;color:#9e9e9e">Nenhuma meta cadastrada.</div>'
+      el.innerHTML=html;return
+    }
+
+    var tipoLabel={'vendas':'Vendas','agendamentos':'Agendamentos','faltas':'Faltas'}
+    html+='<table class="tbl" style="width:100%"><thead><tr><th></th><th>Tipo</th><th>De</th><th>Ate</th><th>Analise</th><th>Clinica / Usuario</th><th style="text-align:right">Meta</th></tr></thead><tbody>'
+    metas.forEach(function(m){
+      var isValor=m.tipo==='vendas'
+      var metaStr=isValor?fmtBrl(m.valor):Math.round(m.valor)
+      html+='<tr>'+
+        '<td style="display:flex;gap:6px">'+
+          '<button onclick="editarMeta('+m.id+')" style="background:none;border:none;color:var(--green);cursor:pointer;font-size:14px" title="Editar">&#9998;</button>'+
+          '<button onclick="excluirMeta('+m.id+')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px" title="Excluir">&times;</button>'+
+        '</td>'+
+        '<td>'+(tipoLabel[m.tipo]||m.tipo)+'</td>'+
+        '<td>'+fmtDt(m.data_inicio)+'</td>'+
+        '<td>'+fmtDt(m.data_fim)+'</td>'+
+        '<td>'+(m.analise==='clinica'?'Clinica':'Geral')+'</td>'+
+        '<td>Klinik Odontologia</td>'+
+        '<td style="text-align:right;font-weight:600">'+metaStr+'</td>'+
+      '</tr>'
+    })
+    html+='</tbody></table>'
+    el.innerHTML=html
+  }catch(e){el.innerHTML='<div style="color:var(--red);text-align:center;padding:30px">'+e.message+'</div>'}
+}
+
+function abrirModalMeta(editId){
+  var old=document.getElementById('modal-meta');if(old)old.remove()
+  var hoje=new Date()
+  var primeiroDia=new Date(hoje.getFullYear(),hoje.getMonth(),1).toISOString().slice(0,10)
+  var ultimoDia=new Date(hoje.getFullYear(),hoje.getMonth()+1,0).toISOString().slice(0,10)
+
+  var m=document.createElement('div')
+  m.id='modal-meta'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10003;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:500px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:18px;font-weight:500;color:#1A1A1A">Adicionar Meta</div><span onclick="document.getElementById(\'modal-meta\').remove()" style="cursor:pointer;font-size:22px;color:#757575">&times;</span></div>'+
+
+      '<div style="margin-bottom:16px">'+
+        '<div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:8px">Metas</div>'+
+        '<div style="display:flex;gap:16px">'+
+          '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="meta-analise" value="geral" style="accent-color:#E65100"> Geral</label>'+
+          '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="meta-analise" value="clinica" checked style="accent-color:#E65100"> Clinica</label>'+
+        '</div>'+
+      '</div>'+
+
+      '<div style="margin-bottom:16px">'+
+        '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Clinica</label>'+
+        '<input type="text" value="Klinik Odontologia" readonly style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:#757575;background:#FAFAFA;font-family:Roboto,sans-serif">'+
+      '</div>'+
+
+      '<div style="display:flex;gap:12px;margin-bottom:16px;align-items:flex-end">'+
+        '<div style="flex:1">'+
+          '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Tipo *</label>'+
+          '<select id="meta-tipo" onchange="metaTipoChange()" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none">'+
+            '<option value="vendas">Vendas</option><option value="agendamentos">Agendamentos</option><option value="faltas">Faltas</option>'+
+          '</select>'+
+        '</div>'+
+        '<div style="flex:1">'+
+          '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px" id="meta-valor-label">Valor (R$) *</label>'+
+          '<input id="meta-valor" type="number" step="0.01" placeholder="R$ 0,00" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none">'+
+        '</div>'+
+        '<div style="flex:1">'+
+          '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">De *</label>'+
+          '<input id="meta-de" type="date" value="'+primeiroDia+'" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none">'+
+        '</div>'+
+        '<div style="flex:1">'+
+          '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Ate *</label>'+
+          '<input id="meta-ate" type="date" value="'+ultimoDia+'" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none">'+
+        '</div>'+
+      '</div>'+
+
+      '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+        '<button onclick="document.getElementById(\'modal-meta\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+        '<button onclick="salvarMeta()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Ok</button>'+
+      '</div>'+
+    '</div>'
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)m.remove()}
+}
+
+function metaTipoChange(){
+  var tipo=(document.getElementById('meta-tipo')||{}).value||'vendas'
+  var label=document.getElementById('meta-valor-label')
+  var input=document.getElementById('meta-valor')
+  if(tipo==='vendas'){
+    if(label)label.textContent='Valor (R$) *'
+    if(input)input.placeholder='R$ 0,00'
+  }else{
+    if(label)label.textContent='Quantidade *'
+    if(input)input.placeholder='Ex: 150'
+  }
+}
+
+async function salvarMeta(){
+  var tipo=document.getElementById('meta-tipo').value
+  var valor=document.getElementById('meta-valor').value
+  var de=document.getElementById('meta-de').value
+  var ate=document.getElementById('meta-ate').value
+  var analise=(document.querySelector('input[name="meta-analise"]:checked')||{}).value||'clinica'
+  if(!valor||!de||!ate){alert('Preencha todos os campos');return}
+  try{
+    var r=await apiPost('metas-config',{tipo:tipo,valor:parseFloat(valor),data_inicio:de,data_fim:ate,analise:analise})
+    if(r.success){document.getElementById('modal-meta').remove();loadMetasConfig()}
+    else alert(r.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function excluirMeta(id){
+  if(!confirm('Excluir esta meta?'))return
+  try{
+    var r=await apiPost('metas-config',{action:'delete',id:id})
+    if(r.success)loadMetasConfig()
+    else alert(r.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+function editarMeta(id){
+  // TODO: load meta data and open modal for editing
+  alert('Funcao em desenvolvimento - exclua e crie novamente')
 }
 
 // ── CONFIRMAÇÕES E ALERTAS ──────────────────────────────────────

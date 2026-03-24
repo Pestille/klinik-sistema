@@ -326,6 +326,65 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: true, mes: mm, ano: ma, resumo_mes: { agendamentos: mtm.rows[0].total, receita: mrm.rows[0].total }, profissionais: mpr.rows })
         }
 
+        // ── METAS-CONFIG (CRUD) ──────────────────────────────────────
+        if (route === 'metas-config') {
+            // Ensure table exists
+            await client.execute("CREATE TABLE IF NOT EXISTS metas_config (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, tipo TEXT NOT NULL, valor REAL NOT NULL, data_inicio TEXT NOT NULL, data_fim TEXT NOT NULL, analise TEXT DEFAULT 'clinica', created_at TEXT DEFAULT (datetime('now')))")
+
+            if (req.method === 'POST') {
+                var mc = req.body || {}
+                if (mc.action === 'delete') {
+                    await client.execute({ sql: "DELETE FROM metas_config WHERE id=? AND clinica_id=?", args: [mc.id, clinica_id] })
+                    return res.status(200).json({ success: true, msg: 'Meta excluída' })
+                }
+                if (!mc.tipo || !mc.valor || !mc.data_inicio || !mc.data_fim) return res.status(400).json({ success: false, error: 'tipo, valor, data_inicio e data_fim obrigatórios' })
+                if (mc.id) {
+                    await client.execute({ sql: "UPDATE metas_config SET tipo=?, valor=?, data_inicio=?, data_fim=?, analise=? WHERE id=? AND clinica_id=?", args: [mc.tipo, parseFloat(mc.valor), mc.data_inicio, mc.data_fim, mc.analise || 'clinica', mc.id, clinica_id] })
+                    return res.status(200).json({ success: true, msg: 'Meta atualizada' })
+                }
+                var mcIns = await client.execute({ sql: "INSERT INTO metas_config(clinica_id, tipo, valor, data_inicio, data_fim, analise) VALUES(?,?,?,?,?,?)", args: [clinica_id, mc.tipo, parseFloat(mc.valor), mc.data_inicio, mc.data_fim, mc.analise || 'clinica'] })
+                return res.status(200).json({ success: true, id: Number(mcIns.lastInsertRowid) })
+            }
+            // GET
+            var mcRows = await client.execute({ sql: "SELECT * FROM metas_config WHERE clinica_id=? ORDER BY data_inicio DESC", args: [clinica_id] })
+            return res.status(200).json({ success: true, metas: mcRows.rows })
+        }
+
+        // ── METAS-VISUALIZAR ──────────────────────────────────────────
+        if (route === 'metas-visualizar') {
+            await client.execute("CREATE TABLE IF NOT EXISTS metas_config (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, tipo TEXT NOT NULL, valor REAL NOT NULL, data_inicio TEXT NOT NULL, data_fim TEXT NOT NULL, analise TEXT DEFAULT 'clinica', created_at TEXT DEFAULT (datetime('now')))")
+
+            var mvTipo = q.tipo || ''
+            var mvW = ["clinica_id=?"], mvA = [clinica_id]
+            if (mvTipo) { mvW.push("tipo=?"); mvA.push(mvTipo) }
+            var mvMetas = await client.execute({ sql: "SELECT * FROM metas_config WHERE " + mvW.join(' AND ') + " ORDER BY data_inicio DESC", args: mvA })
+
+            var mvResult = []
+            for (var mvi = 0; mvi < mvMetas.rows.length; mvi++) {
+                var mvM = mvMetas.rows[mvi]
+                var mvAlcancado = 0
+
+                if (mvM.tipo === 'vendas') {
+                    // Vendas = orçamentos aprovados no período
+                    var mvV = await client.execute({ sql: "SELECT COALESCE(SUM(valor_total - COALESCE(desconto,0)),0) as total FROM orcamentos WHERE status='aprovado' AND data_aprovacao >= ? AND data_aprovacao <= ? AND clinica_id=?", args: [mvM.data_inicio, mvM.data_fim + ' 23:59:59', clinica_id] })
+                    mvAlcancado = mvV.rows[0].total || 0
+                } else if (mvM.tipo === 'agendamentos') {
+                    // Agendamentos = total no período
+                    var mvAg = await client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE DATE(data_hora) >= ? AND DATE(data_hora) <= ? AND status!='cancelado' AND clinica_id=?", args: [mvM.data_inicio, mvM.data_fim, clinica_id] })
+                    mvAlcancado = mvAg.rows[0].total || 0
+                } else if (mvM.tipo === 'faltas') {
+                    // Faltas = pacientes que faltaram
+                    var mvF = await client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE DATE(data_hora) >= ? AND DATE(data_hora) <= ? AND (status='faltou' OR status LIKE '%falt%') AND clinica_id=?", args: [mvM.data_inicio, mvM.data_fim, clinica_id] })
+                    mvAlcancado = mvF.rows[0].total || 0
+                }
+
+                var mvPct = mvM.valor > 0 ? Math.round((mvAlcancado / mvM.valor) * 10000) / 100 : 0
+                mvResult.push({ id: mvM.id, tipo: mvM.tipo, valor: mvM.valor, data_inicio: mvM.data_inicio, data_fim: mvM.data_fim, analise: mvM.analise, alcancado: mvAlcancado, percentual: mvPct })
+            }
+
+            return res.status(200).json({ success: true, metas: mvResult })
+        }
+
         // ── PAGAMENTOS ─────────────────────────────────────────────────
         if (route === 'pagamentos') {
             var pw = ["clinica_id=?"], pa = [clinica_id]
