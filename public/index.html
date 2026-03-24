@@ -2673,9 +2673,12 @@ function renderProntTab(){
   else if(_prontTab==='plano-clinico'){
     renderPlanoFichaClinica(el,p)
   }
+  else if(_prontTab==='fotos'||_prontTab==='exames'||_prontTab==='documentos'){
+    renderDocumentosTab(el,p,_prontTab)
+  }
   else{
     // Abas placeholder
-    var nomes={'fotos':'Fotos','fichas-esp':'Fichas Especialidades','documentos':'Documentos','exames':'Exames','indicacoes':'Indicações'}
+    var nomes={'fichas-esp':'Fichas Especialidades','indicacoes':'Indicações'}
     el.innerHTML='<div style="text-align:center;padding:60px;color:#9e9e9e"><div style="font-size:15px;font-weight:500;margin-bottom:8px">'+(nomes[_prontTab]||_prontTab)+'</div><div style="font-size:13px">Dados não encontrados.</div></div>'
   }
 }
@@ -6600,6 +6603,140 @@ async function darBaixaParcela(parcelaId,pacId){
       loadFinanceiroPaciente(pacId)
     }else{alert(r.error||'Erro ao dar baixa')}
   }catch(e){alert('Erro: '+e.message)}
+}
+
+// ── FOTOS, EXAMES E DOCUMENTOS ──────────────────────────────
+async function renderDocumentosTab(el,p,aba){
+  var pacId=p.id
+  var tipoMap={'fotos':'foto','exames':'exame','documentos':'documento'}
+  var tipo=tipoMap[aba]||'foto'
+  var tituloMap={'fotos':'Fotos','exames':'Exames e Radiografias','documentos':'Documentos'}
+  var titulo=tituloMap[aba]||'Arquivos'
+
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
+  try{
+    var d=await apiData('documentos-paciente',{paciente_id:pacId,tipo:tipo})
+    var docs=d.documentos||[]
+
+    var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'+
+      '<div style="font-size:16px;font-weight:500;color:var(--text)">'+titulo+'</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<label style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;display:flex;align-items:center;gap:6px">'+
+          '<input type="file" accept="image/*,.pdf" multiple onchange="uploadDocumentos(this.files,'+pacId+',\''+tipo+'\')" style="display:none">'+
+          '+ Enviar Arquivo'+
+        '</label>'+
+        (aba==='fotos'?'<label style="background:var(--green3);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;display:flex;align-items:center;gap:6px"><input type="file" accept="image/*" capture="environment" onchange="uploadDocumentos(this.files,'+pacId+',\''+tipo+'\')" style="display:none">Tirar Foto</label>':'')+
+      '</div>'+
+    '</div>'
+
+    if(!docs.length){
+      html+='<div style="text-align:center;padding:60px;color:#9e9e9e">'+
+        '<div style="font-size:48px;margin-bottom:12px;opacity:.3">'+(aba==='fotos'?'&#128247;':aba==='exames'?'&#129658;':'&#128196;')+'</div>'+
+        '<div style="font-size:14px;margin-bottom:6px">Nenhum arquivo enviado</div>'+
+        '<div style="font-size:12px">Clique em "Enviar Arquivo" para adicionar</div>'+
+      '</div>'
+      el.innerHTML=html;return
+    }
+
+    // Grid of images/documents
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px">'
+    docs.forEach(function(doc){
+      var isImage=doc.url&&(doc.url.startsWith('data:image')||doc.nome&&doc.nome.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i))
+      var isPdf=doc.url&&(doc.url.startsWith('data:application/pdf')||doc.nome&&doc.nome.match(/\.pdf$/i))
+
+      html+='<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff">'
+
+      // Preview area
+      if(isImage){
+        html+='<div onclick="abrirPreviewDoc(\''+doc.id+'\')" style="width:100%;height:160px;background:#F5F5F5;cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden">'+
+          '<img src="'+doc.url+'" style="max-width:100%;max-height:160px;object-fit:cover" onerror="this.parentElement.innerHTML=\'&#128247;\'">'+
+        '</div>'
+      }else if(isPdf){
+        html+='<div style="width:100%;height:160px;background:#FFEBEE;display:flex;align-items:center;justify-content:center;flex-direction:column;cursor:pointer" onclick="abrirPreviewDoc(\''+doc.id+'\')">'+
+          '<div style="font-size:40px;opacity:.5">&#128196;</div><div style="font-size:11px;color:#C62828;margin-top:4px">PDF</div>'+
+        '</div>'
+      }else{
+        html+='<div style="width:100%;height:160px;background:#F5F5F5;display:flex;align-items:center;justify-content:center">'+
+          '<div style="font-size:40px;opacity:.3">&#128196;</div>'+
+        '</div>'
+      }
+
+      // Info + actions
+      html+='<div style="padding:10px 12px">'+
+        '<div style="font-size:12px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(doc.nome||'')+'">'+(doc.nome||'Arquivo')+'</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+fmtDt(doc.created_at)+(doc.descricao?' — '+doc.descricao:'')+'</div>'+
+        '<div style="display:flex;gap:6px;margin-top:8px">'+
+          '<button onclick="abrirPreviewDoc(\''+doc.id+'\')" style="background:none;border:none;color:#1565C0;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif;text-decoration:underline">Ver</button>'+
+          '<button onclick="excluirDocumento('+doc.id+','+pacId+',\''+tipo+'\')" style="background:none;border:none;color:var(--red);font-size:11px;cursor:pointer;font-family:Roboto,sans-serif;text-decoration:underline">Excluir</button>'+
+        '</div>'+
+      '</div>'
+      html+='</div>'
+    })
+    html+='</div>'
+
+    el.innerHTML=html
+  }catch(e){el.innerHTML='<div style="color:var(--red);text-align:center;padding:30px">'+e.message+'</div>'}
+}
+
+async function uploadDocumentos(files,pacId,tipo){
+  if(!files||!files.length)return
+  var total=files.length,ok=0,erros=0
+  for(var i=0;i<files.length;i++){
+    var file=files[i]
+    if(file.size>1500000){alert('Arquivo "'+file.name+'" muito grande ('+Math.round(file.size/1024)+'KB). Maximo 1.5MB.');erros++;continue}
+    try{
+      var base64=await new Promise(function(resolve,reject){
+        var reader=new FileReader()
+        reader.onload=function(e){resolve(e.target.result)}
+        reader.onerror=function(){reject(new Error('Erro ao ler arquivo'))}
+        reader.readAsDataURL(file)
+      })
+      var r=await apiPost('salvar-documento',{paciente_id:pacId,tipo:tipo,nome:file.name,url:base64})
+      if(r.success)ok++;else erros++
+    }catch(e){erros++}
+  }
+  if(ok>0){
+    var p=((_prontData||{}).paciente)||{}
+    renderDocumentosTab(document.getElementById('pront-content'),p,_prontTab)
+  }
+  if(erros>0)alert(erros+' arquivo(s) com erro')
+}
+
+async function excluirDocumento(id,pacId,tipo){
+  if(!confirm('Excluir este arquivo?'))return
+  try{
+    var r=await apiPost('excluir-documento',{id:id})
+    if(r.success){
+      var p=((_prontData||{}).paciente)||{}
+      renderDocumentosTab(document.getElementById('pront-content'),p,_prontTab)
+    }else alert(r.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+async function abrirPreviewDoc(docId){
+  var pacId=((_prontData||{}).paciente||{}).id
+  if(!pacId)return
+  try{
+    var d=await apiData('documentos-paciente',{paciente_id:pacId})
+    var doc=(d.documentos||[]).filter(function(dd){return dd.id==docId})[0]
+    if(!doc||!doc.url)return
+
+    var old=document.getElementById('modal-preview-doc');if(old)old.remove()
+    var m=document.createElement('div')
+    m.id='modal-preview-doc'
+    m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:10003;display:flex;align-items:center;justify-content:center;cursor:pointer'
+    var isPdf=doc.url.startsWith('data:application/pdf')
+    if(isPdf){
+      m.innerHTML='<iframe src="'+doc.url+'" style="width:90%;height:90%;border:none;border-radius:8px"></iframe>'+
+        '<span onclick="document.getElementById(\'modal-preview-doc\').remove()" style="position:absolute;top:20px;right:20px;color:#fff;font-size:30px;cursor:pointer">&times;</span>'
+    }else{
+      m.innerHTML='<img src="'+doc.url+'" style="max-width:90%;max-height:90%;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.5)">'+
+        '<div style="position:absolute;bottom:20px;color:#fff;font-size:13px;text-align:center">'+(doc.nome||'')+(doc.descricao?' — '+doc.descricao:'')+'</div>'+
+        '<span onclick="document.getElementById(\'modal-preview-doc\').remove()" style="position:absolute;top:20px;right:20px;color:#fff;font-size:30px;cursor:pointer">&times;</span>'
+    }
+    m.onclick=function(ev){if(ev.target===m)m.remove()}
+    document.body.appendChild(m)
+  }catch(e){}
 }
 
 // ── PLANO E FICHA CLÍNICA ──────────────────────────────────

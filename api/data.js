@@ -1527,6 +1527,41 @@ module.exports = async function handler(req, res) {
             }
         }
 
+        // ── DOCUMENTOS-PACIENTE (fotos, exames, RX) ──────────────
+        if (route === 'documentos-paciente') {
+            var dpPacId = parseInt(q.paciente_id) || 0
+            if (!dpPacId) return res.status(400).json({ success: false, error: 'paciente_id obrigatório' })
+            await client.execute("CREATE TABLE IF NOT EXISTS documentos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, tipo TEXT, nome TEXT, descricao TEXT, url TEXT, created_at TEXT DEFAULT (datetime('now')))")
+            try { await client.execute("ALTER TABLE documentos ADD COLUMN descricao TEXT") } catch(e) {}
+            if (q.tipo) {
+                var dpRows = await client.execute({ sql: "SELECT * FROM documentos WHERE paciente_id=? AND clinica_id=? AND tipo=? ORDER BY created_at DESC", args: [dpPacId, clinica_id, q.tipo] })
+                return res.status(200).json({ success: true, documentos: dpRows.rows })
+            }
+            var dpRows2 = await client.execute({ sql: "SELECT * FROM documentos WHERE paciente_id=? AND clinica_id=? ORDER BY created_at DESC", args: [dpPacId, clinica_id] })
+            return res.status(200).json({ success: true, documentos: dpRows2.rows })
+        }
+
+        // ── SALVAR-DOCUMENTO ──────────────────────────────────────────
+        if (route === 'salvar-documento') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var sd = req.body || {}
+            if (!sd.paciente_id || !sd.url) return res.status(400).json({ success: false, error: 'paciente_id e url obrigatórios' })
+            await client.execute("CREATE TABLE IF NOT EXISTS documentos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, tipo TEXT, nome TEXT, descricao TEXT, url TEXT, created_at TEXT DEFAULT (datetime('now')))")
+            try { await client.execute("ALTER TABLE documentos ADD COLUMN descricao TEXT") } catch(e) {}
+            if (sd.url.length > 2000000) return res.status(400).json({ success: false, error: 'Arquivo muito grande. Maximo 1.5MB.' })
+            var sdIns = await client.execute({ sql: "INSERT INTO documentos(clinica_id, paciente_id, tipo, nome, descricao, url) VALUES(?,?,?,?,?,?)", args: [clinica_id, sd.paciente_id, sd.tipo || 'foto', sd.nome || '', sd.descricao || '', sd.url] })
+            return res.status(200).json({ success: true, id: Number(sdIns.lastInsertRowid) })
+        }
+
+        // ── EXCLUIR-DOCUMENTO ──────────────────────────────────────────
+        if (route === 'excluir-documento') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var ed = req.body || {}
+            if (!ed.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
+            await client.execute({ sql: "DELETE FROM documentos WHERE id=? AND clinica_id=?", args: [ed.id, clinica_id] })
+            return res.status(200).json({ success: true, msg: 'Documento excluído' })
+        }
+
         // ── FICHA-CLINICA (procedimentos executados do paciente) ────
         if (route === 'ficha-clinica') {
             var fcPacId = parseInt(q.paciente_id) || 0
