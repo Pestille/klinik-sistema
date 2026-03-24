@@ -6760,21 +6760,26 @@ async function renderPlanoFichaClinica(el,p){
     '</div>'
     html+='<div id="plano-section-planos">'
 
+    var profs=ST.profissionais||[]
+    var profOpts='<option value="">Selecione...</option>'+profs.map(function(pr){return '<option value="'+pr.id+'|'+(pr.nome||pr.name||'')+'">'+( pr.nome||pr.name||'')+'</option>'}).join('')
+
     if(!orcamentos.length){
       html+='<div style="text-align:center;padding:30px;color:#9e9e9e">Nenhum plano de tratamento aprovado</div>'
     }else{
       orcamentos.forEach(function(orc){
-        var statusLabel=orc.status==='aprovado'?'Fechado':'Em aberto'
-        var statusColor=orc.status==='aprovado'?'#2E7D52':'#E65100'
-        var statusBg=orc.status==='aprovado'?'#2E7D52':'#E65100'
         var valorTotal=+(orc.valor_total||0)-(+(orc.desconto||0))
         var itens=orc.itens||[]
+        var executados=itens.filter(function(i){return i.executado===1||i.executado==='1'})
+        var pendentes=itens.filter(function(i){return !i.executado||i.executado==='0'||i.executado===0})
+        var todosExec=executados.length===itens.length&&itens.length>0
+        var statusLabel=todosExec?'Fechado':'Em aberto'
+        var statusBg=todosExec?'#2E7D52':'#E65100'
 
-        html+='<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:12px;overflow:hidden">'
+        html+='<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:16px;overflow:hidden">'
 
-        // Header row
-        html+='<div onclick="togglePlanoOrc('+orc.id+')" style="display:flex;align-items:center;padding:16px 20px;cursor:pointer;background:#fff;gap:24px">'+
-          '<div style="font-size:13px;color:var(--text3);min-width:90px">'+fmtDt((orc.data_aprovacao||orc.data_criacao||'').slice(0,10))+'</div>'+
+        // Header
+        html+='<div onclick="togglePlanoOrc('+orc.id+')" style="display:flex;align-items:center;padding:14px 20px;cursor:pointer;background:#fff;gap:20px;flex-wrap:wrap">'+
+          '<div style="font-size:13px;color:var(--text3);min-width:80px">'+fmtDt((orc.data_aprovacao||orc.data_criacao||'').slice(0,10))+'</div>'+
           '<div style="flex:1;font-size:13px;color:var(--text3)">Profissional: <span style="color:#E65100;font-weight:500">'+(orc.profissional_nome||'—')+'</span></div>'+
           '<div style="font-size:13px;color:var(--text3)">Valor Total: <strong style="color:var(--text)">'+fmtBrl(valorTotal)+'</strong></div>'+
           '<div style="font-size:13px;color:var(--text3)">Status: <span style="background:'+statusBg+';color:#fff;padding:3px 12px;border-radius:4px;font-size:11px;font-weight:600">'+statusLabel+'</span></div>'+
@@ -6782,30 +6787,57 @@ async function renderPlanoFichaClinica(el,p){
         '</div>'
 
         // Expandable detail
-        html+='<div id="plano-orc-detail-'+orc.id+'" style="display:none;border-top:1px solid var(--border);background:#FAFAFA;padding:16px 20px">'
-        if(itens.length){
-          html+='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:1px solid var(--border)">'+
-            '<th style="padding:8px 10px;text-align:left;color:var(--text3);font-weight:500">Procedimento</th>'+
-            '<th style="padding:8px 10px;text-align:left;color:var(--text3);font-weight:500">Dente</th>'+
-            '<th style="padding:8px 10px;text-align:left;color:var(--text3);font-weight:500">Profissional</th>'+
-            '<th style="padding:8px 10px;text-align:right;color:var(--text3);font-weight:500">Valor (R$)</th>'+
-            '<th style="padding:8px 10px;text-align:center;color:var(--text3);font-weight:500">Status</th>'+
-          '</tr></thead><tbody>'
-          itens.forEach(function(it){
-            var execStatus=it.executado?'Executado':'Pendente'
-            var execClass=it.executado?'green':'orange'
-            html+='<tr style="border-bottom:1px solid #F0F0F0">'+
-              '<td style="padding:8px 10px;color:var(--text)">'+(it.procedimento_codigo?it.procedimento_codigo+' - ':'')+it.procedimento_nome+'</td>'+
-              '<td style="padding:8px 10px;color:var(--text3)">'+(it.dente||it.regiao||'—')+'</td>'+
-              '<td style="padding:8px 10px;color:var(--text3)">'+(it.profissional_nome||'—')+'</td>'+
-              '<td style="padding:8px 10px;text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(it.valor_unitario*(it.quantidade||1))+'</td>'+
-              '<td style="padding:8px 10px;text-align:center"><span class="badge badge-'+execClass+'">'+execStatus+'</span></td>'+
-            '</tr>'
+        html+='<div id="plano-orc-detail-'+orc.id+'" style="display:none;border-top:1px solid var(--border);background:#FAFAFA">'
+
+        // ── Executados section ──
+        if(executados.length){
+          html+='<div style="background:#2E7D52;color:#fff;padding:8px 20px;font-size:13px;font-weight:500">Executados</div>'
+          html+='<div style="padding:12px 20px">'
+          executados.forEach(function(it){
+            html+='<div style="display:flex;align-items:center;gap:16px;padding:10px 0;border-bottom:1px solid #E0E0E0;flex-wrap:wrap">'+
+              '<div style="cursor:pointer;color:var(--text3);font-size:14px" title="Remover execucao">&times;</div>'+
+              '<div style="min-width:180px"><div style="font-size:10px;color:var(--text3)">Procedimento</div><div style="font-size:13px;color:var(--text);font-weight:500">'+(it.procedimento_nome||'—')+'</div></div>'+
+              '<div style="min-width:80px"><div style="font-size:10px;color:var(--text3)">Status</div><div style="font-size:13px;color:var(--text)">Aprovado</div></div>'+
+              '<div style="min-width:90px"><div style="font-size:10px;color:var(--text3)">Data de Execucao</div><div style="font-size:13px;color:var(--text)">'+fmtDt(it.data_execucao)+'</div></div>'+
+              '<div style="min-width:80px"><div style="font-size:10px;color:var(--text3)">Dente/Regiao</div><div style="font-size:13px;color:var(--text)">'+(it.dente||it.regiao||'—')+'</div></div>'+
+              '<div style="min-width:150px"><div style="font-size:10px;color:var(--text3)">Profissional</div><div style="font-size:13px;color:#E65100;font-weight:500">'+(it.profissional_nome||'—')+'</div></div>'+
+              '<div style="margin-left:auto;text-align:right"><div style="font-size:10px;color:var(--text3)">Valor</div><div style="font-size:14px;font-weight:600;color:var(--text)">'+fmtBrl(it.valor_unitario*(it.quantidade||1))+'</div></div>'+
+            '</div>'
           })
-          html+='</tbody></table>'
-        }else{
-          html+='<div style="color:var(--text3);font-size:13px">Nenhum item neste orcamento</div>'
+          html+='</div>'
         }
+
+        // ── Pendentes section ──
+        if(pendentes.length){
+          html+='<div style="padding:16px 20px">'
+          pendentes.forEach(function(it,idx){
+            var itemProfOpts=profOpts.replace('value="'+it.profissional_id+'|','value="'+it.profissional_id+'|" selected data-x="')
+            // Better approach: rebuild with selection
+            var selOpts='<option value="">Selecione...</option>'+profs.map(function(pr){
+              var sel=(pr.id==it.profissional_id)?' selected':''
+              return '<option value="'+pr.id+'|'+(pr.nome||pr.name||'')+'"'+sel+'>'+(pr.nome||pr.name||'')+'</option>'
+            }).join('')
+
+            html+='<div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #E0E0E0;flex-wrap:wrap">'+
+              '<div style="font-size:14px;font-weight:600;color:var(--text3);min-width:20px">'+( idx+1)+'</div>'+
+              '<div style="min-width:160px"><div style="font-size:10px;color:var(--text3)">Procedimento</div><div style="font-size:13px;color:var(--text);font-weight:500">'+(it.procedimento_nome||'—')+'</div></div>'+
+              '<div style="min-width:200px">'+
+                '<div style="font-size:10px;color:#E65100;font-weight:500">Profissional</div>'+
+                '<select id="fc-prof-'+it.id+'" style="border:1.5px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--text);background:#fff;outline:none;min-width:200px">'+selOpts+'</select>'+
+              '</div>'+
+              '<button onclick="abrirExecutarModal('+it.id+','+pacId+',\''+((it.procedimento_nome||'').replace(/'/g,"\\'"))+'\')" style="background:#2E7D52;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Executar</button>'+
+              '<div style="min-width:70px"><div style="font-size:10px;color:var(--text3)">Status</div><div style="font-size:13px">Aprovado</div></div>'+
+              '<div style="min-width:80px"><div style="font-size:10px;color:var(--text3)">Dente/Regiao</div><div style="font-size:13px">'+(it.dente||it.regiao||'—')+'</div></div>'+
+              '<div style="margin-left:auto;text-align:right"><div style="font-size:10px;color:var(--text3)">Valor</div><div style="font-size:14px;font-weight:600;color:#E65100">'+fmtBrl(it.valor_unitario*(it.quantidade||1))+'</div></div>'+
+            '</div>'
+          })
+          html+='</div>'
+        }
+
+        if(!itens.length){
+          html+='<div style="padding:30px;text-align:center;color:var(--text3)">Nenhum item</div>'
+        }
+
         html+='</div>' // end detail
         html+='</div>' // end card
       })
@@ -6890,11 +6922,87 @@ function imprimirFichaClinica(pacId){
 }
 
 function novoRegistroFicha(pacId){
-  alert('Para registrar um procedimento executado, va na aba Orcamentos, abra o orcamento aprovado e marque o procedimento como executado.')
+  alert('Para registrar um procedimento executado, abra um Plano de Tratamento acima e clique em "Executar" no procedimento desejado.')
 }
 
 function solicitarAssinatura(procId){
-  alert('Funcao de assinatura digital em desenvolvimento. O paciente sera notificado para assinar eletronicamente.')
+  alert('Funcao de assinatura digital em desenvolvimento.')
+}
+
+function abrirExecutarModal(itemId,pacId,procNome){
+  var old=document.getElementById('modal-executar');if(old)old.remove()
+  var profs=ST.profissionais||[]
+
+  // Get selected professional from inline select
+  var profSelEl=document.getElementById('fc-prof-'+itemId)
+  var profSelVal=profSelEl?profSelEl.value:''
+  var profParts=profSelVal?profSelVal.split('|'):['','']
+  var profId=profParts[0]||''
+  var profNome=profParts[1]||''
+
+  var profOpts='<option value="">Selecione...</option>'+profs.map(function(pr){
+    var sel=(pr.id==profId)?' selected':''
+    return '<option value="'+pr.id+'|'+(pr.nome||pr.name||'')+'"'+sel+'>'+(pr.nome||pr.name||'')+'</option>'
+  }).join('')
+
+  var m=document.createElement('div')
+  m.id='modal-executar'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10003;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:520px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:32px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px"><div style="font-size:20px;font-weight:500;color:#1A1A1A">Executar</div><span onclick="document.getElementById(\'modal-executar\').remove()" style="cursor:pointer;font-size:24px;color:#757575">&times;</span></div>'+
+
+      '<div style="margin-bottom:20px">'+
+        '<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);margin-bottom:6px">Executado *</label>'+
+        '<input id="exec-data" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:var(--text);outline:none">'+
+      '</div>'+
+
+      '<div style="margin-bottom:20px">'+
+        '<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);margin-bottom:6px">Procedimento *</label>'+
+        '<input type="text" value="'+procNome+'" readonly style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:#757575;background:#FAFAFA;font-family:Roboto,sans-serif">'+
+      '</div>'+
+
+      '<div style="margin-bottom:20px">'+
+        '<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);margin-bottom:6px">Profissional *</label>'+
+        '<select id="exec-prof" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:var(--text);background:#fff;outline:none">'+profOpts+'</select>'+
+      '</div>'+
+
+      '<div style="margin-bottom:20px">'+
+        '<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);margin-bottom:6px">Detalhes Prox. Consulta</label>'+
+        '<input id="exec-prox" type="text" placeholder="" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:var(--text);outline:none">'+
+      '</div>'+
+
+      '<div style="margin-bottom:24px">'+
+        '<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);margin-bottom:6px">Obs</label>'+
+        '<input id="exec-obs" type="text" placeholder="" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:var(--text);outline:none">'+
+      '</div>'+
+
+      '<div style="display:flex;gap:12px;justify-content:flex-end">'+
+        '<button onclick="document.getElementById(\'modal-executar\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:11px 28px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+        '<button onclick="confirmarExecucao('+itemId+','+pacId+')" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:12px 32px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Ok</button>'+
+      '</div>'+
+    '</div>'
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)m.remove()}
+}
+
+async function confirmarExecucao(itemId,pacId){
+  var data=document.getElementById('exec-data').value
+  var profSelVal=(document.getElementById('exec-prof')||{}).value||''
+  var profParts=profSelVal.split('|')
+  var profId=parseInt(profParts[0])||null
+  var profNome=profParts[1]||''
+  if(!data){alert('Informe a data de execucao');return}
+  if(!profId){alert('Selecione o profissional');return}
+
+  try{
+    var r=await apiPost('marcar-executado',{orcamento_item_id:itemId,data_execucao:data,profissional_id:profId,profissional_nome:profNome})
+    if(r.success){
+      document.getElementById('modal-executar').remove()
+      var p=((_prontData||{}).paciente)||{}
+      renderPlanoFichaClinica(document.getElementById('pront-content'),p)
+    }else{alert(r.error||'Erro')}
+  }catch(e){alert('Erro: '+e.message)}
 }
 
 // ── RECIBOS E NFS-e ──────────────────────────────────────────

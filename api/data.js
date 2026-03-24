@@ -2304,8 +2304,12 @@ module.exports = async function handler(req, res) {
             if (!me.orcamento_item_id) return res.status(400).json({ success: false, error: 'orcamento_item_id obrigatório' })
             var meData = me.data_execucao || new Date().toISOString().slice(0, 10)
 
-            // Update item
-            await client.execute({ sql: "UPDATE orcamento_itens SET executado=1, data_execucao=? WHERE id=?", args: [meData, me.orcamento_item_id] })
+            // Update item (including professional if provided)
+            if (me.profissional_id) {
+                await client.execute({ sql: "UPDATE orcamento_itens SET executado=1, data_execucao=?, profissional_id=?, profissional_nome=? WHERE id=?", args: [meData, me.profissional_id, me.profissional_nome || '', me.orcamento_item_id] })
+            } else {
+                await client.execute({ sql: "UPDATE orcamento_itens SET executado=1, data_execucao=? WHERE id=?", args: [meData, me.orcamento_item_id] })
+            }
 
             // Get item + orcamento info for commission
             var meItem = await client.execute({ sql: "SELECT oi.*, o.tabela_preco, o.paciente_id, p.nome as paciente_nome FROM orcamento_itens oi JOIN orcamentos o ON o.id=oi.orcamento_id LEFT JOIN pacientes p ON p.id=o.paciente_id WHERE oi.id=?", args: [me.orcamento_item_id] })
