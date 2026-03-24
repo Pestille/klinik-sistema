@@ -5356,46 +5356,49 @@ function abrirModalMeta(editId){
   m.id='modal-meta'
   m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10003;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
   m.innerHTML=
-    '<div style="background:#fff;border-radius:8px;width:500px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:18px;font-weight:500;color:#1A1A1A">Adicionar Meta</div><span onclick="document.getElementById(\'modal-meta\').remove()" style="cursor:pointer;font-size:22px;color:#757575">&times;</span></div>'+
+    '<div style="background:#fff;border-radius:8px;width:640px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:32px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px"><div style="font-size:20px;font-weight:500;color:#1A1A1A">Adicionar Meta</div><span onclick="document.getElementById(\'modal-meta\').remove()" style="cursor:pointer;font-size:24px;color:#757575;padding:4px 8px">&times;</span></div>'+
 
-      '<div style="margin-bottom:16px">'+
-        '<div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:8px">Metas</div>'+
-        '<div style="display:flex;gap:16px">'+
-          '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="meta-analise" value="geral" style="accent-color:#E65100"> Geral</label>'+
-          '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="meta-analise" value="clinica" checked style="accent-color:#E65100"> Clinica</label>'+
+      '<div style="margin-bottom:20px">'+
+        '<div style="font-size:15px;font-weight:500;color:var(--text);margin-bottom:10px">Metas</div>'+
+        '<div style="display:flex;gap:24px">'+
+          '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:15px"><input type="radio" name="meta-analise" value="geral" style="accent-color:#E65100;width:18px;height:18px"> Geral</label>'+
+          '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:15px"><input type="radio" name="meta-analise" value="clinica" checked style="accent-color:#E65100;width:18px;height:18px"> Clinica</label>'+
         '</div>'+
       '</div>'+
 
-      '<div style="margin-bottom:16px">'+
-        '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Clinica</label>'+
-        '<input type="text" value="Klinik Odontologia" readonly style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:#757575;background:#FAFAFA;font-family:Roboto,sans-serif">'+
+      '<div style="margin-bottom:20px">'+
+        '<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Clinica</label>'+
+        '<input type="text" value="Klinik Odontologia" readonly style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:#757575;background:#FAFAFA;font-family:Roboto,sans-serif">'+
       '</div>'+
 
-      '<div style="display:flex;gap:12px;margin-bottom:16px;align-items:flex-end">'+
-        '<div style="flex:1">'+
-          '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Tipo *</label>'+
-          '<select id="meta-tipo" onchange="metaTipoChange()" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none">'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">'+
+        '<div>'+
+          '<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Tipo *</label>'+
+          '<select id="meta-tipo" onchange="metaTipoChange()" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:var(--text);background:#fff;outline:none">'+
             '<option value="vendas">Vendas</option><option value="agendamentos">Agendamentos</option><option value="faltas">Faltas</option>'+
           '</select>'+
         '</div>'+
-        '<div style="flex:1">'+
-          '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px" id="meta-valor-label">Valor (R$) *</label>'+
-          '<input id="meta-valor" type="number" step="0.01" placeholder="R$ 0,00" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none">'+
-        '</div>'+
-        '<div style="flex:1">'+
-          '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">De *</label>'+
-          '<input id="meta-de" type="date" value="'+primeiroDia+'" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none">'+
-        '</div>'+
-        '<div style="flex:1">'+
-          '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Ate *</label>'+
-          '<input id="meta-ate" type="date" value="'+ultimoDia+'" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none">'+
+        '<div>'+
+          '<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px" id="meta-valor-label">Valor (R$) *</label>'+
+          '<input id="meta-valor" type="number" step="0.01" placeholder="R$ 0,00" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:var(--text);outline:none">'+
         '</div>'+
       '</div>'+
 
-      '<div style="display:flex;gap:8px;justify-content:flex-end">'+
-        '<button onclick="document.getElementById(\'modal-meta\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
-        '<button onclick="salvarMeta()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Ok</button>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">'+
+        '<div>'+
+          '<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">De *</label>'+
+          '<input id="meta-de" type="date" value="'+primeiroDia+'" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:var(--text);outline:none">'+
+        '</div>'+
+        '<div>'+
+          '<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Ate *</label>'+
+          '<input id="meta-ate" type="date" value="'+ultimoDia+'" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:var(--text);outline:none">'+
+        '</div>'+
+      '</div>'+
+
+      '<div style="display:flex;gap:12px;justify-content:flex-end">'+
+        '<button onclick="document.getElementById(\'modal-meta\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:11px 28px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+        '<button onclick="salvarMeta()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:12px 32px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Ok</button>'+
       '</div>'+
     '</div>'
   document.body.appendChild(m)
