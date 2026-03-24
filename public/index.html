@@ -5128,23 +5128,71 @@ async function excluirUsuario(id,nome){
 // ── PERMISSÕES POR PERFIL ────────────────────────────────────────
 var _permData=null
 var _permRecursoLabels={
-  'agenda.ver':'Ver Agenda','agenda.editar':'Criar/Editar Agendamentos',
-  'pacientes.ver':'Ver Pacientes','pacientes.editar':'Editar Cadastro de Pacientes',
-  'prontuario.ver':'Ver Prontuario','prontuario.editar':'Editar Prontuario Clinico',
-  'orcamento.criar':'Criar Orcamento','orcamento.aprovar':'Aprovar Orcamento','orcamento.desaprovar':'Desaprovar Orcamento',
-  'financeiro.ver':'Ver Modulo Financeiro','financeiro.dre':'Ver DRE','financeiro.contas_pagar':'Contas a Pagar','financeiro.dar_baixa':'Dar Baixa em Parcelas','financeiro.comissoes':'Gestao de Comissoes',
-  'usuarios.gerenciar':'Gerenciar Usuarios','configuracoes.editar':'Editar Configuracoes',
-  'relatorios.ver':'Ver Relatorios','marketing.ver':'Ver Marketing',
-  'estoque.ver':'Ver Estoque','estoque.editar':'Editar Estoque'
+  // Agenda
+  'agenda.agendar_atendimento':'Agendar Atendimento','agenda.editar_horarios':'Editar Horarios da Agenda','agenda.visualizar_classificacao':'Visualizar Classificacao',
+  // Clinica
+  'clinica.ver':'Visualizar Clinica',
+  // Configuracoes
+  'configuracoes.acessar':'Acessar Configuracoes','configuracoes.editar':'Editar Configuracoes',
+  // Controle de Cheque
+  'cheque.acessar':'Acessar Cheques','cheque.excluir':'Excluir Cheques','cheque.editar_parcelas':'Editar Parcelas de Cheque',
+  // Controle de Indicacao
+  'indicacao.acessar':'Acessar Indicacoes','indicacao.excluir':'Excluir Indicacao',
+  // Controle Protetico
+  'protetico.acessar':'Acessar Controle Protetico','protetico.excluir':'Excluir Protetico',
+  // CRC
+  'crc.acessar':'Acessar CRC','crc.excluir':'Excluir','crc.agendamento_pacificacao':'Agendamento por Pacificacao','crc.enviar_mensagem':'Enviar Mensagem','crc.exportar_planilha':'Exportar Planilha','crc.abrir_nova_funcao':'Abrir Nova Funcao','crc.editar':'Editar','crc.rejeitar_paciente':'Rejeitar Paciente','crc.encaminhamento':'Encaminhamento','crc.exportar_agendamento':'Exportar Agendamento',
+  // CRM
+  'crm.acessar':'Acessar CRM','crm.excluir':'Excluir','crm.acessar_campanha':'Acessar Campanhas',
+  // Dashboard
+  'dashboard.acessar':'Acessar Dashboard Analitico','dashboard.editar_metas':'Editar Metas no Dashboard',
+  // Financeiro
+  'financeiro.acessar':'Acessar Financeiro','financeiro.excluir':'Excluir Registros','financeiro.contas':'Contas','financeiro.editar_contas':'Editar Contas','financeiro.planos':'Planos','financeiro.processar_recibo':'Processar Recibo','financeiro.conta_corrente':'Conta Corrente','financeiro.controle_cheques':'Controle de Cheques','financeiro.editar_cheques':'Editar Cheques/Antecipacao','financeiro.controle_cartoes':'Controle de Cartoes','financeiro.editar_cartoes':'Editar Cartoes/Antecipacao','financeiro.editar_parcelas':'Editar Parcelas','financeiro.controle_boletos':'Controle de Boletos','financeiro.controle_planos':'Controle de Planos','financeiro.fluxo_caixa':'Fluxo de Caixa','financeiro.parcela_avulsa':'Parcela Avulsa','financeiro.dre':'DRE','financeiro.comissoes':'Comissoes','financeiro.dar_baixa':'Dar Baixa','financeiro.conciliacoes':'Conciliacoes Bancarias','financeiro.receita_saude':'Receita Saude',
+  // Gerenciar Contas
+  'gerenciar_contas.acessar':'Acessar Gerenciar Contas','gerenciar_contas.editar':'Editar','gerenciar_contas.importacao':'Importacao de Dados','gerenciar_contas.excluir_relatorio':'Excluir Relatorio',
+  // Marketplace
+  'marketplace.acessar':'Acessar Marketplace','marketplace.exclusao_grupos':'Exclusao de Grupos',
+  // Metas
+  'metas.acessar':'Acessar Metas','metas.editar':'Editar Metas',
+  // Pacientes
+  'pacientes.acessar':'Acessar Pacientes','pacientes.agendamentos':'Agendamentos','pacientes.prontuario':'Prontuario','pacientes.orcamentos':'Orcamentos','pacientes.editar_orcamento':'Editar Orcamento','pacientes.financeiro':'Financeiro do Paciente','pacientes.fotos':'Fotos','pacientes.emissao_relatorio':'Emissao de Relatorio','pacientes.atendimento_recepcao':'Atendimento na Recepcao','pacientes.exportar':'Exportar Dados','pacientes.prescricoes':'Prescricoes','pacientes.recibos':'Recibos','pacientes.documentos':'Documentos','pacientes.anamnese':'Anamnese','pacientes.odontograma':'Odontograma','pacientes.ficha_clinica':'Plano e Ficha Clinica','pacientes.exames':'Exames','pacientes.indicacoes':'Indicacoes','pacientes.editar_cadastro':'Editar Cadastro','pacientes.excluir':'Excluir Paciente','pacientes.gerar_procedimentos':'Gerar Procedimentos',
+  // Plano de Recorrencia
+  'recorrencia.acessar':'Acessar Planos de Recorrencia','recorrencia.editar':'Editar','recorrencia.editar_config':'Editar Configuracoes',
+  // Portal
+  'portal.acessar':'Acessar Portal do Assinante','portal.editar':'Editar',
+  // Profissionais
+  'profissionais.acessar':'Acessar Profissionais','profissionais.editar':'Editar/Excluir',
+  // Relatorios
+  'relatorios.acessar':'Acessar Relatorios','relatorios.editar':'Editar','relatorios.agendamentos_retornos':'Agendamentos - Analise de Retornos','relatorios.agendamentos_cadastros':'Agendamentos - Cadastros','relatorios.agendamentos_desc':'Agendamentos - Desc. com Agendamentos','relatorios.agendamentos_atendidos':'Agendamentos - Atendimentos Feitos','relatorios.agendamentos_faltas':'Agendamentos - Faltas','relatorios.agendamentos_geral':'Agendamentos - Geral','relatorios.agendamentos_movimentacao':'Agendamentos - Movimentacao','relatorios.agendamentos_marcacoes':'Agendamentos - Periodo Marcacoes','relatorios.agendamentos_confirmacoes':'Agendamentos - Confirmacoes','relatorios.procedimentos_agendados':'Procedimentos - Agendados','relatorios.procedimentos_evolucao':'Procedimentos - Evolucao','relatorios.procedimentos_credito_debito':'Procedimentos - Credito e Debito','relatorios.procedimentos_falta_cancel':'Procedimentos - Falta/Cancelamento','relatorios.financeiro_cpf':'Financeiro - CPF','relatorios.financeiro_liquidez':'Financeiro - Analise Liquidez','relatorios.financeiro_pagamentos':'Financeiro - Pagamentos e Despesas','relatorios.procedimentos_retornos':'Procedimentos - Retornos','relatorios.procedimentos_modalidade':'Procedimentos - Modalidade','relatorios.orcamentos':'Orcamentos','relatorios.orcamentos_aprovados':'Orcamentos Aprovados','relatorios.comissoes':'Comissoes','relatorios.producao':'Producao',
+  // Estoque
+  'estoque.acessar':'Acessar Estoque','estoque.editar':'Editar Estoque',
+  // Marketing
+  'marketing.acessar':'Acessar Marketing','marketing.editar':'Editar Marketing',
+  // Usuarios
+  'usuarios.acessar':'Acessar Usuarios','usuarios.modificar_senhas':'Modificar Senhas','usuarios.trocar_perfil':'Trocar Perfil de Usuario'
 }
 var _permGrupos={
-  'Agenda':['agenda.ver','agenda.editar'],
-  'Pacientes':['pacientes.ver','pacientes.editar'],
-  'Prontuario':['prontuario.ver','prontuario.editar'],
-  'Orcamentos':['orcamento.criar','orcamento.aprovar','orcamento.desaprovar'],
-  'Financeiro':['financeiro.ver','financeiro.dre','financeiro.contas_pagar','financeiro.dar_baixa','financeiro.comissoes'],
-  'Sistema':['usuarios.gerenciar','configuracoes.editar','relatorios.ver','marketing.ver'],
-  'Estoque':['estoque.ver','estoque.editar']
+  'Agenda':['agenda.agendar_atendimento','agenda.editar_horarios','agenda.visualizar_classificacao'],
+  'Clinica':['clinica.ver'],
+  'Configuracoes':['configuracoes.acessar','configuracoes.editar'],
+  'Controle de Cheque':['cheque.acessar','cheque.excluir','cheque.editar_parcelas'],
+  'Controle de Indicacao':['indicacao.acessar','indicacao.excluir'],
+  'Controle Protetico':['protetico.acessar','protetico.excluir'],
+  'CRC':['crc.acessar','crc.excluir','crc.agendamento_pacificacao','crc.enviar_mensagem','crc.exportar_planilha','crc.abrir_nova_funcao','crc.editar','crc.rejeitar_paciente','crc.encaminhamento','crc.exportar_agendamento'],
+  'CRM':['crm.acessar','crm.excluir','crm.acessar_campanha'],
+  'Dashboard Analitico':['dashboard.acessar','dashboard.editar_metas'],
+  'Financeiro':['financeiro.acessar','financeiro.excluir','financeiro.contas','financeiro.editar_contas','financeiro.planos','financeiro.processar_recibo','financeiro.conta_corrente','financeiro.controle_cheques','financeiro.editar_cheques','financeiro.controle_cartoes','financeiro.editar_cartoes','financeiro.editar_parcelas','financeiro.controle_boletos','financeiro.controle_planos','financeiro.fluxo_caixa','financeiro.parcela_avulsa','financeiro.dre','financeiro.comissoes','financeiro.dar_baixa','financeiro.conciliacoes','financeiro.receita_saude'],
+  'Gerenciar Contas':['gerenciar_contas.acessar','gerenciar_contas.editar','gerenciar_contas.importacao','gerenciar_contas.excluir_relatorio'],
+  'Marketplace':['marketplace.acessar','marketplace.exclusao_grupos'],
+  'Metas':['metas.acessar','metas.editar'],
+  'Pacientes':['pacientes.acessar','pacientes.agendamentos','pacientes.prontuario','pacientes.orcamentos','pacientes.editar_orcamento','pacientes.financeiro','pacientes.fotos','pacientes.emissao_relatorio','pacientes.atendimento_recepcao','pacientes.exportar','pacientes.prescricoes','pacientes.recibos','pacientes.documentos','pacientes.anamnese','pacientes.odontograma','pacientes.ficha_clinica','pacientes.exames','pacientes.indicacoes','pacientes.editar_cadastro','pacientes.excluir','pacientes.gerar_procedimentos'],
+  'Plano de Recorrencia':['recorrencia.acessar','recorrencia.editar','recorrencia.editar_config'],
+  'Portal do Assinante':['portal.acessar','portal.editar'],
+  'Profissionais':['profissionais.acessar','profissionais.editar'],
+  'Relatorios':['relatorios.acessar','relatorios.editar','relatorios.agendamentos_retornos','relatorios.agendamentos_cadastros','relatorios.agendamentos_desc','relatorios.agendamentos_atendidos','relatorios.agendamentos_faltas','relatorios.agendamentos_geral','relatorios.agendamentos_movimentacao','relatorios.agendamentos_marcacoes','relatorios.agendamentos_confirmacoes','relatorios.procedimentos_agendados','relatorios.procedimentos_evolucao','relatorios.procedimentos_credito_debito','relatorios.procedimentos_falta_cancel','relatorios.financeiro_cpf','relatorios.financeiro_liquidez','relatorios.financeiro_pagamentos','relatorios.procedimentos_retornos','relatorios.procedimentos_modalidade','relatorios.orcamentos','relatorios.orcamentos_aprovados','relatorios.comissoes','relatorios.producao'],
+  'Estoque':['estoque.acessar','estoque.editar'],
+  'Marketing':['marketing.acessar','marketing.editar'],
+  'Usuarios e Permissoes':['usuarios.acessar','usuarios.modificar_senhas','usuarios.trocar_perfil']
 }
 
 async function loadPermissoesPerfil(){
@@ -5224,12 +5272,12 @@ function aplicarPermissoesFrontend(){
   var p=ST.permissoes||{}
   // Hide sidebar items based on permissions
   var menuMap={
-    'financeiro':'financeiro.ver',
-    'relatorios':'relatorios.ver',
-    'marketing':'marketing.ver',
-    'usuarios':'usuarios.gerenciar',
-    'configuracoes':'configuracoes.editar',
-    'estoque':'estoque.ver'
+    'financeiro':'financeiro.acessar',
+    'relatorios':'relatorios.acessar',
+    'marketing':'marketing.acessar',
+    'usuarios':'usuarios.acessar',
+    'configuracoes':'configuracoes.acessar',
+    'estoque':'estoque.acessar'
   }
   document.querySelectorAll('.sidebar-item[data-page]').forEach(function(item){
     var page=item.getAttribute('data-page')
