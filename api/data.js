@@ -1527,6 +1527,17 @@ module.exports = async function handler(req, res) {
             }
         }
 
+        // ── FICHA-CLINICA (procedimentos executados do paciente) ────
+        if (route === 'ficha-clinica') {
+            var fcPacId = parseInt(q.paciente_id) || 0
+            if (!fcPacId) return res.status(400).json({ success: false, error: 'paciente_id obrigatório' })
+            var fcRows = await client.execute({
+                sql: "SELECT oi.id, oi.orcamento_id, oi.procedimento_codigo, oi.procedimento_nome, oi.dente, oi.regiao, oi.profissional_nome, oi.valor_unitario, oi.quantidade, oi.executado, oi.data_execucao, o.data_aprovacao, o.status as orc_status FROM orcamento_itens oi JOIN orcamentos o ON o.id=oi.orcamento_id WHERE o.paciente_id=? AND o.clinica_id=? AND oi.executado=1 ORDER BY oi.data_execucao DESC, oi.id DESC",
+                args: [fcPacId, clinica_id]
+            })
+            return res.status(200).json({ success: true, procedimentos: fcRows.rows })
+        }
+
         // ── RENEGOCIAR-ORCAMENTO ────────────────────────────────────
         if (route === 'renegociar-orcamento') {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
