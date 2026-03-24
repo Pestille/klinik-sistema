@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Auth check — public routes skip authentication
-    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos', 'pagamentos-migrate', 'financeiro-migrate', 'financeiro-migrate-v2', 'financeiro-migrate-v3', 'comissoes-migrate', 'permissoes-migrate', 'debug-nascimentos']
+    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos', 'pagamentos-migrate', 'financeiro-migrate', 'financeiro-migrate-v2', 'financeiro-migrate-v3', 'comissoes-migrate', 'permissoes-migrate']
     var auth = null, clinica_id = null
     if (publicRoutes.indexOf(route) === -1) {
         auth = await authenticateRequest(req)
@@ -264,38 +264,24 @@ module.exports = async function handler(req, res) {
         }
 
         // ── ANIVERSARIANTES ─────────────────────────────────────────────────
-        // DEBUG: ver datas de nascimento
-        if (route === 'debug-nascimentos') {
-            var client = getClient()
-            var dbgClinicas = await client.execute({ sql: "SELECT DISTINCT clinica_id, COUNT(*) as qtd FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!='' GROUP BY clinica_id", args: [] })
-            var dbgDulce = await client.execute({ sql: "SELECT id,nome,data_nascimento,clinica_id FROM pacientes WHERE nome LIKE '%DULCE ANNA%' LIMIT 3", args: [] })
-            var dbgMes3 = await client.execute({ sql: "SELECT COUNT(*) as total FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!='' AND substr(data_nascimento,6,2)='03'", args: [] })
-            return res.status(200).json({ success: true, clinicas: dbgClinicas.rows, dulce: dbgDulce.rows, mes3_total: dbgMes3.rows[0], server_month: new Date().getMonth()+1, server_date: new Date().toISOString() })
-        }
-
         if (route === 'aniversariantes') {
             var anMes = parseInt(q.mes) || (new Date().getMonth() + 1)
             var anMesStr = String(anMes).padStart(2, '0')
-            var anr = await client.execute({ sql: "SELECT id,nome,telefone,email,data_nascimento FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!='' AND clinica_id=?", args: [clinica_id] })
+            // Also filter by month in SQL for efficiency
+            var anr = await client.execute({ sql: "SELECT id,nome,telefone,email,data_nascimento FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!='' AND substr(data_nascimento,6,2)=? AND clinica_id=?", args: [anMesStr, clinica_id] })
+            console.log('[aniversariantes] clinica_id='+clinica_id+' mes='+anMes+' encontrados='+anr.rows.length)
             var hj = new Date()
             var anivs = []
             anr.rows.forEach(function(p) {
                 try {
                     var dn = p.data_nascimento || ''
-                    // Try different date formats
                     var n = null
                     if (dn.match(/^\d{4}-\d{2}-\d{2}/)) { n = new Date(dn.slice(0,10) + 'T12:00:00') }
                     else if (dn.match(/^\d{2}\/\d{2}\/\d{4}/)) { var pp = dn.split('/'); n = new Date(pp[2]+'-'+pp[1]+'-'+pp[0]+'T12:00:00') }
                     else { n = new Date(dn + 'T12:00:00') }
                     if (!n || isNaN(n.getTime())) return
-                    var mesPac = n.getMonth() + 1
-                    if (mesPac === anMes) {
-                        var dia = n.getDate()
-                        var prox = new Date(hj.getFullYear(), n.getMonth(), dia)
-                        if (prox < hj) prox.setFullYear(prox.getFullYear() + 1)
-                        var df = Math.floor((prox - hj) / 864e5)
-                        anivs.push({ id: p.id, nome: p.nome, telefone: p.telefone, data_nascimento: p.data_nascimento, dia: dia, dias_faltam: df, data_aniversario: prox.toISOString().slice(0, 10) })
-                    }
+                    var dia = n.getDate()
+                    anivs.push({ id: p.id, nome: p.nome, telefone: p.telefone, data_nascimento: p.data_nascimento, dia: dia })
                 } catch(e) {}
             })
             anivs.sort(function(a, b){ return a.dia - b.dia })
