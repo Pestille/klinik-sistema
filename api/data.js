@@ -267,10 +267,10 @@ module.exports = async function handler(req, res) {
         // DEBUG: ver datas de nascimento
         if (route === 'debug-nascimentos') {
             var client = getClient()
-            var dbgR = await client.execute({ sql: "SELECT id,nome,data_nascimento FROM pacientes WHERE (nome LIKE '%DULCE%' OR nome LIKE '%GUSTAVO%ENRICO%' OR nome LIKE '%dulce%' OR nome LIKE '%gustavo%') LIMIT 10", args: [] })
-            var dbgAll = await client.execute({ sql: "SELECT COUNT(*) as total, COUNT(CASE WHEN data_nascimento IS NOT NULL AND data_nascimento!='' THEN 1 END) as com_data FROM pacientes LIMIT 1", args: [] })
-            var dbgSample = await client.execute({ sql: "SELECT id,nome,data_nascimento FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!='' LIMIT 5", args: [] })
-            return res.status(200).json({ success: true, buscados: dbgR.rows, stats: dbgAll.rows[0], amostra: dbgSample.rows })
+            var dbgClinicas = await client.execute({ sql: "SELECT DISTINCT clinica_id, COUNT(*) as qtd FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!='' GROUP BY clinica_id", args: [] })
+            var dbgDulce = await client.execute({ sql: "SELECT id,nome,data_nascimento,clinica_id FROM pacientes WHERE nome LIKE '%DULCE ANNA%' LIMIT 3", args: [] })
+            var dbgMes3 = await client.execute({ sql: "SELECT COUNT(*) as total FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!='' AND substr(data_nascimento,6,2)='03'", args: [] })
+            return res.status(200).json({ success: true, clinicas: dbgClinicas.rows, dulce: dbgDulce.rows, mes3_total: dbgMes3.rows[0], server_month: new Date().getMonth()+1, server_date: new Date().toISOString() })
         }
 
         if (route === 'aniversariantes') {
