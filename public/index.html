@@ -4598,33 +4598,50 @@ async function pagarComissoesLote(profId){
 }
 
 // ── ANIVERSARIANTES ──────────────────────────────────────────────
-async function loadAniversariantes() {
+async function loadAniversariantes(mes) {
   var loadEl=document.getElementById('aniv-loading')
   var dataEl=document.getElementById('aniv-data')
   if(loadEl)loadEl.classList.remove('hidden')
   if(dataEl)dataEl.classList.add('hidden')
   try {
-    var d=await apiData('aniversariantes')
+    if(!mes) mes=new Date().getMonth()+1
+    var d=await apiData('aniversariantes',{mes:mes})
     var data=d.data||[]
     ST.aniversariantes=data
-    var MMS=['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ']
-    document.getElementById('aniv-list').innerHTML=data.length?data.map(function(a){
-      var nome=a.nome||'Paciente'
-      var tel=a.telefone||''
-      var dt=a.data_nascimento||''
-      var dd=dt?new Date(dt+'T12:00:00'):null;var dia=dd?dd.getDate():'—';var mes=dd?MMS[dd.getMonth()+1]:'—'
-      var nome1=nome.split(' ')[0]
-      var wa='https://wa.me/55'+tel.replace(/\D/g,'')+'?text='+encodeURIComponent('Feliz aniversário, '+nome1+'! A equipe Klinik te deseja um dia incrível!')
-      return '<div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid #F0F0F0">'+
-        '<div style="width:42px;height:42px;border-radius:50%;background:#1976D2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;flex-shrink:0">'+dia+'</div>'+
-        '<div style="flex:1;font-size:14px;font-weight:500;color:#333;text-transform:uppercase">'+nome+'</div>'+
-        (tel?'<a href="'+wa+'" target="_blank" style="background:#E8F5E9;color:#2E7D52;border:1px solid #C8E6C9;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:500;text-decoration:none;font-family:Roboto,sans-serif;white-space:nowrap">WhatsApp</a>':'')+
-      '</div>'
-    }).join(''):'<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum aniversariante nos próximos 60 dias</div>'
+
+    // Month selector
+    var mesesNomes=['','Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+    var selHtml='<div style="padding:12px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)">'+
+      '<span style="font-size:13px;color:var(--text3)">Mes:</span>'+
+      '<select id="aniv-mes" onchange="loadAniversariantes(parseInt(this.value))" style="border:1.5px solid var(--border);border-radius:6px;padding:6px 12px;font-size:14px;color:var(--text);background:#fff;outline:none">'
+    for(var mi=1;mi<=12;mi++){
+      selHtml+='<option value="'+mi+'"'+(mi===mes?' selected':'')+'>'+mesesNomes[mi]+'</option>'
+    }
+    selHtml+='</select><span style="font-size:13px;color:var(--text3)">'+data.length+' aniversariante'+(data.length!==1?'s':'')+'</span></div>'
+
+    var listHtml=''
+    if(data.length){
+      data.forEach(function(a){
+        var nome=a.nome||'Paciente'
+        var tel=a.telefone||''
+        var dia=a.dia||'—'
+        var nome1=nome.split(' ')[0]
+        var wa=tel?'https://wa.me/55'+tel.replace(/\D/g,'')+'?text='+encodeURIComponent('Feliz aniversario, '+nome1+'! A equipe Klinik te deseja um dia incrivel!'):''
+        listHtml+='<div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid #F0F0F0">'+
+          '<div style="width:42px;height:42px;border-radius:50%;background:#1976D2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;flex-shrink:0">'+dia+'</div>'+
+          '<div style="flex:1;font-size:14px;font-weight:500;color:#333;text-transform:uppercase">'+nome+'</div>'+
+          (tel?'<a href="'+wa+'" target="_blank" style="background:#E8F5E9;color:#2E7D52;border:1px solid #C8E6C9;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:500;text-decoration:none;font-family:Roboto,sans-serif;white-space:nowrap">WhatsApp</a>':'')+
+        '</div>'
+      })
+    }else{
+      listHtml='<div style="text-align:center;padding:40px;color:var(--text3)">Nenhum aniversariante em '+mesesNomes[mes]+'</div>'
+    }
+
+    document.getElementById('aniv-list').innerHTML=selHtml+listHtml
     if(loadEl)loadEl.classList.add('hidden')
     document.getElementById('aniv-data').classList.remove('hidden')
   } catch(e) {
-    document.getElementById('aniv-loading').innerHTML=`<div style="color:var(--red);text-align:center;padding:40px">${e.message}</div>`
+    document.getElementById('aniv-loading').innerHTML='<div style="color:var(--red);text-align:center;padding:40px">'+e.message+'</div>'
   }
 }
 

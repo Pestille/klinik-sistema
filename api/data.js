@@ -265,22 +265,32 @@ module.exports = async function handler(req, res) {
 
         // ── ANIVERSARIANTES ─────────────────────────────────────────────────
         if (route === 'aniversariantes') {
-            var dias3 = parseInt(q.dias) || 60
+            var anMes = parseInt(q.mes) || (new Date().getMonth() + 1)
+            var anMesStr = String(anMes).padStart(2, '0')
             var anr = await client.execute({ sql: "SELECT id,nome,telefone,email,data_nascimento FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!='' AND clinica_id=?", args: [clinica_id] })
             var hj = new Date()
             var anivs = []
             anr.rows.forEach(function(p) {
                 try {
-                    var n = new Date(p.data_nascimento + 'T12:00:00')
-                    if (isNaN(n.getTime())) return
-                    var prox = new Date(hj.getFullYear(), n.getMonth(), n.getDate())
-                    if (prox < hj) prox.setFullYear(prox.getFullYear() + 1)
-                    var df = Math.floor((prox - hj) / 864e5)
-                    if (df >= 0 && df <= dias3) anivs.push({ id: p.id, nome: p.nome, telefone: p.telefone, data_nascimento: p.data_nascimento, dias_faltam: df, data_aniversario: prox.toISOString().slice(0, 10) })
+                    var dn = p.data_nascimento || ''
+                    // Try different date formats
+                    var n = null
+                    if (dn.match(/^\d{4}-\d{2}-\d{2}/)) { n = new Date(dn.slice(0,10) + 'T12:00:00') }
+                    else if (dn.match(/^\d{2}\/\d{2}\/\d{4}/)) { var pp = dn.split('/'); n = new Date(pp[2]+'-'+pp[1]+'-'+pp[0]+'T12:00:00') }
+                    else { n = new Date(dn + 'T12:00:00') }
+                    if (!n || isNaN(n.getTime())) return
+                    var mesPac = n.getMonth() + 1
+                    if (mesPac === anMes) {
+                        var dia = n.getDate()
+                        var prox = new Date(hj.getFullYear(), n.getMonth(), dia)
+                        if (prox < hj) prox.setFullYear(prox.getFullYear() + 1)
+                        var df = Math.floor((prox - hj) / 864e5)
+                        anivs.push({ id: p.id, nome: p.nome, telefone: p.telefone, data_nascimento: p.data_nascimento, dia: dia, dias_faltam: df, data_aniversario: prox.toISOString().slice(0, 10) })
+                    }
                 } catch(e) {}
             })
-            anivs.sort(function(a, b){ return a.dias_faltam - b.dias_faltam })
-            return res.status(200).json({ success: true, data: anivs, total: anivs.length })
+            anivs.sort(function(a, b){ return a.dia - b.dia })
+            return res.status(200).json({ success: true, data: anivs, total: anivs.length, mes: anMes })
         }
 
         // ── CONTA CORRENTE ──────────────────────────────────────────────────
