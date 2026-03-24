@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Auth check — public routes skip authentication
-    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos', 'pagamentos-migrate', 'financeiro-migrate', 'financeiro-migrate-v2', 'financeiro-migrate-v3', 'comissoes-migrate', 'permissoes-migrate']
+    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos', 'pagamentos-migrate', 'financeiro-migrate', 'financeiro-migrate-v2', 'financeiro-migrate-v3', 'comissoes-migrate', 'permissoes-migrate', 'debug-nascimentos']
     var auth = null, clinica_id = null
     if (publicRoutes.indexOf(route) === -1) {
         auth = await authenticateRequest(req)
@@ -266,9 +266,11 @@ module.exports = async function handler(req, res) {
         // ── ANIVERSARIANTES ─────────────────────────────────────────────────
         // DEBUG: ver datas de nascimento
         if (route === 'debug-nascimentos') {
-            var dbgR = await client.execute({ sql: "SELECT id,nome,data_nascimento FROM pacientes WHERE clinica_id=? AND (nome LIKE '%DULCE%' OR nome LIKE '%GUSTAVO%ENRICO%' OR nome LIKE '%dulce%' OR nome LIKE '%gustavo%') LIMIT 10", args: [clinica_id] })
-            var dbgAll = await client.execute({ sql: "SELECT COUNT(*) as total, COUNT(CASE WHEN data_nascimento IS NOT NULL AND data_nascimento!='' THEN 1 END) as com_data FROM pacientes WHERE clinica_id=?", args: [clinica_id] })
-            return res.status(200).json({ success: true, pacientes: dbgR.rows, stats: dbgAll.rows[0] })
+            var client = getClient()
+            var dbgR = await client.execute({ sql: "SELECT id,nome,data_nascimento FROM pacientes WHERE (nome LIKE '%DULCE%' OR nome LIKE '%GUSTAVO%ENRICO%' OR nome LIKE '%dulce%' OR nome LIKE '%gustavo%') LIMIT 10", args: [] })
+            var dbgAll = await client.execute({ sql: "SELECT COUNT(*) as total, COUNT(CASE WHEN data_nascimento IS NOT NULL AND data_nascimento!='' THEN 1 END) as com_data FROM pacientes LIMIT 1", args: [] })
+            var dbgSample = await client.execute({ sql: "SELECT id,nome,data_nascimento FROM pacientes WHERE data_nascimento IS NOT NULL AND data_nascimento!='' LIMIT 5", args: [] })
+            return res.status(200).json({ success: true, buscados: dbgR.rows, stats: dbgAll.rows[0], amostra: dbgSample.rows })
         }
 
         if (route === 'aniversariantes') {
