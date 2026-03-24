@@ -1347,15 +1347,18 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 
     <!-- RELATÓRIOS -->
     <div class="page gpage" id="p-relatorios">
-      <div class="gpage-header"><div><div class="gpage-title">Relatórios</div></div></div>
+      <div class="gpage-header"><div><div class="gpage-title">Relatorios</div></div></div>
       <div class="gpage-body">
-        <div class="tabs">
-          <div class="tab active" onclick="relTab('producao',this)">Produção</div>
+        <div class="tabs" style="flex-wrap:wrap">
+          <div class="tab active" onclick="relTab('producao',this)">Producao</div>
           <div class="tab" onclick="relTab('procedimentos',this)">Procedimentos</div>
           <div class="tab" onclick="relTab('profissionais',this)">Profissionais</div>
           <div class="tab" onclick="relTab('produtividade',this)">Produtividade</div>
           <div class="tab" onclick="relTab('atendimentos',this)">Atendimentos</div>
-          <div class="tab" onclick="relTab('orcamentos',this)">Orçamentos</div>
+          <div class="tab" onclick="relTab('orcamentos',this)">Orcamentos</div>
+          <div class="tab" onclick="relTab('financeiro-rel',this)">Financeiro</div>
+          <div class="tab" onclick="relTab('comissoes-rel',this)">Comissoes</div>
+          <div class="tab" onclick="relTab('agendamentos-rel',this)">Agendamentos</div>
           <div class="tab" onclick="relTab('inativos',this)">Inativos</div>
         </div>
         <div class="tab-panel active" id="rel-producao">
@@ -1402,6 +1405,30 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
             <div class="kpi orange"><div class="kpi-label">Alta</div><div class="kpi-val" id="rel-alta">—</div></div>
             <div class="kpi green"><div class="kpi-label">Média</div><div class="kpi-val" id="rel-med">—</div></div>
           </div>
+        </div>
+        <!-- Financeiro -->
+        <div class="tab-panel" id="rel-financeiro-rel">
+          <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center">
+            <select id="rel-fin-periodo" style="border:1px solid #e0e0e0;border-radius:4px;padding:7px 12px;font-size:13px"><option value="1">Ultimo mes</option><option value="3" selected>Ultimos 3 meses</option><option value="6">Ultimos 6 meses</option><option value="12">Ultimo ano</option></select>
+            <button onclick="loadRelFinanceiro()" class="btn btn-sm" style="color:var(--orange)">Atualizar</button>
+          </div>
+          <div id="rel-financeiro-content" style="color:#9e9e9e;text-align:center;padding:30px">Clique Atualizar para carregar</div>
+        </div>
+        <!-- Comissoes -->
+        <div class="tab-panel" id="rel-comissoes-rel">
+          <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center">
+            <input type="month" id="rel-com-mes" style="border:1px solid #e0e0e0;border-radius:4px;padding:7px 12px;font-size:13px">
+            <button onclick="loadRelComissoes()" class="btn btn-sm" style="color:var(--orange)">Atualizar</button>
+          </div>
+          <div id="rel-comissoes-content" style="color:#9e9e9e;text-align:center;padding:30px">Clique Atualizar para carregar</div>
+        </div>
+        <!-- Agendamentos -->
+        <div class="tab-panel" id="rel-agendamentos-rel">
+          <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center">
+            <input type="month" id="rel-ag-mes" style="border:1px solid #e0e0e0;border-radius:4px;padding:7px 12px;font-size:13px">
+            <button onclick="loadRelAgendamentos()" class="btn btn-sm" style="color:var(--orange)">Atualizar</button>
+          </div>
+          <div id="rel-agendamentos-content" style="color:#9e9e9e;text-align:center;padding:30px">Clique Atualizar para carregar</div>
         </div>
       </div>
     </div>
@@ -4731,6 +4758,9 @@ function relTab(id,el) {
   if(id==='produtividade')loadRelProdutividade()
   if(id==='atendimentos')loadRelAtendimentos()
   if(id==='orcamentos')loadRelOrcamentos()
+  if(id==='financeiro-rel')loadRelFinanceiro()
+  if(id==='comissoes-rel')loadRelComissoes()
+  if(id==='agendamentos-rel')loadRelAgendamentos()
 }
 
 async function loadRelProdutividade(){
@@ -4813,6 +4843,151 @@ async function loadRelOrcamentos(){
         return '<tr><td class="pname">'+o.profissional+'</td><td>'+(o.orcamentos||0)+'</td><td style="color:#1B5E3B;font-weight:500">'+fmtBrl(o.valor_orcamentos||0)+'</td><td>'+fmtBrl(ticket)+'</td><td><div style="display:flex;align-items:center;gap:8px"><div style="width:60px;height:6px;background:#f0f0f0;border-radius:3px"><div style="height:100%;background:#E65100;border-radius:3px;width:'+pct+'%"></div></div><span style="color:#9e9e9e;font-size:12px">'+pct+'%</span></div></td></tr>'
       }).join('')+
       '</tbody></table></div></div>'
+  }catch(e){el.innerHTML='<div style="color:#D32F2F;padding:20px">'+e.message+'</div>'}
+}
+
+// ── RELATÓRIO FINANCEIRO ─────────────────────────────────────
+async function loadRelFinanceiro(){
+  var el=document.getElementById('rel-financeiro-content');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:#9e9e9e">Carregando...</div>'
+  try{
+    var meses=parseInt((document.getElementById('rel-fin-periodo')||{}).value)||3
+    var now=new Date()
+    var results=[]
+    for(var i=0;i<meses;i++){
+      var dt=new Date(now.getFullYear(),now.getMonth()-i,1)
+      var mesStr=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')
+      var d=await apiData('dre',{ano:dt.getFullYear(),mes_inicio:dt.getMonth()+1,mes_fim:dt.getMonth()+1})
+      if(d.success&&d.meses&&d.meses.length)results.push(d.meses[0])
+    }
+    results.reverse()
+    var mesesNomes=['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+
+    // Totais
+    var totRec=results.reduce(function(s,m){return s+(m.receita_bruta||0)},0)
+    var totDesp=results.reduce(function(s,m){return s+(m.custos_fixos||0)+(m.custos_variaveis||0)+(m.impostos||0)+(m.marketing||0)},0)
+    var totRes=totRec-totDesp
+
+    var html='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">'+
+      '<div style="background:#E8F5E9;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#2E7D52;text-transform:uppercase;margin-bottom:4px">Receita Total</div><div style="font-size:18px;font-weight:700;color:#1B5E3B">'+fmtBrl(totRec)+'</div></div>'+
+      '<div style="background:#FFEBEE;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#C62828;text-transform:uppercase;margin-bottom:4px">Despesas Total</div><div style="font-size:18px;font-weight:700;color:#C62828">'+fmtBrl(totDesp)+'</div></div>'+
+      '<div style="background:'+(totRes>=0?'#E8F5E9':'#FFEBEE')+';border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:'+(totRes>=0?'#2E7D52':'#C62828')+';text-transform:uppercase;margin-bottom:4px">Resultado</div><div style="font-size:18px;font-weight:700;color:'+(totRes>=0?'#1B5E3B':'#C62828')+'">'+fmtBrl(totRes)+'</div></div>'+
+      '<div style="background:#E3F2FD;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#1565C0;text-transform:uppercase;margin-bottom:4px">Margem</div><div style="font-size:18px;font-weight:700;color:#1565C0">'+(totRec>0?Math.round(totRes/totRec*100):0)+'%</div></div>'+
+    '</div>'
+
+    // Tabela mensal
+    html+='<div class="card"><div class="card-body p0"><table class="tbl" style="width:100%"><thead><tr><th>Mes</th><th style="text-align:right">Receita</th><th style="text-align:right">Custos Fixos</th><th style="text-align:right">Custos Variaveis</th><th style="text-align:right">Impostos</th><th style="text-align:right">Marketing</th><th style="text-align:right;font-weight:700">Resultado</th></tr></thead><tbody>'
+    results.forEach(function(m){
+      var res2=(m.receita_bruta||0)-(m.custos_fixos||0)-(m.custos_variaveis||0)-(m.impostos||0)-(m.marketing||0)
+      html+='<tr><td>'+mesesNomes[m.mes]+'/'+new Date().getFullYear()+'</td><td style="text-align:right;color:#1B5E3B">'+fmtBrl(m.receita_bruta)+'</td><td style="text-align:right;color:#C62828">'+fmtBrl(m.custos_fixos)+'</td><td style="text-align:right;color:#C62828">'+fmtBrl(m.custos_variaveis)+'</td><td style="text-align:right;color:#C62828">'+fmtBrl(m.impostos)+'</td><td style="text-align:right;color:#C62828">'+fmtBrl(m.marketing)+'</td><td style="text-align:right;font-weight:700;color:'+(res2>=0?'#1B5E3B':'#C62828')+'">'+fmtBrl(res2)+'</td></tr>'
+    })
+    html+='</tbody></table></div></div>'
+    el.innerHTML=html
+  }catch(e){el.innerHTML='<div style="color:#D32F2F;padding:20px">'+e.message+'</div>'}
+}
+
+// ── RELATÓRIO COMISSÕES ─────────────────────────────────────
+async function loadRelComissoes(){
+  var el=document.getElementById('rel-comissoes-content');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:#9e9e9e">Carregando...</div>'
+  try{
+    var mesInput=document.getElementById('rel-com-mes')
+    var mes=mesInput&&mesInput.value?mesInput.value:new Date().toISOString().slice(0,7)
+    if(mesInput&&!mesInput.value)mesInput.value=mes
+    var d=await apiData('comissoes-relatorio',{mes:mes})
+    var dados=d.dados||[]
+
+    // Agrupa por profissional
+    var porProf={}
+    dados.forEach(function(r){
+      if(!porProf[r.profissional_nome])porProf[r.profissional_nome]={pendente:0,pago:0,qtd:0}
+      porProf[r.profissional_nome][r.status]=(porProf[r.profissional_nome][r.status]||0)+(r.total||0)
+      porProf[r.profissional_nome].qtd+=(r.qtd||0)
+    })
+    var profList=Object.keys(porProf)
+    var totalPend=profList.reduce(function(s,p){return s+(porProf[p].pendente||0)},0)
+    var totalPago=profList.reduce(function(s,p){return s+(porProf[p].pago||0)},0)
+
+    var html='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">'+
+      '<div style="background:#FFF3E0;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#E65100;text-transform:uppercase;margin-bottom:4px">Pendente</div><div style="font-size:18px;font-weight:700;color:#E65100">'+fmtBrl(totalPend)+'</div></div>'+
+      '<div style="background:#E8F5E9;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#2E7D52;text-transform:uppercase;margin-bottom:4px">Pago</div><div style="font-size:18px;font-weight:700;color:#1B5E3B">'+fmtBrl(totalPago)+'</div></div>'+
+      '<div style="background:#E3F2FD;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#1565C0;text-transform:uppercase;margin-bottom:4px">Total Geral</div><div style="font-size:18px;font-weight:700;color:#1565C0">'+fmtBrl(totalPend+totalPago)+'</div></div>'+
+    '</div>'
+
+    if(!profList.length){
+      html+='<div style="text-align:center;padding:30px;color:#9e9e9e">Nenhuma comissao no periodo</div>'
+    }else{
+      html+='<div class="card"><div class="card-body p0"><table class="tbl" style="width:100%"><thead><tr><th>Profissional</th><th>Qtd Comissoes</th><th style="text-align:right">Pendente</th><th style="text-align:right">Pago</th><th style="text-align:right;font-weight:700">Total</th></tr></thead><tbody>'
+      profList.forEach(function(nome){
+        var p=porProf[nome]
+        html+='<tr><td class="pname">'+nome+'</td><td>'+p.qtd+'</td><td style="text-align:right;color:#E65100">'+fmtBrl(p.pendente||0)+'</td><td style="text-align:right;color:#1B5E3B">'+fmtBrl(p.pago||0)+'</td><td style="text-align:right;font-weight:700">'+fmtBrl((p.pendente||0)+(p.pago||0))+'</td></tr>'
+      })
+      html+='</tbody></table></div></div>'
+    }
+    el.innerHTML=html
+  }catch(e){el.innerHTML='<div style="color:#D32F2F;padding:20px">'+e.message+'</div>'}
+}
+
+// ── RELATÓRIO AGENDAMENTOS ─────────────────────────────────
+async function loadRelAgendamentos(){
+  var el=document.getElementById('rel-agendamentos-content');if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:30px;color:#9e9e9e">Carregando...</div>'
+  try{
+    var mesInput=document.getElementById('rel-ag-mes')
+    var mes=mesInput&&mesInput.value?mesInput.value:new Date().toISOString().slice(0,7)
+    if(mesInput&&!mesInput.value)mesInput.value=mes
+    var d=await apiData('agendamentos',{mes:mes,limit:2000})
+    var ag=d.agendamentos||[]
+
+    var total=ag.length
+    var confirmados=ag.filter(function(a){return a.status==='confirmado'}).length
+    var realizados=ag.filter(function(a){return a.status==='realizado'||a.status==='atendido'}).length
+    var faltas=ag.filter(function(a){return a.status==='faltou'||( a.status||'').match(/falt/)}).length
+    var cancelados=ag.filter(function(a){return a.status==='cancelado'}).length
+    var agendados=ag.filter(function(a){return a.status==='agendado'}).length
+
+    var html='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">'+
+      '<div style="background:#E3F2FD;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#1565C0;text-transform:uppercase;margin-bottom:4px">Total</div><div style="font-size:20px;font-weight:700;color:#1565C0">'+total+'</div></div>'+
+      '<div style="background:#FFF3E0;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#E65100;text-transform:uppercase;margin-bottom:4px">Agendados</div><div style="font-size:20px;font-weight:700;color:#E65100">'+agendados+'</div></div>'+
+      '<div style="background:#E8F5E9;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#2E7D52;text-transform:uppercase;margin-bottom:4px">Confirmados</div><div style="font-size:20px;font-weight:700;color:#1B5E3B">'+confirmados+'</div></div>'+
+      '<div style="background:#FFEBEE;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:#C62828;text-transform:uppercase;margin-bottom:4px">Faltas</div><div style="font-size:20px;font-weight:700;color:#C62828">'+faltas+'</div></div>'+
+      '<div style="background:#F5F5F5;border-radius:8px;padding:14px;text-align:center"><div style="font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Cancelados</div><div style="font-size:20px;font-weight:700;color:var(--text3)">'+cancelados+'</div></div>'+
+    '</div>'
+
+    // Por profissional
+    var porProf={}
+    ag.forEach(function(a){
+      var pn=a.profissional_nome||'Sem profissional'
+      if(!porProf[pn])porProf[pn]={total:0,faltas:0,cancelados:0}
+      porProf[pn].total++
+      if(a.status==='faltou'||(a.status||'').match(/falt/))porProf[pn].faltas++
+      if(a.status==='cancelado')porProf[pn].cancelados++
+    })
+    var profList=Object.keys(porProf).sort(function(a,b){return porProf[b].total-porProf[a].total})
+
+    html+='<div class="card" style="margin-bottom:16px"><div class="card-header"><div class="card-title">Por Profissional</div></div><div class="card-body p0"><table class="tbl" style="width:100%"><thead><tr><th>Profissional</th><th>Total</th><th>Faltas</th><th>Cancelados</th><th>% Faltas</th></tr></thead><tbody>'
+    profList.forEach(function(nome){
+      var p=porProf[nome]
+      var pctFalta=p.total>0?Math.round(p.faltas/p.total*100):0
+      html+='<tr><td class="pname">'+nome+'</td><td style="font-weight:500">'+p.total+'</td><td style="color:#C62828">'+p.faltas+'</td><td style="color:var(--text3)">'+p.cancelados+'</td><td><div style="display:flex;align-items:center;gap:6px"><div style="width:50px;height:6px;background:#f0f0f0;border-radius:3px"><div style="height:100%;background:'+(pctFalta>20?'#C62828':'#E65100')+';border-radius:3px;width:'+pctFalta+'%"></div></div><span style="font-size:12px;color:var(--text3)">'+pctFalta+'%</span></div></td></tr>'
+    })
+    html+='</tbody></table></div></div>'
+
+    // Por status (donut seria ideal, mas sem Chart.js neste contexto uso barras)
+    var porTipo={}
+    ag.forEach(function(a){var t=a.tipo||a.procedimento||'Outros';if(!porTipo[t])porTipo[t]=0;porTipo[t]++})
+    var tipoList=Object.keys(porTipo).sort(function(a,b){return porTipo[b]-porTipo[a]}).slice(0,15)
+
+    if(tipoList.length){
+      html+='<div class="card"><div class="card-header"><div class="card-title">Por Tipo/Procedimento (Top 15)</div></div><div class="card-body p0"><table class="tbl" style="width:100%"><thead><tr><th>Tipo</th><th>Qtd</th><th>%</th></tr></thead><tbody>'
+      tipoList.forEach(function(t){
+        var pct=total>0?Math.round(porTipo[t]/total*100):0
+        html+='<tr><td class="pname">'+t+'</td><td>'+porTipo[t]+'</td><td><div style="display:flex;align-items:center;gap:6px"><div style="width:80px;height:6px;background:#f0f0f0;border-radius:3px"><div style="height:100%;background:#1B5E3B;border-radius:3px;width:'+pct+'%"></div></div><span style="font-size:12px;color:var(--text3)">'+pct+'%</span></div></td></tr>'
+      })
+      html+='</tbody></table></div></div>'
+    }
+
+    el.innerHTML=html
   }catch(e){el.innerHTML='<div style="color:#D32F2F;padding:20px">'+e.message+'</div>'}
 }
 
