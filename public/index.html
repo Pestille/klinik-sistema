@@ -2027,7 +2027,7 @@ function nav(id) {
   if (id==='crm' && !ST.dashboard) loadDashboard()
   if (id==='financeiro' && !ST.recebimentos) loadFinanceiro()
   if (id==='profissionais' && !ST.profissionais) loadProfissionais()
-  if (id==='aniversariantes' && !ST.aniversariantes) loadAniversariantes()
+  if (id==='aniversariantes') loadAniversariantes()
   if (id==='relatorios' && ST.dashboard) renderRelatorios()
   if (id==='configuracoes') renderConfiguracoes()
   if (id==='usuarios') { loadUsuarios(); loadPermissoesPerfil() }
