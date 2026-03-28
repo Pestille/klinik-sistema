@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Auth check — public routes skip authentication
-    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos', 'pagamentos-migrate', 'financeiro-migrate', 'financeiro-migrate-v2', 'financeiro-migrate-v3', 'comissoes-migrate', 'permissoes-migrate']
+    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos', 'pagamentos-migrate', 'financeiro-migrate', 'financeiro-migrate-v2', 'financeiro-migrate-v3', 'comissoes-migrate', 'permissoes-migrate', 'testar-integracoes']
     var auth = null, clinica_id = null
     if (publicRoutes.indexOf(route) === -1) {
         auth = await authenticateRequest(req)
@@ -282,6 +282,52 @@ module.exports = async function handler(req, res) {
                 if (diagCli.rows.length) diag.asaas_clinica = diagCli.rows[0].asaas
             } catch(e) {}
             return res.status(200).json({ success: true, diagnostico: diag })
+        }
+
+        // ── TESTAR INTEGRACOES ──────────────────────────────────────
+        if (route === 'testar-integracoes') {
+            var client = getClient()
+            var resultado = { whatsapp: {}, email: {}, asaas: {}, webhook: {} }
+
+            // Test WhatsApp token
+            var waToken = process.env.WHATSAPP_TOKEN || ''
+            var waPhoneId = process.env.WHATSAPP_PHONE_ID || ''
+            if (waToken && waPhoneId) {
+                try {
+                    var waTest = await fetch('https://graph.facebook.com/v23.0/' + waPhoneId, {
+                        headers: { 'Authorization': 'Bearer ' + waToken }
+                    })
+                    var waData = await waTest.json()
+                    if (waData.error) {
+                        resultado.whatsapp = { status: 'ERRO', msg: waData.error.message, code: waData.error.code, tipo_token: waData.error.code === 190 ? 'Token expirado ou invalido' : 'Erro de permissao' }
+                    } else {
+                        resultado.whatsapp = { status: 'OK', phone_number: waData.display_phone_number || '', verified: waData.verified_name || '', quality: waData.quality_rating || '', phone_id: waPhoneId }
+                    }
+                } catch(e) { resultado.whatsapp = { status: 'ERRO', msg: e.message } }
+            } else {
+                resultado.whatsapp = { status: 'NAO_CONFIGURADO', msg: 'WHATSAPP_TOKEN ou WHATSAPP_PHONE_ID ausente' }
+            }
+
+            // Test Resend
+            var resendKey = process.env.RESEND_API_KEY || ''
+            if (resendKey) {
+                try {
+                    var resTest = await fetch('https://api.resend.com/domains', { headers: { 'Authorization': 'Bearer ' + resendKey } })
+                    var resData = await resTest.json()
+                    if (resTest.ok) {
+                        resultado.email = { status: 'OK', dominios: (resData.data || []).map(function(d) { return d.name }), remetente: process.env.RESEND_FROM_EMAIL || 'noreply@klinik.com.br' }
+                    } else {
+                        resultado.email = { status: 'ERRO', msg: resData.message || 'Erro na API' }
+                    }
+                } catch(e) { resultado.email = { status: 'ERRO', msg: e.message } }
+            } else {
+                resultado.email = { status: 'NAO_CONFIGURADO' }
+            }
+
+            // Webhook URL
+            resultado.webhook = { url: 'https://klinik-sistema.vercel.app/api/whatsapp-webhook', verify_token: process.env.WHATSAPP_VERIFY_TOKEN || 'klinik_verify_2026', template: process.env.WHATSAPP_TEMPLATE_NAME || 'confirmacao_consulta' }
+
+            return res.status(200).json({ success: true, resultado: resultado })
         }
 
         if (route === 'aniversariantes') {
