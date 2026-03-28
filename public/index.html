@@ -613,6 +613,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     </div>
   </div>
   <div class="topbar-right">
+    <button class="icon-btn" id="btn-voz" onclick="iniciarAssistenteVoz()" title="Assistente de Voz" style="position:relative"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg></button>
     <button class="icon-btn" title="Vídeos"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
     <button class="icon-btn" title="Suporte"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg></button>
     <button class="icon-btn" title="Notificações"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg><span class="badge"></span></button>
@@ -8006,6 +8007,108 @@ async function confirmarSaque(){
       alert('Erro: '+(r.error||'Falha ao solicitar saque'))
     }
   }catch(e){alert('Erro: '+e.message)}
+}
+
+// ── ASSISTENTE DE VOZ ────────────────────────────────────────
+var _vozReconhecendo=false
+function iniciarAssistenteVoz(){
+  if(_vozReconhecendo)return
+
+  var SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition
+  if(!SpeechRecognition){alert('Seu navegador nao suporta reconhecimento de voz. Use Chrome ou Edge.');return}
+
+  var btn=document.getElementById('btn-voz')
+
+  // Show listening modal
+  var old=document.getElementById('modal-voz');if(old)old.remove()
+  var m=document.createElement('div')
+  m.id='modal-voz'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:10005;display:flex;align-items:center;justify-content:center'
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:16px;width:400px;padding:40px;text-align:center">'+
+      '<div id="voz-status" style="font-size:16px;font-weight:500;color:var(--text);margin-bottom:20px">Ouvindo...</div>'+
+      '<div id="voz-anim" style="width:80px;height:80px;border-radius:50%;background:#C62828;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;animation:pulse 1.5s infinite">'+
+        '<svg width="36" height="36" viewBox="0 0 24 24" fill="#fff"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>'+
+      '</div>'+
+      '<div id="voz-texto" style="font-size:14px;color:var(--text3);min-height:24px;margin-bottom:16px"></div>'+
+      '<div id="voz-resposta" style="display:none;background:#E8F5E9;border-radius:8px;padding:16px;font-size:14px;color:#1B5E3B;text-align:left;margin-bottom:16px"></div>'+
+      '<button onclick="pararAssistenteVoz()" style="background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:8px 24px;font-size:13px;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+    '</div>'
+  m.onclick=function(ev){if(ev.target===m)pararAssistenteVoz()}
+  document.body.appendChild(m)
+
+  // Add pulse animation if not exists
+  if(!document.getElementById('style-pulse')){
+    var s=document.createElement('style');s.id='style-pulse'
+    s.textContent='@keyframes pulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.15);opacity:.8}100%{transform:scale(1);opacity:1}}'
+    document.head.appendChild(s)
+  }
+
+  var recognition=new SpeechRecognition()
+  recognition.lang='pt-BR'
+  recognition.continuous=false
+  recognition.interimResults=true
+  _vozReconhecendo=true
+
+  recognition.onresult=function(event){
+    var texto=''
+    for(var i=0;i<event.results.length;i++){texto+=event.results[i][0].transcript}
+    var textoEl=document.getElementById('voz-texto')
+    if(textoEl)textoEl.textContent='"'+texto+'"'
+    if(event.results[0].isFinal){
+      _vozReconhecendo=false
+      var statusEl=document.getElementById('voz-status')
+      if(statusEl)statusEl.textContent='Processando...'
+      var animEl=document.getElementById('voz-anim')
+      if(animEl){animEl.style.background='#1565C0';animEl.style.animation='none'}
+      processarPerguntaVoz(texto)
+    }
+  }
+
+  recognition.onerror=function(event){
+    _vozReconhecendo=false
+    var statusEl=document.getElementById('voz-status')
+    if(statusEl)statusEl.textContent='Erro: '+(event.error==='not-allowed'?'Permissao de microfone negada':event.error)
+    var animEl=document.getElementById('voz-anim')
+    if(animEl){animEl.style.background='#9E9E9E';animEl.style.animation='none'}
+  }
+
+  recognition.onend=function(){_vozReconhecendo=false}
+  recognition.start()
+}
+
+function pararAssistenteVoz(){
+  _vozReconhecendo=false
+  var m=document.getElementById('modal-voz');if(m)m.remove()
+  if(window.speechSynthesis)window.speechSynthesis.cancel()
+}
+
+async function processarPerguntaVoz(texto){
+  try{
+    var d=await apiData('assistente-voz',{pergunta:texto})
+    var resposta=d.resposta||'Desculpe, nao entendi.'
+
+    var statusEl=document.getElementById('voz-status')
+    if(statusEl)statusEl.textContent='Resposta:'
+    var animEl=document.getElementById('voz-anim')
+    if(animEl){animEl.style.background='#2E7D52';animEl.innerHTML='<svg width="36" height="36" viewBox="0 0 24 24" fill="#fff"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>'}
+    var respEl=document.getElementById('voz-resposta')
+    if(respEl){respEl.textContent=resposta;respEl.style.display='block'}
+
+    // Falar a resposta
+    if(window.speechSynthesis){
+      var utterance=new SpeechSynthesisUtterance(resposta)
+      utterance.lang='pt-BR'
+      utterance.rate=1.0
+      utterance.onend=function(){
+        setTimeout(function(){var m2=document.getElementById('modal-voz');if(m2)m2.querySelector('button').textContent='Fechar'},500)
+      }
+      window.speechSynthesis.speak(utterance)
+    }
+  }catch(e){
+    var statusEl2=document.getElementById('voz-status')
+    if(statusEl2)statusEl2.textContent='Erro: '+e.message
+  }
 }
 
 // ── INIT ────────────────────────────────────────────────────────

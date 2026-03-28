@@ -311,6 +311,80 @@ module.exports = async function handler(req, res) {
             } catch(e) { return res.status(200).json({ success: false, error: e.message }) }
         }
 
+        // ── ASSISTENTE VOZ (consulta agenda) ──────────────────────
+        if (route === 'assistente-voz') {
+            var avPergunta = (q.pergunta || '').toLowerCase()
+            var avProfNome = q.profissional || auth.nome || ''
+            var avHoje = new Date().toISOString().slice(0, 10)
+            var avAmanha = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+
+            var resposta = ''
+
+            // Detecta intenção
+            var ehHoje = avPergunta.match(/hoje|agora|dia/)
+            var ehAmanha = avPergunta.match(/amanh/)
+            var ehSemana = avPergunta.match(/semana/)
+            var ehQuantos = avPergunta.match(/quant|total|numero/)
+            var ehPacientes = avPergunta.match(/pacient|agenda|consulta|atendimento|horario/)
+            var ehFaltas = avPergunta.match(/falt|ausent/)
+            var ehAniversario = avPergunta.match(/anivers|parab/)
+
+            var dataBusca = avHoje
+            var periodoLabel = 'hoje'
+            if (ehAmanha) { dataBusca = avAmanha; periodoLabel = 'amanha' }
+
+            if (ehPacientes || ehQuantos || ehHoje || ehAmanha) {
+                // Busca agendamentos
+                var avSql = "SELECT a.data_hora, a.hora_fim, a.status, a.procedimento, a.tipo, COALESCE(p.nome,a.paciente_nome) as paciente_nome, COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE DATE(a.data_hora)=? AND a.clinica_id=? AND a.status NOT IN ('cancelado')"
+                var avArgs = [dataBusca, clinica_id]
+
+                // Filtrar por profissional se mencionado
+                if (avProfNome && !avPergunta.match(/todos|clinica|geral/)) {
+                    avSql += " AND (pr.nome LIKE ? OR a.profissional_nome LIKE ?)"
+                    avArgs.push('%' + avProfNome.split(' ')[0] + '%', '%' + avProfNome.split(' ')[0] + '%')
+                }
+                avSql += " ORDER BY a.data_hora ASC"
+
+                var avAg = await client.execute({ sql: avSql, args: avArgs })
+                var agList = avAg.rows
+
+                if (agList.length === 0) {
+                    resposta = 'Nao ha agendamentos para ' + periodoLabel + '.'
+                } else {
+                    resposta = 'Voce tem ' + agList.length + ' paciente' + (agList.length > 1 ? 's' : '') + ' ' + periodoLabel + '. '
+                    agList.forEach(function(a, i) {
+                        var hora = (a.data_hora || '').slice(11, 16) || ''
+                        resposta += (i + 1) + ': ' + (a.paciente_nome || 'Paciente') + ' as ' + hora
+                        if (a.tipo || a.procedimento) resposta += ', ' + (a.procedimento || a.tipo)
+                        resposta += '. '
+                    })
+
+                    // Resumo de status
+                    var confirmados = agList.filter(function(a) { return a.status === 'confirmado' }).length
+                    if (confirmados > 0) resposta += confirmados + ' confirmado' + (confirmados > 1 ? 's' : '') + '. '
+                }
+
+            } else if (ehFaltas) {
+                var avF = await client.execute({ sql: "SELECT COUNT(*) as total FROM agendamentos WHERE DATE(data_hora)=? AND (status='faltou' OR status LIKE '%falt%') AND clinica_id=?", args: [dataBusca, clinica_id] })
+                var faltas = avF.rows[0].total || 0
+                resposta = faltas > 0 ? faltas + ' paciente' + (faltas > 1 ? 's' : '') + ' faltaram ' + periodoLabel + '.' : 'Nenhuma falta registrada ' + periodoLabel + '.'
+
+            } else if (ehAniversario) {
+                var avMes = String(new Date().getMonth() + 1).padStart(2, '0')
+                var avAn = await client.execute({ sql: "SELECT nome FROM pacientes WHERE data_nascimento IS NOT NULL AND substr(data_nascimento,6,2)=? AND clinica_id=? LIMIT 10", args: [avMes, clinica_id] })
+                if (avAn.rows.length) {
+                    resposta = avAn.rows.length + ' aniversariantes este mes: ' + avAn.rows.map(function(a) { return a.nome.split(' ')[0] }).join(', ') + '.'
+                } else {
+                    resposta = 'Nenhum aniversariante encontrado este mes.'
+                }
+
+            } else {
+                resposta = 'Desculpe, nao entendi. Voce pode perguntar: quantos pacientes tenho hoje, quem sao meus pacientes de amanha, quantas faltas hoje, ou aniversariantes do mes.'
+            }
+
+            return res.status(200).json({ success: true, resposta: resposta, pergunta: avPergunta })
+        }
+
         // ── TESTAR INTEGRACOES ──────────────────────────────────────
         if (route === 'testar-integracoes') {
             var client = getClient()
