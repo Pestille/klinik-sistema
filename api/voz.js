@@ -147,14 +147,19 @@ async function handleAlexa(req, res) {
             if (intentName === 'AMAZON.HelpIntent') return alexaResp(res, 'Pergunte: quantos pacientes hoje, agenda de amanha, proximo paciente, faltas ou aniversariantes.', false)
             if (intentName === 'AMAZON.StopIntent' || intentName === 'AMAZON.CancelIntent') return alexaResp(res, 'Ate logo!', true)
 
-            if (!token) return alexaResp(res, 'Vincule sua conta primeiro. No app Alexa, va na skill Klinik Odontologia e vincule com seu token pessoal.', true, true)
-
             var client = getClient()
-            try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_voz TEXT") } catch(e) {}
-            var userR = await client.execute({ sql: "SELECT u.id, u.nome, u.clinica_id FROM usuarios u WHERE u.token_voz=? AND u.ativo=1", args: [token] })
-            if (!userR.rows.length) return alexaResp(res, 'Token invalido. Gere um novo no sistema Klinik.', true)
+            var clinica_id = 1, profNome = 'Profissional'
 
-            var user = userR.rows[0], clinica_id = user.clinica_id, profNome = user.nome || ''
+            // Try to identify user by token (optional - works without for general queries)
+            if (token) {
+                try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_voz TEXT") } catch(e) {}
+                var userR = await client.execute({ sql: "SELECT u.id, u.nome, u.clinica_id FROM usuarios u WHERE u.token_voz=? AND u.ativo=1", args: [token] })
+                if (userR.rows.length) { var user = userR.rows[0]; clinica_id = user.clinica_id || 1; profNome = user.nome || 'Profissional' }
+            } else {
+                // Without token, try first clinic
+                var cliR = await client.execute({ sql: "SELECT id FROM clinicas LIMIT 1", args: [] })
+                if (cliR.rows.length) clinica_id = cliR.rows[0].id
+            }
             var hoje = new Date().toISOString().slice(0, 10)
             var amanha = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
 
@@ -199,8 +204,6 @@ async function handleAlexa(req, res) {
     }
 }
 
-function alexaResp(res, text, endSession, linkAccount) {
-    var r = { version: '1.0', response: { outputSpeech: { type: 'PlainText', text: text }, shouldEndSession: endSession !== false } }
-    if (linkAccount) r.response.card = { type: 'LinkAccount' }
-    return res.status(200).json(r)
+function alexaResp(res, text, endSession) {
+    return res.status(200).json({ version: '1.0', response: { outputSpeech: { type: 'PlainText', text: text }, shouldEndSession: endSession !== false } })
 }
