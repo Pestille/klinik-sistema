@@ -1149,7 +1149,7 @@ module.exports = async function handler(req, res) {
                         try {
                             var waPhone = (pac.telefone || '').replace(/\D/g, '')
                             if (waPhone.length <= 11) waPhone = '55' + waPhone
-                            var waRes = await fetch('https://graph.facebook.com/v21.0/' + waPhoneId + '/messages', {
+                            var waRes = await fetch('https://graph.facebook.com/v23.0/' + waPhoneId + '/messages', {
                                 method: 'POST',
                                 headers: { 'Authorization': 'Bearer ' + waToken, 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ messaging_product: 'whatsapp', to: waPhone, type: 'text', text: { body: msgFinal } })
@@ -1969,7 +1969,7 @@ module.exports = async function handler(req, res) {
                     try {
                         var waPhone = (gcPaciente.telefone || '').replace(/\D/g, '')
                         if (waPhone.length <= 11) waPhone = '55' + waPhone
-                        await fetch('https://graph.facebook.com/v21.0/' + waPhoneId + '/messages', {
+                        await fetch('https://graph.facebook.com/v23.0/' + waPhoneId + '/messages', {
                             method: 'POST',
                             headers: { 'Authorization': 'Bearer ' + waToken, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ messaging_product: 'whatsapp', to: waPhone, type: 'text', text: { body: linkMsg } })
@@ -3366,7 +3366,7 @@ module.exports = async function handler(req, res) {
                             try {
                                 var waPhone = (gpPaciente.telefone || '').replace(/\D/g, '')
                                 if (waPhone.length <= 11) waPhone = '55' + waPhone
-                                await fetch('https://graph.facebook.com/v21.0/' + waPhoneId + '/messages', {
+                                await fetch('https://graph.facebook.com/v23.0/' + waPhoneId + '/messages', {
                                     method: 'POST',
                                     headers: { 'Authorization': 'Bearer ' + waToken, 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ messaging_product: 'whatsapp', to: waPhone, type: 'text', text: { body: linkMsg } })

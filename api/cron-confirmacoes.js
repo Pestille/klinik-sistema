@@ -112,15 +112,24 @@ module.exports = async function handler(req, res) {
                     try {
                         var waPhone = (ag.telefone || '').replace(/\D/g, '')
                         if (waPhone.length <= 11) waPhone = '55' + waPhone
-                        var waRes = await fetch('https://graph.facebook.com/v21.0/' + waPhoneId + '/messages', {
+                        // Try template first (required by Meta to initiate conversation)
+                        var waTemplateName = process.env.WHATSAPP_TEMPLATE_NAME || ''
+                        var waBody
+                        if (waTemplateName) {
+                            waBody = { messaging_product: 'whatsapp', to: waPhone, type: 'template', template: { name: waTemplateName, language: { code: 'pt_BR' }, components: [{ type: 'body', parameters: [{ type: 'text', text: ag.paciente_nome || '' }, { type: 'text', text: dataFmt + ' as ' + hora }, { type: 'text', text: ag.profissional_nome || '' }] }] } }
+                        } else {
+                            // Fallback: text message (only works within 24h conversation window)
+                            waBody = { messaging_product: 'whatsapp', to: waPhone, type: 'text', text: { body: msgFinal } }
+                        }
+                        var waRes = await fetch('https://graph.facebook.com/v23.0/' + waPhoneId + '/messages', {
                             method: 'POST',
                             headers: { 'Authorization': 'Bearer ' + waToken, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ messaging_product: 'whatsapp', to: waPhone, type: 'text', text: { body: msgFinal } })
+                            body: JSON.stringify(waBody)
                         })
                         var waSt = waRes.ok ? 'enviado' : 'erro'
                         var waErr = waRes.ok ? '' : await waRes.text()
-                        if (waRes.ok) totalEnv++; else totalErr++
-                        await client.execute({ sql: "INSERT INTO envios(paciente_id,canal,destinatario,mensagem_final,status,erro_msg,enviado_em,clinica_id) VALUES(?,?,?,?,?,?,datetime('now'),?)", args: [ag.paciente_id, 'whatsapp', ag.telefone, msgFinal, waSt, waErr, clinica_id] })
+                        if (waRes.ok) totalEnv++; else { totalErr++; console.error('[cron-wa] Erro:', waErr) }
+                        await client.execute({ sql: "INSERT INTO envios(paciente_id,canal,destinatario,mensagem_final,status,erro_msg,enviado_em,clinica_id) VALUES(?,?,?,?,?,?,datetime('now'),?)", args: [ag.paciente_id, 'whatsapp', waPhone, msgFinal, waSt, waErr, clinica_id] })
                     } catch(e) {
                         totalErr++
                         await client.execute({ sql: "INSERT INTO envios(paciente_id,canal,destinatario,mensagem_final,status,erro_msg,enviado_em,clinica_id) VALUES(?,?,?,?,?,?,datetime('now'),?)", args: [ag.paciente_id, 'whatsapp', ag.telefone, msgFinal, 'erro', e.message, clinica_id] })
