@@ -1,0 +1,115 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "klinik odontologia",
+      "intents": [
+        {
+          "name": "AgendaHojeIntent",
+          "slots": [],
+          "samples": [
+            "minha agenda de hoje",
+            "agenda de hoje",
+            "quantos pacientes tenho hoje",
+            "pacientes de hoje",
+            "quem são meus pacientes hoje",
+            "consultas de hoje",
+            "atendimentos de hoje",
+            "me fala minha agenda",
+            "meus pacientes de hoje",
+            "como está minha agenda hoje"
+          ]
+        },
+        {
+          "name": "AgendaAmanhaIntent",
+          "slots": [],
+          "samples": [
+            "minha agenda de amanhã",
+            "agenda de amanhã",
+            "quantos pacientes tenho amanhã",
+            "pacientes de amanhã",
+            "quem são meus pacientes amanhã",
+            "consultas de amanhã",
+            "atendimentos de amanhã",
+            "meus pacientes de amanhã",
+            "como está minha agenda amanhã"
+          ]
+        },
+        {
+          "name": "ProximoPacienteIntent",
+          "slots": [],
+          "samples": [
+            "próximo paciente",
+            "quem é meu próximo paciente",
+            "qual o próximo atendimento",
+            "próxima consulta",
+            "próximo agendamento",
+            "quem é o próximo"
+          ]
+        },
+        {
+          "name": "QuantosPacientesIntent",
+          "slots": [
+            {
+              "name": "periodo",
+              "type": "AMAZON.DATE"
+            }
+          ],
+          "samples": [
+            "quantos pacientes {periodo}",
+            "quantos agendamentos {periodo}",
+            "quantas consultas {periodo}",
+            "total de pacientes {periodo}",
+            "número de pacientes {periodo}",
+            "quantos pacientes tenho"
+          ]
+        },
+        {
+          "name": "FaltasIntent",
+          "slots": [
+            {
+              "name": "periodo",
+              "type": "AMAZON.DATE"
+            }
+          ],
+          "samples": [
+            "quantas faltas {periodo}",
+            "faltas de {periodo}",
+            "pacientes que faltaram {periodo}",
+            "quantos faltaram {periodo}",
+            "faltas hoje",
+            "quantas faltas hoje",
+            "ausências de {periodo}"
+          ]
+        },
+        {
+          "name": "AniversariantesIntent",
+          "slots": [],
+          "samples": [
+            "aniversariantes do mês",
+            "quem faz aniversário",
+            "aniversariantes",
+            "pacientes aniversariantes",
+            "aniversários do mês",
+            "quem aniversaria esse mês"
+          ]
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        }
+      ]
+    }
+  }
+}
