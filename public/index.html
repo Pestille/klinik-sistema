@@ -1640,6 +1640,66 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
           <div class="card-header"><div class="card-title">Resposta da IA</div></div>
           <div class="card-body" id="ia-quick-result" style="color:var(--text3);font-size:13px;line-height:1.6">Selecione uma sugestão acima para ver a resposta aqui.</div>
         </div>
+        <!-- Assistente de Voz para Siri/Google/Alexa -->
+        <div class="card" style="margin-top:16px">
+          <div class="card-header"><div class="card-title">Assistente de Voz (Siri, Google, Alexa)</div></div>
+          <div class="card-body">
+            <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Configure seu assistente pessoal para consultar a agenda por voz. Gere um token pessoal e siga as instrucoes do seu assistente.</div>
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px">
+              <button onclick="gerarTokenVoz()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Gerar Meu Token Pessoal</button>
+              <button onclick="iniciarAssistenteVoz()" style="background:var(--green3);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Testar no Navegador</button>
+            </div>
+            <div id="token-voz-area" style="display:none">
+              <div style="background:#F5F5F5;border-radius:8px;padding:16px;margin-bottom:16px">
+                <div style="font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Seu Token Pessoal</div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <input id="token-voz-valor" readonly style="flex:1;border:1.5px solid var(--border);border-radius:6px;padding:10px 12px;font-size:13px;color:var(--text);font-family:monospace;background:#fff">
+                  <button onclick="navigator.clipboard.writeText(document.getElementById('token-voz-valor').value);this.textContent='Copiado!';var b=this;setTimeout(function(){b.textContent='Copiar'},1500)" style="background:var(--green3);color:#fff;border:none;border-radius:6px;padding:10px 16px;font-size:12px;cursor:pointer;font-family:Roboto,sans-serif">Copiar</button>
+                </div>
+                <div style="font-size:11px;color:var(--text3);margin-top:6px">URL de consulta: <span id="token-voz-url" style="font-family:monospace;word-break:break-all"></span></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+                <div style="border:1px solid var(--border);border-radius:8px;padding:16px">
+                  <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Siri (iPhone)</div>
+                  <ol style="font-size:12px;color:var(--text2);padding-left:16px;line-height:1.8;margin:0">
+                    <li>Abra o app <strong>Atalhos</strong></li>
+                    <li>Crie novo atalho</li>
+                    <li>Adicione: <strong>Obter conteudo de URL</strong></li>
+                    <li>Cole a URL acima + <strong>&q=minha agenda hoje</strong></li>
+                    <li>Adicione: <strong>Obter valor do dicionario</strong> → chave: <strong>resposta</strong></li>
+                    <li>Adicione: <strong>Falar texto</strong></li>
+                    <li>Renomeie o atalho: <strong>"Minha Agenda"</strong></li>
+                    <li>Diga: <strong>"E ai Siri, Minha Agenda"</strong></li>
+                  </ol>
+                </div>
+                <div style="border:1px solid var(--border);border-radius:8px;padding:16px">
+                  <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Google Assistente</div>
+                  <ol style="font-size:12px;color:var(--text2);padding-left:16px;line-height:1.8;margin:0">
+                    <li>Abra o app <strong>Google Home</strong></li>
+                    <li>Va em <strong>Rotinas</strong></li>
+                    <li>Crie nova rotina</li>
+                    <li>Gatilho: <strong>"Minha agenda"</strong></li>
+                    <li>Acao: use app <strong>Tasker</strong> ou <strong>HTTP Shortcuts</strong></li>
+                    <li>Configure a URL com seu token</li>
+                    <li>Diga: <strong>"Ok Google, Minha Agenda"</strong></li>
+                  </ol>
+                </div>
+                <div style="border:1px solid var(--border);border-radius:8px;padding:16px">
+                  <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Alexa</div>
+                  <ol style="font-size:12px;color:var(--text2);padding-left:16px;line-height:1.8;margin:0">
+                    <li>Abra o app <strong>Alexa</strong></li>
+                    <li>Va em <strong>Mais</strong> → <strong>Rotinas</strong></li>
+                    <li>Crie nova rotina</li>
+                    <li>Quando: <strong>"Alexa, minha agenda"</strong></li>
+                    <li>Acao: <strong>Personalizada</strong></li>
+                    <li>Use a skill <strong>URL Routine</strong> com seu token</li>
+                    <li>Diga: <strong>"Alexa, minha agenda"</strong></li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -8006,6 +8066,21 @@ async function confirmarSaque(){
     }else{
       alert('Erro: '+(r.error||'Falha ao solicitar saque'))
     }
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+// ── TOKEN VOZ PARA ASSISTENTES EXTERNOS ──────────────────────
+async function gerarTokenVoz(){
+  try{
+    var r=await apiData('gerar-token-voz',{})
+    if(r.success&&r.token){
+      var area=document.getElementById('token-voz-area')
+      if(area)area.style.display='block'
+      var valEl=document.getElementById('token-voz-valor')
+      if(valEl)valEl.value=r.token
+      var urlEl=document.getElementById('token-voz-url')
+      if(urlEl)urlEl.textContent='https://klinik-sistema.vercel.app/api/voz?token='+r.token+'&q='
+    }else{alert(r.error||'Erro ao gerar token')}
   }catch(e){alert('Erro: '+e.message)}
 }
 

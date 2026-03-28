@@ -311,6 +311,22 @@ module.exports = async function handler(req, res) {
             } catch(e) { return res.status(200).json({ success: false, error: e.message }) }
         }
 
+        // ── GERAR TOKEN PESSOAL (para assistentes de voz externos) ──
+        if (route === 'gerar-token-voz') {
+            // Gera um token permanente para o profissional usar com Siri/Google/Alexa
+            var crypto = require('crypto')
+            var tokenVoz = crypto.randomBytes(24).toString('hex')
+            try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_voz TEXT") } catch(e) {}
+            await client.execute({ sql: "UPDATE usuarios SET token_voz=? WHERE id=?", args: [tokenVoz, auth.usuario_id] })
+            return res.status(200).json({ success: true, token: tokenVoz, nome: auth.nome, instrucoes: {
+                url_base: 'https://klinik-sistema.vercel.app/api/voz',
+                exemplo: 'https://klinik-sistema.vercel.app/api/voz?token=' + tokenVoz + '&q=quantos+pacientes+hoje',
+                siri: 'Crie um Atalho no iPhone: Obter conteudo de URL → Falar texto',
+                google: 'Use o app Routines do Google Assistant com acao HTTP',
+                alexa: 'Crie uma Rotina com acao personalizada'
+            }})
+        }
+
         // ── ASSISTENTE VOZ (consulta agenda) ──────────────────────
         if (route === 'assistente-voz') {
             var avPergunta = (q.pergunta || '').toLowerCase()
