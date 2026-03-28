@@ -23,7 +23,7 @@
 
 1. Menu lateral: **Endpoint**
 2. Selecione **HTTPS**
-3. **Default Region**: `https://klinik-sistema.vercel.app/api/alexa`
+3. **Default Region**: `https://klinik-sistema.vercel.app/api/voz`
 4. **SSL Certificate**: `My development endpoint is a sub-domain of a domain that has a wildcard certificate from a certificate authority`
 5. Clique **Save Endpoints**
 
