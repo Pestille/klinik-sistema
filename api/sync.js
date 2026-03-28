@@ -180,7 +180,7 @@ async function syncProfissionais(client) {
             await client.execute({ sql: "UPDATE profissionais SET nome=?,especialidade=?,cpf=?,email=?,telefone=?,cro=?,ativo=?,atualizado_em=datetime('now') WHERE clinicorp_id=?", args: [nome, esp, cpf, email, tel, cro, ativo, cid] })
             atualizados++
         } else {
-            await client.execute({ sql: "INSERT INTO profissionais(clinicorp_id,nome,especialidade,cpf,email,telefone,cro,ativo,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))", args: [cid, nome, esp, cpf, email, tel, cro, ativo] })
+            await client.execute({ sql: "INSERT INTO profissionais(clinicorp_id,clinica_id,nome,especialidade,cpf,email,telefone,cro,ativo,criado_em,atualizado_em) VALUES(?,1,?,?,?,?,?,?,?,datetime('now'),datetime('now'))", args: [cid, nome, esp, cpf, email, tel, cro, ativo] })
             inseridos++
         }
     }

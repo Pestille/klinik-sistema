@@ -195,7 +195,7 @@ module.exports = async function handler(req, res) {
 
         // ── PROFISSIONAIS ───────────────────────────────────────────────────
         if (route === 'profissionais') {
-            var rpr = await client.execute({ sql: "SELECT pr.*,COUNT(a.id) as total_agendamentos FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id WHERE pr.clinica_id=? GROUP BY pr.id ORDER BY pr.nome", args: [clinica_id] })
+            var rpr = await client.execute({ sql: "SELECT pr.*,COUNT(a.id) as total_agendamentos FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id WHERE (pr.clinica_id=? OR pr.clinica_id IS NULL) GROUP BY pr.id ORDER BY pr.nome", args: [clinica_id] })
             return res.status(200).json({ success: true, data: rpr.rows, total: rpr.rows.length })
         }
 
@@ -1121,7 +1121,8 @@ module.exports = async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var sp = req.body || {}
             if (!sp.id) return res.status(400).json({ success: false, error: 'ID obrigatório' })
-            await client.execute({ sql: "UPDATE profissionais SET nome=?,especialidade=?,cpf=?,email=?,telefone=?,cro=?,atualizado_em=datetime('now') WHERE id=? AND clinica_id=?", args: [sp.nome||'', sp.especialidade||'', sp.cpf||'', sp.email||'', sp.telefone||'', sp.cro||'', sp.id, clinica_id] })
+            // Update profissional - also set clinica_id if missing
+            await client.execute({ sql: "UPDATE profissionais SET nome=?,especialidade=?,cpf=?,email=?,telefone=?,cro=?,clinica_id=COALESCE(clinica_id,?),atualizado_em=datetime('now') WHERE id=?", args: [sp.nome||'', sp.especialidade||'', sp.cpf||'', sp.email||'', sp.telefone||'', sp.cro||'', clinica_id, sp.id] })
             return res.status(200).json({ success: true, msg: 'Profissional atualizado' })
         }
 
