@@ -264,6 +264,26 @@ module.exports = async function handler(req, res) {
         }
 
         // ── ANIVERSARIANTES ─────────────────────────────────────────────────
+        // ── DIAGNOSTICO INTEGRAÇÕES ──────────────────────────────────
+        if (route === 'diagnostico-integracoes') {
+            var diag = {
+                whatsapp_token: process.env.WHATSAPP_TOKEN ? 'Configurado (' + process.env.WHATSAPP_TOKEN.slice(0, 8) + '...)' : 'NAO CONFIGURADO',
+                whatsapp_phone_id: process.env.WHATSAPP_PHONE_ID || 'NAO CONFIGURADO',
+                whatsapp_template: process.env.WHATSAPP_TEMPLATE_NAME || 'Nao configurado (usando texto livre)',
+                resend_api_key: process.env.RESEND_API_KEY ? 'Configurado' : 'NAO CONFIGURADO',
+                resend_from: process.env.RESEND_FROM_EMAIL || 'noreply@klinik.com.br (default)',
+                asaas_api_key_env: process.env.ASAAS_API_KEY ? 'Configurado' : 'Nao configurado (usa da clinica)',
+                turso_url: process.env.TURSO_DATABASE_URL ? 'Configurado' : 'NAO CONFIGURADO',
+                stripe_key: process.env.STRIPE_SECRET_KEY ? 'Configurado' : 'NAO CONFIGURADO'
+            }
+            // Check Asaas from clinic
+            try {
+                var diagCli = await client.execute({ sql: "SELECT CASE WHEN asaas_api_key IS NOT NULL AND asaas_api_key!='' THEN 'Configurado na clinica' ELSE 'NAO CONFIGURADO' END as asaas FROM clinicas WHERE id=?", args: [clinica_id] })
+                if (diagCli.rows.length) diag.asaas_clinica = diagCli.rows[0].asaas
+            } catch(e) {}
+            return res.status(200).json({ success: true, diagnostico: diag })
+        }
+
         if (route === 'aniversariantes') {
             var anMes = parseInt(q.mes) || (new Date().getMonth() + 1)
             var anMesStr = String(anMes).padStart(2, '0')
