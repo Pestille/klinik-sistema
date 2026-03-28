@@ -5236,12 +5236,38 @@ async function iaQuick(p) {
 }
 
 const SEARCH_MODULOS=[
-  {id:'agenda',nome:'Agenda',desc:'Agendamentos e calendário'},
-  {id:'pacientes',nome:'Pacientes',desc:'Cadastro e prontuários'},
-  {id:'crm',nome:'CRC',desc:'Relacionamento com pacientes'},
-  {id:'financeiro',nome:'Financeiro',desc:'Controle financeiro'},
-  {id:'relatorios',nome:'Relatórios',desc:'Métricas e análises'},
-  {id:'profissionais',nome:'Profissionais',desc:'Equipe da clínica'}
+  // Páginas principais
+  {id:'agenda',nome:'Agenda',desc:'Agendamentos e calendario',tags:'consulta horario marcar agendar'},
+  {id:'pacientes',nome:'Pacientes',desc:'Cadastro e prontuarios',tags:'cadastro buscar nome cpf'},
+  {id:'dashboard',nome:'Dashboard Analitico',desc:'Graficos e indicadores',tags:'kpi metricas grafico analise'},
+  {id:'financeiro',nome:'Financeiro',desc:'Modulo financeiro completo',tags:'dinheiro receita despesa caixa boleto pix'},
+  {id:'relatorios',nome:'Relatorios',desc:'Relatorios e analises',tags:'producao procedimentos atendimentos orcamentos'},
+  {id:'profissionais',nome:'Profissionais',desc:'Equipe e comissoes',tags:'dentista medico equipe cro'},
+  {id:'metas',nome:'Metas',desc:'Metas de vendas, agendamentos e faltas',tags:'objetivo meta vendas'},
+  {id:'aniversariantes',nome:'Aniversariantes',desc:'Aniversariantes do mes',tags:'parabens aniversario felicitacao'},
+  {id:'crm',nome:'CRC / CRM',desc:'Relacionamento com pacientes inativos',tags:'inativo reativacao crm crc'},
+  {id:'marketing',nome:'Marketing',desc:'Campanhas e comunicacao',tags:'campanha email whatsapp disparos'},
+  {id:'usuarios',nome:'Usuarios e Permissoes',desc:'Gerenciar acessos ao sistema',tags:'permissao perfil senha acesso login'},
+  {id:'configuracoes',nome:'Configuracoes',desc:'Dados da clinica e integracoes',tags:'config asaas pix boleto whatsapp email'},
+  {id:'estoque',nome:'Controle de Estoque',desc:'Materiais e insumos',tags:'material produto estoque'},
+  {id:'indicacao',nome:'Controle de Indicacao',desc:'Indicacoes de pacientes',tags:'indicacao referencia'},
+  {id:'protetico',nome:'Controle Protetico',desc:'Laboratorio e proteses',tags:'protese laboratorio protetico'},
+  {id:'alinhadores',nome:'Alinhadores',desc:'Gestao de casos de alinhadores',tags:'invisalign alinhador ortodontia'},
+  {id:'planos',nome:'Planos de Recorrencia',desc:'Assinaturas e planos',tags:'recorrencia assinatura mensal'},
+  {id:'confirmacoes',nome:'Confirmacao e Alertas',desc:'Confirmacoes de consulta e alertas de retorno',tags:'confirmar lembrete retorno aviso'},
+  {id:'ia',nome:'Assistente IA',desc:'Scripts de WhatsApp e assistente de voz',tags:'ia inteligencia artificial voz siri google alexa'},
+  // Funções financeiras (navegam para financeiro + aba)
+  {id:'financeiro',nome:'DRE',desc:'Demonstrativo de Resultado do Exercicio',tags:'dre resultado lucro prejuizo',aba:'dre'},
+  {id:'financeiro',nome:'Fluxo de Caixa',desc:'Entradas e saidas por dia',tags:'fluxo caixa entrada saida',aba:'fluxocaixa'},
+  {id:'financeiro',nome:'Contas a Pagar',desc:'Despesas e fornecedores',tags:'despesa pagar fornecedor conta',aba:'contaspagar'},
+  {id:'financeiro',nome:'Contas a Receber',desc:'Parcelas pendentes de pacientes',tags:'receber parcela pendente',aba:'contasreceber'},
+  {id:'financeiro',nome:'Controle de Boletos',desc:'Boletos emitidos via Asaas',tags:'boleto asaas cobranca',aba:'boletos'},
+  {id:'financeiro',nome:'Controle de Cartoes',desc:'Pagamentos com cartao',tags:'cartao credito debito bandeira',aba:'cartoes'},
+  {id:'financeiro',nome:'Comissoes',desc:'Comissoes dos profissionais',tags:'comissao profissional pagamento',aba:'comissoes-rel'},
+  {id:'financeiro',nome:'Conciliacao Bancaria',desc:'Importar extrato e conciliar',tags:'conciliacao banco extrato csv',aba:'conciliacoes'},
+  {id:'financeiro',nome:'Receita Saude',desc:'Recibos para Receita Federal',tags:'receita saude recibo imposto renda federal',aba:'receitasaude'},
+  {id:'financeiro',nome:'Conta Corrente',desc:'Lancamentos e saldos',tags:'conta corrente saldo lancamento',aba:'contacorrente'},
+  {id:'financeiro',nome:'Extrato',desc:'Extrato de movimentacoes',tags:'extrato movimentacao',aba:'extrato'},
 ]
 let _searchTimer=null
 
@@ -5252,13 +5278,13 @@ function globalSearch(q){
 
   // Módulos
   const lower=q.toLowerCase()
-  const mods=SEARCH_MODULOS.filter(m=>m.nome.toLowerCase().includes(lower)||m.desc.toLowerCase().includes(lower))
+  const mods=SEARCH_MODULOS.filter(m=>m.nome.toLowerCase().includes(lower)||m.desc.toLowerCase().includes(lower)||(m.tags||'').toLowerCase().includes(lower))
   const secMod=document.getElementById('search-sec-modulos')
   if(mods.length){
-    secMod.innerHTML='<div class="search-drop-label">Módulos</div>'+mods.map(m=>
-      `<div class="search-drop-item" onclick="nav('${m.id}');closeSearchDrop()">
-        <div><div class="search-drop-name">${m.nome}</div><div class="search-drop-sub">${m.desc}</div></div>
-      </div>`).join('')
+    secMod.innerHTML='<div class="search-drop-label">Funcoes do Sistema</div>'+mods.slice(0,8).map(m=>{
+      var onclick=m.aba?"nav('"+m.id+"');setTimeout(function(){finNavTo('"+m.aba+"')},100);closeSearchDrop()":"nav('"+m.id+"');closeSearchDrop()"
+      return '<div class="search-drop-item" onclick="'+onclick+'"><div><div class="search-drop-name">'+m.nome+'</div><div class="search-drop-sub">'+m.desc+'</div></div></div>'
+    }).join('')
   } else { secMod.innerHTML='' }
 
   // Pacientes (debounce 300ms)
