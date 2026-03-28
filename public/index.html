@@ -2249,10 +2249,13 @@ function toggleAllProfs() {
 function getStatusIcon(status) {
   if(!status) return ''
   var s = status.toLowerCase()
-  if(s==='confirmado'||s==='confirmed') return '<span style="font-size:9px">&#10003;</span>'
-  if(s==='atendido'||s==='completed') return '<span style="font-size:9px">&#9679;</span>'
-  if(s==='cancelado'||s==='cancelled') return '<span style="font-size:9px">&#10007;</span>'
-  if(s==='faltou'||s==='no_show') return '<span style="font-size:9px">&#9888;</span>'
+  if(s==='confirmado'||s==='confirmed') return '<span title="Confirmado pelo paciente" style="font-size:11px;color:#4CAF50">&#10004;</span>'
+  if(s==='nao_confirmado') return '<span title="Paciente nao confirmou" style="font-size:11px;color:#F44336">&#10008;</span>'
+  if(s==='atendido'||s==='completed'||s==='realizado') return '<span title="Atendido" style="font-size:11px;color:#2196F3">&#9679;</span>'
+  if(s==='cancelado'||s==='cancelled') return '<span title="Cancelado" style="font-size:11px;color:#F44336">&#10007;</span>'
+  if(s==='faltou'||s==='no_show') return '<span title="Faltou" style="font-size:11px;color:#FF9800">&#9888;</span>'
+  if(s==='em_espera') return '<span title="Em espera" style="font-size:11px;color:#FF9800">&#9202;</span>'
+  if(s==='em_atendimento') return '<span title="Em atendimento" style="font-size:11px;color:#2196F3">&#9881;</span>'
   return ''
 }
 

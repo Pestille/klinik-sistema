@@ -113,12 +113,23 @@ module.exports = async function handler(req, res) {
                         var waPhone = (ag.telefone || '').replace(/\D/g, '')
                         if (waPhone.length <= 11) waPhone = '55' + waPhone
                         // Try template first (required by Meta to initiate conversation)
-                        var waTemplateName = process.env.WHATSAPP_TEMPLATE_NAME || ''
+                        var waTemplateName = process.env.WHATSAPP_TEMPLATE_NAME || 'confirmacao_consulta'
                         var waBody
                         if (waTemplateName) {
-                            waBody = { messaging_product: 'whatsapp', to: waPhone, type: 'template', template: { name: waTemplateName, language: { code: 'pt_BR' }, components: [{ type: 'body', parameters: [{ type: 'text', text: ag.paciente_nome || '' }, { type: 'text', text: dataFmt + ' as ' + hora }, { type: 'text', text: ag.profissional_nome || '' }] }] } }
+                            waBody = {
+                                messaging_product: 'whatsapp', to: waPhone, type: 'template',
+                                template: {
+                                    name: waTemplateName, language: { code: 'pt_BR' },
+                                    components: [
+                                        { type: 'body', parameters: [
+                                            { type: 'text', text: (ag.paciente_nome || '').split(' ')[0] },
+                                            { type: 'text', text: dataFmt + ' as ' + hora },
+                                            { type: 'text', text: ag.profissional_nome || '' }
+                                        ]}
+                                    ]
+                                }
+                            }
                         } else {
-                            // Fallback: text message (only works within 24h conversation window)
                             waBody = { messaging_product: 'whatsapp', to: waPhone, type: 'text', text: { body: msgFinal } }
                         }
                         var waRes = await fetch('https://graph.facebook.com/v23.0/' + waPhoneId + '/messages', {
