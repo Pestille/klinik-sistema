@@ -5050,25 +5050,29 @@ function renderConfiguracoes() {
             '<div id="cfg-asaas-status" style="font-size:11px;color:var(--text3);margin-top:4px"></div></div>'+
         '</div>'+
         '<div style="border-top:1px solid var(--border);padding-top:20px;margin-bottom:20px">'+
-          '<div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px">Integracao WhatsApp Business</div>'+
-          '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">Configure o WhatsApp Cloud API da Meta para envio de confirmacoes e mensagens aos pacientes. Cada clinica deve ter seu proprio WhatsApp Business.</div>'+
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px">'+
-            '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">WhatsApp Token</label>'+
-              '<input id="cfg-wa-token" type="password" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="Token da Meta API (deixe em branco para manter)">'+
-              '<div id="cfg-wa-status" style="font-size:11px;color:var(--text3);margin-top:4px"></div></div>'+
-            '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Phone Number ID</label>'+
-              '<input id="cfg-wa-phone" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="ID do numero WhatsApp Business"></div>'+
-          '</div>'+
-          '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Nome do Template de Confirmacao</label>'+
-            '<input id="cfg-wa-template" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="confirmacao_consulta (nome aprovado na Meta)"></div>'+
-        '</div>'+
-        '<div style="border-top:1px solid var(--border);padding-top:20px;margin-bottom:20px">'+
-          '<div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px">Integracao Email (Resend)</div>'+
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'+
-            '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Resend API Key</label>'+
-              '<input id="cfg-email-key" type="password" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="Deixe em branco para manter"></div>'+
-            '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Email Remetente</label>'+
-              '<input id="cfg-email-from" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box" placeholder="noreply@suaclinica.com.br"></div>'+
+          '<div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px">Comunicacao com Pacientes</div>'+
+          '<div style="font-size:11px;color:var(--text3);margin-bottom:16px">Ative as funcionalidades de comunicacao automatica. As mensagens sao enviadas pela plataforma Klinik em nome da sua clinica.</div>'+
+          '<div style="display:flex;flex-direction:column;gap:12px">'+
+            '<label style="display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:#fff">'+
+              '<input type="checkbox" id="cfg-confirmacao-wa" style="accent-color:#034030;width:18px;height:18px">'+
+              '<div><div style="font-size:14px;font-weight:500;color:var(--text)">Confirmacao de Agendamento via WhatsApp</div><div style="font-size:12px;color:var(--text3)">Envia mensagem automatica no dia anterior com botoes Sim/Nao. Atualiza status na agenda.</div></div>'+
+            '</label>'+
+            '<label style="display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:#fff">'+
+              '<input type="checkbox" id="cfg-confirmacao-email" style="accent-color:#034030;width:18px;height:18px">'+
+              '<div><div style="font-size:14px;font-weight:500;color:var(--text)">Confirmacao de Agendamento via Email</div><div style="font-size:12px;color:var(--text3)">Envia email de confirmacao no dia anterior a consulta.</div></div>'+
+            '</label>'+
+            '<label style="display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:#fff">'+
+              '<input type="checkbox" id="cfg-aniversario" style="accent-color:#034030;width:18px;height:18px">'+
+              '<div><div style="font-size:14px;font-weight:500;color:var(--text)">Felicitacoes de Aniversario</div><div style="font-size:12px;color:var(--text3)">Envia mensagem de parabens automatica no dia do aniversario do paciente.</div></div>'+
+            '</label>'+
+            '<label style="display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:#fff">'+
+              '<input type="checkbox" id="cfg-lembrete-retorno" style="accent-color:#034030;width:18px;height:18px">'+
+              '<div><div style="font-size:14px;font-weight:500;color:var(--text)">Lembretes de Retorno</div><div style="font-size:12px;color:var(--text3)">Envia lembrete quando o paciente esta proximo da data de retorno agendada.</div></div>'+
+            '</label>'+
+            '<label style="display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:#fff">'+
+              '<input type="checkbox" id="cfg-cobranca-auto" style="accent-color:#034030;width:18px;height:18px">'+
+              '<div><div style="font-size:14px;font-weight:500;color:var(--text)">Envio Automatico de Cobrancas</div><div style="font-size:12px;color:var(--text3)">Envia links de pagamento (boleto/PIX) automaticamente ao paciente via WhatsApp e Email.</div></div>'+
+            '</label>'+
           '</div>'+
         '</div>'+
         '<div style="display:flex;justify-content:flex-end"><button onclick="salvarDadosClinica()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s ease">Salvar Dados da Clinica</button></div>'+
@@ -6484,15 +6488,13 @@ async function carregarDadosClinica(){
     setVal('cfg-banco-conta',c.banco_conta)
     var asaasEl=document.getElementById('cfg-asaas-status')
     if(asaasEl) asaasEl.textContent=c.asaas_configurado?'API Key configurada':'Nao configurada'
-    // WhatsApp
-    setVal('cfg-wa-phone',c.whatsapp_phone_id)
-    setVal('cfg-wa-template',c.whatsapp_template)
-    var waEl=document.getElementById('cfg-wa-status')
-    if(waEl) waEl.textContent=c.whatsapp_configurado?'WhatsApp configurado':'Nao configurado'
-    // Email
-    setVal('cfg-email-from',c.resend_from_email)
-    var emailEl=document.getElementById('cfg-email-status')
-    if(emailEl) emailEl.textContent=c.email_configurado?'Email configurado':'Nao configurado'
+    // Toggles
+    var setCk=function(id,v){var el=document.getElementById(id);if(el)el.checked=!!v}
+    setCk('cfg-confirmacao-wa',c.cfg_confirmacao_wa)
+    setCk('cfg-confirmacao-email',c.cfg_confirmacao_email)
+    setCk('cfg-aniversario',c.cfg_aniversario)
+    setCk('cfg-lembrete-retorno',c.cfg_lembrete_retorno)
+    setCk('cfg-cobranca-auto',c.cfg_cobranca_auto)
   }catch(e){}
 }
 
@@ -6506,9 +6508,11 @@ async function salvarDadosClinica(){
       pix_tipo:gv('cfg-pix-tipo'),pix_chave:gv('cfg-pix-chave'),
       banco_nome:gv('cfg-banco-nome'),banco_agencia:gv('cfg-banco-agencia'),
       banco_conta:gv('cfg-banco-conta'),asaas_api_key:gv('cfg-asaas-key'),
-      whatsapp_token:gv('cfg-wa-token'),whatsapp_phone_id:gv('cfg-wa-phone'),
-      whatsapp_template:gv('cfg-wa-template'),
-      resend_api_key:gv('cfg-email-key'),resend_from_email:gv('cfg-email-from')
+      cfg_confirmacao_wa:document.getElementById('cfg-confirmacao-wa')&&document.getElementById('cfg-confirmacao-wa').checked?1:0,
+      cfg_confirmacao_email:document.getElementById('cfg-confirmacao-email')&&document.getElementById('cfg-confirmacao-email').checked?1:0,
+      cfg_aniversario:document.getElementById('cfg-aniversario')&&document.getElementById('cfg-aniversario').checked?1:0,
+      cfg_lembrete_retorno:document.getElementById('cfg-lembrete-retorno')&&document.getElementById('cfg-lembrete-retorno').checked?1:0,
+      cfg_cobranca_auto:document.getElementById('cfg-cobranca-auto')&&document.getElementById('cfg-cobranca-auto').checked?1:0
     }
     var r=await apiPost('salvar-dados-clinica',body)
     if(r.success){alert('Dados salvos com sucesso!');carregarDadosClinica()}

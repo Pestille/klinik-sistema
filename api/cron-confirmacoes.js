@@ -36,16 +36,25 @@ module.exports = async function handler(req, res) {
         for (var ci = 0; ci < clinicasR.rows.length; ci++) {
             var clinica_id = clinicasR.rows[ci].id
 
-            // Load per-clinic credentials (with env var fallback)
-            var cliCreds = { whatsapp_token: '', whatsapp_phone_id: '', whatsapp_template: '', resend_api_key: '', resend_from_email: '' }
+            // Load per-clinic settings
+            var cliCfg = {}
             try {
-                var credR = await client.execute({ sql: "SELECT whatsapp_token, whatsapp_phone_id, whatsapp_template, resend_api_key, resend_from_email FROM clinicas WHERE id=?", args: [clinica_id] })
-                if (credR.rows.length) cliCreds = credR.rows[0]
+                var cfgR = await client.execute({ sql: "SELECT nome, cfg_confirmacao_wa, cfg_confirmacao_email, cfg_aniversario, cfg_lembrete_retorno, cfg_cobranca_auto FROM clinicas WHERE id=?", args: [clinica_id] })
+                if (cfgR.rows.length) cliCfg = cfgR.rows[0]
             } catch(e) {}
-            var waToken = cliCreds.whatsapp_token || process.env.WHATSAPP_TOKEN || ''
-            var waPhoneId = cliCreds.whatsapp_phone_id || process.env.WHATSAPP_PHONE_ID || ''
-            var resendKey = cliCreds.resend_api_key || process.env.RESEND_API_KEY || ''
-            var resendFrom = cliCreds.resend_from_email || process.env.RESEND_FROM_EMAIL || 'noreply@klinik.com.br'
+
+            // Platform credentials (centralized - all clinics use the same)
+            var waToken = process.env.WHATSAPP_TOKEN || ''
+            var waPhoneId = process.env.WHATSAPP_PHONE_ID || ''
+            var resendKey = process.env.RESEND_API_KEY || ''
+            var resendFrom = process.env.RESEND_FROM_EMAIL || 'noreply@klinik.com.br'
+            var clinicaNome = cliCfg.nome || 'Klinik Odontologia'
+
+            // Skip if clinic has confirmations disabled
+            if (!cliCfg.cfg_confirmacao_wa && !cliCfg.cfg_confirmacao_email) {
+                clinicasProcessadas.push({ clinica_id: clinica_id, msg: 'Confirmacoes desativadas', enviados: 0 })
+                continue
+            }
             var totalEnv = 0, totalErr = 0
 
             // Load confirmation template for this clinic
@@ -90,8 +99,8 @@ module.exports = async function handler(req, res) {
                 }
                 var msgFinal = (tpl.corpo || '').replace(/\{\{(\w+)\}\}/g, function(_, key) { return vars[key] || '' })
 
-                // Send email
-                if (resendKey && ag.email) {
+                // Send email (only if clinic enabled it)
+                if (cliCfg.cfg_confirmacao_email && resendKey && ag.email) {
                     try {
                         var emailRes = await fetch('https://api.resend.com/emails', {
                             method: 'POST',
@@ -113,13 +122,13 @@ module.exports = async function handler(req, res) {
                     }
                 }
 
-                // Send WhatsApp
-                if (waToken && waPhoneId && ag.telefone) {
+                // Send WhatsApp (only if clinic enabled it)
+                if (cliCfg.cfg_confirmacao_wa && waToken && waPhoneId && ag.telefone) {
                     try {
                         var waPhone = (ag.telefone || '').replace(/\D/g, '')
                         if (waPhone.length <= 11) waPhone = '55' + waPhone
                         // Try template first (required by Meta to initiate conversation)
-                        var waTemplateName = cliCreds.whatsapp_template || process.env.WHATSAPP_TEMPLATE_NAME || 'confirmacao_consulta'
+                        var waTemplateName = process.env.WHATSAPP_TEMPLATE_NAME || 'confirmacao_consulta'
                         var waBody
                         if (waTemplateName) {
                             waBody = {
