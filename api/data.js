@@ -1836,14 +1836,23 @@ module.exports = async function handler(req, res) {
         if (route === 'salvar-dados-clinica') {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var dc = req.body || {}
+            // Ensure WhatsApp columns exist
+            try { await client.execute("ALTER TABLE clinicas ADD COLUMN whatsapp_token TEXT") } catch(e) {}
+            try { await client.execute("ALTER TABLE clinicas ADD COLUMN whatsapp_phone_id TEXT") } catch(e) {}
+            try { await client.execute("ALTER TABLE clinicas ADD COLUMN whatsapp_template TEXT") } catch(e) {}
+            try { await client.execute("ALTER TABLE clinicas ADD COLUMN resend_api_key TEXT") } catch(e) {}
+            try { await client.execute("ALTER TABLE clinicas ADD COLUMN resend_from_email TEXT") } catch(e) {}
+
             await client.execute({
-                sql: "UPDATE clinicas SET documento_tipo=?, documento_numero=?, razao_social=?, endereco=?, cidade=?, estado=?, cep=?, pix_tipo=?, pix_chave=?, banco_nome=?, banco_agencia=?, banco_conta=?, asaas_api_key=COALESCE(NULLIF(?, ''), asaas_api_key) WHERE id=?",
+                sql: "UPDATE clinicas SET documento_tipo=?, documento_numero=?, razao_social=?, endereco=?, cidade=?, estado=?, cep=?, pix_tipo=?, pix_chave=?, banco_nome=?, banco_agencia=?, banco_conta=?, asaas_api_key=COALESCE(NULLIF(?, ''), asaas_api_key), whatsapp_token=COALESCE(NULLIF(?, ''), whatsapp_token), whatsapp_phone_id=COALESCE(NULLIF(?, ''), whatsapp_phone_id), whatsapp_template=COALESCE(NULLIF(?, ''), whatsapp_template), resend_api_key=COALESCE(NULLIF(?, ''), resend_api_key), resend_from_email=COALESCE(NULLIF(?, ''), resend_from_email) WHERE id=?",
                 args: [
                     dc.documento_tipo || '', dc.documento_numero || '', dc.razao_social || '',
                     dc.endereco || '', dc.cidade || '', dc.estado || '', dc.cep || '',
                     dc.pix_tipo || '', dc.pix_chave || '',
                     dc.banco_nome || '', dc.banco_agencia || '', dc.banco_conta || '',
-                    dc.asaas_api_key || '', clinica_id
+                    dc.asaas_api_key || '', dc.whatsapp_token || '', dc.whatsapp_phone_id || '',
+                    dc.whatsapp_template || '', dc.resend_api_key || '', dc.resend_from_email || '',
+                    clinica_id
                 ]
             })
             return res.status(200).json({ success: true, msg: 'Dados da clínica atualizados' })
@@ -1851,7 +1860,12 @@ module.exports = async function handler(req, res) {
 
         // ── DADOS-CLINICA ──────────────────────────────────────────────
         if (route === 'dados-clinica') {
-            var dcRow = await client.execute({ sql: "SELECT id, nome, cnpj, cidade, estado, documento_tipo, documento_numero, razao_social, endereco, cep, pix_tipo, pix_chave, banco_nome, banco_agencia, banco_conta, saldo, CASE WHEN asaas_api_key IS NOT NULL AND asaas_api_key != '' THEN 1 ELSE 0 END as asaas_configurado FROM clinicas WHERE id=?", args: [clinica_id] })
+            try { await client.execute("ALTER TABLE clinicas ADD COLUMN whatsapp_token TEXT") } catch(e) {}
+            try { await client.execute("ALTER TABLE clinicas ADD COLUMN whatsapp_phone_id TEXT") } catch(e) {}
+            try { await client.execute("ALTER TABLE clinicas ADD COLUMN whatsapp_template TEXT") } catch(e) {}
+            try { await client.execute("ALTER TABLE clinicas ADD COLUMN resend_api_key TEXT") } catch(e) {}
+            try { await client.execute("ALTER TABLE clinicas ADD COLUMN resend_from_email TEXT") } catch(e) {}
+            var dcRow = await client.execute({ sql: "SELECT id, nome, cnpj, cidade, estado, documento_tipo, documento_numero, razao_social, endereco, cep, pix_tipo, pix_chave, banco_nome, banco_agencia, banco_conta, saldo, CASE WHEN asaas_api_key IS NOT NULL AND asaas_api_key != '' THEN 1 ELSE 0 END as asaas_configurado, CASE WHEN whatsapp_token IS NOT NULL AND whatsapp_token != '' THEN 1 ELSE 0 END as whatsapp_configurado, whatsapp_phone_id, whatsapp_template, CASE WHEN resend_api_key IS NOT NULL AND resend_api_key != '' THEN 1 ELSE 0 END as email_configurado, resend_from_email FROM clinicas WHERE id=?", args: [clinica_id] })
             if (!dcRow.rows.length) return res.status(404).json({ success: false, error: 'Clínica não encontrada' })
             return res.status(200).json({ success: true, clinica: dcRow.rows[0] })
         }

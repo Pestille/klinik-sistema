@@ -32,6 +32,20 @@ module.exports = async function handler(req, res) {
             for (var ci = 0; ci < changes.length; ci++) {
                 var value = changes[ci].value || {}
                 var messages = value.messages || []
+                var waPhoneIdRecv = (value.metadata && value.metadata.phone_number_id) || ''
+
+                // Identify clinic by WhatsApp phone_id
+                var clinicaWa = null
+                if (waPhoneIdRecv) {
+                    try {
+                        var cliR = await client.execute({ sql: "SELECT id, whatsapp_token, whatsapp_phone_id FROM clinicas WHERE whatsapp_phone_id=? LIMIT 1", args: [waPhoneIdRecv] })
+                        if (cliR.rows.length) clinicaWa = cliR.rows[0]
+                    } catch(e) {}
+                }
+                // Fallback to env var phone_id
+                if (!clinicaWa && waPhoneIdRecv === (process.env.WHATSAPP_PHONE_ID || '')) {
+                    clinicaWa = { id: 1, whatsapp_token: process.env.WHATSAPP_TOKEN || '', whatsapp_phone_id: waPhoneIdRecv }
+                }
 
                 for (var mi = 0; mi < messages.length; mi++) {
                     var msg = messages[mi]
@@ -71,10 +85,12 @@ module.exports = async function handler(req, res) {
                     var agFound = null
                     for (var ti = 0; ti < telVariantes.length; ti++) {
                         var telLike = '%' + telVariantes[ti].slice(-8) + '%' // últimos 8 dígitos
-                        var agR = await client.execute({
-                            sql: "SELECT a.id, a.status, a.data_hora, a.paciente_id, COALESCE(p.nome, a.paciente_nome) as paciente_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id WHERE (p.telefone LIKE ? OR a.paciente_telefone LIKE ?) AND DATE(a.data_hora) >= DATE('now') AND DATE(a.data_hora) <= DATE('now', '+2 days') AND a.status NOT IN ('cancelado','realizado') ORDER BY a.data_hora ASC LIMIT 1",
-                            args: [telLike, telLike]
-                        })
+                        var agClinicaId = clinicaWa ? clinicaWa.id : null
+                        var agSql = "SELECT a.id, a.status, a.data_hora, a.paciente_id, a.clinica_id, COALESCE(p.nome, a.paciente_nome) as paciente_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id WHERE (p.telefone LIKE ? OR a.paciente_telefone LIKE ?) AND DATE(a.data_hora) >= DATE('now') AND DATE(a.data_hora) <= DATE('now', '+2 days') AND a.status NOT IN ('cancelado','realizado')"
+                        var agArgs = [telLike, telLike]
+                        if (agClinicaId) { agSql += " AND a.clinica_id=?"; agArgs.push(agClinicaId) }
+                        agSql += " ORDER BY a.data_hora ASC LIMIT 1"
+                        var agR = await client.execute({ sql: agSql, args: agArgs })
                         if (agR.rows.length) { agFound = agR.rows[0]; break }
                     }
 
@@ -83,8 +99,8 @@ module.exports = async function handler(req, res) {
                         continue
                     }
 
-                    var waToken = process.env.WHATSAPP_TOKEN || ''
-                    var waPhoneId = process.env.WHATSAPP_PHONE_ID || ''
+                    var waToken = (clinicaWa && clinicaWa.whatsapp_token) || process.env.WHATSAPP_TOKEN || ''
+                    var waPhoneId = (clinicaWa && clinicaWa.whatsapp_phone_id) || process.env.WHATSAPP_PHONE_ID || ''
 
                     // Paciente respondeu SIM
                     if (respostaLower === 'sim' || respostaLower === 'yes' || respostaLower === 'confirmo' || respostaLower === 'quick reply') {
