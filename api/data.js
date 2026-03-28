@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Auth check — public routes skip authentication
-    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos', 'pagamentos-migrate', 'financeiro-migrate', 'financeiro-migrate-v2', 'financeiro-migrate-v3', 'comissoes-migrate', 'permissoes-migrate']
+    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos', 'pagamentos-migrate', 'financeiro-migrate', 'financeiro-migrate-v2', 'financeiro-migrate-v3', 'comissoes-migrate', 'permissoes-migrate', 'testar-envio-wa']
     var auth = null, clinica_id = null
     if (publicRoutes.indexOf(route) === -1) {
         auth = await authenticateRequest(req)
@@ -282,6 +282,33 @@ module.exports = async function handler(req, res) {
                 if (diagCli.rows.length) diag.asaas_clinica = diagCli.rows[0].asaas
             } catch(e) {}
             return res.status(200).json({ success: true, diagnostico: diag })
+        }
+
+        // ── TESTAR ENVIO WA ──────────────────────────────────────
+        if (route === 'testar-envio-wa') {
+            var waToken = process.env.WHATSAPP_TOKEN || ''
+            var waPhoneId = process.env.WHATSAPP_PHONE_ID || ''
+            var tel = (req.query || {}).tel || '5567999915131'
+            if (!waToken || !waPhoneId) return res.status(200).json({ success: false, error: 'WA nao configurado' })
+            try {
+                var tpl = (req.query || {}).template || process.env.WHATSAPP_TEMPLATE_NAME || 'confirmacao_consulta'
+                var waRes = await fetch('https://graph.facebook.com/v23.0/' + waPhoneId + '/messages', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + waToken, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messaging_product: 'whatsapp', to: tel, type: 'template',
+                        template: { name: tpl, language: { code: 'pt_BR' },
+                            components: [{ type: 'body', parameters: [
+                                { type: 'text', text: 'Rafael' },
+                                { type: 'text', text: '28/03/2026 as 14:00' },
+                                { type: 'text', text: 'Dra. Caroline' }
+                            ]}]
+                        }
+                    })
+                })
+                var waData = await waRes.json()
+                return res.status(200).json({ success: waRes.ok, status: waRes.status, resposta: waData })
+            } catch(e) { return res.status(200).json({ success: false, error: e.message }) }
         }
 
         // ── TESTAR INTEGRACOES ──────────────────────────────────────
