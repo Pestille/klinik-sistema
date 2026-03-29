@@ -4501,7 +4501,7 @@ async function salvarProfissional(){
     console.log('[salvarProfissional] resposta:', JSON.stringify(d))
     if(d.success){
       // Update local data and re-render in place
-      p.nome=nome;p.name=nome;p.Name=nome;p.telefone=tel;p.email=email;p.cpf=cpf;p.cro=cro;p.especialidade=esp;p.specialty=esp
+      Object.assign(p,body);p.name=nome;p.Name=nome;p.specialty=body.especialidade
       ST.profissionais=null
       // Reload profissional detail in place
       try{
