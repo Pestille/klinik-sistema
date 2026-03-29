@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Auth check — public routes skip authentication
-    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos', 'pagamentos-migrate', 'financeiro-migrate', 'financeiro-migrate-v2', 'financeiro-migrate-v3', 'comissoes-migrate', 'permissoes-migrate']
+    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos', 'pagamentos-migrate', 'financeiro-migrate', 'financeiro-migrate-v2', 'financeiro-migrate-v3', 'comissoes-migrate', 'permissoes-migrate', 'debug-prof']
     var auth = null, clinica_id = null
     if (publicRoutes.indexOf(route) === -1) {
         auth = await authenticateRequest(req)
@@ -264,6 +264,12 @@ module.exports = async function handler(req, res) {
         }
 
         // ── ANIVERSARIANTES ─────────────────────────────────────────────────
+        if (route === 'debug-prof') {
+            var client2 = getClient()
+            var dp = await client2.execute({ sql: "SELECT id, nome, especialidade, cpf, email, telefone, cro, clinica_id, clinicorp_id FROM profissionais WHERE id=7 OR nome LIKE '%MAISA%' LIMIT 5", args: [] })
+            return res.status(200).json({ success: true, profissionais: dp.rows })
+        }
+
         // ── DIAGNOSTICO INTEGRAÇÕES ──────────────────────────────────
         if (route === 'diagnostico-integracoes') {
             var diag = {
