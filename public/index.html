@@ -2200,7 +2200,7 @@ async function loadAgenda() {
     if(!ST.profissionais||!ST.profissionais.length){
       try{
         var pd=await apiData('profissionais')
-        ST.profissionais=(pd.data||pd.profissionais||[]).map(function(p){return {id:p.id,name:p.nome,Name:p.nome,nome:p.nome,specialty:p.especialidade,especialidade:p.especialidade}})
+        ST.profissionais=(pd.data||pd.profissionais||[]).map(function(p){return {id:p.id,nome:p.nome,name:p.nome,Name:p.nome,specialty:p.especialidade,especialidade:p.especialidade,cpf:p.cpf||'',email:p.email||'',telefone:p.telefone||'',cro:p.cro||'',cro_uf:p.cro_uf||'',rg:p.rg||'',sexo:p.sexo||'',estado_civil:p.estado_civil||'',data_nascimento:p.data_nascimento||'',endereco:p.endereco||'',numero:p.numero||'',bairro:p.bairro||'',cidade:p.cidade||'',uf:p.uf||'',cep:p.cep||'',complemento:p.complemento||'',total_agendamentos:p.total_agendamentos||0}})
       }catch(e2){ST.profissionais=[]}
     }
     // Load current month's agendamentos
@@ -3045,7 +3045,7 @@ async function abrirOrcamentoModal(orcId){
   if(!ST.profissionais||!ST.profissionais.length){
     try{
       var pd=await apiData('profissionais')
-      ST.profissionais=(pd.data||[]).map(function(p){return {id:p.id,nome:p.nome,name:p.nome,Name:p.nome,especialidade:p.especialidade,cpf:p.cpf||'',email:p.email||'',telefone:p.telefone||'',cro:p.cro||''}})
+      ST.profissionais=(pd.data||[]).map(function(p){return {id:p.id,nome:p.nome,name:p.nome,Name:p.nome,specialty:p.especialidade,especialidade:p.especialidade,cpf:p.cpf||'',email:p.email||'',telefone:p.telefone||'',cro:p.cro||'',cro_uf:p.cro_uf||'',rg:p.rg||'',sexo:p.sexo||'',estado_civil:p.estado_civil||'',data_nascimento:p.data_nascimento||'',endereco:p.endereco||'',numero:p.numero||'',bairro:p.bairro||'',cidade:p.cidade||'',uf:p.uf||'',cep:p.cep||'',complemento:p.complemento||'',total_agendamentos:p.total_agendamentos||0}})
     }catch(e2){ST.profissionais=[]}
   }
   var profs=ST.profissionais||[]
@@ -7211,7 +7211,7 @@ async function renderPlanoFichaClinica(el,p){
     if(!ST.profissionais||!ST.profissionais.length){
       try{
         var pd=await apiData('profissionais')
-        ST.profissionais=(pd.data||[]).map(function(pr){return {id:pr.id,nome:pr.nome,name:pr.nome,Name:pr.nome,especialidade:pr.especialidade,cro:pr.cro||''}})
+        ST.profissionais=(pd.data||[]).map(function(pr){return {id:pr.id,nome:pr.nome,name:pr.nome,Name:pr.nome,specialty:pr.especialidade,especialidade:pr.especialidade,cpf:pr.cpf||'',email:pr.email||'',telefone:pr.telefone||'',cro:pr.cro||'',cro_uf:pr.cro_uf||'',rg:pr.rg||'',sexo:pr.sexo||'',estado_civil:pr.estado_civil||'',data_nascimento:pr.data_nascimento||'',endereco:pr.endereco||'',numero:pr.numero||'',bairro:pr.bairro||'',cidade:pr.cidade||'',uf:pr.uf||'',cep:pr.cep||'',complemento:pr.complemento||'',total_agendamentos:pr.total_agendamentos||0}})
       }catch(e2){}
     }
     var dOrc=await apiData('orcamentos-paciente',{paciente_id:pacId})
