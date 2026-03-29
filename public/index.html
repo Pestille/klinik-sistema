@@ -1932,6 +1932,26 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 
 
 <script>
+// ── API HELPERS (must be first) ─────────────────────────────────
+function _apiHeaders(extra){
+  var h=Object.assign({'Content-Type':'application/json'},extra||{})
+  var tk=localStorage.getItem('klinik_token')
+  if(tk)h['Authorization']='Bearer '+tk
+  return h
+}
+async function apiData(rota,params){
+  var qs=Object.entries(params||{}).filter(function(kv){return kv[1]!==undefined&&kv[1]!==''}).map(function(kv){return encodeURIComponent(kv[0])+'='+encodeURIComponent(kv[1])}).join('&')
+  var r=await fetch('/api/data?r='+rota+(qs?'&'+qs:''),{headers:_apiHeaders()})
+  if(r.status===401){doLogout();throw new Error('Sessão expirada')}
+  if(!r.ok)throw new Error('HTTP '+r.status)
+  return r.json()
+}
+async function apiPost(rota,body){
+  var r=await fetch('/api/data?r='+rota,{method:'POST',headers:_apiHeaders(),body:JSON.stringify(body)})
+  if(r.status===401){doLogout();throw new Error('Sessão expirada')}
+  return r.json()
+}
+
 // ── AUTH ────────────────────────────────────────────────────────
 var KLINIK_USER = null
 

@@ -2540,6 +2540,8 @@ module.exports = async function handler(req, res) {
 
         // ── COMISSOES-CONFIG (CRUD) ──────────────────────────────────
         if (route === 'comissoes-config') {
+            // Auto-create table if missing
+            try { await client.execute("CREATE TABLE IF NOT EXISTS comissoes_config (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, profissional_id INTEGER, tabela_preco TEXT DEFAULT 'PARTICULAR', momento TEXT NOT NULL, tipo TEXT NOT NULL, valor REAL NOT NULL, valido_desde TEXT, valido_ate TEXT, editado_por TEXT, created_at TEXT DEFAULT (datetime('now')))") } catch(e) {}
             if (req.method === 'POST') {
                 var cc = req.body || {}
                 if (!cc.profissional_id || !cc.momento || !cc.tipo || cc.valor === undefined) return res.status(400).json({ success: false, error: 'profissional_id, momento, tipo e valor obrigatórios' })
