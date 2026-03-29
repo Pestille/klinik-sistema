@@ -108,8 +108,48 @@
         {
           "name": "AMAZON.FallbackIntent",
           "samples": []
+        },
+        {
+          "name": "MinhaConsultaIntent",
+          "slots": [],
+          "samples": [
+            "que horas é minha consulta",
+            "quando é minha consulta",
+            "minha próxima consulta",
+            "minha consulta",
+            "que horas eu tenho consulta",
+            "quando é meu atendimento",
+            "meu horário",
+            "meu agendamento",
+            "que dia é minha consulta",
+            "tenho consulta hoje",
+            "tenho consulta amanhã",
+            "qual o horário da minha consulta",
+            "quando eu tenho dentista",
+            "que horas é minha consulta na klinik"
+          ]
+        },
+        {
+          "name": "MeusAgendamentosIntent",
+          "slots": [],
+          "samples": [
+            "meus agendamentos",
+            "minhas consultas",
+            "minhas consultas marcadas",
+            "meus horários",
+            "meus atendimentos",
+            "consultas agendadas",
+            "listar minhas consultas",
+            "quais são meus agendamentos"
+          ]
         }
       ]
+    },
+    "permissions": [
+      {
+        "name": "alexa::profile:email:read"
+      }
+    ]
     }
   }
 }
