@@ -4435,9 +4435,12 @@ async function salvarProfissional(){
   var cro=(document.getElementById('prof-f-cro').value||'').trim()
   var esp=(document.getElementById('prof-f-esp').value||'').trim()
   try{
+    console.log('[salvarProfissional] id='+p.id+' nome='+nome+' esp='+esp+' cpf='+cpf+' email='+email+' tel='+tel+' cro='+cro)
     var d=await apiPost('salvar-profissional',{id:p.id,nome:nome,especialidade:esp,cpf:cpf,email:email,telefone:tel,cro:cro})
+    console.log('[salvarProfissional] resposta:', JSON.stringify(d))
     if(d.success){
-      p.nome=nome;p.name=nome;p.Name=nome;p.telefone=tel;p.email=email;p.cpf=cpf;p.cro=cro;p.especialidade=esp;p.specialty=esp
+      // Force reload profissionais from API
+      ST.profissionais=null
       alert('Profissional salvo!')
       nav('profissionais')
     }else{alert(d.error||'Erro ao salvar')}

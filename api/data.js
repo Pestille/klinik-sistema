@@ -1121,9 +1121,14 @@ module.exports = async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var sp = req.body || {}
             if (!sp.id) return res.status(400).json({ success: false, error: 'ID obrigatório' })
+            console.log('[salvar-profissional] id=' + sp.id + ' nome=' + sp.nome + ' esp=' + sp.especialidade + ' cpf=' + sp.cpf + ' email=' + sp.email + ' tel=' + sp.telefone + ' cro=' + sp.cro)
             // Update profissional - also set clinica_id if missing
-            await client.execute({ sql: "UPDATE profissionais SET nome=?,especialidade=?,cpf=?,email=?,telefone=?,cro=?,clinica_id=COALESCE(clinica_id,?),atualizado_em=datetime('now') WHERE id=?", args: [sp.nome||'', sp.especialidade||'', sp.cpf||'', sp.email||'', sp.telefone||'', sp.cro||'', clinica_id, sp.id] })
-            return res.status(200).json({ success: true, msg: 'Profissional atualizado' })
+            var spResult = await client.execute({ sql: "UPDATE profissionais SET nome=?,especialidade=?,cpf=?,email=?,telefone=?,cro=?,clinica_id=COALESCE(clinica_id,?),atualizado_em=datetime('now') WHERE id=?", args: [sp.nome||'', sp.especialidade||'', sp.cpf||'', sp.email||'', sp.telefone||'', sp.cro||'', clinica_id, sp.id] })
+            console.log('[salvar-profissional] rowsAffected=' + (spResult.rowsAffected || 0))
+            if (!spResult.rowsAffected) {
+                return res.status(200).json({ success: false, error: 'Nenhum registro atualizado. ID ' + sp.id + ' nao encontrado.' })
+            }
+            return res.status(200).json({ success: true, msg: 'Profissional atualizado', id: sp.id, rows: spResult.rowsAffected })
         }
 
         // ── SALVAR AGENDAMENTO ────────────────────────────────────────
