@@ -266,7 +266,8 @@ module.exports = async function handler(req, res) {
         // ── ANIVERSARIANTES ─────────────────────────────────────────────────
         if (route === 'debug-prof') {
             var client2 = getClient()
-            var dp = await client2.execute({ sql: "SELECT id, nome, especialidade, cpf, email, telefone, cro, clinica_id, clinicorp_id FROM profissionais WHERE id=7 OR nome LIKE '%MAISA%' LIMIT 5", args: [] })
+            // Show what GET profissionais returns
+            var dp = await client2.execute({ sql: "SELECT pr.id, pr.nome, pr.especialidade, pr.cpf, pr.email, pr.telefone, pr.cro, pr.clinica_id FROM profissionais pr WHERE (pr.clinica_id=1 OR pr.clinica_id IS NULL) ORDER BY pr.nome LIMIT 10", args: [] })
             return res.status(200).json({ success: true, profissionais: dp.rows })
         }
 
