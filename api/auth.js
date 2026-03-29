@@ -172,39 +172,121 @@ module.exports = async function handler(req, res) {
         var existe = await client.execute({ sql: "SELECT id FROM usuarios WHERE email=?", args: [b2.email.toLowerCase().trim()] })
         if (existe.rows.length) return res.status(409).json({ success: false, error: 'Email já cadastrado' })
 
-        // Gera senha temporária
-        var senhaTemp = crypto.randomBytes(4).toString('hex') // 8 chars hex
-        var hash2 = bcrypt.hashSync(senhaTemp, 10)
+        // Gera token de ativação (sem senha temporária)
+        var tokenAtivacao = crypto.randomBytes(32).toString('hex')
         var perfil = b2.perfil || 'recepcionista'
         var validos = ['admin', 'dentista', 'recepcionista', 'asb', 'administrativo']
         if (validos.indexOf(perfil) === -1) perfil = 'recepcionista'
 
-        await client.execute({ sql: "INSERT INTO usuarios(nome,email,senha_hash,perfil,deve_redefinir,clinica_id) VALUES(?,?,?,?,1,?)", args: [b2.nome.trim(), b2.email.toLowerCase().trim(), hash2, perfil, b2.clinica_id] })
+        // Ensure columns exist
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_ativacao TEXT") } catch(e) {}
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN ativado INTEGER DEFAULT 0") } catch(e) {}
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_ativacao_expira TEXT") } catch(e) {}
 
-        // Envia email com senha temporária
+        var expiraAtivacao = new Date()
+        expiraAtivacao.setHours(expiraAtivacao.getHours() + 48)
+
+        await client.execute({
+            sql: "INSERT INTO usuarios(nome,email,senha_hash,perfil,deve_redefinir,clinica_id,ativado,token_ativacao,token_ativacao_expira) VALUES(?,?,'',?,1,?,0,?,?)",
+            args: [b2.nome.trim(), b2.email.toLowerCase().trim(), perfil, b2.clinica_id, tokenAtivacao, expiraAtivacao.toISOString()]
+        })
+
+        // Envia email com link de ativação
         var siteUrl = 'https://klinik-sistema.vercel.app'
+        var linkAtivacao = siteUrl + '/api/auth?action=ativar&token=' + tokenAtivacao
         var emailHtml = '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;padding:20px;background:#f5f5f5">' +
             '<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.1)">' +
             '<div style="text-align:center;margin-bottom:24px"><span style="font-size:22px;font-weight:700;color:#1B5E3B">KLINIK SISTEMA</span></div>' +
-            '<p style="color:#333;font-size:15px">Olá <strong>' + b2.nome.trim() + '</strong>,</p>' +
-            '<p style="color:#555;font-size:14px">Sua conta foi criada no Klinik Sistema com o perfil <strong>' + perfil.toUpperCase() + '</strong>.</p>' +
-            '<div style="background:#f8f8f8;border-radius:6px;padding:16px;margin:20px 0;border-left:4px solid #E65100">' +
-            '<p style="margin:0 0 8px;font-size:13px;color:#666">Seus dados de acesso:</p>' +
-            '<p style="margin:0;font-size:14px"><strong>Email:</strong> ' + b2.email.toLowerCase().trim() + '</p>' +
-            '<p style="margin:4px 0 0;font-size:14px"><strong>Senha temporária:</strong> <code style="background:#eee;padding:2px 8px;border-radius:4px;font-size:16px;letter-spacing:1px">' + senhaTemp + '</code></p>' +
+            '<p style="color:#333;font-size:15px">Ola <strong>' + b2.nome.trim() + '</strong>,</p>' +
+            '<p style="color:#555;font-size:14px">Voce foi convidado para o Klinik Sistema com o perfil <strong>' + perfil.toUpperCase() + '</strong>.</p>' +
+            '<p style="color:#555;font-size:14px">Para ativar sua conta e criar sua senha, clique no botao abaixo:</p>' +
+            '<div style="text-align:center;margin:24px 0"><a href="' + linkAtivacao + '" style="display:inline-block;background:#E65100;color:#fff;text-decoration:none;padding:14px 36px;border-radius:6px;font-weight:600;font-size:15px">Ativar Minha Conta</a></div>' +
+            '<p style="color:#999;font-size:12px">Este link expira em 48 horas. Se voce nao solicitou esta conta, ignore este email.</p>' +
+            '<div style="border-top:1px solid #eee;margin-top:24px;padding-top:16px">' +
+            '<p style="color:#999;font-size:11px;margin:0">Se o botao nao funcionar, copie e cole o link abaixo no seu navegador:</p>' +
+            '<p style="color:#1565C0;font-size:11px;word-break:break-all">' + linkAtivacao + '</p>' +
             '</div>' +
-            '<p style="color:#D32F2F;font-size:13px;font-weight:500">Ao fazer o primeiro login, você será obrigado a redefinir sua senha.</p>' +
-            '<p style="color:#555;font-size:13px">Requisitos da nova senha: mínimo 8 caracteres, pelo menos 1 número e 1 caractere especial (!@#$%...).</p>' +
-            '<div style="text-align:center;margin-top:24px"><a href="' + siteUrl + '" style="display:inline-block;background:#E65100;color:#fff;text-decoration:none;padding:12px 32px;border-radius:6px;font-weight:500;font-size:14px">Acessar o Sistema</a></div>' +
-            '<p style="color:#999;font-size:11px;text-align:center;margin-top:24px">Klinik Odontologia — Campo Grande, MS</p>' +
+            '<p style="color:#999;font-size:11px;text-align:center;margin-top:16px">Klinik Odontologia</p>' +
             '</div></body></html>'
 
-        var emailEnviado = await enviarEmail(b2.email.toLowerCase().trim(), 'Bem-vindo ao Klinik Sistema — Seus dados de acesso', emailHtml)
+        var emailEnviado = await enviarEmail(b2.email.toLowerCase().trim(), 'Ative sua conta — Klinik Sistema', emailHtml)
 
-        return res.status(200).json({ success: true, msg: 'Usuário criado', email_enviado: emailEnviado, senha_temp: emailEnviado ? undefined : senhaTemp })
+        return res.status(200).json({ success: true, msg: 'Convite enviado por email', email_enviado: emailEnviado })
     }
 
     // ── LISTAR USUÁRIOS ────────────────────────────────────────
+    // ── ATIVAR CONTA (via link do email) ────────────────────────
+    if (action === 'ativar') {
+        var tokenAt = q.token || ''
+        if (!tokenAt) {
+            res.setHeader('Content-Type', 'text/html')
+            return res.status(400).send('<html><body style="font-family:Arial;padding:40px;text-align:center"><h2 style="color:#C62828">Link invalido</h2><p>Token de ativacao nao informado.</p></body></html>')
+        }
+
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_ativacao TEXT") } catch(e) {}
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN ativado INTEGER DEFAULT 0") } catch(e) {}
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_ativacao_expira TEXT") } catch(e) {}
+
+        var userAt = await client.execute({ sql: "SELECT id, nome, email, token_ativacao_expira FROM usuarios WHERE token_ativacao=?", args: [tokenAt] })
+        if (!userAt.rows.length) {
+            res.setHeader('Content-Type', 'text/html')
+            return res.status(400).send('<html><body style="font-family:Arial;padding:40px;text-align:center"><h2 style="color:#C62828">Link invalido ou expirado</h2><p>Este link de ativacao nao e valido. Solicite um novo convite ao administrador.</p></body></html>')
+        }
+
+        var uAt = userAt.rows[0]
+        if (uAt.token_ativacao_expira && new Date(uAt.token_ativacao_expira) < new Date()) {
+            res.setHeader('Content-Type', 'text/html')
+            return res.status(400).send('<html><body style="font-family:Arial;padding:40px;text-align:center"><h2 style="color:#E65100">Link expirado</h2><p>Este link expirou. Solicite um novo convite ao administrador.</p></body></html>')
+        }
+
+        // Se POST, é a submissão do formulário de senha
+        if (req.method === 'POST') {
+            var senhaBody = req.body || {}
+            var novaSenha = senhaBody.senha || ''
+            if (novaSenha.length < 8) return res.status(400).json({ success: false, error: 'Senha deve ter no minimo 8 caracteres' })
+            if (!/[0-9]/.test(novaSenha)) return res.status(400).json({ success: false, error: 'Senha deve conter pelo menos 1 numero' })
+            if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(novaSenha)) return res.status(400).json({ success: false, error: 'Senha deve conter pelo menos 1 caractere especial' })
+
+            var hashAtiv = bcrypt.hashSync(novaSenha, 10)
+            await client.execute({ sql: "UPDATE usuarios SET senha_hash=?, ativado=1, deve_redefinir=0, token_ativacao=NULL, token_ativacao_expira=NULL WHERE id=?", args: [hashAtiv, uAt.id] })
+            return res.status(200).json({ success: true, msg: 'Conta ativada com sucesso! Voce ja pode fazer login.' })
+        }
+
+        // GET: mostra formulário HTML de criação de senha
+        res.setHeader('Content-Type', 'text/html')
+        return res.status(200).send('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ativar Conta — Klinik</title></head>' +
+            '<body style="font-family:Arial,sans-serif;background:#f5f5f5;padding:20px;margin:0">' +
+            '<div style="max-width:420px;margin:40px auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.1)">' +
+            '<div style="text-align:center;margin-bottom:24px"><span style="font-size:22px;font-weight:700;color:#1B5E3B">KLINIK SISTEMA</span></div>' +
+            '<h2 style="color:#333;font-size:18px;margin-bottom:8px">Ativar sua conta</h2>' +
+            '<p style="color:#666;font-size:14px;margin-bottom:24px">Ola <strong>' + uAt.nome + '</strong>, crie sua senha para acessar o sistema.</p>' +
+            '<div id="form-area">' +
+            '<div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Email</label><input type="text" value="' + uAt.email + '" readonly style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;background:#f9f9f9;color:#999"></div>' +
+            '<div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Nova Senha *</label><input type="password" id="at-senha" placeholder="Minimo 8 caracteres" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px"></div>' +
+            '<div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Confirmar Senha *</label><input type="password" id="at-confirma" placeholder="Repita a senha" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px"></div>' +
+            '<p style="font-size:12px;color:#999;margin-bottom:16px">Requisitos: minimo 8 caracteres, 1 numero e 1 caractere especial (!@#$%...)</p>' +
+            '<button onclick="ativarConta()" style="width:100%;padding:12px;background:#E65100;color:#fff;border:none;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer">Ativar Conta</button>' +
+            '<div id="at-msg" style="margin-top:12px;text-align:center;font-size:13px"></div>' +
+            '</div></div>' +
+            '<script>' +
+            'async function ativarConta(){' +
+            '  var s=document.getElementById("at-senha").value;' +
+            '  var c=document.getElementById("at-confirma").value;' +
+            '  var msg=document.getElementById("at-msg");' +
+            '  if(s!==c){msg.innerHTML="<span style=\\"color:#C62828\\">As senhas nao coincidem</span>";return}' +
+            '  if(s.length<8){msg.innerHTML="<span style=\\"color:#C62828\\">Minimo 8 caracteres</span>";return}' +
+            '  msg.innerHTML="<span style=\\"color:#1565C0\\">Ativando...</span>";' +
+            '  try{' +
+            '    var r=await fetch("/api/auth?action=ativar&token=' + tokenAt + '",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({senha:s})});' +
+            '    var d=await r.json();' +
+            '    if(d.success){' +
+            '      document.getElementById("form-area").innerHTML="<div style=\\"text-align:center;padding:20px\\"><div style=\\"font-size:40px;margin-bottom:12px\\">✅</div><h3 style=\\"color:#1B5E3B\\">Conta ativada!</h3><p style=\\"color:#666\\">Sua senha foi criada com sucesso.</p><a href=\\"/app\\" style=\\"display:inline-block;margin-top:16px;background:#1B5E3B;color:#fff;padding:12px 32px;border-radius:6px;text-decoration:none;font-weight:600\\">Acessar o Sistema</a></div>";' +
+            '    }else{msg.innerHTML="<span style=\\"color:#C62828\\">"+(d.error||"Erro")+"</span>"}' +
+            '  }catch(e){msg.innerHTML="<span style=\\"color:#C62828\\">Erro de conexao</span>"}' +
+            '}' +
+            '</script></body></html>')
+    }
+
     if (action === 'listar-usuarios') {
         var us = await client.execute("SELECT id,nome,email,perfil,ativo,deve_redefinir,criado_em,ultimo_login FROM usuarios ORDER BY nome")
         return res.status(200).json({ success: true, data: us.rows, total: us.rows.length })
