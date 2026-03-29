@@ -4179,7 +4179,7 @@ async function loadProfissionais() {
     var d=await apiData('profissionais')
     var data=d.data||[]
     // Converte para formato compatível
-    ST.profissionais=data.map(function(p){return {id:p.id,nome:p.nome,name:p.nome,Name:p.nome,specialty:p.especialidade,especialidade:p.especialidade,cpf:p.cpf||'',email:p.email||'',telefone:p.telefone||'',cro:p.cro||'',total_agendamentos:p.total_agendamentos||0}})
+    ST.profissionais=data.map(function(p){return {id:p.id,nome:p.nome,name:p.nome,Name:p.nome,specialty:p.especialidade,especialidade:p.especialidade,cpf:p.cpf||'',email:p.email||'',telefone:p.telefone||'',cro:p.cro||'',cro_uf:p.cro_uf||'',rg:p.rg||'',sexo:p.sexo||'',estado_civil:p.estado_civil||'',data_nascimento:p.data_nascimento||'',endereco:p.endereco||'',numero:p.numero||'',bairro:p.bairro||'',cidade:p.cidade||'',uf:p.uf||'',cep:p.cep||'',complemento:p.complemento||'',total_agendamentos:p.total_agendamentos||0}})
     document.getElementById('prof-sub').textContent=data.length+' profissionais cadastrados'
     document.getElementById('prof-grid').innerHTML=data.map(function(p,i){
       var nome=p.nome||'Profissional'
@@ -4255,11 +4255,15 @@ var PALETA_CORES=['#9C27B0','#4CAF50','#FF9800','#795548','#2196F3','#E91E63','#
 function renderProfDados(p,cor){
   var nome=p.name||p.Name||p.nome||''
   var esp=p.specialty||p.especialidade||''
-  var cpf=p.cpf||'';var cro=p.cro||''
+  var cpf=p.cpf||'';var cro=p.cro||'';var rg=p.rg||'';var croUf=p.cro_uf||'MS'
+  var dn=p.data_nascimento||'';var dnParts=dn?dn.split('-'):[]
+  var dnDia=dnParts[2]?parseInt(dnParts[2]):''
+  var dnMes=dnParts[1]?parseInt(dnParts[1]):''
+  var dnAno=dnParts[0]?parseInt(dnParts[0]):''
   // Gera selects de nascimento
-  var diasOpts='<option value="">—</option>';for(var dd=1;dd<=31;dd++)diasOpts+='<option value="'+dd+'">'+dd+'</option>'
-  var mesesOpts='<option value="">—</option>';var mNomes=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];for(var mm=0;mm<12;mm++)mesesOpts+='<option value="'+(mm+1)+'">'+mNomes[mm]+'</option>'
-  var anosOpts='<option value="">—</option>';for(var yy=2010;yy>=1940;yy--)anosOpts+='<option value="'+yy+'">'+yy+'</option>'
+  var diasOpts='<option value="">—</option>';for(var dd=1;dd<=31;dd++)diasOpts+='<option value="'+dd+'"'+(dd===dnDia?' selected':'')+'>'+dd+'</option>'
+  var mesesOpts='<option value="">—</option>';var mNomes=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];for(var mm=0;mm<12;mm++)mesesOpts+='<option value="'+(mm+1)+'"'+((mm+1)===dnMes?' selected':'')+'>'+mNomes[mm]+'</option>'
+  var anosOpts='<option value="">—</option>';for(var yy=2010;yy>=1940;yy--)anosOpts+='<option value="'+yy+'"'+(yy===dnAno?' selected':'')+'>'+yy+'</option>'
   // Paleta de cores
   var paletaHtml=PALETA_CORES.map(function(c){return '<div onclick="profSelectCor(\''+c+'\')" style="width:24px;height:24px;border-radius:50%;background:'+c+';cursor:pointer;border:2px solid '+(c===cor?'#212121':'transparent')+';transition:border-color .12s" title="'+c+'"></div>'}).join('')
 
@@ -4279,8 +4283,8 @@ function renderProfDados(p,cor){
       // Nascimento | Sexo | Estado Civil
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:24px">'+
         '<div class="pdt-field"><label>Nascimento</label><div style="display:flex;gap:8px;padding:4px 0"><select id="prof-f-nasc-dia" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;color:#212121;padding:4px 0">'+diasOpts+'</select><select id="prof-f-nasc-mes" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;color:#212121;padding:4px 0">'+mesesOpts+'</select><select id="prof-f-nasc-ano" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;color:#212121;padding:4px 0">'+anosOpts+'</select></div></div>'+
-        '<div class="pdt-field"><label>Sexo</label><div style="display:flex;gap:16px;padding:8px 0;font-size:14px"><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" value="M" style="accent-color:#E65100"> Masculino</label><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" value="F" style="accent-color:#E65100"> Feminino</label><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" value="O" style="accent-color:#E65100"> Outro</label></div></div>'+
-        '<div class="pdt-field"><label>Estado Civil</label><select id="prof-f-civil"><option value="">—</option><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option></select></div>'+
+        '<div class="pdt-field"><label>Sexo</label><div style="display:flex;gap:16px;padding:8px 0;font-size:14px"><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" value="M"'+(p.sexo==='M'?' checked':'')+' style="accent-color:#E65100"> Masculino</label><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" value="F"'+(p.sexo==='F'?' checked':'')+' style="accent-color:#E65100"> Feminino</label><label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#212121"><input type="radio" name="prof-sexo" value="O"'+(p.sexo==='O'?' checked':'')+' style="accent-color:#E65100"> Outro</label></div></div>'+
+        '<div class="pdt-field"><label>Estado Civil</label><select id="prof-f-civil"><option value="">—</option><option'+(p.estado_civil==='Solteiro(a)'?' selected':'')+'>Solteiro(a)</option><option'+(p.estado_civil==='Casado(a)'?' selected':'')+'>Casado(a)</option><option'+(p.estado_civil==='Divorciado(a)'?' selected':'')+'>Divorciado(a)</option><option'+(p.estado_civil==='Viúvo(a)'?' selected':'')+'>Viúvo(a)</option></select></div>'+
       '</div>'+
       // CRO | Número | Usuário
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:24px">'+
@@ -4290,7 +4294,7 @@ function renderProfDados(p,cor){
       '</div>'+
       // RG | CPF
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">'+
-        '<div class="pdt-field"><label>RG</label><input id="prof-f-rg" value="" placeholder="RG"></div>'+
+        '<div class="pdt-field"><label>RG</label><input id="prof-f-rg" value="'+rg+'" placeholder="RG"></div>'+
         '<div class="pdt-field"><label>CPF</label><input id="prof-f-cpf" value="'+(cpf||'')+'" placeholder="000.000.000-00" oninput="mascaraCpf(this)" onblur="validarCpfField(this)"></div>'+
       '</div>'+
       // Especialidades
@@ -4303,7 +4307,7 @@ function renderProfDados(p,cor){
 }
 
 function renderProfContato(p){
-  var tel=p.telefone||'';var email=p.email||''
+  var tel=p.telefone||'';var email=p.email||'';var cep=p.cep||'';var cidade=p.cidade||'';var uf=p.uf||'';var endereco=p.endereco||'';var numero=p.numero||'';var bairro=p.bairro||'';var complemento=p.complemento||''
   document.getElementById('pdt-contato').innerHTML=
     '<div style="max-width:800px">'+
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:24px"><svg width="20" height="20" viewBox="0 0 24 24" fill="#E65100"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg><span style="font-size:16px;font-weight:500;color:#212121">Contato</span></div>'+
@@ -4312,17 +4316,17 @@ function renderProfContato(p){
         '<div class="pdt-field"><label>Email</label><input id="prof-c-email" value="'+email+'" placeholder="email@email.com"></div>'+
       '</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:24px">'+
-        '<div class="pdt-field"><label>CEP</label><input id="prof-c-cep" placeholder="79000-000" oninput="buscarCep(this.value,\'prof-c\')"></div>'+
-        '<div class="pdt-field"><label>Cidade</label><input id="prof-c-cidade" placeholder="Campo Grande"></div>'+
+        '<div class="pdt-field"><label>CEP</label><input id="prof-c-cep" value="'+cep+'" placeholder="79000-000" oninput="buscarCep(this.value,\'prof-c\')"></div>'+
+        '<div class="pdt-field"><label>Cidade</label><input id="prof-c-cidade" value="'+cidade+'" placeholder="Campo Grande"></div>'+
         '<div class="pdt-field"><label>UF</label><select id="prof-c-uf"><option value="">—</option><option>AC</option><option>AL</option><option>AM</option><option>AP</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option><option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option><option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option><option>SP</option><option>TO</option></select></div>'+
       '</div>'+
       '<div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;margin-bottom:24px">'+
-        '<div class="pdt-field"><label>Endereço</label><input id="prof-c-endereco" placeholder="Rua, Avenida..."></div>'+
-        '<div class="pdt-field"><label>Número</label><input id="prof-c-numero" placeholder="Nº"></div>'+
+        '<div class="pdt-field"><label>Endereço</label><input id="prof-c-endereco" value="'+endereco+'" placeholder="Rua, Avenida..."></div>'+
+        '<div class="pdt-field"><label>Número</label><input id="prof-c-numero" value="'+numero+'" placeholder="Nº"></div>'+
       '</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">'+
-        '<div class="pdt-field"><label>Bairro</label><input id="prof-c-bairro" placeholder="Bairro"></div>'+
-        '<div class="pdt-field"><label>Complemento</label><input id="prof-c-complemento" placeholder="Sala, Andar..."></div>'+
+        '<div class="pdt-field"><label>Bairro</label><input id="prof-c-bairro" value="'+bairro+'" placeholder="Bairro"></div>'+
+        '<div class="pdt-field"><label>Complemento</label><input id="prof-c-complemento" value="'+complemento+'" placeholder="Sala, Andar..."></div>'+
       '</div>'+
       '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="pdt-btn-outline" onclick="nav(\'profissionais\')">Cancelar</button><button class="pdt-btn-fill" onclick="salvarProfissional()">Salvar Alterações</button></div>'+
     '</div>'
@@ -4448,19 +4452,36 @@ function profFotoPreview(input){
 async function salvarProfissional(){
   var p=_profDetData;if(!p)return
   var gv=function(id){var el=document.getElementById(id);return el?(el.value||'').trim():''}
-  // Debug: log all field values
-  var allFields=['prof-f-nome','prof-f-cpf','prof-f-cro','prof-f-esp','prof-h-cel','prof-h-email','prof-c-cel','prof-c-email']
-  allFields.forEach(function(fid){console.log('[salvarProf] '+fid+'='+(document.getElementById(fid)?'"'+document.getElementById(fid).value+'"':'[NOT FOUND]'))})
   var nome=gv('prof-f-nome')
   if(!nome){alert('Nome é obrigatório');return}
-  var tel=gv('prof-h-cel')||gv('prof-c-cel')||p.telefone||''
-  var email=gv('prof-h-email')||gv('prof-c-email')||p.email||''
-  var cpf=gv('prof-f-cpf')
-  var cro=gv('prof-f-cro')
-  var esp=gv('prof-f-esp')
+  // Build nascimento from selects
+  var nascDia=gv('prof-f-nasc-dia'),nascMes=gv('prof-f-nasc-mes'),nascAno=gv('prof-f-nasc-ano')
+  var dataNasc=(nascAno&&nascMes&&nascDia)?nascAno+'-'+String(nascMes).padStart(2,'0')+'-'+String(nascDia).padStart(2,'0'):(p.data_nascimento||'')
+  // Get sexo from radio
+  var sexoEl=document.querySelector('input[name="prof-sexo"]:checked')
+  var sexo=sexoEl?sexoEl.value:(p.sexo||'')
   try{
-    console.log('[salvarProfissional] id='+p.id+' nome='+nome+' esp='+esp+' cpf='+cpf+' email='+email+' tel='+tel+' cro='+cro)
-    var d=await apiPost('salvar-profissional',{id:p.id,nome:nome,especialidade:esp,cpf:cpf,email:email,telefone:tel,cro:cro})
+    var body={
+      id:p.id, nome:nome,
+      especialidade:gv('prof-f-esp'),
+      cpf:gv('prof-f-cpf'),
+      cro:gv('prof-f-cro'),
+      cro_uf:gv('prof-f-cro-uf'),
+      rg:gv('prof-f-rg'),
+      sexo:sexo,
+      estado_civil:gv('prof-f-civil'),
+      data_nascimento:dataNasc,
+      telefone:gv('prof-h-cel')||gv('prof-c-cel')||p.telefone||'',
+      email:gv('prof-h-email')||gv('prof-c-email')||p.email||'',
+      endereco:gv('prof-c-endereco')||p.endereco||'',
+      numero:gv('prof-c-numero')||p.numero||'',
+      bairro:gv('prof-c-bairro')||p.bairro||'',
+      cidade:gv('prof-c-cidade')||p.cidade||'',
+      uf:gv('prof-c-uf')||p.uf||'',
+      cep:gv('prof-c-cep')||p.cep||'',
+      complemento:gv('prof-c-complemento')||p.complemento||''
+    }
+    var d=await apiPost('salvar-profissional',body)
     console.log('[salvarProfissional] resposta:', JSON.stringify(d))
     if(d.success){
       // Update local data and re-render in place

@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Auth check — public routes skip authentication
-    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos', 'pagamentos-migrate', 'financeiro-migrate', 'financeiro-migrate-v2', 'financeiro-migrate-v3', 'comissoes-migrate', 'permissoes-migrate', 'debug-prof']
+    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos', 'pagamentos-migrate', 'financeiro-migrate', 'financeiro-migrate-v2', 'financeiro-migrate-v3', 'comissoes-migrate', 'permissoes-migrate']
     var auth = null, clinica_id = null
     if (publicRoutes.indexOf(route) === -1) {
         auth = await authenticateRequest(req)
@@ -195,6 +195,9 @@ module.exports = async function handler(req, res) {
 
         // ── PROFISSIONAIS ───────────────────────────────────────────────────
         if (route === 'profissionais') {
+            // Ensure extra columns exist
+            var prCols2 = ['rg TEXT','sexo TEXT','estado_civil TEXT','data_nascimento TEXT','endereco TEXT','numero TEXT','bairro TEXT','cidade TEXT','uf TEXT','cep TEXT','complemento TEXT','cro_uf TEXT']
+            for(var pci=0;pci<prCols2.length;pci++){try{await client.execute("ALTER TABLE profissionais ADD COLUMN "+prCols2[pci])}catch(e){}}
             var rpr = await client.execute({ sql: "SELECT pr.*,COUNT(a.id) as total_agendamentos FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id WHERE (pr.clinica_id=? OR pr.clinica_id IS NULL) GROUP BY pr.id ORDER BY pr.nome", args: [clinica_id] })
             return res.status(200).json({ success: true, data: rpr.rows, total: rpr.rows.length })
         }
@@ -264,17 +267,6 @@ module.exports = async function handler(req, res) {
         }
 
         // ── ANIVERSARIANTES ─────────────────────────────────────────────────
-        if (route === 'debug-prof') {
-            var client2 = getClient()
-            // Test: update CRO directly and verify
-            if ((req.query||{}).action === 'set') {
-                await client2.execute({ sql: "UPDATE profissionais SET cro='12345-MS', especialidade='Ortodontia', email='maisa@teste.com', telefone='67999991111' WHERE id=7", args: [] })
-                var after = await client2.execute({ sql: "SELECT id,nome,especialidade,cpf,email,telefone,cro FROM profissionais WHERE id=7", args: [] })
-                return res.status(200).json({ success: true, msg: 'Updated directly', after: after.rows[0] })
-            }
-            var dp = await client2.execute({ sql: "SELECT pr.id, pr.nome, pr.especialidade, pr.cpf, pr.email, pr.telefone, pr.cro FROM profissionais pr WHERE id=7 LIMIT 1", args: [] })
-            return res.status(200).json({ success: true, profissional: dp.rows[0] })
-        }
 
         // ── DIAGNOSTICO INTEGRAÇÕES ──────────────────────────────────
         if (route === 'diagnostico-integracoes') {
@@ -1133,14 +1125,14 @@ module.exports = async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var sp = req.body || {}
             if (!sp.id) return res.status(400).json({ success: false, error: 'ID obrigatório' })
-            console.log('[salvar-profissional] id=' + sp.id + ' nome=' + sp.nome + ' esp=' + sp.especialidade + ' cpf=' + sp.cpf + ' email=' + sp.email + ' tel=' + sp.telefone + ' cro=' + sp.cro)
-            // Update profissional - also set clinica_id if missing
-            var spResult = await client.execute({ sql: "UPDATE profissionais SET nome=?,especialidade=?,cpf=?,email=?,telefone=?,cro=?,clinica_id=COALESCE(clinica_id,?),atualizado_em=datetime('now') WHERE id=?", args: [sp.nome||'', sp.especialidade||'', sp.cpf||'', sp.email||'', sp.telefone||'', sp.cro||'', clinica_id, sp.id] })
-            console.log('[salvar-profissional] rowsAffected=' + (spResult.rowsAffected || 0))
-            if (!spResult.rowsAffected) {
-                return res.status(200).json({ success: false, error: 'Nenhum registro atualizado. ID ' + sp.id + ' nao encontrado.' })
-            }
-            return res.status(200).json({ success: true, msg: 'Profissional atualizado', id: sp.id, rows: spResult.rowsAffected })
+            // Ensure all columns exist
+            var spCols = ['rg TEXT','sexo TEXT','estado_civil TEXT','data_nascimento TEXT','endereco TEXT','numero TEXT','bairro TEXT','cidade TEXT','uf TEXT','cep TEXT','complemento TEXT','cro_uf TEXT']
+            for (var sci=0;sci<spCols.length;sci++){try{await client.execute("ALTER TABLE profissionais ADD COLUMN "+spCols[sci])}catch(e){}}
+            var spResult = await client.execute({
+                sql: "UPDATE profissionais SET nome=?,especialidade=?,cpf=?,email=?,telefone=?,cro=?,rg=?,sexo=?,estado_civil=?,data_nascimento=?,endereco=?,numero=?,bairro=?,cidade=?,uf=?,cep=?,complemento=?,cro_uf=?,clinica_id=COALESCE(clinica_id,?),atualizado_em=datetime('now') WHERE id=?",
+                args: [sp.nome||'',sp.especialidade||'',sp.cpf||'',sp.email||'',sp.telefone||'',sp.cro||'',sp.rg||'',sp.sexo||'',sp.estado_civil||'',sp.data_nascimento||'',sp.endereco||'',sp.numero||'',sp.bairro||'',sp.cidade||'',sp.uf||'',sp.cep||'',sp.complemento||'',sp.cro_uf||'',clinica_id,sp.id]
+            })
+            return res.status(200).json({ success: true, msg: 'Profissional atualizado', rows: spResult.rowsAffected || 0 })
         }
 
         // ── SALVAR AGENDAMENTO ────────────────────────────────────────
