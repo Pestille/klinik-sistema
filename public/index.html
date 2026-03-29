@@ -5487,7 +5487,7 @@ async function salvarUsuario(){
   var perfil=document.getElementById('usr-f-perfil').value
   if(!nome||!email){alert('Preencha nome e email');return}
   try{
-    var r=await fetch('/api/auth?action=criar-usuario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:nome,email:email,perfil:perfil})})
+    var r=await fetch('/api/auth?action=criar-usuario',{method:'POST',headers:_apiHeaders(),body:JSON.stringify({nome:nome,email:email,perfil:perfil,clinica_id:KLINIK_USER?KLINIK_USER.clinica_id:1})})
     var d=await r.json()
     if(d.success){
       closeModal('novo-usuario');loadUsuarios()
