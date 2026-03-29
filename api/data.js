@@ -1052,8 +1052,13 @@ module.exports = async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var spe = req.body || {}
             if (!spe.id) return res.status(400).json({ success: false, error: 'ID obrigatório' })
-            try { await client.execute("ALTER TABLE pacientes ADD COLUMN rg TEXT") } catch(e) {}
-            await client.execute({ sql: "UPDATE pacientes SET nome=?,telefone=?,email=?,cpf=?,rg=?,data_nascimento=?,cep=?,cidade=?,endereco=?,bairro=?,atualizado_em=datetime('now') WHERE id=? AND clinica_id=?", args: [spe.nome||'', spe.telefone||'', spe.email||'', spe.cpf||'', spe.rg||'', spe.data_nascimento||'', spe.cep||'', spe.cidade||'', spe.endereco||'', spe.bairro||'', spe.id, clinica_id] })
+            // Ensure all columns exist
+            var speCols = ['rg TEXT','apelido TEXT','observacoes TEXT','fone_fixo TEXT','outros_telefones TEXT','numero TEXT','complemento TEXT','uf TEXT','sexo TEXT','estado_civil TEXT','como_conheceu TEXT','whatsapp TEXT']
+            for(var spei=0;spei<speCols.length;spei++){try{await client.execute("ALTER TABLE pacientes ADD COLUMN "+speCols[spei])}catch(e){}}
+            await client.execute({
+                sql: "UPDATE pacientes SET nome=?,telefone=?,email=?,cpf=?,rg=?,data_nascimento=?,cep=?,cidade=?,uf=?,endereco=?,numero=?,bairro=?,complemento=?,sexo=?,estado_civil=?,como_conheceu=?,apelido=?,observacoes=?,fone_fixo=?,outros_telefones=?,whatsapp=?,atualizado_em=datetime('now') WHERE id=? AND clinica_id=?",
+                args: [spe.nome||'',spe.telefone||'',spe.email||'',spe.cpf||'',spe.rg||'',spe.data_nascimento||'',spe.cep||'',spe.cidade||'',spe.uf||'',spe.endereco||'',spe.numero||'',spe.bairro||'',spe.complemento||'',spe.sexo||'',spe.estado_civil||'',spe.como_conheceu||'',spe.apelido||'',spe.observacoes||'',spe.fone_fixo||'',spe.outros_telefones||'',spe.whatsapp||'',spe.id,clinica_id]
+            })
             return res.status(200).json({ success: true, msg: 'Paciente atualizado' })
         }
 

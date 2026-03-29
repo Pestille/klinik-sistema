@@ -4092,19 +4092,35 @@ function prontCadSecao(secao){
 async function salvarCadastroPaciente(){
   if(!_prontData||!_prontData.paciente)return
   var id=_prontData.paciente.id
-  var nome=(document.getElementById('pc-nome')?document.getElementById('pc-nome').value:'').trim()
-  var cel=(document.getElementById('pc-cel')?document.getElementById('pc-cel').value:'').trim()
-  var email=(document.getElementById('pc-email')?document.getElementById('pc-email').value:'').trim()
-  var cpf=(document.getElementById('pc-cpf')?document.getElementById('pc-cpf').value:'').trim()
-  var rg=(document.getElementById('pc-rg')?document.getElementById('pc-rg').value:'').trim()
-  var nasc=(document.getElementById('pc-nasc')?document.getElementById('pc-nasc').value:'')
-  var cep=(document.getElementById('pc-cep')?document.getElementById('pc-cep').value:'').trim()
-  var cidade=(document.getElementById('pc-cidade')?document.getElementById('pc-cidade').value:'').trim()
-  var endereco=(document.getElementById('pc-endereco')?document.getElementById('pc-endereco').value:'').trim()
-  var bairro=(document.getElementById('pc-bairro')?document.getElementById('pc-bairro').value:'').trim()
+  var p=_prontData.paciente
+  var gv=function(fid){var el=document.getElementById(fid);return el?(el.value||'').trim():''}
+  var body={
+    id:id,
+    nome:gv('pc-nome')||p.nome,
+    telefone:gv('pc-cel')||p.telefone||'',
+    email:gv('pc-email')||p.email||'',
+    cpf:gv('pc-cpf')||p.cpf||'',
+    rg:gv('pc-rg')||p.rg||'',
+    data_nascimento:gv('pc-nasc')||p.data_nascimento||'',
+    cep:gv('pc-cep')||p.cep||'',
+    cidade:gv('pc-cidade')||p.cidade||'',
+    uf:gv('pc-uf')||p.uf||'',
+    endereco:gv('pc-endereco')||p.endereco||'',
+    numero:gv('pc-numero')||p.numero||'',
+    bairro:gv('pc-bairro')||p.bairro||'',
+    complemento:gv('pc-complemento')||p.complemento||'',
+    apelido:gv('pc-apelido')||p.apelido||'',
+    observacoes:gv('pc-obs')||p.observacoes||'',
+    fone_fixo:gv('pc-fone')||p.fone_fixo||'',
+    outros_telefones:gv('pc-outros-tel')||p.outros_telefones||'',
+    whatsapp:gv('pc-whats')||p.whatsapp||'',
+    sexo:gv('pc-sexo')||p.sexo||'',
+    estado_civil:gv('pc-civil')||p.estado_civil||'',
+    como_conheceu:gv('pc-como')||p.como_conheceu||''
+  }
   try{
-    var d=await apiPost('salvar-paciente-edit',{id:id,nome:nome||_prontData.paciente.nome,telefone:cel,email:email,cpf:cpf,rg:rg,data_nascimento:nasc,cep:cep,cidade:cidade,endereco:endereco,bairro:bairro})
-    if(d.success){alert('Cadastro salvo!');_prontData.paciente.nome=nome||_prontData.paciente.nome;_prontData.paciente.telefone=cel;_prontData.paciente.email=email}
+    var d=await apiPost('salvar-paciente-edit',body)
+    if(d.success){alert('Cadastro salvo!');Object.assign(p,body)}
     else alert(d.error||'Erro')
   }catch(e){alert('Erro: '+e.message)}
 }
