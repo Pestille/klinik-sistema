@@ -1932,6 +1932,19 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 
 
 <script>
+// ── SECURITY HELPERS ─────────────────────────────────────────────
+function escHtml(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+
+// Auto-logout after 30 min inactivity
+var _lastActivity=Date.now()
+document.addEventListener('click',function(){_lastActivity=Date.now()})
+document.addEventListener('keydown',function(){_lastActivity=Date.now()})
+setInterval(function(){
+  if(Date.now()-_lastActivity>1800000&&localStorage.getItem('klinik_token')){
+    localStorage.removeItem('klinik_token');location.reload()
+  }
+},60000)
+
 // ── API HELPERS (must be first) ─────────────────────────────────
 function _apiHeaders(extra){
   var h=Object.assign({'Content-Type':'application/json'},extra||{})

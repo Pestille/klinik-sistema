@@ -83,4 +83,51 @@ async function verificarPermissao(client, clinica_id, perfil, recurso) {
     } catch(e) { return false }
 }
 
-module.exports = { authenticateRequest, requireRole, verificarPermissao }
+/**
+ * setCorsHeaders(req, res)
+ * CORS restrito a origens confiáveis
+ */
+function setCorsHeaders(req, res) {
+    var allowedOrigins = [
+        'https://klinik-sistema.vercel.app',
+        'https://klinik-sistema-pestilles-projects.vercel.app',
+        'https://klinik-sistema-git-main-pestilles-projects.vercel.app'
+    ]
+    var origin = (req.headers && req.headers.origin) || ''
+    if (allowedOrigins.indexOf(origin) !== -1) {
+        res.setHeader('Access-Control-Allow-Origin', origin)
+    } else if (!origin) {
+        // Same-origin requests (no Origin header) or server-to-server
+        res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0])
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    res.setHeader('Access-Control-Max-Age', '86400')
+}
+
+/**
+ * Rate limiting simples em memória
+ * Para produção com múltiplas instâncias, usar Redis
+ */
+var _rateLimits = {}
+setInterval(function() { _rateLimits = {} }, 900000) // Limpa a cada 15 min
+
+function checkRateLimit(key, maxRequests, windowMs) {
+    var now = Date.now()
+    if (!_rateLimits[key]) _rateLimits[key] = []
+    // Remove entradas antigas
+    _rateLimits[key] = _rateLimits[key].filter(function(t) { return now - t < windowMs })
+    if (_rateLimits[key].length >= maxRequests) return false
+    _rateLimits[key].push(now)
+    return true
+}
+
+/**
+ * escapeHtml - sanitiza strings para prevenir XSS
+ */
+function escapeHtml(str) {
+    if (!str) return ''
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+}
+
+module.exports = { authenticateRequest, requireRole, verificarPermissao, setCorsHeaders, checkRateLimit, escapeHtml }

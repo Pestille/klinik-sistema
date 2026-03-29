@@ -2,10 +2,10 @@
 // Schema real: agendamentos.data_hora, financeiro.data_pagamento, pacientes.criado_em
 
 var { getClient } = require('./db')
-var { authenticateRequest, verificarPermissao } = require('./middleware')
+var { authenticateRequest, verificarPermissao, setCorsHeaders, checkRateLimit } = require('./middleware')
 
 module.exports = async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*')
+    setCorsHeaders(req, res)
     res.setHeader('Content-Type', 'application/json')
     if (req.method === 'OPTIONS') { res.status(200).end(); return }
 
@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Auth check — public routes skip authentication
-    var publicRoutes = ['db-status', 'migrate-saas', 'marketing-migrate', 'orcamentos-migrate', 'importar-orcamentos-lote', 'anamnese-migrate', 'importar-anamneses-lote', 'importar-tabela-precos', 'pagamentos-migrate', 'financeiro-migrate', 'financeiro-migrate-v2', 'financeiro-migrate-v3', 'comissoes-migrate', 'permissoes-migrate']
+    var publicRoutes = ['db-status']
     var auth = null, clinica_id = null
     if (publicRoutes.indexOf(route) === -1) {
         auth = await authenticateRequest(req)
@@ -44,22 +44,7 @@ module.exports = async function handler(req, res) {
             var start = Date.now()
             await client.execute('SELECT 1')
             var lat = Date.now() - start
-            var tabs = await client.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
-            var counts = {}
-            for (var i = 0; i < tabs.rows.length; i++) {
-                try {
-                    var cr = await client.execute('SELECT COUNT(*) as total FROM ' + tabs.rows[i].name)
-                    counts[tabs.rows[i].name] = cr.rows[0].total
-                } catch(e) { counts[tabs.rows[i].name] = 'erro' }
-            }
-            return res.status(200).json({ status: 'online', latencia_ms: lat, tabelas: counts, timestamp: new Date().toISOString() })
-        }
-
-        // ── SCHEMA ──────────────────────────────────────────────────────────
-        if (route === 'schema') {
-            var t = q.t || 'agendamentos'
-            var r2 = await client.execute('PRAGMA table_info(' + t + ')')
-            return res.status(200).json({ table: t, columns: r2.rows.map(function(c){ return { name: c.name, type: c.type } }) })
+            return res.status(200).json({ status: 'online', latencia_ms: lat, timestamp: new Date().toISOString() })
         }
 
         // ── DASHBOARD ───────────────────────────────────────────────────────
@@ -132,7 +117,7 @@ module.exports = async function handler(req, res) {
                 orcRows = orcR.rows
                 var orcIds2 = orcRows.map(function(o) { return o.id })
                 if (orcIds2.length) {
-                    var itR = await client.execute({ sql: "SELECT * FROM orcamento_itens WHERE orcamento_id IN (" + orcIds2.join(',') + ") ORDER BY id", args: [] })
+                    var itR = await client.execute({ sql: "SELECT * FROM orcamento_itens WHERE orcamento_id IN (" + orcIds2.map(function(){return '?'}).join(',') + ") ORDER BY id", args: orcIds2 })
                     var itMap2 = {}
                     itR.rows.forEach(function(it) { if (!itMap2[it.orcamento_id]) itMap2[it.orcamento_id] = []; itMap2[it.orcamento_id].push(it) })
                     orcRows.forEach(function(o) { o.itens = itMap2[o.id] || [] })
@@ -1534,7 +1519,7 @@ module.exports = async function handler(req, res) {
             var orcIds = orcList.map(function(o) { return o.id })
             var itensMap = {}
             if (orcIds.length) {
-                var itensRows = await client.execute({ sql: "SELECT * FROM orcamento_itens WHERE orcamento_id IN (" + orcIds.join(',') + ") ORDER BY id", args: [] })
+                var itensRows = await client.execute({ sql: "SELECT * FROM orcamento_itens WHERE orcamento_id IN (" + orcIds.map(function(){return '?'}).join(',') + ") ORDER BY id", args: orcIds })
                 itensRows.rows.forEach(function(it) {
                     if (!itensMap[it.orcamento_id]) itensMap[it.orcamento_id] = []
                     itensMap[it.orcamento_id].push(it)

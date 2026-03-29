@@ -2,10 +2,10 @@ const https = require('https')
 
 const BASE_HOST = 'api.clinicorp.com'
 const BASE_PATH = '/rest/v1'
-const USUARIO   = process.env.CLINICORP_USUARIO || 'klinik'
-const TOKEN     = process.env.CLINICORP_TOKEN   || '23b73dd0-f3a9-4aef-97ff-9db567d283b5'
-const BID       = process.env.CLINICORP_BID     || '5073030694043648'
-const SUB       = 'klinik'
+const USUARIO   = process.env.CLINICORP_USUARIO || ''
+const TOKEN     = process.env.CLINICORP_TOKEN   || ''
+const BID       = process.env.CLINICORP_BID     || ''
+const SUB       = process.env.CLINICORP_SUB     || ''
 
 function auth() {
   return 'Basic ' + Buffer.from(USUARIO + ':' + TOKEN).toString('base64')

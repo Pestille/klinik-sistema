@@ -45,10 +45,11 @@ async function enviarEmail(para, assunto, html) {
     }
 }
 
+var { setCorsHeaders, checkRateLimit } = require('./middleware')
+
 module.exports = async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    setCorsHeaders(req, res)
+    res.setHeader('Content-Type', 'application/json')
     if (req.method === 'OPTIONS') { res.status(200).end(); return }
 
     var q = req.query || {}
@@ -67,6 +68,11 @@ module.exports = async function handler(req, res) {
         if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
         var b = req.body || {}
         if (!b.email || !b.senha) return res.status(400).json({ success: false, error: 'Email e senha obrigatórios' })
+        // Rate limiting: max 5 tentativas por email em 15 min
+        var rlKey = 'login:' + (b.email || '').toLowerCase()
+        if (!checkRateLimit(rlKey, 5, 900000)) {
+            return res.status(429).json({ success: false, error: 'Muitas tentativas. Aguarde 15 minutos.' })
+        }
 
         // Busca usuário pelo email (sem comparar hash ainda — precisamos detectar formato)
         var r = await client.execute({ sql: "SELECT id,nome,email,perfil,ativo,deve_redefinir,senha_hash,clinica_id FROM usuarios WHERE email=?", args: [b.email.toLowerCase().trim()] })
@@ -100,7 +106,7 @@ module.exports = async function handler(req, res) {
 
         // Cria sessão (expira em 7 dias)
         var token = gerarToken()
-        var expira = new Date(); expira.setDate(expira.getDate() + 7)
+        var expira = new Date(); expira.setHours(expira.getHours() + 8)
         await client.execute({ sql: "INSERT INTO sessoes(usuario_id,token,expira_em) VALUES(?,?,?)", args: [user.id, token, expira.toISOString()] })
         await client.execute({ sql: "UPDATE usuarios SET ultimo_login=datetime('now') WHERE id=?", args: [user.id] })
 
@@ -122,7 +128,7 @@ module.exports = async function handler(req, res) {
 
         // Cria nova sessão
         var tokenR = gerarToken()
-        var expiraR = new Date(); expiraR.setDate(expiraR.getDate() + 7)
+        var expiraR = new Date(); expiraR.setHours(expiraR.getHours() + 8)
         await client.execute({ sql: "INSERT INTO sessoes(usuario_id,token,expira_em) VALUES(?,?,?)", args: [br.usuario_id, tokenR, expiraR.toISOString()] })
         await client.execute({ sql: "UPDATE usuarios SET ultimo_login=datetime('now') WHERE id=?", args: [br.usuario_id] })
 
