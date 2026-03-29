@@ -2540,8 +2540,11 @@ module.exports = async function handler(req, res) {
 
         // ── COMISSOES-CONFIG (CRUD) ──────────────────────────────────
         if (route === 'comissoes-config') {
+            try {
             // Auto-create table if missing
-            try { await client.execute("CREATE TABLE IF NOT EXISTS comissoes_config (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, profissional_id INTEGER, tabela_preco TEXT DEFAULT 'PARTICULAR', momento TEXT NOT NULL, tipo TEXT NOT NULL, valor REAL NOT NULL, valido_desde TEXT, valido_ate TEXT, editado_por TEXT, created_at TEXT DEFAULT (datetime('now')))") } catch(e) {}
+            await client.execute("CREATE TABLE IF NOT EXISTS comissoes_config (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, profissional_id INTEGER, tabela_preco TEXT DEFAULT 'PARTICULAR', momento TEXT, tipo TEXT, valor REAL DEFAULT 0, valido_desde TEXT, valido_ate TEXT, editado_por TEXT, created_at TEXT DEFAULT (datetime('now')))")
+            } catch(tableErr) { console.error('[comissoes-config] table create error:', tableErr.message) }
+            try {
             if (req.method === 'POST') {
                 var cc = req.body || {}
                 if (!cc.profissional_id || !cc.momento || !cc.tipo || cc.valor === undefined) return res.status(400).json({ success: false, error: 'profissional_id, momento, tipo e valor obrigatórios' })
@@ -2560,10 +2563,11 @@ module.exports = async function handler(req, res) {
             }
             // GET
             var ccProfId = parseInt(q.profissional_id) || 0
-            var ccW = ["clinica_id=?"], ccA = [clinica_id]
-            if (ccProfId) { ccW.push("profissional_id=?"); ccA.push(ccProfId) }
+            var ccW = ["cc.clinica_id=?"], ccA = [clinica_id]
+            if (ccProfId) { ccW.push("cc.profissional_id=?"); ccA.push(ccProfId) }
             var ccRows = await client.execute({ sql: "SELECT cc.*, p.nome as profissional_nome FROM comissoes_config cc LEFT JOIN profissionais p ON p.id=cc.profissional_id WHERE " + ccW.join(' AND ') + " ORDER BY cc.profissional_id, cc.tabela_preco", args: ccA })
             return res.status(200).json({ success: true, configs: ccRows.rows })
+            } catch(ccErr) { return res.status(200).json({ success: true, configs: [], error_debug: ccErr.message }) }
         }
 
         // ── COMISSOES-PROFISSIONAL (lista lançamentos) ──────────────
