@@ -4448,6 +4448,9 @@ function profFotoPreview(input){
 async function salvarProfissional(){
   var p=_profDetData;if(!p)return
   var gv=function(id){var el=document.getElementById(id);return el?(el.value||'').trim():''}
+  // Debug: log all field values
+  var allFields=['prof-f-nome','prof-f-cpf','prof-f-cro','prof-f-esp','prof-h-cel','prof-h-email','prof-c-cel','prof-c-email']
+  allFields.forEach(function(fid){console.log('[salvarProf] '+fid+'='+(document.getElementById(fid)?'"'+document.getElementById(fid).value+'"':'[NOT FOUND]'))})
   var nome=gv('prof-f-nome')
   if(!nome){alert('Nome é obrigatório');return}
   var tel=gv('prof-h-cel')||gv('prof-c-cel')||p.telefone||''
