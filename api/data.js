@@ -266,9 +266,14 @@ module.exports = async function handler(req, res) {
         // ── ANIVERSARIANTES ─────────────────────────────────────────────────
         if (route === 'debug-prof') {
             var client2 = getClient()
-            // Show what GET profissionais returns
-            var dp = await client2.execute({ sql: "SELECT pr.id, pr.nome, pr.especialidade, pr.cpf, pr.email, pr.telefone, pr.cro, pr.clinica_id FROM profissionais pr WHERE (pr.clinica_id=1 OR pr.clinica_id IS NULL) ORDER BY pr.nome LIMIT 10", args: [] })
-            return res.status(200).json({ success: true, profissionais: dp.rows })
+            // Test: update CRO directly and verify
+            if ((req.query||{}).action === 'set') {
+                await client2.execute({ sql: "UPDATE profissionais SET cro='12345-MS', especialidade='Ortodontia', email='maisa@teste.com', telefone='67999991111' WHERE id=7", args: [] })
+                var after = await client2.execute({ sql: "SELECT id,nome,especialidade,cpf,email,telefone,cro FROM profissionais WHERE id=7", args: [] })
+                return res.status(200).json({ success: true, msg: 'Updated directly', after: after.rows[0] })
+            }
+            var dp = await client2.execute({ sql: "SELECT pr.id, pr.nome, pr.especialidade, pr.cpf, pr.email, pr.telefone, pr.cro FROM profissionais pr WHERE id=7 LIMIT 1", args: [] })
+            return res.status(200).json({ success: true, profissional: dp.rows[0] })
         }
 
         // ── DIAGNOSTICO INTEGRAÇÕES ──────────────────────────────────
