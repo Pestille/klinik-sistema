@@ -4460,10 +4460,30 @@ async function salvarProfissional(){
     var d=await apiPost('salvar-profissional',{id:p.id,nome:nome,especialidade:esp,cpf:cpf,email:email,telefone:tel,cro:cro})
     console.log('[salvarProfissional] resposta:', JSON.stringify(d))
     if(d.success){
-      // Force reload profissionais from API
+      // Update local data and re-render in place
+      p.nome=nome;p.name=nome;p.Name=nome;p.telefone=tel;p.email=email;p.cpf=cpf;p.cro=cro;p.especialidade=esp;p.specialty=esp
       ST.profissionais=null
+      // Reload profissional detail in place
+      try{
+        var pd=await apiData('profissionais')
+        ST.profissionais=(pd.data||[]).map(function(pr){return {id:pr.id,nome:pr.nome,name:pr.nome,Name:pr.nome,especialidade:pr.especialidade,cpf:pr.cpf||'',email:pr.email||'',telefone:pr.telefone||'',cro:pr.cro||'',total_agendamentos:pr.total_agendamentos||0}})
+        // Find updated professional and re-render
+        for(var si=0;si<ST.profissionais.length;si++){
+          if(ST.profissionais[si].id===p.id){_profDetData=ST.profissionais[si];_profDetIdx=si;break}
+        }
+        var cor=PROF_CORES[_profDetIdx%PROF_CORES.length]
+        renderProfDados(_profDetData,cor)
+        renderProfContato(_profDetData)
+        // Update header
+        var hdrEl=document.getElementById('prof-det-header')
+        if(hdrEl){
+          var ini=nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
+          hdrEl.querySelector('.prof-det-av').textContent=ini
+          hdrEl.querySelector('.prof-det-name').textContent=nome
+          hdrEl.querySelector('.prof-det-esp').textContent=esp||'Clinico Geral'
+        }
+      }catch(e2){}
       alert('Profissional salvo!')
-      nav('profissionais')
     }else{alert(d.error||'Erro ao salvar')}
   }catch(e){alert('Erro: '+e.message)}
 }
