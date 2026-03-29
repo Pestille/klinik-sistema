@@ -1303,7 +1303,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 
     <!-- PROFISSIONAIS -->
     <div class="page gpage" id="p-profissionais">
-      <div class="gpage-header"><div><div class="gpage-title">Profissionais</div><div class="gpage-sub" id="prof-sub">Carregando...</div></div><button class="btn btn-primary" onclick="openModal('paciente')">+ Novo Profissional</button></div>
+      <div class="gpage-header"><div><div class="gpage-title">Profissionais</div><div class="gpage-sub" id="prof-sub">Carregando...</div></div><button class="btn btn-primary" onclick="openModal('profissional')">+ Novo Profissional</button></div>
       <div class="gpage-body">
         <div id="prof-loading" class="loading"><div class="spin"></div></div>
         <div id="prof-data" class="hidden"><div class="prof-grid" id="prof-grid"></div></div>
@@ -4447,13 +4447,14 @@ function profFotoPreview(input){
 
 async function salvarProfissional(){
   var p=_profDetData;if(!p)return
-  var nome=(document.getElementById('prof-f-nome').value||'').trim()
+  var gv=function(id){var el=document.getElementById(id);return el?(el.value||'').trim():''}
+  var nome=gv('prof-f-nome')
   if(!nome){alert('Nome é obrigatório');return}
-  var tel=(document.getElementById('prof-h-cel').value||'').trim()
-  var email=(document.getElementById('prof-h-email').value||'').trim()
-  var cpf=(document.getElementById('prof-f-cpf').value||'').trim()
-  var cro=(document.getElementById('prof-f-cro').value||'').trim()
-  var esp=(document.getElementById('prof-f-esp').value||'').trim()
+  var tel=gv('prof-h-cel')||gv('prof-c-cel')||p.telefone||''
+  var email=gv('prof-h-email')||gv('prof-c-email')||p.email||''
+  var cpf=gv('prof-f-cpf')
+  var cro=gv('prof-f-cro')
+  var esp=gv('prof-f-esp')
   try{
     console.log('[salvarProfissional] id='+p.id+' nome='+nome+' esp='+esp+' cpf='+cpf+' email='+email+' tel='+tel+' cro='+cro)
     var d=await apiPost('salvar-profissional',{id:p.id,nome:nome,especialidade:esp,cpf:cpf,email:email,telefone:tel,cro:cro})
