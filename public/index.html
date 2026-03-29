@@ -2114,7 +2114,7 @@ function nav(id) {
   if (id==='prontuario' && !ST.agendamentos) loadAgenda()
   if (id==='crm' && !ST.dashboard) loadDashboard()
   if (id==='financeiro' && !ST.recebimentos) loadFinanceiro()
-  if (id==='profissionais' && !ST.profissionais) loadProfissionais()
+  if (id==='profissionais') loadProfissionais()
   if (id==='aniversariantes') loadAniversariantes()
   if (id==='relatorios' && ST.dashboard) renderRelatorios()
   if (id==='configuracoes') renderConfiguracoes()
