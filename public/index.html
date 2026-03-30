@@ -1469,13 +1469,24 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     <!-- MODAL NOVO USUÁRIO -->
     <div class="modal-ov" id="modal-novo-usuario" onclick="if(event.target===this)closeModal('novo-usuario')">
       <div class="modal lg">
-        <div class="modal-head"><div class="modal-title">Novo Usuário</div><button class="modal-close" onclick="closeModal('novo-usuario')">✕</button></div>
+        <div class="modal-head"><div class="modal-title">Novo Usuario</div><button class="modal-close" onclick="closeModal('novo-usuario')">✕</button></div>
         <div class="modal-body">
-          <div class="form-row c2"><div class="form-group"><label class="form-label">Nome Completo *</label><input class="form-input" id="usr-f-nome" placeholder="Nome completo"></div><div class="form-group"><label class="form-label">Email *</label><input class="form-input" id="usr-f-email" type="email" placeholder="email@klinik.com"></div></div>
+          <div class="form-group">
+            <label class="form-label">Usuario *</label>
+            <div style="display:flex;align-items:center;gap:0">
+              <input class="form-input" id="usr-f-usuario" placeholder="nome.sobrenome" style="border-radius:6px 0 0 6px;border-right:none" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9._-]/g,'')">
+              <span style="background:var(--gray1);border:1px solid var(--border);border-left:none;border-radius:0 6px 6px 0;padding:9px 12px;font-size:14px;color:var(--text3);white-space:nowrap">@klinik.com</span>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">Login do usuario no sistema (somente letras minusculas, numeros e pontos)</div>
+          </div>
+          <div class="form-group"><label class="form-label">Nome Completo *</label><input class="form-input" id="usr-f-nome" placeholder="Nome completo do usuario"></div>
+          <div class="form-group"><label class="form-label">Email *</label><input class="form-input" id="usr-f-email" type="email" placeholder="email.pessoal@gmail.com">
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">Email pessoal do usuario. Um link de ativacao sera enviado para este endereco.</div>
+          </div>
           <div class="form-group"><label class="form-label">Perfil *</label><select class="form-input" id="usr-f-perfil"><option value="recepcionista">Recepcionista</option><option value="dentista">Dentista</option><option value="admin">Administrador</option><option value="asb">ASB</option><option value="administrativo">Administrativo</option></select></div>
-          <div style="background:var(--gray1);border-radius:6px;padding:12px;font-size:12px;color:var(--text3);line-height:1.5">Uma senha temporária será gerada e enviada por email. No primeiro login, o usuário será obrigado a criar uma senha forte (mín. 8 chars, 1 número, 1 especial).</div>
+          <div style="background:#E8F5E9;border-radius:6px;padding:12px;font-size:12px;color:#2E7D52;line-height:1.5">Um email sera enviado ao endereco informado com um link para o usuario ativar sua conta e criar sua senha de acesso.</div>
         </div>
-        <div class="modal-foot"><button class="btn btn-primary" onclick="salvarUsuario()">Criar Usuário</button><button class="btn" onclick="closeModal('novo-usuario')">Cancelar</button></div>
+        <div class="modal-foot"><button class="btn btn-primary" onclick="salvarUsuario()">Criar Usuario</button><button class="btn" onclick="closeModal('novo-usuario')">Cancelar</button></div>
       </div>
     </div>
 
@@ -5482,18 +5493,22 @@ async function loadUsuarios(){
 }
 
 async function salvarUsuario(){
+  var usuario=(document.getElementById('usr-f-usuario').value||'').trim().toLowerCase()
   var nome=document.getElementById('usr-f-nome').value.trim()
-  var email=document.getElementById('usr-f-email').value.trim()
+  var emailPessoal=document.getElementById('usr-f-email').value.trim()
   var perfil=document.getElementById('usr-f-perfil').value
-  if(!nome||!email){alert('Preencha nome e email');return}
+  if(!usuario){alert('Preencha o campo Usuario');return}
+  if(!nome){alert('Preencha o nome completo');return}
+  if(!emailPessoal){alert('Preencha o email para envio do link de ativacao');return}
+  var loginEmail=usuario+'@klinik.com'
   try{
-    var r=await fetch('/api/auth?action=criar-usuario',{method:'POST',headers:_apiHeaders(),body:JSON.stringify({nome:nome,email:email,perfil:perfil,clinica_id:KLINIK_USER?KLINIK_USER.clinica_id:1})})
+    var r=await fetch('/api/auth?action=criar-usuario',{method:'POST',headers:_apiHeaders(),body:JSON.stringify({nome:nome,email:loginEmail,email_pessoal:emailPessoal,perfil:perfil,clinica_id:KLINIK_USER?KLINIK_USER.clinica_id:1})})
     var d=await r.json()
     if(d.success){
       closeModal('novo-usuario');loadUsuarios()
-      document.getElementById('usr-f-nome').value='';document.getElementById('usr-f-email').value=''
-      if(d.senha_temp){alert('Usuário criado!\n\nSenha temporária: '+d.senha_temp+'\n\n(Email não enviado — RESEND_API_KEY não configurada.\nInforme a senha acima ao usuário.)')}
-      else{alert('Usuário criado! Email enviado com os dados de acesso.')}
+      document.getElementById('usr-f-usuario').value='';document.getElementById('usr-f-nome').value='';document.getElementById('usr-f-email').value=''
+      if(d.email_enviado){alert('Usuario criado!\n\nLogin: '+loginEmail+'\n\nUm link de ativacao foi enviado para '+emailPessoal)}
+      else{alert('Usuario criado!\n\nLogin: '+loginEmail+'\n\nATENCAO: Email nao enviado. Configure RESEND_API_KEY no Vercel.')}
     }
     else{alert(d.error||'Erro ao criar')}
   }catch(e){alert('Erro: '+e.message)}

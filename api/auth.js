@@ -209,7 +209,9 @@ module.exports = async function handler(req, res) {
             '<p style="color:#999;font-size:11px;text-align:center;margin-top:16px">Klinik Odontologia</p>' +
             '</div></body></html>'
 
-        var emailEnviado = await enviarEmail(b2.email.toLowerCase().trim(), 'Ative sua conta — Klinik Sistema', emailHtml)
+        // Envia para o email pessoal (não o login @klinik.com)
+        var emailDestino = b2.email_pessoal || b2.email
+        var emailEnviado = await enviarEmail(emailDestino.toLowerCase().trim(), 'Ative sua conta — Klinik Sistema', emailHtml)
 
         return res.status(200).json({ success: true, msg: 'Convite enviado por email', email_enviado: emailEnviado })
     }
