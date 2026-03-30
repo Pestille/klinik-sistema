@@ -24,23 +24,33 @@ function validarSenha(senha) {
 // Envio de email via Gmail SMTP (nodemailer)
 // Configurar no Vercel: EMAIL_USER (gmail) e EMAIL_PASS (senha de app)
 async function enviarEmail(para, assunto, html) {
+    // Try Resend first (configured), then Gmail fallback
+    var resendKey = process.env.RESEND_API_KEY || ''
+    var resendFrom = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
+    if (resendKey) {
+        try {
+            var r = await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ from: resendFrom, to: [para], subject: assunto, html: html })
+            })
+            var rd = await r.json()
+            console.log('[auth] Resend email to ' + para + ': ' + (r.ok ? 'OK' : JSON.stringify(rd)))
+            return r.ok
+        } catch(e) {
+            console.error('[auth] Resend error:', e.message)
+        }
+    }
+    // Gmail fallback
     var user = process.env.EMAIL_USER
     var pass = process.env.EMAIL_PASS
-    if (!user || !pass) { console.log('[auth] EMAIL_USER/EMAIL_PASS não configurados'); return false }
+    if (!user || !pass) { console.log('[auth] Nenhum servico de email configurado (RESEND_API_KEY ou EMAIL_USER/EMAIL_PASS)'); return false }
     try {
-        var transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: { user: user, pass: pass }
-        })
-        await transporter.sendMail({
-            from: 'Klinik Sistema <' + user + '>',
-            to: para,
-            subject: assunto,
-            html: html
-        })
+        var transporter = nodemailer.createTransport({ service: 'gmail', auth: { user: user, pass: pass } })
+        await transporter.sendMail({ from: 'Klinik Sistema <' + user + '>', to: para, subject: assunto, html: html })
         return true
     } catch(e) {
-        console.error('[auth] Erro ao enviar email:', e.message)
+        console.error('[auth] Gmail error:', e.message)
         return false
     }
 }
