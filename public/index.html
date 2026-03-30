@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Klinik Sistema</title>
+<title>Klinov</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -563,7 +563,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
   <div class="login-card">
     <div class="login-logo">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 2C12 2 7 6 7 11a5 5 0 0010 0c0-5-5-9-5-9z" stroke="currentColor" stroke-width="1.5" fill="rgba(27,94,59,.2)"/></svg>
-      <span>KLINIK SISTEMA</span>
+      <span>KLINOV</span>
     </div>
     <!-- Login normal -->
     <div id="login-form">
@@ -665,7 +665,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     <div class="sidebar-item" data-page="configuracoes" onclick="nav('configuracoes');toggleSidebar()">⚙ Configuração</div>
   </div>
   <div class="sidebar-footer">
-    <div>KLINIK ODONTOLOGIA</div>
+    <div>KLINOV</div>
   </div>
 </div>
 
@@ -736,7 +736,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         <div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
           <div><div style="font-size:11px;color:#9e9e9e;margin-bottom:4px">Mês de Referência</div><select id="da-mes" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;padding:6px 0;min-width:120px"><option value="3">Março</option><option value="2">Fevereiro</option><option value="1">Janeiro</option><option value="12">Dezembro</option><option value="11">Novembro</option><option value="10">Outubro</option><option value="9">Setembro</option><option value="8">Agosto</option><option value="7">Julho</option><option value="6">Junho</option><option value="5">Maio</option><option value="4">Abril</option></select></div>
           <div><div style="font-size:11px;color:#9e9e9e;margin-bottom:4px">Ano</div><select id="da-ano" style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;padding:6px 0;min-width:80px"><option>2026</option><option>2025</option><option>2024</option></select></div>
-          <div><div style="font-size:11px;color:#9e9e9e;margin-bottom:4px">Clínica</div><select style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;padding:6px 0;min-width:200px"><option>Klinik Odontologia</option></select></div>
+          <div><div style="font-size:11px;color:#9e9e9e;margin-bottom:4px">Clínica</div><select style="border:none;border-bottom:1px solid #e0e0e0;font-size:14px;padding:6px 0;min-width:200px"><option>Klinov</option></select></div>
           <button onclick="loadAnalytics()" style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;font-size:14px;color:#E65100;font-weight:500;font-family:Roboto,sans-serif"><span style="width:24px;height:24px;border-radius:50%;background:#E65100;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px">▶</span>Listar</button>
         </div>
       </div>
@@ -1232,7 +1232,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
           <div class="ctrl-filters">
             <div class="cc-field"><div class="cc-label">De</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-ext-de')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-ext-de-val">—</span></div><div class="datepicker-pop" id="dp-ext-de"></div></div></div>
             <div class="cc-field"><div class="cc-label">Até</div><div class="datepicker-wrap"><div class="cc-date-btn" onclick="dpOpen('dp-ext-ate')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span id="dp-ext-ate-val">—</span></div><div class="datepicker-pop" id="dp-ext-ate"></div></div></div>
-            <div class="cc-field"><div class="cc-label">Conta</div><select class="ctrl-type-sel"><option>Todas</option><option>KLINIK ODONTOLOGI...</option></select></div>
+            <div class="cc-field"><div class="cc-label">Conta</div><select class="ctrl-type-sel"><option>Todas</option><option>KLINOV...</option></select></div>
             <div class="cc-field"><div class="cc-label">Tipo</div><select class="ctrl-type-sel"><option>Todos</option><option>Entrada</option><option>Saída</option><option>Saque</option></select></div>
             <button class="ctrl-listar" onclick="renderExtrato()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Listar</button>
             <div class="rec-indicators">
@@ -1475,7 +1475,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
             <label class="form-label">Usuario *</label>
             <div style="display:flex;align-items:center;gap:0">
               <input class="form-input" id="usr-f-usuario" placeholder="nome.sobrenome" style="border-radius:6px 0 0 6px;border-right:none" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9._-]/g,'')">
-              <span style="background:var(--gray1);border:1px solid var(--border);border-left:none;border-radius:0 6px 6px 0;padding:9px 12px;font-size:14px;color:var(--text3);white-space:nowrap">@klinik.com</span>
+              <span style="background:var(--gray1);border:1px solid var(--border);border-left:none;border-radius:0 6px 6px 0;padding:9px 12px;font-size:14px;color:var(--text3);white-space:nowrap">@klinov.com</span>
             </div>
             <div style="font-size:11px;color:var(--text3);margin-top:4px">Login do usuario no sistema (somente letras minusculas, numeros e pontos)</div>
           </div>
@@ -1596,7 +1596,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 
     <!-- TUTORIAIS -->
     <div class="page gpage" id="p-tutoriais">
-      <div class="gpage-header"><div><div class="gpage-title">Tutoriais do Sistema</div><div class="gpage-sub">Aprenda a usar o Klinik Sistema</div></div></div>
+      <div class="gpage-header"><div><div class="gpage-title">Tutoriais do Sistema</div><div class="gpage-sub">Aprenda a usar o Klinov</div></div></div>
       <div class="gpage-body" style="max-width:900px;margin:0 auto;padding:20px 24px">
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px" id="tutoriais-grid">
           <div class="card" style="padding:20px;cursor:pointer" onclick="nav('agenda')"><div style="font-size:15px;font-weight:500;margin-bottom:4px">Agenda</div><div style="font-size:13px;color:var(--text3)">Como agendar, remarcar e gerenciar consultas</div></div>
@@ -1611,7 +1611,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 
     <!-- IA -->
     <div class="page gpage" id="p-ia">
-      <div class="gpage-header"><div><div class="gpage-title">Assistente IA</div><div class="gpage-sub">Powered by Claude · Klinik Edition</div></div></div>
+      <div class="gpage-header"><div><div class="gpage-title">Assistente IA</div><div class="gpage-sub">Powered by Claude · Klinov Edition</div></div></div>
       <div class="gpage-body">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
           <div class="card">
@@ -1638,11 +1638,11 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
             <div class="card-header"><div class="card-title">Sugestões Rápidas</div></div>
             <div class="card-body">
               <div style="display:flex;flex-direction:column;gap:8px">
-                <button class="btn" style="text-align:left;font-size:13px" onclick="iaQuick('Plano de marketing Março para Klinik Odontologia focado em clareamento e lentes')">📅 Plano de Marketing — Março</button>
-                <button class="btn" style="text-align:left;font-size:13px" onclick="iaQuick('Análise de margem e upsell: Lentes R$1.800, Implante R$2.200, Clareamento R$800 — Klinik Odontologia')">💰 Análise de Margem e Upsell</button>
-                <button class="btn" style="text-align:left;font-size:13px" onclick="iaQuick('Posts Instagram Klinik Odontologia implante dentário público feminino 35-55 anos, 3 posts')">📸 Posts Instagram — Implante</button>
-                <button class="btn" style="text-align:left;font-size:13px" onclick="iaQuick('Estratégia para reativar 399 pacientes inativos Klinik Odontologia via WhatsApp')">🔄 Estratégia de Reativação</button>
-                <button class="btn" style="text-align:left;font-size:13px" onclick="iaQuick('Script captação indicações para paciente satisfeito da Klinik Odontologia')">⭐ Script de Indicação</button>
+                <button class="btn" style="text-align:left;font-size:13px" onclick="iaQuick('Plano de marketing Março para Klinov focado em clareamento e lentes')">📅 Plano de Marketing — Março</button>
+                <button class="btn" style="text-align:left;font-size:13px" onclick="iaQuick('Análise de margem e upsell: Lentes R$1.800, Implante R$2.200, Clareamento R$800 — Klinov')">💰 Análise de Margem e Upsell</button>
+                <button class="btn" style="text-align:left;font-size:13px" onclick="iaQuick('Posts Instagram Klinov implante dentário público feminino 35-55 anos, 3 posts')">📸 Posts Instagram — Implante</button>
+                <button class="btn" style="text-align:left;font-size:13px" onclick="iaQuick('Estratégia para reativar 399 pacientes inativos Klinov via WhatsApp')">🔄 Estratégia de Reativação</button>
+                <button class="btn" style="text-align:left;font-size:13px" onclick="iaQuick('Script captação indicações para paciente satisfeito da Klinov')">⭐ Script de Indicação</button>
               </div>
             </div>
           </div>
@@ -1951,15 +1951,15 @@ var _lastActivity=Date.now()
 document.addEventListener('click',function(){_lastActivity=Date.now()})
 document.addEventListener('keydown',function(){_lastActivity=Date.now()})
 setInterval(function(){
-  if(Date.now()-_lastActivity>1800000&&localStorage.getItem('klinik_token')){
-    localStorage.removeItem('klinik_token');location.reload()
+  if(Date.now()-_lastActivity>1800000&&localStorage.getItem('klinov_token')){
+    localStorage.removeItem('klinov_token');location.reload()
   }
 },60000)
 
 // ── API HELPERS (must be first) ─────────────────────────────────
 function _apiHeaders(extra){
   var h=Object.assign({'Content-Type':'application/json'},extra||{})
-  var tk=localStorage.getItem('klinik_token')
+  var tk=localStorage.getItem('klinov_token')
   if(tk)h['Authorization']='Bearer '+tk
   return h
 }
@@ -1977,17 +1977,17 @@ async function apiPost(rota,body){
 }
 
 // ── AUTH ────────────────────────────────────────────────────────
-var KLINIK_USER = null
+var KLINOV_USER = null
 
 async function checkAuth() {
-  var token = localStorage.getItem('klinik_token')
+  var token = localStorage.getItem('klinov_token')
   if (!token) { showLogin(); return }
   try {
     var r = await fetch('/api/auth?action=me', { headers: { 'Authorization': 'Bearer ' + token } })
     var d = await r.json()
-    if (d.success) { KLINIK_USER = d.usuario; hideLogin(); updateUserInfo(); return }
+    if (d.success) { KLINOV_USER = d.usuario; hideLogin(); updateUserInfo(); return }
   } catch(e) {}
-  localStorage.removeItem('klinik_token')
+  localStorage.removeItem('klinov_token')
   showLogin()
 }
 
@@ -2010,8 +2010,8 @@ async function doLogin() {
       document.getElementById('login-form').style.display = 'none'
       document.getElementById('redefine-form').style.display = 'block'
     } else if (d.success) {
-      localStorage.setItem('klinik_token', d.token)
-      KLINIK_USER = d.usuario
+      localStorage.setItem('klinov_token', d.token)
+      KLINOV_USER = d.usuario
       hideLogin()
       updateUserInfo()
     } else { errEl.textContent = d.error || 'Erro no login' }
@@ -2035,8 +2035,8 @@ async function doRedefinir() {
     var r = await fetch('/api/auth?action=redefinir-senha', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario_id: _redefineUserId, nova_senha: senha }) })
     var d = await r.json()
     if (d.success) {
-      localStorage.setItem('klinik_token', d.token)
-      KLINIK_USER = d.usuario
+      localStorage.setItem('klinov_token', d.token)
+      KLINOV_USER = d.usuario
       hideLogin()
       updateUserInfo()
       document.getElementById('login-form').style.display = 'block'
@@ -2047,29 +2047,29 @@ async function doRedefinir() {
 }
 
 function doLogout() {
-  var token = localStorage.getItem('klinik_token')
+  var token = localStorage.getItem('klinov_token')
   if (token) fetch('/api/auth?action=logout', { headers: { 'Authorization': 'Bearer ' + token } }).catch(function(){})
-  localStorage.removeItem('klinik_token')
-  KLINIK_USER = null
+  localStorage.removeItem('klinov_token')
+  KLINOV_USER = null
   showLogin()
 }
 
 function showLogin() { document.getElementById('login-screen').classList.remove('hidden') }
 function hideLogin() { document.getElementById('login-screen').classList.add('hidden') }
 function updateUserInfo() {
-  if (!KLINIK_USER) return
+  if (!KLINOV_USER) return
   var el = document.querySelector('.user-info span')
-  if (el) el.textContent = KLINIK_USER.nome.split(' ')[0]
+  if (el) el.textContent = KLINOV_USER.nome.split(' ')[0]
   var av = document.querySelector('.user-av')
-  if (av) av.textContent = KLINIK_USER.nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
+  if (av) av.textContent = KLINOV_USER.nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
   // Load plan status
   loadPlanStatus()
 }
 
 async function loadPlanStatus(){
-  if(!KLINIK_USER||!KLINIK_USER.clinica_id)return
+  if(!KLINOV_USER||!KLINOV_USER.clinica_id)return
   try{
-    var r=await fetch('/api/billing?action=status&clinica_id='+KLINIK_USER.clinica_id,{headers:_apiHeaders()})
+    var r=await fetch('/api/billing?action=status&clinica_id='+KLINOV_USER.clinica_id,{headers:_apiHeaders()})
     var d=await r.json()
     if(!d.success)return
     var badge=document.getElementById('plan-badge')
@@ -2099,13 +2099,13 @@ async function loadPlanStatus(){
 }
 
 async function openUpgrade(){
-  if(!KLINIK_USER)return
+  if(!KLINOV_USER)return
   var plano=prompt('Escolha seu plano:\n\n1 - Básico (R$ 97/mês)\n2 - Profissional (R$ 197/mês)\n3 - Premium (R$ 347/mês)\n\nDigite 1, 2 ou 3:')
   var planoMap={'1':'basico','2':'profissional','3':'premium'}
   var pl=planoMap[plano]
   if(!pl){alert('Plano inválido');return}
   try{
-    var r=await fetch('/api/billing?action=checkout',{method:'POST',headers:_apiHeaders(),body:JSON.stringify({clinica_id:KLINIK_USER.clinica_id,plano:pl})})
+    var r=await fetch('/api/billing?action=checkout',{method:'POST',headers:_apiHeaders(),body:JSON.stringify({clinica_id:KLINOV_USER.clinica_id,plano:pl})})
     var d=await r.json()
     if(d.success&&d.url)window.location.href=d.url
     else alert(d.error||'Erro ao criar checkout')
@@ -2113,9 +2113,9 @@ async function openUpgrade(){
 }
 
 async function openBillingPortal(){
-  if(!KLINIK_USER)return
+  if(!KLINOV_USER)return
   try{
-    var r=await fetch('/api/billing?action=portal',{method:'POST',headers:_apiHeaders(),body:JSON.stringify({clinica_id:KLINIK_USER.clinica_id})})
+    var r=await fetch('/api/billing?action=portal',{method:'POST',headers:_apiHeaders(),body:JSON.stringify({clinica_id:KLINOV_USER.clinica_id})})
     var d=await r.json()
     if(d.success&&d.url)window.location.href=d.url
     else alert(d.error||'Erro ao abrir portal')
@@ -3082,7 +3082,7 @@ async function abrirOrcamentoModal(orcId){
     id:orc?orc.id:null,
     paciente_id:p.id,
     profissional_id:orc?orc.profissional_id:null,
-    profissional_nome:orc?orc.profissional_nome:(KLINIK_USER?KLINIK_USER.nome:''),
+    profissional_nome:orc?orc.profissional_nome:(KLINOV_USER?KLINOV_USER.nome:''),
     data_criacao:orc?(orc.data_criacao||'').slice(0,10):new Date().toISOString().slice(0,10),
     observacoes:orc?orc.observacoes||'':'',
     tabela_preco:orc?orc.tabela_preco:'PARTICULAR',
@@ -3135,11 +3135,11 @@ function renderOrcModal(){
           '<div style="font-size:13px;font-weight:500;color:#757575;text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px">Dados do Orçamento</div>'+
           '<div style="margin-bottom:16px">'+
             '<label style="display:block;font-size:13px;font-weight:500;color:#1A1A1A;margin-bottom:4px">Clínica</label>'+
-            '<input type="text" value="Klinik Odontologia" readonly style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#757575;background:#FAFAFA;font-family:Roboto,sans-serif">'+
+            '<input type="text" value="Klinov" readonly style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#757575;background:#FAFAFA;font-family:Roboto,sans-serif">'+
           '</div>'+
           '<div style="margin-bottom:16px">'+
             '<label style="display:block;font-size:13px;font-weight:500;color:#1A1A1A;margin-bottom:4px">Orçamento criado por</label>'+
-            '<input type="text" value="'+((d.id&&d.profissional_nome)?d.profissional_nome:(KLINIK_USER?KLINIK_USER.nome:''))+'" readonly style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#757575;background:#FAFAFA;font-family:Roboto,sans-serif">'+
+            '<input type="text" value="'+((d.id&&d.profissional_nome)?d.profissional_nome:(KLINOV_USER?KLINOV_USER.nome:''))+'" readonly style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#757575;background:#FAFAFA;font-family:Roboto,sans-serif">'+
           '</div>'+
           '<div style="margin-bottom:16px">'+
             '<label style="display:block;font-size:13px;font-weight:500;color:#1A1A1A;margin-bottom:4px">Data</label>'+
@@ -4170,7 +4170,7 @@ function renderCRM() {
   const bmap={urgente:'badge-red',alta:'badge-orange',media:'badge-green'}
   const lmap={urgente:'URGENTE',alta:'ALTA',media:'MÉDIA'}
   document.getElementById('crm-table').innerHTML=filtered.map((p,i)=>{
-    const wa=`https://wa.me/55?text=${encodeURIComponent('Olá '+p.nome.split(' ')[0]+'! É a Klinik Odontologia. Sentimos sua falta! 😊')}`
+    const wa=`https://wa.me/55?text=${encodeURIComponent('Olá '+p.nome.split(' ')[0]+'! É a Klinov. Sentimos sua falta! 😊')}`
     return`<tr><td class="text-muted">${i+1}</td><td><div class="pname">${p.nome}</div></td><td class="text-muted">${p.ultima}</td><td style="color:var(--red);font-weight:500">${p.dias}d</td><td><span class="badge ${bmap[pr(p.dias)]}">${lmap[pr(p.dias)]}</span></td><td><a href="${wa}" target="_blank" class="wa-btn">WhatsApp</a></td></tr>`
   }).join('')
 }
@@ -4829,8 +4829,8 @@ async function loadAniversariantes(mes) {
         var nome1=nome.split(' ')[0]
         var waTel=tel?tel.replace(/\D/g,''):''
         if(waTel&&waTel.length<=11)waTel='55'+waTel
-        var waUrl=waTel?'https://wa.me/'+waTel+'?text='+encodeURIComponent('Feliz aniversario, '+nome1+'! A equipe Klinik Odontologia te deseja um dia incrivel! 🎂'):''
-        var mailUrl=email?'mailto:'+email+'?subject='+encodeURIComponent('Feliz Aniversario, '+nome1+'!')+'&body='+encodeURIComponent('Ola '+nome1+',\n\nA equipe Klinik Odontologia te deseja um feliz aniversario!\n\nUm abraco!'):''
+        var waUrl=waTel?'https://wa.me/'+waTel+'?text='+encodeURIComponent('Feliz aniversario, '+nome1+'! A equipe Klinov te deseja um dia incrivel! 🎂'):''
+        var mailUrl=email?'mailto:'+email+'?subject='+encodeURIComponent('Feliz Aniversario, '+nome1+'!')+'&body='+encodeURIComponent('Ola '+nome1+',\n\nA equipe Klinov te deseja um feliz aniversario!\n\nUm abraco!'):''
 
         html+='<div style="display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid #F0F0F0">'+
           '<div style="width:42px;height:42px;border-radius:50%;background:#1976D2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;flex-shrink:0">'+dia+'</div>'+
@@ -5297,7 +5297,7 @@ async function callClaude(p) {
     const d=await r.json()
     return d.content?.[0]?.text||'Erro ao gerar.'
   } catch(e) {
-    return`Olá! Somos a Klinik Odontologia 💛\n\nSentimos sua falta! Temos horários disponíveis essa semana.\n\n📍 Rua Padre João Crippa, 2012\n📞 (67) 99931-5131`
+    return`Olá! Somos a Klinov 💛\n\nSentimos sua falta! Temos horários disponíveis essa semana.\n\n📍 Rua Padre João Crippa, 2012\n📞 (67) 99931-5131`
   }
 }
 
@@ -5310,7 +5310,7 @@ async function gerarScriptIA() {
   const out=document.getElementById('ia-output')
   el.classList.remove('hidden')
   out.textContent='Gerando...'
-  const s=await callClaude(`Você é recepcionista da Klinik Odontologia, Campo Grande MS (Rua Padre João Crippa 2012, tel: (67) 99931-5131). Gere mensagem WhatsApp de ${tipo} para ${nome}, ausente há ${dias} dias. Mencione ${proc}. Tom caloroso. 3 parágrafos. CTA.`)
+  const s=await callClaude(`Você é recepcionista da Klinov, Campo Grande MS (Rua Padre João Crippa 2012, tel: (67) 99931-5131). Gere mensagem WhatsApp de ${tipo} para ${nome}, ausente há ${dias} dias. Mencione ${proc}. Tom caloroso. 3 parágrafos. CTA.`)
   out.textContent=s; window._iaScript=s
   document.getElementById('ia-wa').href=`https://wa.me/5567999315131?text=${encodeURIComponent(s)}`
 }
@@ -5321,7 +5321,7 @@ async function gerarScriptModal() {
   const proc=document.getElementById('ms-proc').value
   document.getElementById('ms-loading').classList.remove('hidden')
   document.getElementById('ms-result').classList.add('hidden')
-  const s=await callClaude(`Você é recepcionista da Klinik Odontologia. Gere mensagem WhatsApp de ${tipo} para ${nome}, mencione ${proc}. Tom caloroso. 3 parágrafos. CTA. Tel: (67) 99931-5131`)
+  const s=await callClaude(`Você é recepcionista da Klinov. Gere mensagem WhatsApp de ${tipo} para ${nome}, mencione ${proc}. Tom caloroso. 3 parágrafos. CTA. Tel: (67) 99931-5131`)
   document.getElementById('ms-loading').classList.add('hidden')
   document.getElementById('ms-result').classList.remove('hidden')
   document.getElementById('ms-output').textContent=s; window._msScript=s
@@ -5331,7 +5331,7 @@ async function gerarScriptModal() {
 async function iaQuick(p) {
   const el=document.getElementById('ia-quick-result')
   el.textContent='Gerando com IA...'
-  const s=await callClaude('Especialista em marketing odontológico para Klinik Odontologia Campo Grande MS. '+p+' Seja específico e prático.')
+  const s=await callClaude('Especialista em marketing odontológico para Klinov Campo Grande MS. '+p+' Seja específico e prático.')
   el.textContent=s
 }
 
@@ -5500,9 +5500,9 @@ async function salvarUsuario(){
   if(!usuario){alert('Preencha o campo Usuario');return}
   if(!nome){alert('Preencha o nome completo');return}
   if(!emailPessoal){alert('Preencha o email para envio do link de ativacao');return}
-  var loginEmail=usuario+'@klinik.com'
+  var loginEmail=usuario+'@klinov.com'
   try{
-    var r=await fetch('/api/auth?action=criar-usuario',{method:'POST',headers:_apiHeaders(),body:JSON.stringify({nome:nome,email:loginEmail,email_pessoal:emailPessoal,perfil:perfil,clinica_id:KLINIK_USER?KLINIK_USER.clinica_id:1})})
+    var r=await fetch('/api/auth?action=criar-usuario',{method:'POST',headers:_apiHeaders(),body:JSON.stringify({nome:nome,email:loginEmail,email_pessoal:emailPessoal,perfil:perfil,clinica_id:KLINOV_USER?KLINOV_USER.clinica_id:1})})
     var d=await r.json()
     if(d.success){
       closeModal('novo-usuario');loadUsuarios()
@@ -5773,7 +5773,7 @@ async function loadMetasVisualizar(){
 
       html+='<div style="background:#F5F5F5;border-radius:8px;padding:20px;border:1px solid var(--border)">'+
         '<div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px">'+tipoLabel+'</div>'+
-        '<div style="font-size:13px;color:var(--text3);margin-bottom:4px">Clinica: <strong style="color:var(--text)">Klinik Odontologia</strong></div>'+
+        '<div style="font-size:13px;color:var(--text3);margin-bottom:4px">Clinica: <strong style="color:var(--text)">Klinov</strong></div>'+
         '<div style="font-size:13px;color:var(--text3);margin-bottom:4px">Periodo: '+fmtDt(m.data_inicio)+' ate '+fmtDt(m.data_fim)+'</div>'+
         '<div style="font-size:13px;color:var(--text3);margin-bottom:4px">Meta: <strong style="color:var(--text)">'+metaStr+'</strong></div>'+
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
@@ -5821,7 +5821,7 @@ async function loadMetasConfig(){
         '<td>'+fmtDt(m.data_inicio)+'</td>'+
         '<td>'+fmtDt(m.data_fim)+'</td>'+
         '<td>'+(m.analise==='clinica'?'Clinica':'Geral')+'</td>'+
-        '<td>Klinik Odontologia</td>'+
+        '<td>Klinov</td>'+
         '<td style="text-align:right;font-weight:600">'+metaStr+'</td>'+
       '</tr>'
     })
@@ -5853,7 +5853,7 @@ function abrirModalMeta(editId){
 
       '<div style="margin-bottom:20px">'+
         '<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Clinica</label>'+
-        '<input type="text" value="Klinik Odontologia" readonly style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:#757575;background:#FAFAFA;font-family:Roboto,sans-serif">'+
+        '<input type="text" value="Klinov" readonly style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:#757575;background:#FAFAFA;font-family:Roboto,sans-serif">'+
       '</div>'+
 
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">'+
@@ -9084,7 +9084,7 @@ function fmtBrl(v){return 'R$ '+(+v||0).toLocaleString('pt-BR',{minimumFractionD
 function fmtDt(s){if(!s)return '—';var d=s.slice(0,10);try{return new Date(d+'T12:00:00').toLocaleDateString('pt-BR')}catch(e){return d}}
 function _apiHeaders(extra){
   var h=Object.assign({'Content-Type':'application/json'},extra||{})
-  var tk=localStorage.getItem('klinik_token')
+  var tk=localStorage.getItem('klinov_token')
   if(tk)h['Authorization']='Bearer '+tk
   return h
 }
@@ -9219,7 +9219,7 @@ function ccExportar(){
   if(!el||!el.innerHTML.includes('cc-day'))return alert('Carregue os dados primeiro')
   var w=window.open('','_blank')
   w.document.write('<html><head><title>Conta Corrente - Klinik</title><style>body{font-family:Arial,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:12px}th{background:#f5f5f5}</style></head><body>')
-  w.document.write('<h2>Conta Corrente — Klinik Odontologia</h2>')
+  w.document.write('<h2>Conta Corrente — Klinov</h2>')
   w.document.write(el.innerHTML)
   w.document.write('</body></html>')
   w.document.close()

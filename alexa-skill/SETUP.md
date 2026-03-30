@@ -1,4 +1,4 @@
-# Alexa Skill - Klinik Odontologia
+# Alexa Skill - Klinov
 
 ## Passo a passo para publicar a skill
 
@@ -6,7 +6,7 @@
 
 1. Acesse [developer.amazon.com/alexa/console/ask](https://developer.amazon.com/alexa/console/ask)
 2. Clique **Create Skill**
-3. **Skill name**: `Klinik Odontologia`
+3. **Skill name**: `Klinov`
 4. **Primary locale**: `Portuguese (BR)`
 5. **Type of experience**: Other
 6. **Model**: Custom
@@ -42,18 +42,18 @@
 ### 5. Testar
 
 1. Menu: **Test** → ative teste em **Development**
-2. Diga ou digite: `Alexa, abrir Klinik Odontologia`
+2. Diga ou digite: `Alexa, abrir Klinov`
 3. Depois: `Quantos pacientes tenho hoje?`
 
 ### 6. Publicar
 
 1. Menu: **Distribution**
 2. Preencha:
-   - **Public Name**: Klinik Odontologia
+   - **Public Name**: Klinov
    - **One Sentence Description**: Consulte sua agenda odontológica por voz
    - **Detailed Description**: Profissionais de odontologia podem consultar sua agenda, ver próximos pacientes, verificar faltas e aniversariantes diretamente pela Alexa.
    - **Example Phrases**:
-     - "Alexa, abrir Klinik Odontologia"
+     - "Alexa, abrir Klinov"
      - "Alexa, perguntar ao Klinik quantos pacientes tenho hoje"
      - "Alexa, perguntar ao Klinik minha agenda de amanhã"
    - **Category**: Health & Fitness
@@ -66,7 +66,7 @@
 
 | Comando | O que faz |
 |---------|-----------|
-| "Alexa, abrir Klinik Odontologia" | Inicia a skill |
+| "Alexa, abrir Klinov" | Inicia a skill |
 | "Minha agenda de hoje" | Lista pacientes do dia |
 | "Agenda de amanhã" | Lista pacientes de amanhã |
 | "Próximo paciente" | Mostra o próximo atendimento |
@@ -79,6 +79,6 @@
 1. No sistema Klinik, vá em **Assistente IA**
 2. Clique **Gerar Meu Token Pessoal**
 3. Copie o token
-4. No app Alexa do celular, busque a skill **Klinik Odontologia**
+4. No app Alexa do celular, busque a skill **Klinov**
 5. Ative e vincule a conta com o token
-6. Pronto! Diga "Alexa, abrir Klinik Odontologia"
+6. Pronto! Diga "Alexa, abrir Klinov"

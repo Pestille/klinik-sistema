@@ -1,7 +1,7 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "klinik odontologia",
+      "invocationName": "klinov",
       "intents": [
         {
           "name": "AgendaHojeIntent",
@@ -126,7 +126,7 @@
             "tenho consulta amanhã",
             "qual o horário da minha consulta",
             "quando eu tenho dentista",
-            "que horas é minha consulta na klinik"
+            "que horas é minha consulta na klinov"
           ]
         },
         {

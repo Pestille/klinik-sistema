@@ -1,5 +1,5 @@
 // api/middleware.js — Middleware de autenticação e autorização (SaaS)
-// Klinik Sistema — Campo Grande, MS
+// Klinov — Campo Grande, MS
 
 var { getClient } = require('./db')
 

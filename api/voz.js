@@ -215,9 +215,9 @@ async function handleAlexa(req, res) {
 
         if (requestType === 'LaunchRequest') {
             if (isPaciente) {
-                return alexaResp(res, 'Ola ' + pacienteNome.split(' ')[0] + '! Sou a assistente da Klinik Odontologia. Voce pode perguntar: que horas e minha consulta, quando e minha proxima consulta, ou meus agendamentos.', false)
+                return alexaResp(res, 'Ola ' + pacienteNome.split(' ')[0] + '! Sou a assistente da Klinov. Voce pode perguntar: que horas e minha consulta, quando e minha proxima consulta, ou meus agendamentos.', false)
             }
-            return alexaResp(res, 'Ola' + (profNome ? ' ' + profNome.split(' ')[0] : '') + '! Sou a assistente da Klinik Odontologia. Voce pode perguntar: quantos pacientes tenho hoje, minha agenda de amanha, proximo paciente, faltas ou aniversariantes.', false)
+            return alexaResp(res, 'Ola' + (profNome ? ' ' + profNome.split(' ')[0] : '') + '! Sou a assistente da Klinov. Voce pode perguntar: quantos pacientes tenho hoje, minha agenda de amanha, proximo paciente, faltas ou aniversariantes.', false)
         }
         if (requestType === 'SessionEndedRequest') return res.status(200).json({})
 
@@ -234,7 +234,7 @@ async function handleAlexa(req, res) {
                     return alexaResp(res, 'Para consultar seus agendamentos, preciso acessar seu email. Nas configuracoes da skill no app Alexa, habilite a permissao de email.', true)
                 }
                 if (!isPaciente) {
-                    return alexaResp(res, 'Nao encontrei seu cadastro na Klinik Odontologia com o email ' + userEmail + '. Verifique com a clinica se seu email esta cadastrado.', true)
+                    return alexaResp(res, 'Nao encontrei seu cadastro na Klinov com o email ' + userEmail + '. Verifique com a clinica se seu email esta cadastrado.', true)
                 }
 
                 // Find patient appointments
@@ -244,7 +244,7 @@ async function handleAlexa(req, res) {
                 })
 
                 if (!pacAg.rows.length) {
-                    return alexaResp(res, pacienteNome.split(' ')[0] + ', voce nao tem consultas agendadas nos proximos dias. Para agendar, entre em contato com a Klinik Odontologia.', true)
+                    return alexaResp(res, pacienteNome.split(' ')[0] + ', voce nao tem consultas agendadas nos proximos dias. Para agendar, entre em contato com a Klinov.', true)
                 }
 
                 var proxima = pacAg.rows[0]

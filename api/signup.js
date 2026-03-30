@@ -1,5 +1,5 @@
 // api/signup.js — Cadastro de clínicas (SaaS)
-// Klinik Sistema — Campo Grande, MS
+// Klinov — Campo Grande, MS
 
 var bcrypt = require('bcryptjs')
 var { getClient } = require('./db')

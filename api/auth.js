@@ -47,7 +47,7 @@ async function enviarEmail(para, assunto, html) {
     if (!user || !pass) { console.log('[auth] Nenhum servico de email configurado (RESEND_API_KEY ou EMAIL_USER/EMAIL_PASS)'); return false }
     try {
         var transporter = nodemailer.createTransport({ service: 'gmail', auth: { user: user, pass: pass } })
-        await transporter.sendMail({ from: 'Klinik Sistema <' + user + '>', to: para, subject: assunto, html: html })
+        await transporter.sendMail({ from: 'Klinov <' + user + '>', to: para, subject: assunto, html: html })
         return true
     } catch(e) {
         console.error('[auth] Gmail error:', e.message)
@@ -206,9 +206,9 @@ module.exports = async function handler(req, res) {
         var linkAtivacao = siteUrl + '/api/auth?action=ativar&token=' + tokenAtivacao
         var emailHtml = '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;padding:20px;background:#f5f5f5">' +
             '<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.1)">' +
-            '<div style="text-align:center;margin-bottom:24px"><span style="font-size:22px;font-weight:700;color:#1B5E3B">KLINIK SISTEMA</span></div>' +
+            '<div style="text-align:center;margin-bottom:24px"><span style="font-size:22px;font-weight:700;color:#1B5E3B">KLINOV</span></div>' +
             '<p style="color:#333;font-size:15px">Ola <strong>' + b2.nome.trim() + '</strong>,</p>' +
-            '<p style="color:#555;font-size:14px">Voce foi convidado para o Klinik Sistema com o perfil <strong>' + perfil.toUpperCase() + '</strong>.</p>' +
+            '<p style="color:#555;font-size:14px">Voce foi convidado para o Klinov com o perfil <strong>' + perfil.toUpperCase() + '</strong>.</p>' +
             '<p style="color:#555;font-size:14px">Para ativar sua conta e criar sua senha, clique no botao abaixo:</p>' +
             '<div style="text-align:center;margin:24px 0"><a href="' + linkAtivacao + '" style="display:inline-block;background:#E65100;color:#fff;text-decoration:none;padding:14px 36px;border-radius:6px;font-weight:600;font-size:15px">Ativar Minha Conta</a></div>' +
             '<p style="color:#999;font-size:12px">Este link expira em 48 horas. Se voce nao solicitou esta conta, ignore este email.</p>' +
@@ -216,12 +216,12 @@ module.exports = async function handler(req, res) {
             '<p style="color:#999;font-size:11px;margin:0">Se o botao nao funcionar, copie e cole o link abaixo no seu navegador:</p>' +
             '<p style="color:#1565C0;font-size:11px;word-break:break-all">' + linkAtivacao + '</p>' +
             '</div>' +
-            '<p style="color:#999;font-size:11px;text-align:center;margin-top:16px">Klinik Odontologia</p>' +
+            '<p style="color:#999;font-size:11px;text-align:center;margin-top:16px">Klinov</p>' +
             '</div></body></html>'
 
-        // Envia para o email pessoal (não o login @klinik.com)
+        // Envia para o email pessoal (não o login @klinov.com)
         var emailDestino = b2.email_pessoal || b2.email
-        var emailEnviado = await enviarEmail(emailDestino.toLowerCase().trim(), 'Ative sua conta — Klinik Sistema', emailHtml)
+        var emailEnviado = await enviarEmail(emailDestino.toLowerCase().trim(), 'Ative sua conta — Klinov', emailHtml)
 
         return res.status(200).json({ success: true, msg: 'Convite enviado por email', email_enviado: emailEnviado })
     }
@@ -266,10 +266,10 @@ module.exports = async function handler(req, res) {
 
         // GET: mostra formulário HTML de criação de senha
         res.setHeader('Content-Type', 'text/html')
-        return res.status(200).send('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ativar Conta — Klinik</title></head>' +
+        return res.status(200).send('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ativar Conta — Klinov</title></head>' +
             '<body style="font-family:Arial,sans-serif;background:#f5f5f5;padding:20px;margin:0">' +
             '<div style="max-width:420px;margin:40px auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.1)">' +
-            '<div style="text-align:center;margin-bottom:24px"><span style="font-size:22px;font-weight:700;color:#1B5E3B">KLINIK SISTEMA</span></div>' +
+            '<div style="text-align:center;margin-bottom:24px"><span style="font-size:22px;font-weight:700;color:#1B5E3B">KLINOV</span></div>' +
             '<h2 style="color:#333;font-size:18px;margin-bottom:8px">Ativar sua conta</h2>' +
             '<p style="color:#666;font-size:14px;margin-bottom:24px">Ola <strong>' + uAt.nome + '</strong>, crie sua senha para acessar o sistema.</p>' +
             '<div id="form-area">' +

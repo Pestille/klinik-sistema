@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
         var mode = (req.query || {})['hub.mode']
         var token = (req.query || {})['hub.verify_token']
         var challenge = (req.query || {})['hub.challenge']
-        var verifyToken = process.env.WHATSAPP_VERIFY_TOKEN || 'klinik_verify_2026'
+        var verifyToken = process.env.WHATSAPP_VERIFY_TOKEN || 'klinov_verify_2026'
         if (mode === 'subscribe' && token === verifyToken) {
             console.log('[wa-webhook] Verificacao OK')
             return res.status(200).send(challenge)
