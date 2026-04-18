@@ -770,7 +770,7 @@ async function enviarLead(ev) {
   msg.textContent = ''
 
   try {
-    var r = await fetch('/api/lead', {
+    var r = await fetch('/api/signup?action=lead', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
