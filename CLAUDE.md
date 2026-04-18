@@ -1,8 +1,13 @@
 # Klinik Sistema — Guia de Design Frontend
 
 ## Stack
-HTML estático + CSS inline no `index.html` + Vercel Serverless Node.js + Turso DB (libSQL).
-Sem bundler, sem framework JS. Tudo em um único `index.html`.
+HTML estático + CSS inline + Vercel Serverless Node.js + Turso DB (libSQL).
+Sem bundler, sem framework JS.
+
+Arquivos principais em `public/`:
+- `index.html` — landing page comercial (servida em `/`)
+- `app.html` — sistema completo com login (servido em `/app` via rewrite)
+- `politica-privacidade.html`, `termos-de-uso.html` — páginas legais
 
 ## Banco de Dados (Turso) — Backup 20/03/2026
 Dados importados do Clinicorp e agora autônomos. O sistema opera 100% a partir do Turso.
