@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#034030"/>
+      <stop offset="100%" stop-color="#2E7D52"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#E65100"/>
+      <stop offset="100%" stop-color="#FF6D00"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <circle cx="1050" cy="120" r="180" fill="#fff" opacity="0.04"/>
+  <circle cx="200" cy="540" r="220" fill="#fff" opacity="0.04"/>
+
+  <g transform="translate(80,100)">
+    <rect width="64" height="64" rx="14" fill="#fff" opacity="0.12"/>
+    <path d="M20 18 L20 46 M20 32 L32 18 M20 32 L34 46" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none" transform="translate(0,0)"/>
+    <circle cx="46" cy="20" r="4.5" fill="url(#orange)"/>
+  </g>
+  <text x="170" y="148" font-family="Inter,Arial,sans-serif" font-size="48" font-weight="800" fill="#fff" letter-spacing="-1">Klinov</text>
+
+  <text x="80" y="290" font-family="Inter,Arial,sans-serif" font-size="72" font-weight="800" fill="#fff" letter-spacing="-2">Gestão inteligente</text>
+  <text x="80" y="370" font-family="Inter,Arial,sans-serif" font-size="72" font-weight="800" fill="#fff" letter-spacing="-2">para clínicas</text>
+  <text x="80" y="450" font-family="Inter,Arial,sans-serif" font-size="72" font-weight="800" fill="url(#orange)" letter-spacing="-2">odontológicas</text>
+
+  <text x="80" y="520" font-family="Inter,Arial,sans-serif" font-size="26" font-weight="400" fill="#fff" opacity="0.85">Agenda · Prontuário · Financeiro · Orçamentos · WhatsApp</text>
+
+  <g transform="translate(80,555)">
+    <rect width="240" height="48" rx="8" fill="url(#orange)"/>
+    <text x="120" y="31" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="700" fill="#fff">Teste 14 dias grátis</text>
+  </g>
+
+  <text x="1120" y="600" text-anchor="end" font-family="Inter,Arial,sans-serif" font-size="14" fill="#fff" opacity="0.5">klinov.com</text>
+</svg>
