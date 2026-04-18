@@ -3,4 +3,4 @@ Allow: /
 Disallow: /app
 Disallow: /api/
 
-Sitemap: https://klinov.com/sitemap.xml
+Sitemap: https://klinov.com.br/sitemap.xml

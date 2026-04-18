@@ -89,8 +89,8 @@ async function verificarPermissao(client, clinica_id, perfil, recurso) {
  */
 function setCorsHeaders(req, res) {
     var allowedOrigins = [
-        'https://klinov.com',
-        'https://www.klinov.com',
+        'https://klinov.com.br',
+        'https://www.klinov.com.br',
         'https://klinik-sistema.vercel.app',
         'https://klinik-sistema-pestilles-projects.vercel.app',
         'https://klinik-sistema-git-main-pestilles-projects.vercel.app'

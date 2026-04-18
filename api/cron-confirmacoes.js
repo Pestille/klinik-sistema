@@ -47,7 +47,7 @@ module.exports = async function handler(req, res) {
             var waToken = process.env.WHATSAPP_TOKEN || ''
             var waPhoneId = process.env.WHATSAPP_PHONE_ID || ''
             var resendKey = process.env.RESEND_API_KEY || ''
-            var resendFrom = process.env.RESEND_FROM_EMAIL || 'noreply@klinov.com'
+            var resendFrom = process.env.RESEND_FROM_EMAIL || 'noreply@klinov.com.br'
             var clinicaNome = cliCfg.nome || 'Klinov'
 
             // Skip if clinic has confirmations disabled

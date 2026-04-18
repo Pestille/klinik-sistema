@@ -260,7 +260,7 @@ module.exports = async function handler(req, res) {
                 whatsapp_phone_id: process.env.WHATSAPP_PHONE_ID || 'NAO CONFIGURADO',
                 whatsapp_template: process.env.WHATSAPP_TEMPLATE_NAME || 'Nao configurado (usando texto livre)',
                 resend_api_key: process.env.RESEND_API_KEY ? 'Configurado' : 'NAO CONFIGURADO',
-                resend_from: process.env.RESEND_FROM_EMAIL || 'noreply@klinov.com (default)',
+                resend_from: process.env.RESEND_FROM_EMAIL || 'noreply@klinov.com.br (default)',
                 asaas_api_key_env: process.env.ASAAS_API_KEY ? 'Configurado' : 'Nao configurado (usa da clinica)',
                 turso_url: process.env.TURSO_DATABASE_URL ? 'Configurado' : 'NAO CONFIGURADO',
                 stripe_key: process.env.STRIPE_SECRET_KEY ? 'Configurado' : 'NAO CONFIGURADO'
@@ -421,7 +421,7 @@ module.exports = async function handler(req, res) {
                     var resTest = await fetch('https://api.resend.com/domains', { headers: { 'Authorization': 'Bearer ' + resendKey } })
                     var resData = await resTest.json()
                     if (resTest.ok) {
-                        resultado.email = { status: 'OK', dominios: (resData.data || []).map(function(d) { return d.name }), remetente: process.env.RESEND_FROM_EMAIL || 'noreply@klinov.com' }
+                        resultado.email = { status: 'OK', dominios: (resData.data || []).map(function(d) { return d.name }), remetente: process.env.RESEND_FROM_EMAIL || 'noreply@klinov.com.br' }
                     } else {
                         resultado.email = { status: 'ERRO', msg: resData.message || 'Erro na API' }
                     }
@@ -1299,7 +1299,7 @@ module.exports = async function handler(req, res) {
             var pacsCamp = await resolveSegmento(client, camp.segmento, camp.filtro_json)
             var totalEnv = 0, totalErr = 0
             var resendKey = process.env.RESEND_API_KEY || ''
-            var resendFrom = process.env.RESEND_FROM_EMAIL || 'noreply@klinov.com'
+            var resendFrom = process.env.RESEND_FROM_EMAIL || 'noreply@klinov.com.br'
             var waToken = process.env.WHATSAPP_TOKEN || ''
             var waPhoneId = process.env.WHATSAPP_PHONE_ID || ''
 
@@ -2170,7 +2170,7 @@ module.exports = async function handler(req, res) {
                 }
                 // Email
                 var resendKey = process.env.RESEND_API_KEY || ''
-                var resendFrom = process.env.RESEND_FROM_EMAIL || 'noreply@klinov.com'
+                var resendFrom = process.env.RESEND_FROM_EMAIL || 'noreply@klinov.com.br'
                 if (resendKey && gcPaciente.email) {
                     try {
                         await fetch('https://api.resend.com/emails', {

@@ -61,7 +61,7 @@ async function handleLead(req, res, client) {
         console.error('[lead] insert:', e.message)
     }
 
-    var destino = process.env.LEAD_EMAIL_TO || 'contato@klinov.com'
+    var destino = process.env.LEAD_EMAIL_TO || 'contato@klinov.com.br'
     var html =
         '<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1A1A1A">' +
         '<h2 style="color:#034030;margin:0 0 16px">Novo lead — Klinov</h2>' +
@@ -73,7 +73,7 @@ async function handleLead(req, res, client) {
         '<tr><td style="padding:8px 0;color:#718096;vertical-align:top">Mensagem</td><td style="padding:8px 0;white-space:pre-wrap">' + escapeHtml(mensagem || '—') + '</td></tr>' +
         '<tr><td style="padding:8px 0;color:#718096">IP</td><td style="padding:8px 0;color:#718096">' + escapeHtml(ip) + '</td></tr>' +
         '</table>' +
-        '<p style="margin-top:24px;padding-top:16px;border-top:1px solid #E2E8F0;color:#718096;font-size:12px">Recebido via landing page klinov.com</p>' +
+        '<p style="margin-top:24px;padding-top:16px;border-top:1px solid #E2E8F0;color:#718096;font-size:12px">Recebido via landing page klinov.com.br</p>' +
         '</div>'
 
     enviarEmail(destino, 'Novo lead Klinov — ' + nome, html).catch(function(){})
