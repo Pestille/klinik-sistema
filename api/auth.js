@@ -464,11 +464,18 @@ module.exports = async function handler(req, res) {
     // ── ATIVAR/DESATIVAR ───────────────────────────────────────
     if (action === 'toggle-usuario') {
         if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+        var { authenticateRequest: authTU } = require('./middleware')
+        var authTg = await authTU(req)
+        if (!authTg) return res.status(401).json({ success: false, error: 'Não autenticado' })
+        if (authTg.perfil !== 'admin') return res.status(403).json({ success: false, error: 'Apenas admin' })
         var b4 = req.body || {}
         if (!b4.usuario_id) return res.status(400).json({ success: false, error: 'usuario_id obrigatório' })
-        await client.execute({ sql: "UPDATE usuarios SET ativo = CASE WHEN ativo=1 THEN 0 ELSE 1 END WHERE id=?", args: [b4.usuario_id] })
+        // Verifica que o usuário pertence à mesma clínica
+        var owTg = await client.execute({ sql: "SELECT id FROM usuarios WHERE id=? AND clinica_id=?", args: [b4.usuario_id, authTg.clinica_id] })
+        if (!owTg.rows.length) return res.status(404).json({ success: false, error: 'Usuário não encontrado' })
+        await client.execute({ sql: "UPDATE usuarios SET ativo = CASE WHEN ativo=1 THEN 0 ELSE 1 END WHERE id=? AND clinica_id=?", args: [b4.usuario_id, authTg.clinica_id] })
         // Invalida sessões se desativou
-        var check = await client.execute({ sql: "SELECT ativo FROM usuarios WHERE id=?", args: [b4.usuario_id] })
+        var check = await client.execute({ sql: "SELECT ativo FROM usuarios WHERE id=? AND clinica_id=?", args: [b4.usuario_id, authTg.clinica_id] })
         if (check.rows.length && !check.rows[0].ativo) {
             await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=?", args: [b4.usuario_id] })
         }
@@ -478,10 +485,18 @@ module.exports = async function handler(req, res) {
     // ── EXCLUIR USUÁRIO ──────────────────────────────────────
     if (action === 'excluir-usuario') {
         if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+        var { authenticateRequest: authEU } = require('./middleware')
+        var authEx = await authEU(req)
+        if (!authEx) return res.status(401).json({ success: false, error: 'Não autenticado' })
+        if (authEx.perfil !== 'admin') return res.status(403).json({ success: false, error: 'Apenas admin' })
         var b5 = req.body || {}
         if (!b5.usuario_id) return res.status(400).json({ success: false, error: 'usuario_id obrigatório' })
+        if (Number(b5.usuario_id) === Number(authEx.usuario_id)) return res.status(400).json({ success: false, error: 'Você não pode excluir a própria conta' })
+        // Verifica que o usuário pertence à mesma clínica
+        var owEx = await client.execute({ sql: "SELECT id FROM usuarios WHERE id=? AND clinica_id=?", args: [b5.usuario_id, authEx.clinica_id] })
+        if (!owEx.rows.length) return res.status(404).json({ success: false, error: 'Usuário não encontrado' })
         await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=?", args: [b5.usuario_id] })
-        await client.execute({ sql: "DELETE FROM usuarios WHERE id=?", args: [b5.usuario_id] })
+        await client.execute({ sql: "DELETE FROM usuarios WHERE id=? AND clinica_id=?", args: [b5.usuario_id, authEx.clinica_id] })
         return res.status(200).json({ success: true, msg: 'Usuário excluído' })
     }
 

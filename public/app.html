@@ -5526,7 +5526,7 @@ async function loadUsuarios(){
   var el=document.getElementById('usr-list');if(!el)return
   el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Carregando...</div>'
   try{
-    var r=await fetch('/api/auth?action=listar-usuarios')
+    var r=await fetch('/api/auth?action=listar-usuarios',{headers:_apiHeaders()})
     var d=await r.json()
     var users=d.data||[]
     document.getElementById('usr-sub').textContent=users.length+' usuário'+(users.length!==1?'s':'')+' cadastrado'+(users.length!==1?'s':'')
@@ -5596,7 +5596,7 @@ async function alterarSenhaUsuario(){
 async function toggleUsuario(id){
   if(!confirm('Confirma alteração de status do usuário?'))return
   try{
-    var r=await fetch('/api/auth?action=toggle-usuario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario_id:id})})
+    var r=await fetch('/api/auth?action=toggle-usuario',{method:'POST',headers:_apiHeaders(),body:JSON.stringify({usuario_id:id})})
     var d=await r.json()
     if(d.success)loadUsuarios()
     else alert(d.error||'Erro')
@@ -5606,7 +5606,7 @@ async function toggleUsuario(id){
 async function excluirUsuario(id,nome){
   if(!confirm('Excluir o usuário "'+nome+'" permanentemente?\n\nEsta ação não pode ser desfeita.'))return
   try{
-    var r=await fetch('/api/auth?action=excluir-usuario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario_id:id})})
+    var r=await fetch('/api/auth?action=excluir-usuario',{method:'POST',headers:_apiHeaders(),body:JSON.stringify({usuario_id:id})})
     var d=await r.json()
     if(d.success)loadUsuarios()
     else alert(d.error||'Erro')
