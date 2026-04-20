@@ -76,7 +76,11 @@ async function handleLead(req, res, client) {
         '<p style="margin-top:24px;padding-top:16px;border-top:1px solid #E2E8F0;color:#718096;font-size:12px">Recebido via landing page klinov.com.br</p>' +
         '</div>'
 
-    enviarEmail(destino, 'Novo lead Klinov — ' + nome, html).catch(function(){})
+    try {
+        await enviarEmail(destino, 'Novo lead Klinov — ' + nome, html)
+    } catch(e) {
+        console.error('[lead] enviarEmail error:', e && e.message)
+    }
 
     return res.status(200).json({ ok: true })
 }
