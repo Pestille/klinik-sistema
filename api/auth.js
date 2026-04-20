@@ -193,13 +193,15 @@ module.exports = async function handler(req, res) {
         try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_ativacao TEXT") } catch(e) {}
         try { await client.execute("ALTER TABLE usuarios ADD COLUMN ativado INTEGER DEFAULT 0") } catch(e) {}
         try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_ativacao_expira TEXT") } catch(e) {}
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN email_pessoal TEXT") } catch(e) {}
 
         var expiraAtivacao = new Date()
         expiraAtivacao.setHours(expiraAtivacao.getHours() + 48)
 
+        var emailPessoalCU = (b2.email_pessoal || '').toLowerCase().trim()
         await client.execute({
-            sql: "INSERT INTO usuarios(nome,email,senha_hash,perfil,deve_redefinir,clinica_id,ativado,token_ativacao,token_ativacao_expira) VALUES(?,?,'',?,1,?,0,?,?)",
-            args: [b2.nome.trim(), b2.email.toLowerCase().trim(), perfil, b2.clinica_id, tokenAtivacao, expiraAtivacao.toISOString()]
+            sql: "INSERT INTO usuarios(nome,email,email_pessoal,senha_hash,perfil,deve_redefinir,clinica_id,ativado,token_ativacao,token_ativacao_expira) VALUES(?,?,?,'',?,1,?,0,?,?)",
+            args: [b2.nome.trim(), b2.email.toLowerCase().trim(), emailPessoalCU || null, perfil, b2.clinica_id, tokenAtivacao, expiraAtivacao.toISOString()]
         })
 
         // Envia email com link de ativação
@@ -244,8 +246,15 @@ module.exports = async function handler(req, res) {
         // Garante colunas
         try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_reset TEXT") } catch(e) {}
         try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_reset_expira TEXT") } catch(e) {}
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN email_pessoal TEXT") } catch(e) {}
 
-        var esUser = await client.execute({ sql: "SELECT id, nome FROM usuarios WHERE email=? AND ativo=1", args: [esEmail] })
+        // Busca por login (email) OU por email_pessoal — usuário pode lembrar qualquer um
+        var esUser = await client.execute({
+            sql: "SELECT id, nome, email, email_pessoal FROM usuarios WHERE (email=? OR email_pessoal=?) AND ativo=1",
+            args: [esEmail, esEmail]
+        })
+
+        console.log('[esqueci-senha] email=' + esEmail + ' encontrou=' + esUser.rows.length)
 
         // Sempre responde sucesso (não revela se email existe — evita enumeração)
         if (esUser.rows.length) {
@@ -275,7 +284,10 @@ module.exports = async function handler(req, res) {
                 '<p style="color:#1565C0;font-size:11px;word-break:break-all">' + linkReset + '</p>' +
                 '</div></div>'
 
-            await enviarEmail(esEmail, 'Redefinição de senha — Klinov', esHtml)
+            // Envia SEMPRE pro email_pessoal quando existe (login é @klinov.com e não recebe email real).
+            // Se não houver email_pessoal, usa o próprio login (caso seja um email real tipo @gmail.com).
+            var esDestino = esU.email_pessoal || esU.email
+            await enviarEmail(esDestino, 'Redefinição de senha — Klinov', esHtml)
         }
 
         return res.status(200).json({ success: true, msg: 'Se o email estiver cadastrado, um link de redefinição foi enviado.' })
