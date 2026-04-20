@@ -39,6 +39,33 @@ module.exports = async function handler(req, res) {
             global._fotoColChecked = true
         }
 
+        // Tenant isolation: ensure child tables carry clinica_id + backfill from parents.
+        // Without this, an authenticated user could access rows from another clinic by
+        // guessing IDs. Runs once per cold start; ALTERs throw if column exists (ignored).
+        if (!global._tenantColsChecked) {
+            var tenantAlters = [
+                "ALTER TABLE odontograma ADD COLUMN clinica_id INTEGER",
+                "ALTER TABLE orcamento_itens ADD COLUMN clinica_id INTEGER",
+                "ALTER TABLE tabelas_preco_itens ADD COLUMN clinica_id INTEGER",
+                "ALTER TABLE estoque_movimentacao ADD COLUMN clinica_id INTEGER",
+                "ALTER TABLE conciliacao_itens ADD COLUMN clinica_id INTEGER"
+            ]
+            for (var ta = 0; ta < tenantAlters.length; ta++) {
+                try { await client.execute(tenantAlters[ta]) } catch(e) {}
+            }
+            var tenantBackfills = [
+                "UPDATE odontograma SET clinica_id=(SELECT clinica_id FROM pacientes WHERE pacientes.id=odontograma.paciente_id) WHERE clinica_id IS NULL",
+                "UPDATE orcamento_itens SET clinica_id=(SELECT clinica_id FROM orcamentos WHERE orcamentos.id=orcamento_itens.orcamento_id) WHERE clinica_id IS NULL",
+                "UPDATE tabelas_preco_itens SET clinica_id=(SELECT clinica_id FROM tabelas_preco WHERE tabelas_preco.id=tabelas_preco_itens.tabela_id) WHERE clinica_id IS NULL",
+                "UPDATE estoque_movimentacao SET clinica_id=(SELECT clinica_id FROM estoque WHERE estoque.id=estoque_movimentacao.estoque_id) WHERE clinica_id IS NULL",
+                "UPDATE conciliacao_itens SET clinica_id=(SELECT clinica_id FROM conciliacoes WHERE conciliacoes.id=conciliacao_itens.conciliacao_id) WHERE clinica_id IS NULL"
+            ]
+            for (var tb = 0; tb < tenantBackfills.length; tb++) {
+                try { await client.execute(tenantBackfills[tb]) } catch(e) {}
+            }
+            global._tenantColsChecked = true
+        }
+
         // ── DB-STATUS ───────────────────────────────────────────────────────
         if (route === 'db-status') {
             var start = Date.now()
@@ -106,7 +133,7 @@ module.exports = async function handler(req, res) {
             // Odontograma — tabela pode não existir ainda
             var odontRows = []
             try {
-                await client.execute("CREATE TABLE IF NOT EXISTS odontograma (id INTEGER PRIMARY KEY AUTOINCREMENT, paciente_id INTEGER REFERENCES pacientes(id), dente INTEGER NOT NULL, status TEXT DEFAULT 'saudavel', cor TEXT, observacao TEXT, updated_at TEXT DEFAULT (datetime('now')))")
+                await client.execute("CREATE TABLE IF NOT EXISTS odontograma (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER REFERENCES pacientes(id), dente INTEGER NOT NULL, status TEXT DEFAULT 'saudavel', cor TEXT, observacao TEXT, updated_at TEXT DEFAULT (datetime('now')))")
                 var odR = await client.execute({ sql: "SELECT * FROM odontograma WHERE paciente_id=? AND clinica_id=? ORDER BY dente", args: [rpId, clinica_id] })
                 odontRows = odR.rows
             } catch(e) { /* tabela não existe, retorna vazio */ }
@@ -1478,11 +1505,11 @@ module.exports = async function handler(req, res) {
                 var orc = lote[oi]
                 try {
                     // Find paciente_id by name
-                    var pacR = await client.execute({ sql: "SELECT id FROM pacientes WHERE nome=? LIMIT 1", args: [orc.paciente_nome || ''] })
+                    var pacR = await client.execute({ sql: "SELECT id FROM pacientes WHERE nome=? AND clinica_id=? LIMIT 1", args: [orc.paciente_nome || '', clinica_id] })
                     var pacId = pacR.rows.length ? pacR.rows[0].id : null
                     if (!pacId) { errs++; continue }
                     // Find profissional_id
-                    var profR = await client.execute({ sql: "SELECT id FROM profissionais WHERE nome=? LIMIT 1", args: [orc.profissional_nome || ''] })
+                    var profR = await client.execute({ sql: "SELECT id FROM profissionais WHERE nome=? AND clinica_id=? LIMIT 1", args: [orc.profissional_nome || '', clinica_id] })
                     var profId = profR.rows.length ? profR.rows[0].id : null
                     // Parse date
                     var dataCriacao = orc.data || ''
@@ -1497,7 +1524,7 @@ module.exports = async function handler(req, res) {
                     if (orc.itens && orc.itens.length) {
                         for (var ii = 0; ii < orc.itens.length; ii++) {
                             var it = orc.itens[ii]
-                            await client.execute({ sql: "INSERT INTO orcamento_itens(orcamento_id,procedimento_nome,dente,regiao,profissional_nome,valor_unitario,valor_plano,executado,data_execucao) VALUES(?,?,?,?,?,?,?,?,?)", args: [orcId, it.procedimento_nome||'', it.dente||'', it.regiao||'', it.profissional_nome||'', it.valor_unitario||0, it.valor_plano||0, it.executado||0, it.data_execucao||''] })
+                            await client.execute({ sql: "INSERT INTO orcamento_itens(clinica_id,orcamento_id,procedimento_nome,dente,regiao,profissional_nome,valor_unitario,valor_plano,executado,data_execucao) VALUES(?,?,?,?,?,?,?,?,?,?)", args: [clinica_id, orcId, it.procedimento_nome||'', it.dente||'', it.regiao||'', it.profissional_nome||'', it.valor_unitario||0, it.valor_plano||0, it.executado||0, it.data_execucao||''] })
                         }
                     }
                     ins++
@@ -1512,7 +1539,7 @@ module.exports = async function handler(req, res) {
             if (!opId) return res.status(400).json({ success: false, error: 'paciente_id obrigatório' })
             // Ensure tables exist
             try { await client.execute("CREATE TABLE IF NOT EXISTS orcamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, profissional_id INTEGER, profissional_nome TEXT, data_criacao TEXT DEFAULT (datetime('now')), observacoes TEXT, tabela_preco TEXT DEFAULT 'PARTICULAR', status TEXT DEFAULT 'aberto', aprovado_por TEXT, data_aprovacao TEXT, motivo_reprovacao TEXT, forma_pagamento TEXT, tipo_pagamento TEXT DEFAULT 'valor_total', parcelas INTEGER DEFAULT 1, desconto REAL DEFAULT 0, valor_total REAL DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))") } catch(e) {}
-            try { await client.execute("CREATE TABLE IF NOT EXISTS orcamento_itens (id INTEGER PRIMARY KEY AUTOINCREMENT, orcamento_id INTEGER REFERENCES orcamentos(id), procedimento_codigo TEXT, procedimento_nome TEXT, dente TEXT, regiao TEXT, profissional_id INTEGER, profissional_nome TEXT, valor_unitario REAL DEFAULT 0, valor_plano REAL DEFAULT 0, quantidade INTEGER DEFAULT 1, executado INTEGER DEFAULT 0, data_execucao TEXT, created_at TEXT DEFAULT (datetime('now')))") } catch(e) {}
+            try { await client.execute("CREATE TABLE IF NOT EXISTS orcamento_itens (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, orcamento_id INTEGER REFERENCES orcamentos(id), procedimento_codigo TEXT, procedimento_nome TEXT, dente TEXT, regiao TEXT, profissional_id INTEGER, profissional_nome TEXT, valor_unitario REAL DEFAULT 0, valor_plano REAL DEFAULT 0, quantidade INTEGER DEFAULT 1, executado INTEGER DEFAULT 0, data_execucao TEXT, created_at TEXT DEFAULT (datetime('now')))") } catch(e) {}
             var orcRows = await client.execute({ sql: "SELECT * FROM orcamentos WHERE paciente_id=? AND clinica_id=? ORDER BY data_criacao DESC", args: [opId, clinica_id] })
             var orcList = orcRows.rows
             // Load items for each orcamento
@@ -1536,7 +1563,7 @@ module.exports = async function handler(req, res) {
             if (!so.paciente_id) return res.status(400).json({ success: false, error: 'paciente_id obrigatório' })
             // Ensure tables exist
             try { await client.execute("CREATE TABLE IF NOT EXISTS orcamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, profissional_id INTEGER, profissional_nome TEXT, data_criacao TEXT DEFAULT (datetime('now')), observacoes TEXT, tabela_preco TEXT DEFAULT 'PARTICULAR', status TEXT DEFAULT 'aberto', aprovado_por TEXT, data_aprovacao TEXT, motivo_reprovacao TEXT, forma_pagamento TEXT, tipo_pagamento TEXT DEFAULT 'valor_total', parcelas INTEGER DEFAULT 1, desconto REAL DEFAULT 0, valor_total REAL DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))") } catch(e) {}
-            try { await client.execute("CREATE TABLE IF NOT EXISTS orcamento_itens (id INTEGER PRIMARY KEY AUTOINCREMENT, orcamento_id INTEGER REFERENCES orcamentos(id), procedimento_codigo TEXT, procedimento_nome TEXT, dente TEXT, regiao TEXT, profissional_id INTEGER, profissional_nome TEXT, valor_unitario REAL DEFAULT 0, valor_plano REAL DEFAULT 0, quantidade INTEGER DEFAULT 1, executado INTEGER DEFAULT 0, data_execucao TEXT, created_at TEXT DEFAULT (datetime('now')))") } catch(e) {}
+            try { await client.execute("CREATE TABLE IF NOT EXISTS orcamento_itens (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, orcamento_id INTEGER REFERENCES orcamentos(id), procedimento_codigo TEXT, procedimento_nome TEXT, dente TEXT, regiao TEXT, profissional_id INTEGER, profissional_nome TEXT, valor_unitario REAL DEFAULT 0, valor_plano REAL DEFAULT 0, quantidade INTEGER DEFAULT 1, executado INTEGER DEFAULT 0, data_execucao TEXT, created_at TEXT DEFAULT (datetime('now')))") } catch(e) {}
             var soItens = so.itens || []
             var soValorTotal = soItens.reduce(function(s, it) { return s + (+(it.valor_unitario || 0) * (+(it.quantidade || 1))) }, 0)
             var orcId
@@ -1545,7 +1572,7 @@ module.exports = async function handler(req, res) {
                 await client.execute({ sql: "UPDATE orcamentos SET profissional_id=?,profissional_nome=?,data_criacao=?,observacoes=?,tabela_preco=?,forma_pagamento=?,tipo_pagamento=?,parcelas=?,desconto=?,valor_total=?,status=CASE WHEN status IN ('desaprovado','reprovado') THEN 'aberto' ELSE status END,updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [so.profissional_id||null, so.profissional_nome||'', so.data_criacao||new Date().toISOString().slice(0,10), so.observacoes||'', so.tabela_preco||'PARTICULAR', so.forma_pagamento||null, so.tipo_pagamento||'valor_total', so.parcelas||1, so.desconto||0, soValorTotal, so.id, clinica_id] })
                 orcId = so.id
                 // Delete old items and re-insert
-                await client.execute({ sql: "DELETE FROM orcamento_itens WHERE orcamento_id=?", args: [orcId] })
+                await client.execute({ sql: "DELETE FROM orcamento_itens WHERE orcamento_id=? AND clinica_id=?", args: [orcId, clinica_id] })
             } else {
                 // Insert new
                 var insResult = await client.execute({ sql: "INSERT INTO orcamentos (clinica_id,paciente_id,profissional_id,profissional_nome,data_criacao,observacoes,tabela_preco,forma_pagamento,tipo_pagamento,parcelas,desconto,valor_total) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", args: [clinica_id, so.paciente_id, so.profissional_id||null, so.profissional_nome||'', so.data_criacao||new Date().toISOString().slice(0,10), so.observacoes||'', so.tabela_preco||'PARTICULAR', so.forma_pagamento||null, so.tipo_pagamento||'valor_total', so.parcelas||1, so.desconto||0, soValorTotal] })
@@ -1554,7 +1581,7 @@ module.exports = async function handler(req, res) {
             // Insert items
             for (var si = 0; si < soItens.length; si++) {
                 var it = soItens[si]
-                await client.execute({ sql: "INSERT INTO orcamento_itens (orcamento_id,procedimento_codigo,procedimento_nome,dente,regiao,profissional_id,profissional_nome,valor_unitario,valor_plano,quantidade) VALUES (?,?,?,?,?,?,?,?,?,?)", args: [orcId, it.procedimento_codigo||'', it.procedimento_nome||'', it.dente||'', it.regiao||'', it.profissional_id||null, it.profissional_nome||'', +(it.valor_unitario||0), +(it.valor_plano||0), +(it.quantidade||1)] })
+                await client.execute({ sql: "INSERT INTO orcamento_itens (clinica_id,orcamento_id,procedimento_codigo,procedimento_nome,dente,regiao,profissional_id,profissional_nome,valor_unitario,valor_plano,quantidade) VALUES (?,?,?,?,?,?,?,?,?,?,?)", args: [clinica_id, orcId, it.procedimento_codigo||'', it.procedimento_nome||'', it.dente||'', it.regiao||'', it.profissional_id||null, it.profissional_nome||'', +(it.valor_unitario||0), +(it.valor_plano||0), +(it.quantidade||1)] })
             }
             return res.status(200).json({ success: true, id: orcId, msg: 'Orçamento salvo' })
         }
@@ -1568,13 +1595,13 @@ module.exports = async function handler(req, res) {
 
             // Generate approval commissions for each item's professional
             try {
-                var aoOrc = await client.execute({ sql: "SELECT tabela_preco, paciente_id FROM orcamentos WHERE id=?", args: [ao.id] })
+                var aoOrc = await client.execute({ sql: "SELECT tabela_preco, paciente_id FROM orcamentos WHERE id=? AND clinica_id=?", args: [ao.id, clinica_id] })
                 var aoTabela = aoOrc.rows.length ? (aoOrc.rows[0].tabela_preco || 'PARTICULAR') : 'PARTICULAR'
                 var aoPacId = aoOrc.rows.length ? aoOrc.rows[0].paciente_id : null
                 var aoPacNome = ''
-                if (aoPacId) { var aoPn = await client.execute({ sql: "SELECT nome FROM pacientes WHERE id=?", args: [aoPacId] }); if (aoPn.rows.length) aoPacNome = aoPn.rows[0].nome }
+                if (aoPacId) { var aoPn = await client.execute({ sql: "SELECT nome FROM pacientes WHERE id=? AND clinica_id=?", args: [aoPacId, clinica_id] }); if (aoPn.rows.length) aoPacNome = aoPn.rows[0].nome }
 
-                var aoItens = await client.execute({ sql: "SELECT * FROM orcamento_itens WHERE orcamento_id=?", args: [ao.id] })
+                var aoItens = await client.execute({ sql: "SELECT * FROM orcamento_itens WHERE orcamento_id=? AND clinica_id=?", args: [ao.id, clinica_id] })
                 for (var aoi = 0; aoi < aoItens.rows.length; aoi++) {
                     var aoItem = aoItens.rows[aoi]
                     var aoProfId = aoItem.profissional_id
@@ -1585,7 +1612,7 @@ module.exports = async function handler(req, res) {
                     var aoValBase = (aoItem.valor_unitario || 0) * (aoItem.quantidade || 1)
                     var aoValCom = aoR.tipo === 'percentual' ? aoValBase * aoR.valor / 100 : aoR.valor
                     var aoProfNome = aoItem.profissional_nome || ''
-                    if (!aoProfNome) { var aoProfN = await client.execute({ sql: "SELECT nome FROM profissionais WHERE id=?", args: [aoProfId] }); if (aoProfN.rows.length) aoProfNome = aoProfN.rows[0].nome }
+                    if (!aoProfNome) { var aoProfN = await client.execute({ sql: "SELECT nome FROM profissionais WHERE id=? AND clinica_id=?", args: [aoProfId, clinica_id] }); if (aoProfN.rows.length) aoProfNome = aoProfN.rows[0].nome }
                     await client.execute({
                         sql: "INSERT INTO comissoes_lancamentos(clinica_id, profissional_id, profissional_nome, orcamento_id, orcamento_item_id, paciente_id, paciente_nome, procedimento_nome, tabela_preco, momento, tipo, valor_base, percentual, valor_comissao, data_referencia) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                         args: [clinica_id, aoProfId, aoProfNome, ao.id, aoItem.id, aoPacId, aoPacNome, aoItem.procedimento_nome, aoTabela, 'aprovacao', aoR.tipo, aoValBase, aoR.tipo === 'percentual' ? aoR.valor : null, aoValCom, new Date().toISOString().slice(0, 10)]
@@ -1619,7 +1646,7 @@ module.exports = async function handler(req, res) {
             if (daO.status !== 'aprovado') return res.status(400).json({ success: false, error: 'Orçamento não está aprovado' })
 
             // Check executed items
-            var daItens = await client.execute({ sql: "SELECT * FROM orcamento_itens WHERE orcamento_id=?", args: [da.id] })
+            var daItens = await client.execute({ sql: "SELECT * FROM orcamento_itens WHERE orcamento_id=? AND clinica_id=?", args: [da.id, clinica_id] })
             var daExec = daItens.rows.filter(function(i) { return i.executado === 1 })
             var daNaoExec = daItens.rows.filter(function(i) { return i.executado !== 1 })
             var daForceParcial = da.parcial === true
@@ -1639,19 +1666,19 @@ module.exports = async function handler(req, res) {
 
             if (daExec.length === 0) {
                 // TOTAL disapproval - no items executed
-                await client.execute({ sql: "UPDATE orcamentos SET status='desaprovado', motivo_reprovacao=?, updated_at=datetime('now') WHERE id=?", args: [da.motivo, da.id] })
+                await client.execute({ sql: "UPDATE orcamentos SET status='desaprovado', motivo_reprovacao=?, updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [da.motivo, da.id, clinica_id] })
 
                 // Cancel all parcelas
-                await client.execute({ sql: "UPDATE parcelas_orcamento SET status='cancelado', updated_at=datetime('now') WHERE orcamento_id=? AND status='pendente'", args: [da.id] })
+                await client.execute({ sql: "UPDATE parcelas_orcamento SET status='cancelado', updated_at=datetime('now') WHERE orcamento_id=? AND clinica_id=? AND status='pendente'", args: [da.id, clinica_id] })
 
                 // Cancel pending Asaas charges in DB
-                await client.execute({ sql: "UPDATE cobrancas SET status='cancelado', updated_at=datetime('now') WHERE id IN (SELECT cobranca_id FROM parcelas_orcamento WHERE orcamento_id=? AND cobranca_id IS NOT NULL) AND status='pendente'", args: [da.id] })
+                await client.execute({ sql: "UPDATE cobrancas SET status='cancelado', updated_at=datetime('now') WHERE id IN (SELECT cobranca_id FROM parcelas_orcamento WHERE orcamento_id=? AND clinica_id=? AND cobranca_id IS NOT NULL) AND clinica_id=? AND status='pendente'", args: [da.id, clinica_id, clinica_id] })
 
                 // Cancel pending commissions
-                await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_id=? AND status='pendente'", args: [da.id] })
+                await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_id=? AND clinica_id=? AND status='pendente'", args: [da.id, clinica_id] })
 
                 // Calculate refund: how much was already paid
-                var daPago = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM parcelas_orcamento WHERE orcamento_id=? AND status='pago'", args: [da.id] })
+                var daPago = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM parcelas_orcamento WHERE orcamento_id=? AND clinica_id=? AND status='pago'", args: [da.id, clinica_id] })
                 var daValorPago = daPago.rows[0].total || 0
 
                 // If patient paid something, register credit
@@ -1678,7 +1705,7 @@ module.exports = async function handler(req, res) {
                 if (daNovoLiquido < 0) daNovoLiquido = 0
 
                 // Update orcamento with new total
-                await client.execute({ sql: "UPDATE orcamentos SET valor_total=?, motivo_reprovacao=?, updated_at=datetime('now') WHERE id=?", args: [daNovoTotal, 'Desaprovação parcial: ' + da.motivo, da.id] })
+                await client.execute({ sql: "UPDATE orcamentos SET valor_total=?, motivo_reprovacao=?, updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [daNovoTotal, 'Desaprovação parcial: ' + da.motivo, da.id, clinica_id] })
 
                 // Cancel non-executed item commissions
                 for (var dai = 0; dai < daNaoExec.length; dai++) {
@@ -1686,11 +1713,11 @@ module.exports = async function handler(req, res) {
                 }
 
                 // Cancel pending parcelas
-                await client.execute({ sql: "UPDATE parcelas_orcamento SET status='cancelado', updated_at=datetime('now') WHERE orcamento_id=? AND status='pendente'", args: [da.id] })
-                await client.execute({ sql: "UPDATE cobrancas SET status='cancelado', updated_at=datetime('now') WHERE id IN (SELECT cobranca_id FROM parcelas_orcamento WHERE orcamento_id=? AND cobranca_id IS NOT NULL) AND status='pendente'", args: [da.id] })
+                await client.execute({ sql: "UPDATE parcelas_orcamento SET status='cancelado', updated_at=datetime('now') WHERE orcamento_id=? AND clinica_id=? AND status='pendente'", args: [da.id, clinica_id] })
+                await client.execute({ sql: "UPDATE cobrancas SET status='cancelado', updated_at=datetime('now') WHERE id IN (SELECT cobranca_id FROM parcelas_orcamento WHERE orcamento_id=? AND clinica_id=? AND cobranca_id IS NOT NULL) AND clinica_id=? AND status='pendente'", args: [da.id, clinica_id, clinica_id] })
 
                 // Calculate refund
-                var daPago2 = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM parcelas_orcamento WHERE orcamento_id=? AND status='pago'", args: [da.id] })
+                var daPago2 = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM parcelas_orcamento WHERE orcamento_id=? AND clinica_id=? AND status='pago'", args: [da.id, clinica_id] })
                 var daValorPago2 = daPago2.rows[0].total || 0
                 var daDiferenca = daValorPago2 - daNovoLiquido
 
@@ -1775,10 +1802,10 @@ module.exports = async function handler(req, res) {
             var rnParc = await client.execute({ sql: "UPDATE parcelas_orcamento SET status='cancelado', updated_at=datetime('now') WHERE orcamento_id=? AND status IN ('pendente','vencido') AND clinica_id=?", args: [rn.id, clinica_id] })
 
             // Cancel pending cobrancas in DB
-            var rnCob = await client.execute({ sql: "UPDATE cobrancas SET status='cancelado', updated_at=datetime('now') WHERE id IN (SELECT cobranca_id FROM parcelas_orcamento WHERE orcamento_id=? AND cobranca_id IS NOT NULL AND status='cancelado') AND status IN ('pendente','vencido')", args: [rn.id] })
+            var rnCob = await client.execute({ sql: "UPDATE cobrancas SET status='cancelado', updated_at=datetime('now') WHERE id IN (SELECT cobranca_id FROM parcelas_orcamento WHERE orcamento_id=? AND clinica_id=? AND cobranca_id IS NOT NULL AND status='cancelado') AND clinica_id=? AND status IN ('pendente','vencido')", args: [rn.id, clinica_id, clinica_id] })
 
             // Cancel pending commissions
-            try { await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_id=? AND status='pendente'", args: [rn.id] }) } catch(e) {}
+            try { await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_id=? AND clinica_id=? AND status='pendente'", args: [rn.id, clinica_id] }) } catch(e) {}
 
             // Try to cancel in Asaas API
             var rnApiKey = ''
@@ -1809,7 +1836,10 @@ module.exports = async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var eo = req.body || {}
             if (!eo.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
-            await client.execute({ sql: "DELETE FROM orcamento_itens WHERE orcamento_id=?", args: [eo.id] })
+            // Verify ownership before deleting items (prevents cross-tenant deletion)
+            var eoOrc = await client.execute({ sql: "SELECT id FROM orcamentos WHERE id=? AND clinica_id=?", args: [eo.id, clinica_id] })
+            if (!eoOrc.rows.length) return res.status(404).json({ success: false, error: 'Orçamento não encontrado' })
+            await client.execute({ sql: "DELETE FROM orcamento_itens WHERE orcamento_id=? AND clinica_id=?", args: [eo.id, clinica_id] })
             await client.execute({ sql: "DELETE FROM orcamentos WHERE id=? AND clinica_id=?", args: [eo.id, clinica_id] })
             return res.status(200).json({ success: true, msg: 'Orçamento excluído' })
         }
@@ -2183,7 +2213,7 @@ module.exports = async function handler(req, res) {
             }
 
             // Fetch the inserted record
-            var gcRec = await client.execute({ sql: "SELECT * FROM cobrancas WHERE id=?", args: [gcNewId] })
+            var gcRec = await client.execute({ sql: "SELECT * FROM cobrancas WHERE id=? AND clinica_id=?", args: [gcNewId, clinica_id] })
             return res.status(200).json({ success: true, cobranca: gcRec.rows[0] || { id: gcNewId }, invoice_url: gcInvoiceUrl })
         }
 
@@ -2624,13 +2654,13 @@ module.exports = async function handler(req, res) {
 
             // Update item (including professional if provided)
             if (me.profissional_id) {
-                await client.execute({ sql: "UPDATE orcamento_itens SET executado=1, data_execucao=?, profissional_id=?, profissional_nome=? WHERE id=?", args: [meData, me.profissional_id, me.profissional_nome || '', me.orcamento_item_id] })
+                await client.execute({ sql: "UPDATE orcamento_itens SET executado=1, data_execucao=?, profissional_id=?, profissional_nome=? WHERE id=? AND clinica_id=?", args: [meData, me.profissional_id, me.profissional_nome || '', me.orcamento_item_id, clinica_id] })
             } else {
-                await client.execute({ sql: "UPDATE orcamento_itens SET executado=1, data_execucao=? WHERE id=?", args: [meData, me.orcamento_item_id] })
+                await client.execute({ sql: "UPDATE orcamento_itens SET executado=1, data_execucao=? WHERE id=? AND clinica_id=?", args: [meData, me.orcamento_item_id, clinica_id] })
             }
 
             // Get item + orcamento info for commission
-            var meItem = await client.execute({ sql: "SELECT oi.*, o.tabela_preco, o.paciente_id, p.nome as paciente_nome FROM orcamento_itens oi JOIN orcamentos o ON o.id=oi.orcamento_id LEFT JOIN pacientes p ON p.id=o.paciente_id WHERE oi.id=?", args: [me.orcamento_item_id] })
+            var meItem = await client.execute({ sql: "SELECT oi.*, o.tabela_preco, o.paciente_id, p.nome as paciente_nome FROM orcamento_itens oi JOIN orcamentos o ON o.id=oi.orcamento_id LEFT JOIN pacientes p ON p.id=o.paciente_id WHERE oi.id=? AND oi.clinica_id=?", args: [me.orcamento_item_id, clinica_id] })
             if (meItem.rows.length) {
                 var meI = meItem.rows[0]
                 var meProfId = me.profissional_id || meI.profissional_id
@@ -2642,7 +2672,7 @@ module.exports = async function handler(req, res) {
                         var meValBase = meI.valor_unitario * (meI.quantidade || 1)
                         var meValCom = meR.tipo === 'percentual' ? meValBase * meR.valor / 100 : meR.valor
                         var meProfNome = meI.profissional_nome || ''
-                        if (!meProfNome) { var mePn = await client.execute({ sql: "SELECT nome FROM profissionais WHERE id=?", args: [meProfId] }); if (mePn.rows.length) meProfNome = mePn.rows[0].nome }
+                        if (!meProfNome) { var mePn = await client.execute({ sql: "SELECT nome FROM profissionais WHERE id=? AND clinica_id=?", args: [meProfId, clinica_id] }); if (mePn.rows.length) meProfNome = mePn.rows[0].nome }
                         await client.execute({
                             sql: "INSERT INTO comissoes_lancamentos(clinica_id, profissional_id, profissional_nome, orcamento_id, orcamento_item_id, paciente_id, paciente_nome, procedimento_nome, tabela_preco, momento, tipo, valor_base, percentual, valor_comissao, data_referencia) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                             args: [clinica_id, meProfId, meProfNome, meI.orcamento_id, me.orcamento_item_id, meI.paciente_id, meI.paciente_nome || '', meI.procedimento_nome, meI.tabela_preco || 'PARTICULAR', 'execucao', meR.tipo, meValBase, meR.tipo === 'percentual' ? meR.valor : null, meValCom, meData]
@@ -2666,8 +2696,8 @@ module.exports = async function handler(req, res) {
                 } catch(e) {}
             }
             await client.execute({
-                sql: "UPDATE orcamento_itens SET data_execucao=?, profissional_id=?, profissional_nome=? WHERE id=?",
-                args: [ee.data_execucao || new Date().toISOString().slice(0, 10), ee.profissional_id || null, ee.profissional_nome || '', ee.orcamento_item_id]
+                sql: "UPDATE orcamento_itens SET data_execucao=?, profissional_id=?, profissional_nome=? WHERE id=? AND clinica_id=?",
+                args: [ee.data_execucao || new Date().toISOString().slice(0, 10), ee.profissional_id || null, ee.profissional_nome || '', ee.orcamento_item_id, clinica_id]
             })
             return res.status(200).json({ success: true, msg: 'Execução atualizada' })
         }
@@ -2684,7 +2714,7 @@ module.exports = async function handler(req, res) {
                     if (!dePerm) return res.status(403).json({ success: false, error: 'Sem permissão para desfazer execuções' })
                 } catch(e) {}
             }
-            await client.execute({ sql: "UPDATE orcamento_itens SET executado=0, data_execucao=NULL WHERE id=?", args: [de2.orcamento_item_id] })
+            await client.execute({ sql: "UPDATE orcamento_itens SET executado=0, data_execucao=NULL WHERE id=? AND clinica_id=?", args: [de2.orcamento_item_id, clinica_id] })
             // Cancel related commission
             try { await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_item_id=? AND momento='execucao' AND status='pendente'", args: [de2.orcamento_item_id] }) } catch(e) {}
             return res.status(200).json({ success: true, msg: 'Execução desfeita' })
@@ -2779,7 +2809,7 @@ module.exports = async function handler(req, res) {
             await client.execute("CREATE TABLE IF NOT EXISTS conciliacoes (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, descricao TEXT, periodo_de TEXT, periodo_ate TEXT, status TEXT DEFAULT 'pendente', total_itens INTEGER DEFAULT 0, total_conciliados INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))")
             fm3Summary.tables.push('conciliacoes: ok')
 
-            await client.execute("CREATE TABLE IF NOT EXISTS conciliacao_itens (id INTEGER PRIMARY KEY AUTOINCREMENT, conciliacao_id INTEGER, data TEXT, descricao TEXT, valor REAL, tipo TEXT, lancamento_id INTEGER, status TEXT DEFAULT 'pendente', created_at TEXT DEFAULT (datetime('now')))")
+            await client.execute("CREATE TABLE IF NOT EXISTS conciliacao_itens (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, conciliacao_id INTEGER, data TEXT, descricao TEXT, valor REAL, tipo TEXT, lancamento_id INTEGER, status TEXT DEFAULT 'pendente', created_at TEXT DEFAULT (datetime('now')))")
             fm3Summary.tables.push('conciliacao_itens: ok')
 
             await client.execute("CREATE TABLE IF NOT EXISTS receitas_saude (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, profissional_id INTEGER, orcamento_id INTEGER, valor REAL NOT NULL, data_emissao TEXT, numero_recibo TEXT, cpf_paciente TEXT, nome_paciente TEXT, cpf_profissional TEXT, nome_profissional TEXT, cro_profissional TEXT, descricao_servico TEXT, tipo TEXT DEFAULT 'recibo', status TEXT DEFAULT 'rascunho', created_at TEXT DEFAULT (datetime('now')))")
@@ -2811,13 +2841,13 @@ module.exports = async function handler(req, res) {
             for (var cii = 0; cii < ci.itens.length; cii++) {
                 var item = ci.itens[cii]
                 await client.execute({
-                    sql: "INSERT INTO conciliacao_itens(conciliacao_id, data, descricao, valor, tipo, status) VALUES(?,?,?,?,?,?)",
-                    args: [ciId, item.data || '', item.descricao || '', parseFloat(item.valor) || 0, item.tipo || (parseFloat(item.valor) >= 0 ? 'credito' : 'debito'), 'pendente']
+                    sql: "INSERT INTO conciliacao_itens(clinica_id, conciliacao_id, data, descricao, valor, tipo, status) VALUES(?,?,?,?,?,?,?)",
+                    args: [clinica_id, ciId, item.data || '', item.descricao || '', parseFloat(item.valor) || 0, item.tipo || (parseFloat(item.valor) >= 0 ? 'credito' : 'debito'), 'pendente']
                 })
             }
 
             // Auto-match: try to find lancamentos/financeiro with same date and value
-            var ciItens = await client.execute({ sql: "SELECT * FROM conciliacao_itens WHERE conciliacao_id=?", args: [ciId] })
+            var ciItens = await client.execute({ sql: "SELECT * FROM conciliacao_itens WHERE conciliacao_id=? AND clinica_id=?", args: [ciId, clinica_id] })
             var ciMatched = 0
             for (var cim = 0; cim < ciItens.rows.length; cim++) {
                 var cItem = ciItens.rows[cim]
@@ -2828,7 +2858,7 @@ module.exports = async function handler(req, res) {
                     args: [cItem.data, absVal, clinica_id]
                 })
                 if (matchFin.rows.length) {
-                    await client.execute({ sql: "UPDATE conciliacao_itens SET status='conciliado', lancamento_id=? WHERE id=?", args: [matchFin.rows[0].id, cItem.id] })
+                    await client.execute({ sql: "UPDATE conciliacao_itens SET status='conciliado', lancamento_id=? WHERE id=? AND clinica_id=?", args: [matchFin.rows[0].id, cItem.id, clinica_id] })
                     ciMatched++
                     continue
                 }
@@ -2838,12 +2868,12 @@ module.exports = async function handler(req, res) {
                     args: [cItem.data, absVal, clinica_id]
                 })
                 if (matchLanc.rows.length) {
-                    await client.execute({ sql: "UPDATE conciliacao_itens SET status='conciliado', lancamento_id=? WHERE id=?", args: [matchLanc.rows[0].id, cItem.id] })
+                    await client.execute({ sql: "UPDATE conciliacao_itens SET status='conciliado', lancamento_id=? WHERE id=? AND clinica_id=?", args: [matchLanc.rows[0].id, cItem.id, clinica_id] })
                     ciMatched++
                 }
             }
 
-            await client.execute({ sql: "UPDATE conciliacoes SET total_conciliados=?, status=? WHERE id=?", args: [ciMatched, ciMatched === ci.itens.length ? 'concluida' : 'parcial', ciId] })
+            await client.execute({ sql: "UPDATE conciliacoes SET total_conciliados=?, status=? WHERE id=? AND clinica_id=?", args: [ciMatched, ciMatched === ci.itens.length ? 'concluida' : 'parcial', ciId, clinica_id] })
 
             return res.status(200).json({ success: true, conciliacao_id: ciId, total: ci.itens.length, conciliados: ciMatched })
         }
@@ -2858,7 +2888,7 @@ module.exports = async function handler(req, res) {
         if (route === 'conciliacao-itens') {
             var cqId = parseInt(q.conciliacao_id) || 0
             if (!cqId) return res.status(400).json({ success: false, error: 'conciliacao_id obrigatório' })
-            var cqRows = await client.execute({ sql: "SELECT * FROM conciliacao_itens WHERE conciliacao_id=? ORDER BY data ASC", args: [cqId] })
+            var cqRows = await client.execute({ sql: "SELECT * FROM conciliacao_itens WHERE conciliacao_id=? AND clinica_id=? ORDER BY data ASC", args: [cqId, clinica_id] })
             return res.status(200).json({ success: true, itens: cqRows.rows })
         }
 
@@ -2868,14 +2898,14 @@ module.exports = async function handler(req, res) {
             var cc = req.body || {}
             if (!cc.item_id) return res.status(400).json({ success: false, error: 'item_id obrigatório' })
             var ccStatus = cc.action === 'ignorar' ? 'ignorado' : 'conciliado'
-            await client.execute({ sql: "UPDATE conciliacao_itens SET status=?, lancamento_id=? WHERE id=?", args: [ccStatus, cc.lancamento_id || null, cc.item_id] })
+            await client.execute({ sql: "UPDATE conciliacao_itens SET status=?, lancamento_id=? WHERE id=? AND clinica_id=?", args: [ccStatus, cc.lancamento_id || null, cc.item_id, clinica_id] })
             // Update totals
-            var ccItem = await client.execute({ sql: "SELECT conciliacao_id FROM conciliacao_itens WHERE id=?", args: [cc.item_id] })
+            var ccItem = await client.execute({ sql: "SELECT conciliacao_id FROM conciliacao_itens WHERE id=? AND clinica_id=?", args: [cc.item_id, clinica_id] })
             if (ccItem.rows.length) {
                 var ccConcId = ccItem.rows[0].conciliacao_id
-                var ccTot = await client.execute({ sql: "SELECT COUNT(*) as total, SUM(CASE WHEN status IN ('conciliado','ignorado') THEN 1 ELSE 0 END) as done FROM conciliacao_itens WHERE conciliacao_id=?", args: [ccConcId] })
+                var ccTot = await client.execute({ sql: "SELECT COUNT(*) as total, SUM(CASE WHEN status IN ('conciliado','ignorado') THEN 1 ELSE 0 END) as done FROM conciliacao_itens WHERE conciliacao_id=? AND clinica_id=?", args: [ccConcId, clinica_id] })
                 var ccDone = ccTot.rows[0].done || 0, ccTotal = ccTot.rows[0].total || 0
-                await client.execute({ sql: "UPDATE conciliacoes SET total_conciliados=?, status=? WHERE id=?", args: [ccDone, ccDone >= ccTotal ? 'concluida' : 'parcial', ccConcId] })
+                await client.execute({ sql: "UPDATE conciliacoes SET total_conciliados=?, status=? WHERE id=? AND clinica_id=?", args: [ccDone, ccDone >= ccTotal ? 'concluida' : 'parcial', ccConcId, clinica_id] })
             }
             return res.status(200).json({ success: true, msg: 'Item ' + ccStatus })
         }
@@ -3210,7 +3240,7 @@ module.exports = async function handler(req, res) {
                 args: [cpbData, cpb.id, clinica_id]
             })
             // Create lancamento
-            var cpbRow = await client.execute({ sql: "SELECT * FROM contas_pagar WHERE id=?", args: [cpb.id] })
+            var cpbRow = await client.execute({ sql: "SELECT * FROM contas_pagar WHERE id=? AND clinica_id=?", args: [cpb.id, clinica_id] })
             if (cpbRow.rows.length) {
                 var cpbConta = cpbRow.rows[0]
                 try {
@@ -3417,7 +3447,7 @@ module.exports = async function handler(req, res) {
 
             // Create lancamento entry
             var pbPacNome = ''
-            var pbPacRow = await client.execute({ sql: "SELECT nome FROM pacientes WHERE id=?", args: [pbParc.paciente_id] })
+            var pbPacRow = await client.execute({ sql: "SELECT nome FROM pacientes WHERE id=? AND clinica_id=?", args: [pbParc.paciente_id, clinica_id] })
             if (pbPacRow.rows.length) pbPacNome = pbPacRow.rows[0].nome
 
             try {
@@ -3474,8 +3504,8 @@ module.exports = async function handler(req, res) {
 
             // Update orcamento with payment config
             await client.execute({
-                sql: "UPDATE orcamentos SET entrada_valor=?, entrada_forma=?, dia_vencimento=?, forma_pagamento=?, parcelas=?, updated_at=datetime('now') WHERE id=?",
-                args: [gpEntradaValor, gpEntradaForma, gpDiaVenc, gpFormaPag, gpParcelas, gp.orcamento_id]
+                sql: "UPDATE orcamentos SET entrada_valor=?, entrada_forma=?, dia_vencimento=?, forma_pagamento=?, parcelas=?, updated_at=datetime('now') WHERE id=? AND clinica_id=?",
+                args: [gpEntradaValor, gpEntradaForma, gpDiaVenc, gpFormaPag, gpParcelas, gp.orcamento_id, clinica_id]
             })
 
             // Delete existing parcelas for this orcamento (in case of reconfiguration)
@@ -3489,7 +3519,7 @@ module.exports = async function handler(req, res) {
             var gpNumero = 0
 
             // Load patient info for Asaas
-            var gpPacRow = await client.execute({ sql: "SELECT nome, cpf, email, telefone FROM pacientes WHERE id=?", args: [gpO.paciente_id] })
+            var gpPacRow = await client.execute({ sql: "SELECT nome, cpf, email, telefone FROM pacientes WHERE id=? AND clinica_id=?", args: [gpO.paciente_id, clinica_id] })
             var gpPaciente = gpPacRow.rows.length ? gpPacRow.rows[0] : null
 
             // Get Asaas API key

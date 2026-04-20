@@ -9,6 +9,14 @@ Arquivos principais em `public/`:
 - `app.html` — sistema completo com login (servido em `/app` via rewrite)
 - `politica-privacidade.html`, `termos-de-uso.html` — páginas legais
 
+## Isolamento multi-tenant (obrigatório)
+
+Todas as tabelas que contêm dados clínicos ou operacionais **devem** ter uma coluna `clinica_id INTEGER` e **toda query** (SELECT/UPDATE/DELETE) deve incluir `AND clinica_id=?` com o `clinica_id` vindo de `auth.clinica_id` (setado pelo `middleware.authenticateRequest`).
+
+- Tabelas filhas (como `orcamento_itens`, `odontograma`, `conciliacao_itens`) também carregam `clinica_id` — não confie só no JOIN pelo pai. É defesa em profundidade contra vazamento entre tenants.
+- Migrations de `clinica_id` são aplicadas em `api/data.js` no bloco `_tenantColsChecked` (ALTER TABLE + backfill a partir do pai). Ao adicionar nova tabela filha, **inclua ela nesse bloco**.
+- Nunca faça `WHERE id=?` sem acompanhar de `AND clinica_id=?` se o `id` vier do body/query do request.
+
 ## Banco de Dados (Turso) — Backup 20/03/2026
 Dados importados do Clinicorp e agora autônomos. O sistema opera 100% a partir do Turso.
 

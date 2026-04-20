@@ -53,8 +53,10 @@ CREATE TABLE alinhadores (
     created_at TEXT DEFAULT (datetime('now'))
 )
 
+-- anamnese (legacy, not used by current code — anamnese_respostas is the active table)
 CREATE TABLE anamnese (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    clinica_id INTEGER REFERENCES clinicas(id),
     paciente_id INTEGER REFERENCES pacientes(id),
     pergunta TEXT NOT NULL,
     resposta TEXT,
@@ -250,6 +252,7 @@ CREATE TABLE estoque (
 
 CREATE TABLE estoque_movimentacao (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    clinica_id INTEGER REFERENCES clinicas(id),
     estoque_id INTEGER REFERENCES estoque(id),
     tipo TEXT,  -- entrada, saida
     quantidade REAL,
@@ -319,6 +322,7 @@ CREATE TABLE metas (
 
 CREATE TABLE odontograma (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    clinica_id INTEGER REFERENCES clinicas(id),
     paciente_id INTEGER REFERENCES pacientes(id),
     dente INTEGER NOT NULL,
     status TEXT DEFAULT 'saudavel',  -- saudavel, cariado, restaurado, ausente, implante, coroa, tratamento
@@ -451,6 +455,7 @@ CREATE TABLE tabelas_preco (
 
 CREATE TABLE tabelas_preco_itens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    clinica_id INTEGER REFERENCES clinicas(id),
     tabela_id INTEGER REFERENCES tabelas_preco(id),
     codigo TEXT,
     descricao TEXT NOT NULL,
