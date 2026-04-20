@@ -1,5 +1,6 @@
 // api/auth.js — Autenticação de usuários (Turso)
-// Rotas: login, logout, me, criar-usuario, listar-usuarios, alterar-senha, redefinir-senha
+// Rotas: login, logout, me, criar-usuario, listar-usuarios, alterar-senha, redefinir-senha,
+//        esqueci-senha, resetar-senha, ativar
 
 var crypto = require('crypto')
 var bcrypt = require('bcryptjs')
@@ -226,6 +227,131 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ success: true, msg: 'Convite enviado por email', email_enviado: emailEnviado })
     }
 
+    // ── ESQUECI MINHA SENHA (solicita reset por email) ──────────
+    if (action === 'esqueci-senha') {
+        if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+        var bes = req.body || {}
+        var esEmail = String(bes.email || '').toLowerCase().trim()
+        if (!esEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(esEmail)) {
+            return res.status(400).json({ success: false, error: 'Email inválido' })
+        }
+
+        // Rate limit: max 3 solicitações por email em 15 min
+        if (!checkRateLimit('reset:' + esEmail, 3, 900000)) {
+            return res.status(429).json({ success: false, error: 'Muitas solicitações. Aguarde 15 minutos.' })
+        }
+
+        // Garante colunas
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_reset TEXT") } catch(e) {}
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_reset_expira TEXT") } catch(e) {}
+
+        var esUser = await client.execute({ sql: "SELECT id, nome FROM usuarios WHERE email=? AND ativo=1", args: [esEmail] })
+
+        // Sempre responde sucesso (não revela se email existe — evita enumeração)
+        if (esUser.rows.length) {
+            var esU = esUser.rows[0]
+            var esToken = gerarToken()
+            var esExpira = new Date(); esExpira.setHours(esExpira.getHours() + 1) // 1h
+            await client.execute({
+                sql: "UPDATE usuarios SET token_reset=?, token_reset_expira=? WHERE id=?",
+                args: [esToken, esExpira.toISOString(), esU.id]
+            })
+
+            var esOrigem = (req.headers.origin || 'https://klinov.com.br').replace(/\/$/, '')
+            if (esOrigem.indexOf('klinov.com.br') === -1 && esOrigem.indexOf('vercel.app') === -1) {
+                esOrigem = 'https://klinov.com.br'
+            }
+            var linkReset = esOrigem + '/api/auth?action=resetar&token=' + esToken
+
+            var esHtml =
+                '<div style="font-family:Inter,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1A1A1A">' +
+                '<h2 style="color:#034030;margin:0 0 16px">Redefinir sua senha</h2>' +
+                '<p style="font-size:14px;line-height:1.7">Olá ' + (esU.nome || 'usuário') + ', recebemos uma solicitação para redefinir sua senha no Klinov.</p>' +
+                '<p style="font-size:14px;line-height:1.7">Clique no botão abaixo para criar uma nova senha. O link expira em 1 hora.</p>' +
+                '<p style="text-align:center;margin:24px 0"><a href="' + linkReset + '" style="display:inline-block;background:#E65100;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600">Redefinir Senha</a></p>' +
+                '<p style="font-size:12px;color:#999;line-height:1.6">Se você não solicitou essa redefinição, ignore este email — sua senha atual continua válida.</p>' +
+                '<div style="border-top:1px solid #eee;margin-top:24px;padding-top:16px">' +
+                '<p style="color:#999;font-size:11px;margin:0">Link completo (caso o botão não funcione):</p>' +
+                '<p style="color:#1565C0;font-size:11px;word-break:break-all">' + linkReset + '</p>' +
+                '</div></div>'
+
+            await enviarEmail(esEmail, 'Redefinição de senha — Klinov', esHtml)
+        }
+
+        return res.status(200).json({ success: true, msg: 'Se o email estiver cadastrado, um link de redefinição foi enviado.' })
+    }
+
+    // ── RESETAR SENHA (via link do email) ───────────────────────
+    if (action === 'resetar') {
+        var tokenRs = q.token || ''
+        if (!tokenRs) {
+            res.setHeader('Content-Type', 'text/html')
+            return res.status(400).send('<html><body style="font-family:Arial;padding:40px;text-align:center"><h2 style="color:#C62828">Link invalido</h2><p>Token de redefinicao nao informado.</p></body></html>')
+        }
+
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_reset TEXT") } catch(e) {}
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_reset_expira TEXT") } catch(e) {}
+
+        var userRs = await client.execute({ sql: "SELECT id, nome, email, token_reset_expira FROM usuarios WHERE token_reset=? AND ativo=1", args: [tokenRs] })
+        if (!userRs.rows.length) {
+            res.setHeader('Content-Type', 'text/html')
+            return res.status(400).send('<html><body style="font-family:Arial;padding:40px;text-align:center"><h2 style="color:#C62828">Link invalido ou ja utilizado</h2><p>Este link de redefinicao nao e valido. Solicite um novo em <a href="/app">/app</a>.</p></body></html>')
+        }
+
+        var uRs = userRs.rows[0]
+        if (uRs.token_reset_expira && new Date(uRs.token_reset_expira) < new Date()) {
+            res.setHeader('Content-Type', 'text/html')
+            return res.status(400).send('<html><body style="font-family:Arial;padding:40px;text-align:center"><h2 style="color:#E65100">Link expirado</h2><p>Este link expirou (validade: 1 hora). Solicite um novo em <a href="/app">/app</a>.</p></body></html>')
+        }
+
+        if (req.method === 'POST') {
+            var bRs = req.body || {}
+            var novaSenhaRs = bRs.senha || ''
+            var erroRs = validarSenha(novaSenhaRs)
+            if (erroRs) return res.status(400).json({ success: false, error: erroRs })
+
+            var hashRs = bcrypt.hashSync(novaSenhaRs, 10)
+            await client.execute({ sql: "UPDATE usuarios SET senha_hash=?, deve_redefinir=0, token_reset=NULL, token_reset_expira=NULL WHERE id=?", args: [hashRs, uRs.id] })
+            // Invalida sessões antigas por segurança
+            await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=?", args: [uRs.id] })
+            return res.status(200).json({ success: true, msg: 'Senha redefinida com sucesso. Faça login com a nova senha.' })
+        }
+
+        // GET: mostra formulário HTML (mesmo estilo da ativação)
+        res.setHeader('Content-Type', 'text/html')
+        return res.status(200).send('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Redefinir Senha — Klinov</title></head>' +
+            '<body style="font-family:Arial,sans-serif;background:#f5f5f5;padding:20px;margin:0">' +
+            '<div style="max-width:420px;margin:40px auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.1)">' +
+            '<div style="text-align:center;margin-bottom:24px"><span style="font-size:22px;font-weight:700;color:#1B5E3B">KLINOV</span></div>' +
+            '<h2 style="color:#333;font-size:18px;margin-bottom:8px">Redefinir sua senha</h2>' +
+            '<p style="color:#666;font-size:14px;margin-bottom:24px">Ola <strong>' + uRs.nome + '</strong>, crie uma nova senha para sua conta.</p>' +
+            '<div id="form-area">' +
+            '<div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Email</label><input type="text" value="' + uRs.email + '" readonly style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;background:#f9f9f9;color:#999"></div>' +
+            '<div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Nova Senha *</label><input type="password" id="rs-senha" placeholder="Minimo 8 caracteres" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px"></div>' +
+            '<div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Confirmar Senha *</label><input type="password" id="rs-confirma" placeholder="Repita a senha" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px"></div>' +
+            '<p style="font-size:12px;color:#999;margin-bottom:16px">Requisitos: minimo 8 caracteres, 1 numero e 1 caractere especial (!@#$%...)</p>' +
+            '<button onclick="resetarSenha()" style="width:100%;padding:12px;background:#E65100;color:#fff;border:none;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer">Redefinir Senha</button>' +
+            '<div id="rs-msg" style="margin-top:12px;text-align:center;font-size:13px"></div>' +
+            '</div></div>' +
+            '<script>' +
+            'async function resetarSenha(){' +
+            '  var s=document.getElementById("rs-senha").value;' +
+            '  var c=document.getElementById("rs-confirma").value;' +
+            '  var msg=document.getElementById("rs-msg");' +
+            '  if(s!==c){msg.innerHTML="<span style=\\"color:#C62828\\">As senhas nao coincidem</span>";return}' +
+            '  if(s.length<8){msg.innerHTML="<span style=\\"color:#C62828\\">Minimo 8 caracteres</span>";return}' +
+            '  msg.innerHTML="<span style=\\"color:#1565C0\\">Redefinindo...</span>";' +
+            '  try{' +
+            '    var r=await fetch("/api/auth?action=resetar&token=' + tokenRs + '",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({senha:s})});' +
+            '    var d=await r.json();' +
+            '    if(d.success){' +
+            '      document.getElementById("form-area").innerHTML="<div style=\\"text-align:center;padding:20px\\"><div style=\\"font-size:40px;margin-bottom:12px\\">✅</div><h3 style=\\"color:#1B5E3B\\">Senha redefinida!</h3><p style=\\"color:#666\\">Agora faca login com sua nova senha.</p><a href=\\"/app\\" style=\\"display:inline-block;margin-top:16px;background:#1B5E3B;color:#fff;padding:12px 32px;border-radius:6px;text-decoration:none;font-weight:600\\">Ir para Login</a></div>";' +
+            '    }else{msg.innerHTML="<span style=\\"color:#C62828\\">"+(d.error||"Erro")+"</span>"}' +
+            '  }catch(e){msg.innerHTML="<span style=\\"color:#C62828\\">Erro de conexao</span>"}' +
+            '}' +
+            '</script></body></html>')
+    }
+
     // ── LISTAR USUÁRIOS ────────────────────────────────────────
     // ── ATIVAR CONTA (via link do email) ────────────────────────
     if (action === 'ativar') {
@@ -300,7 +426,11 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'listar-usuarios') {
-        var us = await client.execute("SELECT id,nome,email,perfil,ativo,deve_redefinir,criado_em,ultimo_login FROM usuarios ORDER BY nome")
+        var { authenticateRequest } = require('./middleware')
+        var authLU = await authenticateRequest(req)
+        if (!authLU) return res.status(401).json({ success: false, error: 'Não autenticado' })
+        if (authLU.perfil !== 'admin') return res.status(403).json({ success: false, error: 'Apenas admin pode listar usuários' })
+        var us = await client.execute({ sql: "SELECT id,nome,email,perfil,ativo,deve_redefinir,criado_em,ultimo_login FROM usuarios WHERE clinica_id=? ORDER BY nome", args: [authLU.clinica_id] })
         return res.status(200).json({ success: true, data: us.rows, total: us.rows.length })
     }
 
@@ -343,5 +473,5 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ success: true, msg: 'Usuário excluído' })
     }
 
-    return res.status(400).json({ success: false, error: 'Action inválida', actions: ['login', 'me', 'logout', 'criar-usuario', 'listar-usuarios', 'alterar-senha', 'redefinir-senha', 'toggle-usuario', 'excluir-usuario'] })
+    return res.status(400).json({ success: false, error: 'Action inválida', actions: ['login', 'me', 'logout', 'criar-usuario', 'listar-usuarios', 'alterar-senha', 'redefinir-senha', 'esqueci-senha', 'resetar', 'ativar', 'toggle-usuario', 'excluir-usuario'] })
 }

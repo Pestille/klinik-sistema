@@ -576,7 +576,26 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         <input type="password" id="login-senha" placeholder="Sua senha" onkeydown="if(event.key==='Enter')doLogin()">
       </div>
       <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar</button>
+      <div style="text-align:center;margin-top:12px">
+        <a href="#" onclick="showEsqueci();return false" style="font-size:12px;color:var(--green);text-decoration:none">Esqueci minha senha</a>
+      </div>
       <div class="login-error" id="login-error"></div>
+    </div>
+    <!-- Esqueci minha senha -->
+    <div id="esqueci-form" style="display:none">
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:14px;font-weight:500;color:var(--text)">Redefinir senha</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">Informe seu email e enviaremos um link para criar nova senha.</div>
+      </div>
+      <div class="login-field">
+        <label>Email</label>
+        <input type="email" id="esqueci-email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doEsqueci()">
+      </div>
+      <button class="login-btn" id="esqueci-btn" onclick="doEsqueci()">Enviar link de redefinição</button>
+      <div style="text-align:center;margin-top:12px">
+        <a href="#" onclick="hideEsqueci();return false" style="font-size:12px;color:var(--text3);text-decoration:none">← Voltar ao login</a>
+      </div>
+      <div class="login-error" id="esqueci-msg" style="color:var(--green)"></div>
     </div>
     <!-- Redefinir senha (primeiro acesso) -->
     <div id="redefine-form" style="display:none">
@@ -2056,6 +2075,45 @@ function doLogout() {
 
 function showLogin() { document.getElementById('login-screen').classList.remove('hidden') }
 function hideLogin() { document.getElementById('login-screen').classList.add('hidden') }
+
+function showEsqueci() {
+  document.getElementById('login-form').style.display = 'none'
+  document.getElementById('esqueci-form').style.display = 'block'
+  document.getElementById('esqueci-msg').textContent = ''
+  document.getElementById('esqueci-email').value = document.getElementById('login-email').value || ''
+  setTimeout(function(){ document.getElementById('esqueci-email').focus() }, 50)
+}
+function hideEsqueci() {
+  document.getElementById('esqueci-form').style.display = 'none'
+  document.getElementById('login-form').style.display = 'block'
+}
+async function doEsqueci() {
+  var email = (document.getElementById('esqueci-email').value || '').trim()
+  var msg = document.getElementById('esqueci-msg')
+  var btn = document.getElementById('esqueci-btn')
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    msg.style.color = 'var(--red)'
+    msg.textContent = 'Email inválido.'
+    return
+  }
+  btn.disabled = true; btn.textContent = 'Enviando...'
+  try {
+    var r = await fetch('/api/auth?action=esqueci-senha', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    })
+    var d = await r.json()
+    msg.style.color = d.success ? 'var(--green)' : 'var(--red)'
+    msg.textContent = d.success
+      ? 'Se o email estiver cadastrado, um link foi enviado. Verifique sua caixa de entrada (e spam).'
+      : (d.error || 'Erro ao solicitar redefinição.')
+  } catch(e) {
+    msg.style.color = 'var(--red)'
+    msg.textContent = 'Erro de conexão.'
+  }
+  btn.disabled = false; btn.textContent = 'Enviar link de redefinição'
+}
 function updateUserInfo() {
   if (!KLINOV_USER) return
   var el = document.querySelector('.user-info span')
