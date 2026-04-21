@@ -155,7 +155,8 @@ module.exports = async function handler(req, res) {
         var token2 = authHeader.replace('Bearer ', '') || q.token || ''
         if (!token2) return res.status(401).json({ success: false, error: 'Token não fornecido' })
 
-        var s = await client.execute({ sql: "SELECT s.usuario_id, s.expira_em, u.nome, u.email, u.perfil, u.clinica_id FROM sessoes s JOIN usuarios u ON u.id=s.usuario_id WHERE s.token=? AND u.ativo=1", args: [token2] })
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN email_pessoal TEXT") } catch(e) {}
+        var s = await client.execute({ sql: "SELECT s.usuario_id, s.expira_em, u.nome, u.email, u.email_pessoal, u.perfil, u.clinica_id FROM sessoes s JOIN usuarios u ON u.id=s.usuario_id WHERE s.token=? AND u.ativo=1", args: [token2] })
         if (!s.rows.length) return res.status(401).json({ success: false, error: 'Sessão inválida' })
 
         var sess = s.rows[0]
@@ -164,7 +165,7 @@ module.exports = async function handler(req, res) {
             return res.status(401).json({ success: false, error: 'Sessão expirada' })
         }
 
-        return res.status(200).json({ success: true, usuario: { id: sess.usuario_id, nome: sess.nome, email: sess.email, perfil: sess.perfil, clinica_id: sess.clinica_id } })
+        return res.status(200).json({ success: true, usuario: { id: sess.usuario_id, nome: sess.nome, email: sess.email, email_pessoal: sess.email_pessoal || '', perfil: sess.perfil, clinica_id: sess.clinica_id } })
     }
 
     // ── LOGOUT ─────────────────────────────────────────────────
@@ -500,5 +501,68 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ success: true, msg: 'Usuário excluído' })
     }
 
-    return res.status(400).json({ success: false, error: 'Action inválida', actions: ['login', 'me', 'logout', 'criar-usuario', 'listar-usuarios', 'alterar-senha', 'redefinir-senha', 'esqueci-senha', 'resetar', 'ativar', 'toggle-usuario', 'excluir-usuario'] })
+    // ── ATUALIZAR PERFIL (self-service) ──────────────────────
+    if (action === 'atualizar-perfil') {
+        if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+        var { authenticateRequest: authAP } = require('./middleware')
+        var authAp = await authAP(req)
+        if (!authAp) return res.status(401).json({ success: false, error: 'Não autenticado' })
+
+        var bp = req.body || {}
+        var nome = (bp.nome || '').trim()
+        var emailPessoal = (bp.email_pessoal || '').toLowerCase().trim()
+        var novoUsuario = (bp.novo_usuario || '').toLowerCase().trim()
+        var novaSenha = bp.nova_senha || ''
+        var senhaAtual = bp.senha_atual || ''
+
+        var trocaSensivel = !!(novoUsuario || novaSenha)
+        if (trocaSensivel) {
+            if (!senhaAtual) return res.status(400).json({ success: false, error: 'Senha atual obrigatória para alterar usuário ou senha' })
+            var curUser = await client.execute({ sql: "SELECT senha_hash FROM usuarios WHERE id=?", args: [authAp.usuario_id] })
+            if (!curUser.rows.length) return res.status(404).json({ success: false, error: 'Usuário não encontrado' })
+            var hashCur = curUser.rows[0].senha_hash || ''
+            var senhaOk = false
+            if (hashCur.length === 64) senhaOk = hashSenha(senhaAtual) === hashCur
+            else if (hashCur.indexOf('$2') === 0) senhaOk = bcrypt.compareSync(senhaAtual, hashCur)
+            if (!senhaOk) return res.status(401).json({ success: false, error: 'Senha atual incorreta' })
+        }
+
+        if (emailPessoal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailPessoal)) {
+            return res.status(400).json({ success: false, error: 'Email pessoal inválido' })
+        }
+
+        if (novoUsuario) {
+            if (!/^[^\s@]+@[^\s@]+$/.test(novoUsuario)) return res.status(400).json({ success: false, error: 'Nome de usuário inválido' })
+            var dup = await client.execute({ sql: "SELECT id FROM usuarios WHERE email=? AND id<>?", args: [novoUsuario, authAp.usuario_id] })
+            if (dup.rows.length) return res.status(409).json({ success: false, error: 'Este usuário já está em uso' })
+        }
+
+        if (novaSenha) {
+            var erroNs = validarSenha(novaSenha)
+            if (erroNs) return res.status(400).json({ success: false, error: erroNs })
+        }
+
+        var sets = []
+        var args = []
+        if (nome) { sets.push('nome=?'); args.push(nome) }
+        if (emailPessoal) { sets.push('email_pessoal=?'); args.push(emailPessoal) }
+        if (novoUsuario) { sets.push('email=?'); args.push(novoUsuario) }
+        if (novaSenha) { sets.push('senha_hash=?'); args.push(bcrypt.hashSync(novaSenha, 10)); sets.push('deve_redefinir=0') }
+
+        if (!sets.length) return res.status(400).json({ success: false, error: 'Nenhum campo para atualizar' })
+
+        args.push(authAp.usuario_id)
+        await client.execute({ sql: "UPDATE usuarios SET " + sets.join(',') + " WHERE id=?", args: args })
+
+        if (novaSenha) {
+            var tokenCurrent = (req.headers.authorization || '').replace('Bearer ', '')
+            await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=? AND token<>?", args: [authAp.usuario_id, tokenCurrent] })
+        }
+
+        var updRow = await client.execute({ sql: "SELECT id,nome,email,email_pessoal,perfil,clinica_id FROM usuarios WHERE id=?", args: [authAp.usuario_id] })
+        var u = updRow.rows[0] || {}
+        return res.status(200).json({ success: true, usuario: { id: u.id, nome: u.nome, email: u.email, email_pessoal: u.email_pessoal || '', perfil: u.perfil, clinica_id: u.clinica_id } })
+    }
+
+    return res.status(400).json({ success: false, error: 'Action inválida', actions: ['login', 'me', 'logout', 'criar-usuario', 'listar-usuarios', 'alterar-senha', 'redefinir-senha', 'esqueci-senha', 'resetar', 'ativar', 'toggle-usuario', 'excluir-usuario', 'atualizar-perfil'] })
 }

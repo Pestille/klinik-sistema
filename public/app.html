@@ -49,6 +49,13 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 .user-info{display:flex;align-items:center;gap:8px;color:#fff;font-size:13px;font-weight:500;cursor:pointer;padding:4px 8px;border-radius:4px}
 .user-info:hover{background:rgba(255,255,255,.1)}
 .user-av{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.user-menu-wrap{position:relative}
+.user-menu-dd{display:none;position:absolute;right:0;top:calc(100% + 6px);min-width:180px;background:var(--surface,#fff);border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.12);overflow:hidden;z-index:120}
+.user-menu-dd.open{display:block}
+.user-menu-item{display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:var(--text2);cursor:pointer;transition:background .12s ease}
+.user-menu-item:hover{background:var(--surface2,#FAFAFA);color:var(--text)}
+.user-menu-item svg{flex-shrink:0;color:var(--text3)}
+.user-menu-sep{height:1px;background:var(--border2,#F0F0F0)}
 
 /* ── BODY LAYOUT ── */
 #body{flex:1;display:flex;overflow:hidden;position:relative}
@@ -637,9 +644,22 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     <button class="icon-btn" title="Suporte"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg></button>
     <button class="icon-btn" title="Notificações"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg><span class="badge"></span></button>
     <span id="plan-badge" style="display:none;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.04em;cursor:pointer" onclick="openUpgrade()"></span>
-    <div class="user-info" onclick="doLogout()" title="Clique para sair">
-      <div class="user-av">RP</div>
-      <span>RAFAEL PESTILLE</span>
+    <div class="user-menu-wrap">
+      <div class="user-info" onclick="toggleUserMenu(event)" title="Menu do usuário">
+        <div class="user-av">RP</div>
+        <span>RAFAEL PESTILLE</span>
+      </div>
+      <div class="user-menu-dd" id="user-menu-dd">
+        <div class="user-menu-item" onclick="abrirPerfil()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          Perfil
+        </div>
+        <div class="user-menu-sep"></div>
+        <div class="user-menu-item" onclick="doLogout()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+          Sair
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1454,6 +1474,47 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     </div>
 
 
+    <!-- MEU PERFIL -->
+    <div class="page gpage" id="p-perfil">
+      <div class="gpage-header">
+        <div><div class="gpage-title">Meu Perfil</div><div class="gpage-sub">Gerencie seus dados pessoais, usuário e senha</div></div>
+      </div>
+      <div class="gpage-body" style="max-width:720px;margin:0 auto;padding:20px 24px">
+        <div class="card" style="padding:20px 24px;margin-bottom:16px">
+          <div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px">Dados Pessoais</div>
+          <div class="form-group"><label class="form-label">Nome Completo</label><input class="form-input" id="pf-nome"></div>
+          <div class="form-group"><label class="form-label">Email Pessoal</label><input class="form-input" id="pf-email" type="email" placeholder="email@exemplo.com">
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">Usado para recuperação de senha e notificações.</div>
+          </div>
+          <div class="form-group"><label class="form-label">Perfil de Acesso</label><input class="form-input" id="pf-perfil-ro" readonly style="background:var(--surface2,#FAFAFA);color:var(--text3)">
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">Alterável apenas por um administrador.</div>
+          </div>
+          <div style="text-align:right;margin-top:8px"><button class="btn btn-primary" onclick="salvarPerfilDados()">Salvar Dados</button></div>
+        </div>
+
+        <div class="card" style="padding:20px 24px;margin-bottom:16px">
+          <div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px">Nome de Usuário</div>
+          <div class="form-group"><label class="form-label">Usuário Atual</label><input class="form-input" id="pf-user-atual" readonly style="background:var(--surface2,#FAFAFA);color:var(--text3)"></div>
+          <div class="form-group"><label class="form-label">Novo Usuário</label>
+            <div style="display:flex;align-items:center;gap:0">
+              <input class="form-input" id="pf-user-novo" placeholder="nome.sobrenome" style="border-radius:6px 0 0 6px;border-right:none" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9._-]/g,'')">
+              <span style="background:var(--surface2,#FAFAFA);border:1px solid var(--border);border-left:none;border-radius:0 6px 6px 0;padding:9px 12px;font-size:14px;color:var(--text3);white-space:nowrap">@klinov</span>
+            </div>
+          </div>
+          <div class="form-group"><label class="form-label">Senha Atual *</label><input class="form-input" id="pf-user-senha" type="password" placeholder="Confirme sua senha"></div>
+          <div style="text-align:right;margin-top:8px"><button class="btn btn-primary" onclick="salvarPerfilUsuario()">Alterar Usuário</button></div>
+        </div>
+
+        <div class="card" style="padding:20px 24px;margin-bottom:16px">
+          <div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px">Alterar Senha</div>
+          <div class="form-group"><label class="form-label">Senha Atual *</label><input class="form-input" id="pf-pwd-atual" type="password"></div>
+          <div class="form-group"><label class="form-label">Nova Senha *</label><input class="form-input" id="pf-pwd-nova" type="password" placeholder="Mínimo 8 caracteres, 1 número, 1 especial"></div>
+          <div class="form-group"><label class="form-label">Confirmar Nova Senha *</label><input class="form-input" id="pf-pwd-conf" type="password"></div>
+          <div style="text-align:right;margin-top:8px"><button class="btn btn-primary" onclick="salvarPerfilSenha()">Alterar Senha</button></div>
+        </div>
+      </div>
+    </div>
+
     <!-- USUÁRIOS E PERMISSÕES -->
     <div class="page gpage" id="p-usuarios">
       <div class="gpage-header">
@@ -1985,13 +2046,13 @@ function _apiHeaders(extra){
 async function apiData(rota,params){
   var qs=Object.entries(params||{}).filter(function(kv){return kv[1]!==undefined&&kv[1]!==''}).map(function(kv){return encodeURIComponent(kv[0])+'='+encodeURIComponent(kv[1])}).join('&')
   var r=await fetch('/api/data?r='+rota+(qs?'&'+qs:''),{headers:_apiHeaders()})
-  if(r.status===401){doLogout();throw new Error('Sessão expirada')}
+  if(r.status===401){forceLogout();throw new Error('Sessão expirada')}
   if(!r.ok)throw new Error('HTTP '+r.status)
   return r.json()
 }
 async function apiPost(rota,body){
   var r=await fetch('/api/data?r='+rota,{method:'POST',headers:_apiHeaders(),body:JSON.stringify(body)})
-  if(r.status===401){doLogout();throw new Error('Sessão expirada')}
+  if(r.status===401){forceLogout();throw new Error('Sessão expirada')}
   return r.json()
 }
 
@@ -2065,7 +2126,35 @@ async function doRedefinir() {
   btn.disabled = false; btn.textContent = 'Redefinir Senha'
 }
 
+function toggleUserMenu(e) {
+  if (e) e.stopPropagation()
+  var dd = document.getElementById('user-menu-dd')
+  if (dd) dd.classList.toggle('open')
+}
+function closeUserMenu() {
+  var dd = document.getElementById('user-menu-dd')
+  if (dd) dd.classList.remove('open')
+}
+document.addEventListener('click', function(e) {
+  var wrap = document.querySelector('.user-menu-wrap')
+  if (wrap && !wrap.contains(e.target)) closeUserMenu()
+})
+
+function abrirPerfil() {
+  closeUserMenu()
+  nav('perfil')
+}
+
 function doLogout() {
+  closeUserMenu()
+  if (!confirm('Deseja realmente sair do sistema?')) return
+  var token = localStorage.getItem('klinov_token')
+  if (token) fetch('/api/auth?action=logout', { headers: { 'Authorization': 'Bearer ' + token } }).catch(function(){})
+  localStorage.removeItem('klinov_token')
+  KLINOV_USER = null
+  showLogin()
+}
+function forceLogout() {
   var token = localStorage.getItem('klinov_token')
   if (token) fetch('/api/auth?action=logout', { headers: { 'Authorization': 'Bearer ' + token } }).catch(function(){})
   localStorage.removeItem('klinov_token')
@@ -2226,6 +2315,77 @@ function nav(id) {
   if (id==='confirmacoes') loadConfirmacoes()
   if (id==='dashboard') loadAnalytics()
   if (id==='marketing') loadMarketing()
+  if (id==='perfil') loadPerfil()
+}
+
+async function loadPerfil() {
+  try {
+    var r = await fetch('/api/auth?action=me', { headers: _apiHeaders() })
+    var d = await r.json()
+    if (!d.success) { alert(d.error||'Erro ao carregar perfil'); return }
+    var u = d.usuario
+    document.getElementById('pf-nome').value = u.nome || ''
+    document.getElementById('pf-email').value = u.email_pessoal || ''
+    document.getElementById('pf-perfil-ro').value = (u.perfil || '').toUpperCase()
+    document.getElementById('pf-user-atual').value = u.email || ''
+    // Pré-preenche o prefixo do novo usuário com o atual (sem o @klinov)
+    var prefixo = (u.email || '').split('@')[0] || ''
+    document.getElementById('pf-user-novo').value = prefixo
+    document.getElementById('pf-user-senha').value = ''
+    document.getElementById('pf-pwd-atual').value = ''
+    document.getElementById('pf-pwd-nova').value = ''
+    document.getElementById('pf-pwd-conf').value = ''
+  } catch(e) { alert('Erro de conexão') }
+}
+
+async function salvarPerfilDados() {
+  var nome = document.getElementById('pf-nome').value.trim()
+  var email = document.getElementById('pf-email').value.trim()
+  if (!nome) { alert('Informe o nome completo'); return }
+  try {
+    var r = await fetch('/api/auth?action=atualizar-perfil', { method:'POST', headers:_apiHeaders(), body: JSON.stringify({ nome: nome, email_pessoal: email }) })
+    var d = await r.json()
+    if (!d.success) { alert(d.error||'Erro ao salvar'); return }
+    KLINOV_USER = Object.assign(KLINOV_USER||{}, d.usuario)
+    updateUserInfo()
+    alert('Dados atualizados')
+  } catch(e) { alert('Erro de conexão') }
+}
+
+async function salvarPerfilUsuario() {
+  var prefixo = document.getElementById('pf-user-novo').value.trim().toLowerCase()
+  var senhaAtual = document.getElementById('pf-user-senha').value
+  if (!prefixo) { alert('Informe o novo usuário'); return }
+  if (!senhaAtual) { alert('Informe sua senha atual para confirmar'); return }
+  var novoUsuario = prefixo + '@klinov'
+  var atual = document.getElementById('pf-user-atual').value
+  if (novoUsuario === atual) { alert('O novo usuário é igual ao atual'); return }
+  try {
+    var r = await fetch('/api/auth?action=atualizar-perfil', { method:'POST', headers:_apiHeaders(), body: JSON.stringify({ novo_usuario: novoUsuario, senha_atual: senhaAtual }) })
+    var d = await r.json()
+    if (!d.success) { alert(d.error||'Erro ao alterar usuário'); return }
+    KLINOV_USER = Object.assign(KLINOV_USER||{}, d.usuario)
+    document.getElementById('pf-user-atual').value = d.usuario.email
+    document.getElementById('pf-user-senha').value = ''
+    alert('Usuário alterado')
+  } catch(e) { alert('Erro de conexão') }
+}
+
+async function salvarPerfilSenha() {
+  var atual = document.getElementById('pf-pwd-atual').value
+  var nova = document.getElementById('pf-pwd-nova').value
+  var conf = document.getElementById('pf-pwd-conf').value
+  if (!atual || !nova || !conf) { alert('Preencha todos os campos'); return }
+  if (nova !== conf) { alert('As senhas não coincidem'); return }
+  try {
+    var r = await fetch('/api/auth?action=atualizar-perfil', { method:'POST', headers:_apiHeaders(), body: JSON.stringify({ nova_senha: nova, senha_atual: atual }) })
+    var d = await r.json()
+    if (!d.success) { alert(d.error||'Erro ao alterar senha'); return }
+    document.getElementById('pf-pwd-atual').value = ''
+    document.getElementById('pf-pwd-nova').value = ''
+    document.getElementById('pf-pwd-conf').value = ''
+    alert('Senha alterada')
+  } catch(e) { alert('Erro de conexão') }
 }
 
 // ── API ──────────────────────────────────────────────────────────
@@ -9149,13 +9309,13 @@ function _apiHeaders(extra){
 async function apiData(rota,params){
   var qs=Object.entries(params||{}).filter(function(kv){return kv[1]!==undefined&&kv[1]!==''}).map(function(kv){return encodeURIComponent(kv[0])+'='+encodeURIComponent(kv[1])}).join('&')
   var r=await fetch('/api/data?r='+rota+(qs?'&'+qs:''),{headers:_apiHeaders()})
-  if(r.status===401){doLogout();throw new Error('Sessão expirada')}
+  if(r.status===401){forceLogout();throw new Error('Sessão expirada')}
   if(!r.ok)throw new Error('HTTP '+r.status)
   return r.json()
 }
 async function apiPost(rota,body){
   var r=await fetch('/api/data?r='+rota,{method:'POST',headers:_apiHeaders(),body:JSON.stringify(body)})
-  if(r.status===401){doLogout();throw new Error('Sessão expirada')}
+  if(r.status===401){forceLogout();throw new Error('Sessão expirada')}
   return r.json()
 }
 const DIAS_SEMANA=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado']
