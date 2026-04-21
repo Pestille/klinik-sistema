@@ -585,10 +585,10 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     <div id="esqueci-form" style="display:none">
       <div style="text-align:center;margin-bottom:16px">
         <div style="font-size:14px;font-weight:500;color:var(--text)">Redefinir senha</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:4px">Informe seu email e enviaremos um link para criar nova senha.</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">Informe seu usuário ou email pessoal e enviaremos um link para criar nova senha.</div>
       </div>
       <div class="login-field">
-        <label>Email</label>
+        <label>Usuário ou email</label>
         <input type="text" id="esqueci-email" placeholder="usuario@klinov ou email pessoal" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')doEsqueci()">
       </div>
       <button class="login-btn" id="esqueci-btn" onclick="doEsqueci()">Enviar link de redefinição</button>
@@ -2018,7 +2018,7 @@ async function doLogin() {
   var errEl = document.getElementById('login-error')
   var btn = document.getElementById('login-btn')
   errEl.textContent = ''
-  if (!email || !senha) { errEl.textContent = 'Preencha email e senha'; return }
+  if (!email || !senha) { errEl.textContent = 'Preencha usuário e senha'; return }
   btn.disabled = true; btn.textContent = 'Entrando...'
   try {
     var r = await fetch('/api/auth?action=login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, senha: senha }) })
@@ -5531,7 +5531,7 @@ async function loadUsuarios(){
     var users=d.data||[]
     document.getElementById('usr-sub').textContent=users.length+' usuário'+(users.length!==1?'s':'')+' cadastrado'+(users.length!==1?'s':'')
     if(!users.length){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">Nenhum usuário cadastrado</div>';return}
-    el.innerHTML='<table class="tbl" style="width:100%"><thead><tr><th>Nome</th><th>Email</th><th>Perfil</th><th>Status</th><th>Último Login</th><th>Ações</th></tr></thead><tbody>'+
+    el.innerHTML='<table class="tbl" style="width:100%"><thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th>Status</th><th>Último Login</th><th>Ações</th></tr></thead><tbody>'+
       users.map(function(u){
         var perfilCor=u.perfil==='admin'?'red':u.perfil==='dentista'?'blue':'green'
         var statusBadge=u.ativo?'<span class="badge badge-green">Ativo</span>':'<span class="badge badge-orange">Inativo</span>'
