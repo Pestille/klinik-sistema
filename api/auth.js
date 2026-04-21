@@ -235,7 +235,7 @@ module.exports = async function handler(req, res) {
         var bes = req.body || {}
         var esEmail = String(bes.email || '').toLowerCase().trim()
         if (!esEmail || !/^[^\s@]+@[^\s@]+$/.test(esEmail)) {
-            return res.status(400).json({ success: false, error: 'Informe seu login (usuario@klinov) ou email pessoal' })
+            return res.status(400).json({ success: false, error: 'Informe seu usuário ou email pessoal' })
         }
 
         // Rate limit: max 3 solicitações por email em 15 min

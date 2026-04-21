@@ -569,7 +569,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     <div id="login-form">
       <div class="login-field">
         <label>Usuário</label>
-        <input type="text" id="login-email" placeholder="usuario@klinov" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')doLogin()">
+        <input type="text" id="login-email" placeholder="" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')doLogin()">
       </div>
       <div class="login-field">
         <label>Senha</label>
@@ -589,7 +589,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
       </div>
       <div class="login-field">
         <label>Usuário ou email</label>
-        <input type="text" id="esqueci-email" placeholder="usuario@klinov ou email pessoal" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')doEsqueci()">
+        <input type="text" id="esqueci-email" placeholder="" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')doEsqueci()">
       </div>
       <button class="login-btn" id="esqueci-btn" onclick="doEsqueci()">Enviar link de redefinição</button>
       <div style="text-align:center;margin-top:12px">
@@ -2093,7 +2093,7 @@ async function doEsqueci() {
   var btn = document.getElementById('esqueci-btn')
   if (!email || !/^[^\s@]+@[^\s@]+$/.test(email)) {
     msg.style.color = 'var(--red)'
-    msg.textContent = 'Informe seu login (usuario@klinov) ou email pessoal.'
+    msg.textContent = 'Informe seu usuário ou email pessoal.'
     return
   }
   btn.disabled = true; btn.textContent = 'Enviando...'
