@@ -7,10 +7,6 @@ var bcrypt = require('bcryptjs')
 var nodemailer = require('nodemailer')
 var { getClient } = require('./db')
 
-function hashSenha(senha) {
-    return crypto.createHash('sha256').update(senha + '_klinik_salt_2026').digest('hex')
-}
-
 function gerarToken() {
     return crypto.randomBytes(32).toString('hex')
 }
@@ -92,18 +88,10 @@ module.exports = async function handler(req, res) {
         var user = r.rows[0]
         var senhaValida = false
 
-        // Migração: hash SHA-256 tem 64 chars hex, bcrypt começa com $2
-        if (user.senha_hash && user.senha_hash.length === 64) {
-            // Hash antigo (SHA-256) — verifica com método legado
-            var hashLegado = hashSenha(b.senha)
-            if (hashLegado === user.senha_hash) {
-                senhaValida = true
-                // Re-hash com bcrypt e atualiza
-                var bcryptHash = bcrypt.hashSync(b.senha, 10)
-                await client.execute({ sql: "UPDATE usuarios SET senha_hash=? WHERE id=?", args: [bcryptHash, user.id] })
-            }
-        } else if (user.senha_hash && user.senha_hash.indexOf('$2') === 0) {
-            // Hash bcrypt
+        // Apenas bcrypt é aceito. O hash SHA-256 legado (salt hardcoded) foi
+        // removido — qualquer conta ainda em SHA-256 precisa usar "esqueci senha"
+        // para recriar a senha via email e gerar um bcrypt limpo.
+        if (user.senha_hash && user.senha_hash.indexOf('$2') === 0) {
             senhaValida = bcrypt.compareSync(b.senha, user.senha_hash)
         }
 
@@ -521,9 +509,7 @@ module.exports = async function handler(req, res) {
             var curUser = await client.execute({ sql: "SELECT senha_hash FROM usuarios WHERE id=?", args: [authAp.usuario_id] })
             if (!curUser.rows.length) return res.status(404).json({ success: false, error: 'Usuário não encontrado' })
             var hashCur = curUser.rows[0].senha_hash || ''
-            var senhaOk = false
-            if (hashCur.length === 64) senhaOk = hashSenha(senhaAtual) === hashCur
-            else if (hashCur.indexOf('$2') === 0) senhaOk = bcrypt.compareSync(senhaAtual, hashCur)
+            var senhaOk = hashCur.indexOf('$2') === 0 && bcrypt.compareSync(senhaAtual, hashCur)
             if (!senhaOk) return res.status(401).json({ success: false, error: 'Senha atual incorreta' })
         }
 
