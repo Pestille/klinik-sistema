@@ -98,10 +98,12 @@ function setCorsHeaders(req, res) {
     var origin = (req.headers && req.headers.origin) || ''
     if (allowedOrigins.indexOf(origin) !== -1) {
         res.setHeader('Access-Control-Allow-Origin', origin)
-    } else if (!origin) {
-        // Same-origin requests (no Origin header) or server-to-server
-        res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0])
     }
+    // Requisições sem header Origin (same-origin, server-to-server, curl) não
+    // precisam de CORS — o browser só aplica CORS em cross-origin. Setar
+    // Access-Control-Allow-Origin nesse caso só ampliava a superfície de
+    // ataque, permitindo que clientes sem Origin recebessem o header e
+    // confundissem checagens downstream.
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
     res.setHeader('Access-Control-Max-Age', '86400')

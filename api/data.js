@@ -68,10 +68,17 @@ module.exports = async function handler(req, res) {
 
         // ── DB-STATUS ───────────────────────────────────────────────────────
         if (route === 'db-status') {
-            var start = Date.now()
             await client.execute('SELECT 1')
-            var lat = Date.now() - start
-            return res.status(200).json({ status: 'online', latencia_ms: lat, timestamp: new Date().toISOString() })
+            return res.status(200).json({ status: 'online' })
+        }
+
+        // ── RATE LIMIT — rotas destrutivas ──────────────────────────────────
+        // Protege contra vazamento de credenciais + loop de delete/DoS operacional.
+        // 100 exclusões / 10 min por clínica é folga pra operação normal e teto rígido pra abuso.
+        if (clinica_id && (route.indexOf('excluir-') === 0 || route.indexOf('deletar-') === 0 || route.indexOf('remover-') === 0)) {
+            if (!checkRateLimit('destructive:' + clinica_id, 100, 600000)) {
+                return res.status(429).json({ success: false, error: 'Muitas operações de exclusão em sequência. Aguarde alguns minutos.' })
+            }
         }
 
         // ── DASHBOARD ───────────────────────────────────────────────────────
