@@ -431,7 +431,7 @@ module.exports = async function handler(req, res) {
         var authLU = await authenticateRequest(req)
         if (!authLU) return res.status(401).json({ success: false, error: 'Não autenticado' })
         if (authLU.perfil !== 'admin') return res.status(403).json({ success: false, error: 'Apenas admin pode listar usuários' })
-        var us = await client.execute({ sql: "SELECT id,nome,email,perfil,ativo,deve_redefinir,criado_em,ultimo_login FROM usuarios WHERE clinica_id=? ORDER BY nome", args: [authLU.clinica_id] })
+        var us = await client.execute({ sql: "SELECT id,nome,email,perfil,ativo,deve_redefinir,profissional_id,criado_em,ultimo_login FROM usuarios WHERE clinica_id=? ORDER BY nome", args: [authLU.clinica_id] })
         return res.status(200).json({ success: true, data: us.rows, total: us.rows.length })
     }
 

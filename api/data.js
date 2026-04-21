@@ -1153,10 +1153,37 @@ module.exports = async function handler(req, res) {
             var spCols = ['rg TEXT','sexo TEXT','estado_civil TEXT','data_nascimento TEXT','endereco TEXT','numero TEXT','bairro TEXT','cidade TEXT','uf TEXT','cep TEXT','complemento TEXT','cro_uf TEXT']
             for (var sci=0;sci<spCols.length;sci++){try{await client.execute("ALTER TABLE profissionais ADD COLUMN "+spCols[sci])}catch(e){}}
             var spResult = await client.execute({
-                sql: "UPDATE profissionais SET nome=?,especialidade=?,cpf=?,email=?,telefone=?,cro=?,rg=?,sexo=?,estado_civil=?,data_nascimento=?,endereco=?,numero=?,bairro=?,cidade=?,uf=?,cep=?,complemento=?,cro_uf=?,clinica_id=COALESCE(clinica_id,?),atualizado_em=datetime('now') WHERE id=?",
-                args: [sp.nome||'',sp.especialidade||'',sp.cpf||'',sp.email||'',sp.telefone||'',sp.cro||'',sp.rg||'',sp.sexo||'',sp.estado_civil||'',sp.data_nascimento||'',sp.endereco||'',sp.numero||'',sp.bairro||'',sp.cidade||'',sp.uf||'',sp.cep||'',sp.complemento||'',sp.cro_uf||'',clinica_id,sp.id]
+                sql: "UPDATE profissionais SET nome=?,especialidade=?,cpf=?,email=?,telefone=?,cro=?,rg=?,sexo=?,estado_civil=?,data_nascimento=?,endereco=?,numero=?,bairro=?,cidade=?,uf=?,cep=?,complemento=?,cro_uf=?,clinica_id=COALESCE(clinica_id,?),atualizado_em=datetime('now') WHERE id=? AND (clinica_id=? OR clinica_id IS NULL)",
+                args: [sp.nome||'',sp.especialidade||'',sp.cpf||'',sp.email||'',sp.telefone||'',sp.cro||'',sp.rg||'',sp.sexo||'',sp.estado_civil||'',sp.data_nascimento||'',sp.endereco||'',sp.numero||'',sp.bairro||'',sp.cidade||'',sp.uf||'',sp.cep||'',sp.complemento||'',sp.cro_uf||'',clinica_id,sp.id,clinica_id]
             })
             return res.status(200).json({ success: true, msg: 'Profissional atualizado', rows: spResult.rowsAffected || 0 })
+        }
+
+        // ── CRIAR PROFISSIONAL ───────────────────────────────────────
+        if (route === 'criar-profissional') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var cp = req.body || {}
+            var cpNome = (cp.nome || '').trim()
+            if (!cpNome) return res.status(400).json({ success: false, error: 'Nome obrigatório' })
+            // Ensure extra columns exist on profissionais
+            var cpCols = ['rg TEXT','sexo TEXT','estado_civil TEXT','data_nascimento TEXT','endereco TEXT','numero TEXT','bairro TEXT','cidade TEXT','uf TEXT','cep TEXT','complemento TEXT','cro_uf TEXT','cpf TEXT','atualizado_em TEXT']
+            for (var cpi=0;cpi<cpCols.length;cpi++){try{await client.execute("ALTER TABLE profissionais ADD COLUMN "+cpCols[cpi])}catch(e){}}
+            var cpIns = await client.execute({
+                sql: "INSERT INTO profissionais(clinica_id,nome,especialidade,cpf,email,telefone,cro,cro_uf,rg,sexo,estado_civil,data_nascimento,endereco,numero,bairro,cidade,uf,cep,complemento,ativo,created_at,atualizado_em) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,datetime('now'),datetime('now'))",
+                args: [clinica_id, cpNome, cp.especialidade||'', cp.cpf||'', cp.email||'', cp.telefone||'', cp.cro||'', cp.cro_uf||'', cp.rg||'', cp.sexo||'', cp.estado_civil||'', cp.data_nascimento||'', cp.endereco||'', cp.numero||'', cp.bairro||'', cp.cidade||'', cp.uf||'', cp.cep||'', cp.complemento||'']
+            })
+            var cpNewId = Number(cpIns.lastInsertRowid)
+            // Vincula a um usuário existente, se informado (e se ele pertencer à mesma clínica)
+            var cpUserId = parseInt(cp.usuario_id) || 0
+            var cpLinked = false
+            if (cpUserId) {
+                var cpUR = await client.execute({ sql: "SELECT id FROM usuarios WHERE id=? AND clinica_id=?", args: [cpUserId, clinica_id] })
+                if (cpUR.rows.length) {
+                    await client.execute({ sql: "UPDATE usuarios SET profissional_id=? WHERE id=? AND clinica_id=?", args: [cpNewId, cpUserId, clinica_id] })
+                    cpLinked = true
+                }
+            }
+            return res.status(200).json({ success: true, id: cpNewId, usuario_vinculado: cpLinked, msg: 'Profissional criado' })
         }
 
         // ── SALVAR AGENDAMENTO ────────────────────────────────────────

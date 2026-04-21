@@ -1342,7 +1342,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 
     <!-- PROFISSIONAIS -->
     <div class="page gpage" id="p-profissionais">
-      <div class="gpage-header"><div><div class="gpage-title">Profissionais</div><div class="gpage-sub" id="prof-sub">Carregando...</div></div><button class="btn btn-primary" onclick="openModal('profissional')">+ Novo Profissional</button></div>
+      <div class="gpage-header"><div><div class="gpage-title">Profissionais</div><div class="gpage-sub" id="prof-sub">Carregando...</div></div><button class="btn btn-primary" onclick="abrirNovoProfissional()">+ Novo Profissional</button></div>
       <div class="gpage-body">
         <div id="prof-loading" class="loading"><div class="spin"></div></div>
         <div id="prof-data" class="hidden"><div class="prof-grid" id="prof-grid"></div></div>
@@ -1573,8 +1573,9 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     <!-- MODAL PROFISSIONAL -->
     <div class="modal-ov" id="modal-profissional" onclick="if(event.target===this)closeModal('profissional')">
       <div class="modal lg">
-        <div class="modal-head"><div class="modal-title" id="prof-modal-title">Profissional</div><button class="modal-close" onclick="closeModal('profissional')">✕</button></div>
+        <div class="modal-head"><div class="modal-title" id="prof-modal-title">Novo Profissional</div><button class="modal-close" onclick="closeModal('profissional')">✕</button></div>
         <div class="modal-body" id="prof-modal-body"></div>
+        <div class="modal-foot"><button class="btn btn-primary" onclick="criarProfissional()">Criar Profissional</button><button class="btn" onclick="closeModal('profissional')">Cancelar</button></div>
       </div>
     </div>
 
@@ -2551,7 +2552,7 @@ function renderProfsList() {
       '<div class="prof-check-box" style="border-color:'+cor+';'+(checked?'background:'+cor:'background:transparent')+'">'+
       (checked?'<svg width="8" height="8" viewBox="0 0 12 12" fill="white"><path d="M1 6l4 4 6-6" stroke="white" stroke-width="2" fill="none"/></svg>':'')+
       '</div>'+
-      '<div class="prof-check-name">'+nome.toUpperCase().substring(0,20)+'</div>'+
+      '<div class="prof-check-name">'+escHtml(nome.toUpperCase().substring(0,20))+'</div>'+
     '</div>'
   }).join('')
 }
@@ -4445,7 +4446,7 @@ async function loadProfissionais() {
       var esp=p.especialidade||''
       var ini=nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
       var cor=PROF_CORES[i%PROF_CORES.length]
-      return '<div class="prof-card" style="cursor:pointer" onclick="verProfissional('+i+')"><div class="prof-av" style="background:'+cor+'22;color:'+cor+'">'+ini+'</div><div class="prof-name">'+nome.split(' ').slice(0,3).join(' ')+'</div><div class="prof-esp">'+(esp||'Clínico Geral')+'</div><div style="font-size:11px;color:var(--text3);margin-top:4px">'+(p.total_agendamentos||0)+' agendamentos</div><span class="badge badge-green" style="margin-top:6px">Ativo</span></div>'
+      return '<div class="prof-card" style="cursor:pointer" onclick="verProfissional('+i+')"><div class="prof-av" style="background:'+cor+'22;color:'+cor+'">'+escHtml(ini)+'</div><div class="prof-name">'+escHtml(nome.split(' ').slice(0,3).join(' '))+'</div><div class="prof-esp">'+escHtml(esp||'Clínico Geral')+'</div><div style="font-size:11px;color:var(--text3);margin-top:4px">'+(p.total_agendamentos||0)+' agendamentos</div><span class="badge badge-green" style="margin-top:6px">Ativo</span></div>'
     }).join('')
     renderProfsList()
     if(loadEl)loadEl.classList.add('hidden')
@@ -4476,18 +4477,18 @@ function verProfissional(idx){
         '<input type="file" id="prof-foto-input" accept="image/*" style="display:none" onchange="profFotoPreview(this)">'+
       '</div>'+
       '<div style="flex:1">'+
-        '<div style="font-size:22px;font-weight:600;color:#212121">'+nome+'</div>'+
+        '<div style="font-size:22px;font-weight:600;color:#212121">'+escHtml(nome)+'</div>'+
         '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;font-size:13px;color:#616161">'+
-          '<div style="display:flex;align-items:center;gap:6px">☎ <input id="prof-h-tel" value="'+(tel||'')+'" placeholder="Não informado" style="border:none;border-bottom:1px solid transparent;font-size:13px;color:#616161;padding:2px 0;outline:none;font-family:Roboto,sans-serif;background:transparent;width:200px" onfocus="this.style.borderBottomColor=\'#E65100\'" onblur="this.style.borderBottomColor=\'transparent\'"></div>'+
-          '<div style="display:flex;align-items:center;gap:6px">📱 <input id="prof-h-cel" value="'+(tel||'')+'" placeholder="Não informado" style="border:none;border-bottom:1px solid transparent;font-size:13px;color:#616161;padding:2px 0;outline:none;font-family:Roboto,sans-serif;background:transparent;width:200px" onfocus="this.style.borderBottomColor=\'#E65100\'" onblur="this.style.borderBottomColor=\'transparent\'"></div>'+
-          '<div style="display:flex;align-items:center;gap:6px">✉ <input id="prof-h-email" value="'+(email||'')+'" placeholder="Não informado" style="border:none;border-bottom:1px solid transparent;font-size:13px;color:#616161;padding:2px 0;outline:none;font-family:Roboto,sans-serif;background:transparent;width:260px" onfocus="this.style.borderBottomColor=\'#E65100\'" onblur="this.style.borderBottomColor=\'transparent\'"></div>'+
+          '<div style="display:flex;align-items:center;gap:6px">☎ <input id="prof-h-tel" value="'+escHtml(tel||'')+'" placeholder="Não informado" style="border:none;border-bottom:1px solid transparent;font-size:13px;color:#616161;padding:2px 0;outline:none;font-family:Roboto,sans-serif;background:transparent;width:200px" onfocus="this.style.borderBottomColor=\'#E65100\'" onblur="this.style.borderBottomColor=\'transparent\'"></div>'+
+          '<div style="display:flex;align-items:center;gap:6px">📱 <input id="prof-h-cel" value="'+escHtml(tel||'')+'" placeholder="Não informado" style="border:none;border-bottom:1px solid transparent;font-size:13px;color:#616161;padding:2px 0;outline:none;font-family:Roboto,sans-serif;background:transparent;width:200px" onfocus="this.style.borderBottomColor=\'#E65100\'" onblur="this.style.borderBottomColor=\'transparent\'"></div>'+
+          '<div style="display:flex;align-items:center;gap:6px">✉ <input id="prof-h-email" value="'+escHtml(email||'')+'" placeholder="Não informado" style="border:none;border-bottom:1px solid transparent;font-size:13px;color:#616161;padding:2px 0;outline:none;font-family:Roboto,sans-serif;background:transparent;width:260px" onfocus="this.style.borderBottomColor=\'#E65100\'" onblur="this.style.borderBottomColor=\'transparent\'"></div>'+
         '</div>'+
       '</div>'+
       '<div style="display:flex;align-items:center;gap:8px">'+
         '<button class="pdt-icon-btn" title="Desativar">🚫</button>'+
         '<button class="pdt-icon-btn" title="Excluir">🗑</button>'+
         '<button class="pdt-btn-outline" onclick="nav(\'profissionais\')">← Voltar</button>'+
-        '<button class="pdt-btn-outline">+ Novo Profissional</button>'+
+        '<button class="pdt-btn-outline" onclick="abrirNovoProfissional()">+ Novo Profissional</button>'+
       '</div>'+
     '</div>'
 
@@ -4760,6 +4761,96 @@ async function salvarProfissional(){
       }catch(e2){}
       alert('Profissional salvo!')
     }else{alert(d.error||'Erro ao salvar')}
+  }catch(e){alert('Erro: '+e.message)}
+}
+
+// ── NOVO PROFISSIONAL ────────────────────────────────────────────
+async function abrirNovoProfissional(){
+  // Form HTML
+  var body=document.getElementById('prof-modal-body')
+  body.innerHTML=
+    '<div style="display:flex;flex-direction:column;gap:20px">'+
+      // Dados profissionais
+      '<div>'+
+        '<div style="font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Dados profissionais</div>'+
+        '<div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">'+
+          '<div class="form-group"><label class="form-label">Nome completo *</label><input class="form-input" id="np-nome" autocomplete="off"></div>'+
+          '<div class="form-group"><label class="form-label">Especialidade</label><input class="form-input" id="np-esp" placeholder="Ex.: Clínico Geral"></div>'+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr 80px;gap:12px">'+
+          '<div class="form-group"><label class="form-label">CPF</label><input class="form-input" id="np-cpf" placeholder="000.000.000-00"></div>'+
+          '<div class="form-group"><label class="form-label">CRO</label><input class="form-input" id="np-cro"></div>'+
+          '<div class="form-group"><label class="form-label">UF</label><input class="form-input" id="np-cro-uf" maxlength="2" value="MS" style="text-transform:uppercase"></div>'+
+        '</div>'+
+      '</div>'+
+      // Contato
+      '<div>'+
+        '<div style="font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Contato</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
+          '<div class="form-group"><label class="form-label">Email</label><input class="form-input" id="np-email" type="email"></div>'+
+          '<div class="form-group"><label class="form-label">Telefone</label><input class="form-input" id="np-tel" placeholder="(67) 99999-9999"></div>'+
+        '</div>'+
+      '</div>'+
+      // Usuário vinculado
+      '<div>'+
+        '<div style="font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Usuário vinculado (opcional)</div>'+
+        '<div class="form-group"><label class="form-label">Conta de acesso do profissional</label><select class="form-input" id="np-usuario-id"><option value="">— Sem vínculo —</option></select></div>'+
+        '<div id="np-usuario-hint" style="font-size:12px;color:var(--text3);margin-top:-8px">Carregando usuários...</div>'+
+      '</div>'+
+    '</div>'
+  openModal('profissional')
+  // Foca no nome
+  setTimeout(function(){var el=document.getElementById('np-nome');if(el)el.focus()},50)
+  // Carrega usuários da clínica que ainda não têm profissional vinculado
+  try{
+    var r=await fetch('/api/auth?action=listar-usuarios',{headers:_apiHeaders()})
+    var d=await r.json()
+    var users=(d.data||[]).filter(function(u){return u.ativo && !u.profissional_id})
+    var sel=document.getElementById('np-usuario-id')
+    var hint=document.getElementById('np-usuario-hint')
+    if(!sel)return
+    if(!users.length){
+      hint.innerHTML='Nenhum usuário disponível para vínculo. Crie o usuário em <b>Configuração → Usuários</b> antes, se desejar que o profissional acesse o sistema.'
+      return
+    }
+    users.forEach(function(u){
+      var opt=document.createElement('option')
+      opt.value=u.id
+      opt.textContent=u.nome+' ('+u.perfil+')'
+      sel.appendChild(opt)
+    })
+    hint.textContent='Cadastre o usuário em Configuração → Usuários antes, se quiser que o profissional acesse o sistema.'
+  }catch(e){
+    var h=document.getElementById('np-usuario-hint')
+    if(h)h.innerHTML='<span style="color:var(--red)">Não foi possível carregar usuários ('+escHtml(e.message)+')</span>'
+  }
+}
+
+async function criarProfissional(){
+  var gv=function(id){var el=document.getElementById(id);return el?(el.value||'').trim():''}
+  var nome=gv('np-nome')
+  if(!nome){alert('Nome é obrigatório');return}
+  var body={
+    nome:nome,
+    especialidade:gv('np-esp'),
+    cpf:gv('np-cpf'),
+    cro:gv('np-cro'),
+    cro_uf:(gv('np-cro-uf')||'').toUpperCase(),
+    email:gv('np-email'),
+    telefone:gv('np-tel'),
+    usuario_id:gv('np-usuario-id')||null
+  }
+  try{
+    var d=await apiPost('criar-profissional',body)
+    if(d.success){
+      closeModal('profissional')
+      // Recarrega lista e abre detalhe do novo profissional
+      await loadProfissionais()
+      var idx=(ST.profissionais||[]).findIndex(function(p){return p.id===d.id})
+      if(idx>=0)verProfissional(idx)
+    }else{
+      alert(d.error||'Erro ao criar profissional')
+    }
   }catch(e){alert('Erro: '+e.message)}
 }
 
