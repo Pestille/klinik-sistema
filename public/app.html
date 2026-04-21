@@ -568,8 +568,8 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     <!-- Login normal -->
     <div id="login-form">
       <div class="login-field">
-        <label>Email</label>
-        <input type="email" id="login-email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doLogin()">
+        <label>Usuário</label>
+        <input type="text" id="login-email" placeholder="usuario@klinov" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')doLogin()">
       </div>
       <div class="login-field">
         <label>Senha</label>
@@ -589,7 +589,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
       </div>
       <div class="login-field">
         <label>Email</label>
-        <input type="email" id="esqueci-email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doEsqueci()">
+        <input type="text" id="esqueci-email" placeholder="usuario@klinov ou email pessoal" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')doEsqueci()">
       </div>
       <button class="login-btn" id="esqueci-btn" onclick="doEsqueci()">Enviar link de redefinição</button>
       <div style="text-align:center;margin-top:12px">
@@ -1494,7 +1494,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
             <label class="form-label">Usuario *</label>
             <div style="display:flex;align-items:center;gap:0">
               <input class="form-input" id="usr-f-usuario" placeholder="nome.sobrenome" style="border-radius:6px 0 0 6px;border-right:none" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9._-]/g,'')">
-              <span style="background:var(--gray1);border:1px solid var(--border);border-left:none;border-radius:0 6px 6px 0;padding:9px 12px;font-size:14px;color:var(--text3);white-space:nowrap">@klinov.com</span>
+              <span style="background:var(--gray1);border:1px solid var(--border);border-left:none;border-radius:0 6px 6px 0;padding:9px 12px;font-size:14px;color:var(--text3);white-space:nowrap">@klinov</span>
             </div>
             <div style="font-size:11px;color:var(--text3);margin-top:4px">Login do usuario no sistema (somente letras minusculas, numeros e pontos)</div>
           </div>
@@ -2091,9 +2091,9 @@ async function doEsqueci() {
   var email = (document.getElementById('esqueci-email').value || '').trim()
   var msg = document.getElementById('esqueci-msg')
   var btn = document.getElementById('esqueci-btn')
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!email || !/^[^\s@]+@[^\s@]+$/.test(email)) {
     msg.style.color = 'var(--red)'
-    msg.textContent = 'Email inválido.'
+    msg.textContent = 'Informe seu login (usuario@klinov) ou email pessoal.'
     return
   }
   btn.disabled = true; btn.textContent = 'Enviando...'
@@ -5558,7 +5558,7 @@ async function salvarUsuario(){
   if(!usuario){alert('Preencha o campo Usuario');return}
   if(!nome){alert('Preencha o nome completo');return}
   if(!emailPessoal){alert('Preencha o email para envio do link de ativacao');return}
-  var loginEmail=usuario+'@klinov.com'
+  var loginEmail=usuario+'@klinov'
   try{
     var r=await fetch('/api/auth?action=criar-usuario',{method:'POST',headers:_apiHeaders(),body:JSON.stringify({nome:nome,email:loginEmail,email_pessoal:emailPessoal,perfil:perfil,clinica_id:KLINOV_USER?KLINOV_USER.clinica_id:1})})
     var d=await r.json()

@@ -178,7 +178,7 @@ module.exports = async function handler(req, res) {
     if (action === 'criar-usuario') {
         if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
         var b2 = req.body || {}
-        if (!b2.nome || !b2.email || !b2.clinica_id) return res.status(400).json({ success: false, error: 'Nome, email e clinica_id obrigatórios' })
+        if (!b2.nome || !b2.email || !b2.email_pessoal || !b2.clinica_id) return res.status(400).json({ success: false, error: 'Nome, login, email pessoal e clinica_id obrigatórios' })
 
         var existe = await client.execute({ sql: "SELECT id FROM usuarios WHERE email=?", args: [b2.email.toLowerCase().trim()] })
         if (existe.rows.length) return res.status(409).json({ success: false, error: 'Email já cadastrado' })
@@ -222,9 +222,9 @@ module.exports = async function handler(req, res) {
             '<p style="color:#999;font-size:11px;text-align:center;margin-top:16px">Klinov</p>' +
             '</div></body></html>'
 
-        // Envia para o email pessoal (não o login @klinov.com)
-        var emailDestino = b2.email_pessoal || b2.email
-        var emailEnviado = await enviarEmail(emailDestino.toLowerCase().trim(), 'Ative sua conta — Klinov', emailHtml)
+        // Envia para o email pessoal (o login é usuario@klinov — não é endereço real)
+        var emailDestino = b2.email_pessoal.toLowerCase().trim()
+        var emailEnviado = await enviarEmail(emailDestino, 'Ative sua conta — Klinov', emailHtml)
 
         return res.status(200).json({ success: true, msg: 'Convite enviado por email', email_enviado: emailEnviado })
     }
@@ -234,8 +234,8 @@ module.exports = async function handler(req, res) {
         if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
         var bes = req.body || {}
         var esEmail = String(bes.email || '').toLowerCase().trim()
-        if (!esEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(esEmail)) {
-            return res.status(400).json({ success: false, error: 'Email inválido' })
+        if (!esEmail || !/^[^\s@]+@[^\s@]+$/.test(esEmail)) {
+            return res.status(400).json({ success: false, error: 'Informe seu login (usuario@klinov) ou email pessoal' })
         }
 
         // Rate limit: max 3 solicitações por email em 15 min
@@ -284,8 +284,8 @@ module.exports = async function handler(req, res) {
                 '<p style="color:#1565C0;font-size:11px;word-break:break-all">' + linkReset + '</p>' +
                 '</div></div>'
 
-            // Envia SEMPRE pro email_pessoal quando existe (login é @klinov.com e não recebe email real).
-            // Se não houver email_pessoal, usa o próprio login (caso seja um email real tipo @gmail.com).
+            // Envia SEMPRE pro email_pessoal quando existe (login é usuario@klinov — não é email real).
+            // Se não houver email_pessoal (usuários legados), cai no próprio login.
             var esDestino = esU.email_pessoal || esU.email
             await enviarEmail(esDestino, 'Redefinição de senha — Klinov', esHtml)
         }
