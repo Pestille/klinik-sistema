@@ -1,5 +1,22 @@
 // api/asaas-webhook.js — Webhook do Asaas para validação de saques e notificações
+var crypto = require('crypto')
 var { getClient } = require('./db')
+
+// Compara o header `asaas-access-token` enviado pela Asaas com o segredo
+// configurado no painel Asaas (e aqui via env ASAAS_WEBHOOK_TOKEN).
+// Sem esse check, qualquer um pode forjar um POST marcando cobrança como paga
+// e creditando saldo na clínica.
+function verifyAsaasToken(req) {
+    var expected = process.env.ASAAS_WEBHOOK_TOKEN || ''
+    if (!expected) return false
+    var received = (req.headers && (req.headers['asaas-access-token'] || req.headers['Asaas-Access-Token'])) || ''
+    if (typeof received !== 'string' || received.length !== expected.length) return false
+    try {
+        return crypto.timingSafeEqual(Buffer.from(received, 'utf8'), Buffer.from(expected, 'utf8'))
+    } catch(e) {
+        return false
+    }
+}
 
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*')
@@ -13,6 +30,11 @@ module.exports = async function handler(req, res) {
 
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' })
+    }
+
+    if (!verifyAsaasToken(req)) {
+        console.error('[asaas-webhook] Rejeitado: token invalido ou ausente. Configure ASAAS_WEBHOOK_TOKEN no Vercel e no painel Asaas.')
+        return res.status(401).json({ error: 'Unauthorized' })
     }
 
     try {
