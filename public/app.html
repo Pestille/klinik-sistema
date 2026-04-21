@@ -2024,7 +2024,8 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 
 <script>
 // ── SECURITY HELPERS ─────────────────────────────────────────────
-function escHtml(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function escHtml(s){if(s==null)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function escCssUrl(s){if(!s)return '';s=String(s);if(!/^https?:\/\/[^\s'"()<>]+$/i.test(s))return '';return s}
 
 // Auto-logout after 30 min inactivity
 var _lastActivity=Date.now()
@@ -2858,11 +2859,11 @@ async function buscarPacientes(){
     if(!pacs.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#9e9e9e">Nenhum paciente encontrado</div>';return}
     el.innerHTML=pacs.map(function(p){
       var ini=p.nome?p.nome.split(' ').slice(0,2).map(function(x){return x[0]}).join(''):'?'
-      var avBg=p.foto_url?'background:url('+p.foto_url+') center/cover':'background:#E8F5E9'
+      var avBg=p.foto_url?'background:url('+escCssUrl(p.foto_url)+') center/cover':'background:#E8F5E9'
       var avTxt=p.foto_url?'':ini
       return '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid #e0e0e0;border-radius:6px;margin-bottom:8px;cursor:pointer;transition:border-color .12s;background:#fff" onmouseover="this.style.borderColor=\'#E65100\'" onmouseout="this.style.borderColor=\'#e0e0e0\'" onclick="abrirProntuario(\''+p.nome.replace(/'/g,"\\'")+'\')">'+
         '<div style="width:40px;height:40px;border-radius:50%;'+avBg+';display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#1B5E3B;flex-shrink:0;overflow:hidden">'+avTxt+'</div>'+
-        '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500;color:#212121">'+p.nome+'</div><div style="font-size:12px;color:#9e9e9e">'+(p.telefone||'Sem telefone')+' · '+(p.email||'Sem email')+'</div></div>'+
+        '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500;color:#212121">'+escHtml(p.nome)+'</div><div style="font-size:12px;color:#9e9e9e">'+escHtml(p.telefone||'Sem telefone')+' · '+escHtml(p.email||'Sem email')+'</div></div>'+
         '<svg width="16" height="16" viewBox="0 0 24 24" fill="#9e9e9e"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>'+
       '</div>'
     }).join('')
@@ -2902,9 +2903,9 @@ function filterPac() {
     const dias=Math.floor((Date.now()-p.ultima.getTime())/86400e3)
     const inativo=dias>180
     return `<div class="patient-row">
-      <div class="patient-av" style="${p.foto?'background:url('+p.foto+') center/cover':''}">${p.foto?'':ini}</div>
+      <div class="patient-av" style="${p.foto?'background:url('+escCssUrl(p.foto)+') center/cover':''}">${p.foto?'':ini}</div>
       <div class="patient-info">
-        <div class="patient-name">${p.nome}</div>
+        <div class="patient-name">${escHtml(p.nome)}</div>
         <div class="patient-meta"><span>${p.tel||'—'}</span><span>Última visita: ${p.ultima.toLocaleDateString('pt-BR')}</span><span>${dias} dias atrás</span></div>
         <div class="patient-tags">${p.cat?`<span class="badge badge-blue">${p.cat}</span>`:''} ${inativo?'<span class="badge badge-orange">Inativo</span>':'<span class="badge badge-green">Ativo</span>'}</div>
       </div>
@@ -2923,7 +2924,7 @@ function filterProntList() {
   var lista=(ST.pacientesLista||[]).filter(function(p){return p.nome.toLowerCase().includes(q)}).slice(0,30)
   el.innerHTML=lista.map(function(p){
     var pIni=p.nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
-    var pAvStyle=p.foto?'width:32px;height:32px;font-size:12px;background:url('+p.foto+') center/cover':'width:32px;height:32px;font-size:12px'
+    var pAvStyle=p.foto?'width:32px;height:32px;font-size:12px;background:url('+escCssUrl(p.foto)+') center/cover':'width:32px;height:32px;font-size:12px'
     return '<div class="patient-row" style="padding:10px 12px;cursor:pointer" onclick="abrirProntuario(\''+p.nome.replace(/'/g,"\\'")+'\')">'+'<div class="patient-av" style="'+pAvStyle+'">'+(p.foto?'':pIni)+'</div>'+'<div class="patient-info"><div class="patient-name" style="font-size:12px">'+p.nome.split(' ').slice(0,3).join(' ')+'</div><div style="font-size:11px;color:var(--text3)">'+(p.tel||'—')+'</div></div></div>'
   }).join('')
 }
@@ -2946,13 +2947,13 @@ async function abrirProntuario(nome) {
     // Header
     var fotoUrl=p.foto_url||''
     var avatarStyle='width:72px;height:72px;border-radius:50%;border:2px solid #e0e0e0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#1B5E3B;flex-shrink:0;cursor:pointer;position:relative;overflow:hidden'
-    var avatarBg=fotoUrl?'background:url('+fotoUrl+') center/cover':'background:#E8F5E9'
+    var avatarBg=fotoUrl?'background:url('+escCssUrl(fotoUrl)+') center/cover':'background:#E8F5E9'
     var avatarContent=fotoUrl?'':''+ini
     document.getElementById('pront-header').innerHTML=
       '<div style="display:flex;align-items:flex-start;gap:16px">'+
         '<div id="pront-avatar" style="'+avatarStyle+';'+avatarBg+'" onclick="triggerFotoUpload('+p.id+')" title="Clique para alterar foto" onmouseover="this.querySelector(\'.foto-overlay\').style.opacity=1" onmouseout="this.querySelector(\'.foto-overlay\').style.opacity=0">'+avatarContent+'<div class="foto-overlay" style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.45);color:#fff;font-size:10px;text-align:center;padding:2px 0;opacity:0;transition:opacity .12s;pointer-events:none">📷</div></div>'+
         '<div style="flex:1">'+
-          '<div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px;font-weight:700;color:#212121">'+p.nome+'</span><span style="background:#E8F5E9;color:#2E7D32;border-radius:20px;padding:3px 10px;font-size:12px">● Ativo</span></div>'+
+          '<div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px;font-weight:700;color:#212121">'+escHtml(p.nome)+'</span><span style="background:#E8F5E9;color:#2E7D32;border-radius:20px;padding:3px 10px;font-size:12px">● Ativo</span></div>'+
           '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;font-size:13px;color:#616161">'+
             '<div>☎ '+(tel||'Não informado')+'</div>'+
             '<div>📱 '+(tel||'Não informado')+'</div>'+
@@ -3108,7 +3109,7 @@ async function renderAnamneseTab(el,p){
       var respVal=resp.resposta||''
       var descVal=resp.descricao||''
       html+='<div style="background:#FFFFFF;border:1px solid #E0E0E0;border-radius:8px;padding:16px 20px" data-pergunta-id="'+prg.id+'" data-pergunta-texto="'+prg.pergunta.replace(/"/g,'&quot;')+'" data-tipo="'+prg.tipo+'">'+
-        '<div style="font-size:14px;font-weight:500;color:#1A1A1A;margin-bottom:12px">'+prg.sequencia+'. '+prg.pergunta+'</div>'
+        '<div style="font-size:14px;font-weight:500;color:#1A1A1A;margin-bottom:12px">'+prg.sequencia+'. '+escHtml(prg.pergunta)+'</div>'
       if(prg.tipo==='DESC'){
         html+='<textarea class="anam-input" style="width:100%;min-height:60px;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#1A1A1A;font-family:Roboto,sans-serif;resize:vertical;outline:none;transition:border-color .12s ease;box-sizing:border-box">'+(descVal||respVal)+'</textarea>'
       }else{
@@ -3143,7 +3144,7 @@ async function renderAnamneseTab(el,p){
         var resp=respMap[prg.id]||respMap[prg.pergunta]||null
         var bgColor=qi%2===0?'#FFFFFF':'#FAFAFA'
         html+='<div style="display:flex;align-items:flex-start;gap:16px;padding:12px 16px;border-radius:6px;background:'+bgColor+'">'+
-          '<div style="flex:1;font-size:14px;color:#424242">'+prg.sequencia+'. '+prg.pergunta+'</div>'+
+          '<div style="flex:1;font-size:14px;color:#424242">'+prg.sequencia+'. '+escHtml(prg.pergunta)+'</div>'+
           '<div style="min-width:120px;text-align:right">'
         if(!resp||(!resp.resposta&&!resp.descricao)){
           html+='<span style="color:#757575;font-size:13px">—</span>'
@@ -3157,7 +3158,7 @@ async function renderAnamneseTab(el,p){
             html+='<span style="color:#C62828;font-weight:500;font-size:13px">&#10007; Não</span>'
           }
           if(resp.descricao){
-            html+='<div style="font-size:12px;color:#757575;margin-top:2px">'+resp.descricao+'</div>'
+            html+='<div style="font-size:12px;color:#757575;margin-top:2px">'+escHtml(resp.descricao)+'</div>'
           }
         }
         html+='</div></div>'
@@ -3246,9 +3247,9 @@ function renderOrcamentosTab(el,p){
           '</tr></thead><tbody>'
         itens.forEach(function(it){
           h+='<tr><td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242">'+(it.procedimento_codigo||'—')+'</td>'+
-            '<td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242">'+(it.procedimento_nome||'—')+'</td>'+
-            '<td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242">'+(it.dente||it.regiao||'—')+'</td>'+
-            '<td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242">'+(it.profissional_nome||'—')+'</td>'+
+            '<td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242">'+escHtml(it.procedimento_nome||'—')+'</td>'+
+            '<td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242">'+escHtml(it.dente||it.regiao||'—')+'</td>'+
+            '<td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242">'+escHtml(it.profissional_nome||'—')+'</td>'+
             '<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(it.valor_unitario)+'</td></tr>'
         })
         h+='</tbody></table></div>'
@@ -3365,7 +3366,7 @@ function renderOrcModal(){
           '</div>'+
           '<div style="margin-bottom:16px">'+
             '<label style="display:block;font-size:13px;font-weight:500;color:#1A1A1A;margin-bottom:4px">Observações</label>'+
-            '<textarea id="orc-obs" rows="3" style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#1A1A1A;font-family:Roboto,sans-serif;resize:vertical">'+d.observacoes+'</textarea>'+
+            '<textarea id="orc-obs" rows="3" style="width:100%;box-sizing:border-box;border:1.5px solid #E0E0E0;border-radius:6px;padding:9px 12px;font-size:14px;color:#1A1A1A;font-family:Roboto,sans-serif;resize:vertical">'+escHtml(d.observacoes)+'</textarea>'+
           '</div>'+
           '<div style="margin-bottom:20px">'+
             '<label style="display:block;font-size:13px;font-weight:500;color:#1A1A1A;margin-bottom:4px">Tabela de Preço</label>'+
@@ -3701,7 +3702,7 @@ function aprovarOrcamento(){
   // Open modal to select approving professional
   var old=document.getElementById('modal-aprovador');if(old)old.remove()
   var profs=ST.profissionais||[]
-  var profAprovOpts=profs.map(function(pr){return '<option value="'+(pr.nome||pr.name||'')+'|'+pr.id+'">'+(pr.nome||pr.name||'')+'</option>'}).join('')
+  var profAprovOpts=profs.map(function(pr){return '<option value="'+escHtml(pr.nome||pr.name||'')+'|'+pr.id+'">'+escHtml(pr.nome||pr.name||'')+'</option>'}).join('')
 
   var m=document.createElement('div')
   m.id='modal-aprovador'
@@ -4389,7 +4390,7 @@ function renderCRM() {
   const lmap={urgente:'URGENTE',alta:'ALTA',media:'MÉDIA'}
   document.getElementById('crm-table').innerHTML=filtered.map((p,i)=>{
     const wa=`https://wa.me/55?text=${encodeURIComponent('Olá '+p.nome.split(' ')[0]+'! É a Klinov. Sentimos sua falta! 😊')}`
-    return`<tr><td class="text-muted">${i+1}</td><td><div class="pname">${p.nome}</div></td><td class="text-muted">${p.ultima}</td><td style="color:var(--red);font-weight:500">${p.dias}d</td><td><span class="badge ${bmap[pr(p.dias)]}">${lmap[pr(p.dias)]}</span></td><td><a href="${wa}" target="_blank" class="wa-btn">WhatsApp</a></td></tr>`
+    return`<tr><td class="text-muted">${i+1}</td><td><div class="pname">${escHtml(p.nome)}</div></td><td class="text-muted">${p.ultima}</td><td style="color:var(--red);font-weight:500">${p.dias}d</td><td><span class="badge ${bmap[pr(p.dias)]}">${lmap[pr(p.dias)]}</span></td><td><a href="${wa}" target="_blank" class="wa-btn">WhatsApp</a></td></tr>`
   }).join('')
 }
 
@@ -4913,8 +4914,8 @@ async function renderProfAnaliseComissao(p){
         html+='<div class="comissao-card"><div class="comissao-card-head">'+
           '<div style="font-size:13px;color:#616161;min-width:100px">'+fmtDt(c.data_referencia)+'</div>'+
           '<div class="comissao-badge" style="background:'+(c.momento==='aprovacao'?'#1565C0':'#2E7D32')+'">'+(momentoLabel[c.momento]||c.momento)+'</div>'+
-          '<div class="comissao-col"><div class="comissao-col-label">Paciente</div><div class="comissao-col-val">'+(c.paciente_nome||'—')+'</div></div>'+
-          '<div class="comissao-col"><div class="comissao-col-label">Procedimento</div><div class="comissao-col-val">'+(c.procedimento_nome||'—')+'</div></div>'+
+          '<div class="comissao-col"><div class="comissao-col-label">Paciente</div><div class="comissao-col-val">'+escHtml(c.paciente_nome||'—')+'</div></div>'+
+          '<div class="comissao-col"><div class="comissao-col-label">Procedimento</div><div class="comissao-col-val">'+escHtml(c.procedimento_nome||'—')+'</div></div>'+
           '<div class="comissao-col"><div class="comissao-col-label">Valor Base</div><div class="comissao-col-val">'+fmtBrl(c.valor_base)+'</div></div>'+
           '<div class="comissao-col"><div class="comissao-col-label">'+tipoStr+'</div><div class="comissao-col-val" style="color:#1B5E3B;font-weight:600">'+fmtBrl(c.valor_comissao)+'</div></div>'+
           '<span class="badge badge-'+stClass+'" style="margin-left:auto">'+stLabel+'</span>'+
@@ -4966,7 +4967,7 @@ async function renderProfComissoes(p){
       html+='<table class="tbl" style="width:100%"><thead><tr><th><input type="checkbox" id="cp-check-all" onchange="cpToggleAll()" style="accent-color:#034030"></th><th>Data</th><th>Momento</th><th>Procedimento</th><th>Paciente</th><th>Tabela</th><th style="text-align:right">Valor Base</th><th style="text-align:right">Comissão</th><th>Ações</th></tr></thead><tbody>'
       comissoes.forEach(function(c){
         var momentoLabel=c.momento==='aprovacao'?'Aprovação':'Execução'
-        html+='<tr><td><input type="checkbox" class="cp-check" value="'+c.id+'" style="accent-color:#034030"></td><td>'+fmtDt(c.data_referencia)+'</td><td><span class="badge badge-'+(c.momento==='aprovacao'?'blue':'green')+'">'+momentoLabel+'</span></td><td style="font-size:12px">'+(c.procedimento_nome||'—')+'</td><td>'+(c.paciente_nome||'—')+'</td><td style="font-size:12px">'+(c.tabela_preco||'—')+'</td><td style="text-align:right">'+fmtBrl(c.valor_base)+'</td><td style="text-align:right;font-weight:600;color:#1B5E3B">'+fmtBrl(c.valor_comissao)+'</td><td><button onclick="pagarComissao('+c.id+','+profId+')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Pagar</button></td></tr>'
+        html+='<tr><td><input type="checkbox" class="cp-check" value="'+c.id+'" style="accent-color:#034030"></td><td>'+fmtDt(c.data_referencia)+'</td><td><span class="badge badge-'+(c.momento==='aprovacao'?'blue':'green')+'">'+momentoLabel+'</span></td><td style="font-size:12px">'+escHtml(c.procedimento_nome||'—')+'</td><td>'+escHtml(c.paciente_nome||'—')+'</td><td style="font-size:12px">'+(c.tabela_preco||'—')+'</td><td style="text-align:right">'+fmtBrl(c.valor_base)+'</td><td style="text-align:right;font-weight:600;color:#1B5E3B">'+fmtBrl(c.valor_comissao)+'</td><td><button onclick="pagarComissao('+c.id+','+profId+')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Pagar</button></td></tr>'
       })
       html+='</tbody><tfoot><tr style="border-top:2px solid var(--border)"><td colspan="7" style="padding:12px 14px;text-align:right;font-weight:700">Total Pendente</td><td style="padding:12px 14px;text-align:right;font-weight:700;color:#1B5E3B">'+fmtBrl(totalPend)+'</td><td></td></tr></tfoot></table>'
     }
@@ -5109,7 +5110,7 @@ async function renderRelatorios() {
       // Profissionais
       var profs=td.profissionais||[]
       document.getElementById('rel-profs').innerHTML=profs.map(function(p){
-        return '<tr><td class="pname">'+(p.nome||'—')+'</td><td class="text-muted">'+(p.total_agendamentos||0)+'</td></tr>'
+        return '<tr><td class="pname">'+escHtml(p.nome||'—')+'</td><td class="text-muted">'+(p.total_agendamentos||0)+'</td></tr>'
       }).join('')
       // Inativos lista no tab
       var relInats=document.getElementById('rel-inativos')
@@ -5119,7 +5120,7 @@ async function renderRelatorios() {
           var d2=p.dias_ausente||0
           var pri=d2>365?'urgente':d2>270?'alta':'media'
           var cor=pri==='urgente'?'red':pri==='alta'?'orange':'green'
-          return '<tr><td class="pname">'+(p.nome||'—')+'</td><td class="text-muted">'+(p.ultima_visita||'—')+'</td><td style="color:var(--red);font-weight:500">'+d2+'d</td><td><span class="badge badge-'+cor+'">'+pri.toUpperCase()+'</span></td></tr>'
+          return '<tr><td class="pname">'+escHtml(p.nome||'—')+'</td><td class="text-muted">'+(p.ultima_visita||'—')+'</td><td style="color:var(--red);font-weight:500">'+d2+'d</td><td><span class="badge badge-'+cor+'">'+pri.toUpperCase()+'</span></td></tr>'
         }).join('')
         tblHtml+='</tbody></table></div></div>'
         if(!relInats.querySelector('.card'))relInats.insertAdjacentHTML('beforeend',tblHtml)
@@ -5163,7 +5164,7 @@ async function loadRelProdutividade(){
       prods.map(function(p){
         var pct=maxVal>0?Math.round(+(p.valor_total||0)/maxVal*100):0
         return '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #f0f0f0">'+
-          '<div style="width:180px;font-size:13px;font-weight:500;color:#212121;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.nome+'</div>'+
+          '<div style="width:180px;font-size:13px;font-weight:500;color:#212121;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(p.nome)+'</div>'+
           '<div style="flex:1;height:8px;background:#f0f0f0;border-radius:4px"><div style="height:100%;background:#1B5E3B;border-radius:4px;width:'+pct+'%"></div></div>'+
           '<div style="width:120px;text-align:right;font-size:14px;font-weight:500;color:#1B5E3B">'+fmtBrl(p.valor_total||0)+'</div>'+
           '<div style="width:80px;text-align:right;font-size:12px;color:#9e9e9e">'+(p.atendimentos||0)+' atend.</div>'+
@@ -5186,7 +5187,7 @@ async function loadRelAtendimentos(){
       var cor=PROF_CORES[i%PROF_CORES.length]
       html+='<div class="card" style="margin-bottom:16px"><div class="card-header" style="cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\'">'+
         '<div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:50%;background:'+cor+'22;color:'+cor+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">'+p.nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')+'</div>'+
-        '<div><div class="card-title" style="margin:0">'+p.nome+'</div><div style="font-size:12px;color:#9e9e9e">'+(p.especialidade||'Clínico Geral')+' — '+(p.atendimentos||0)+' atendimentos — '+fmtBrl(p.valor_total||0)+'</div></div></div>'+
+        '<div><div class="card-title" style="margin:0">'+escHtml(p.nome)+'</div><div style="font-size:12px;color:#9e9e9e">'+(p.especialidade||'Clínico Geral')+' — '+(p.atendimentos||0)+' atendimentos — '+fmtBrl(p.valor_total||0)+'</div></div></div>'+
         '<span style="font-size:18px;color:#9e9e9e">▾</span>'+
       '</div><div class="card-body p0">'
       if(procs.length){
@@ -5601,7 +5602,7 @@ function globalSearch(q){
   if(mods.length){
     secMod.innerHTML='<div class="search-drop-label">Funcoes do Sistema</div>'+mods.slice(0,8).map(m=>{
       var onclick=m.aba?"nav('"+m.id+"');setTimeout(function(){finNavTo('"+m.aba+"')},100);closeSearchDrop()":"nav('"+m.id+"');closeSearchDrop()"
-      return '<div class="search-drop-item" onclick="'+onclick+'"><div><div class="search-drop-name">'+m.nome+'</div><div class="search-drop-sub">'+m.desc+'</div></div></div>'
+      return '<div class="search-drop-item" onclick="'+onclick+'"><div><div class="search-drop-name">'+escHtml(m.nome)+'</div><div class="search-drop-sub">'+m.desc+'</div></div></div>'
     }).join('')
   } else { secMod.innerHTML='' }
 
@@ -5619,7 +5620,7 @@ function globalSearch(q){
       if(pacs.length){
         secPac.innerHTML=sep+'<div class="search-drop-label">Pacientes</div>'+pacs.slice(0,6).map(p=>
           `<div class="search-drop-item" onclick="abrirProntuario('${p.nome.replace(/'/g,"\\'")}');closeSearchDrop()">
-            <div><div class="search-drop-name">${p.nome}</div><div class="search-drop-sub">${p.telefone||'sem telefone'}</div></div>
+            <div><div class="search-drop-name">${escHtml(p.nome)}</div><div class="search-drop-sub">${p.telefone||'sem telefone'}</div></div>
           </div>`).join('')
       } else {
         secPac.innerHTML=sep+'<div class="search-drop-label">Pacientes</div><div class="search-drop-empty">Nenhum resultado</div>'
@@ -5696,7 +5697,7 @@ async function loadUsuarios(){
         var perfilCor=u.perfil==='admin'?'red':u.perfil==='dentista'?'blue':'green'
         var statusBadge=u.ativo?'<span class="badge badge-green">Ativo</span>':'<span class="badge badge-orange">Inativo</span>'
         var login=u.ultimo_login?fmtDt(u.ultimo_login):'Nunca'
-        return '<tr><td class="pname">'+u.nome+'</td><td style="color:var(--text3)">'+u.email+'</td>'+
+        return '<tr><td class="pname">'+escHtml(u.nome)+'</td><td style="color:var(--text3)">'+escHtml(u.email)+'</td>'+
           '<td><span class="badge badge-'+perfilCor+'">'+u.perfil.toUpperCase()+'</span></td>'+
           '<td>'+statusBadge+'</td>'+
           '<td style="color:var(--text3);font-size:12px">'+login+'</td>'+
@@ -6434,7 +6435,7 @@ async function loadCampanhas(){
       (camps.length?'<table class="tbl" style="width:100%"><thead><tr><th>Nome</th><th>Canal</th><th>Segmento</th><th>Destinatários</th><th>Enviados</th><th>Erros</th><th>Status</th><th>Data</th><th></th></tr></thead><tbody>'+
         camps.map(function(c){
           var seg={todos:'Todos',ativos:'Ativos',inativos:'Inativos',aniversariantes:'Aniversariantes',convenio:'Convênio'}
-          return '<tr><td class="pname">'+c.nome+'</td><td>'+tipoBadge(c.tipo)+'</td><td>'+(seg[c.segmento]||c.segmento)+'</td><td style="text-align:center">'+(c.total_destinatarios||0)+'</td><td style="text-align:center;color:var(--green)">'+(c.total_enviados||0)+'</td><td style="text-align:center;color:var(--red)">'+(c.total_erros||0)+'</td><td>'+stBadge(c.status)+'</td><td style="font-size:12px;color:var(--text3)">'+fmtDt((c.created_at||'').slice(0,10))+'</td><td style="white-space:nowrap">'+
+          return '<tr><td class="pname">'+escHtml(c.nome)+'</td><td>'+tipoBadge(c.tipo)+'</td><td>'+(seg[c.segmento]||c.segmento)+'</td><td style="text-align:center">'+(c.total_destinatarios||0)+'</td><td style="text-align:center;color:var(--green)">'+(c.total_enviados||0)+'</td><td style="text-align:center;color:var(--red)">'+(c.total_erros||0)+'</td><td>'+stBadge(c.status)+'</td><td style="font-size:12px;color:var(--text3)">'+fmtDt((c.created_at||'').slice(0,10))+'</td><td style="white-space:nowrap">'+
             (c.status==='rascunho'?'<button class="pdt-icon-btn" title="Editar" onclick="openNovaCampanha('+c.id+')">✏️</button><button class="pdt-icon-btn" title="Enviar" onclick="enviarCampanha('+c.id+',\''+c.nome.replace(/'/g,"\\'")+'\')">🚀</button>':'')+
           '</td></tr>'
         }).join('')+'</tbody></table>':'<div style="text-align:center;padding:60px;color:var(--text3)"><div style="font-size:15px;font-weight:500;margin-bottom:8px">Nenhuma campanha criada</div><div style="font-size:13px">Clique em "+ Nova Campanha" para começar</div></div>')+
@@ -6472,7 +6473,7 @@ async function openNovaCampanha(id){
       '<div id="camp-pac-selected" style="display:none;margin-top:8px;padding:10px 14px;background:#E8F5E9;border-radius:6px;font-size:13px;align-items:center;gap:8px"></div>'+
     '</div>'+
     '<div style="margin-bottom:12px;padding:10px 14px;background:var(--gray1);border-radius:6px;font-size:13px;color:var(--text2)" id="camp-preview-count">Selecione um segmento para ver o alcance</div>'+
-    '<div class="pdt-field" style="margin-bottom:12px"><label>Template base</label><select id="camp-tpl-sel" onchange="campTplSelect()"><option value="">— Escrever manualmente —</option>'+tpls.map(function(t){return '<option value="'+t.id+'" data-corpo="'+t.corpo.replace(/"/g,'&quot;')+'" data-assunto="'+(t.assunto||'').replace(/"/g,'&quot;')+'">'+t.nome+' ('+t.tipo+')</option>'}).join('')+'</select></div>'+
+    '<div class="pdt-field" style="margin-bottom:12px"><label>Template base</label><select id="camp-tpl-sel" onchange="campTplSelect()"><option value="">— Escrever manualmente —</option>'+tpls.map(function(t){return '<option value="'+t.id+'" data-corpo="'+t.corpo.replace(/"/g,'&quot;')+'" data-assunto="'+(t.assunto||'').replace(/"/g,'&quot;')+'">'+escHtml(t.nome)+' ('+t.tipo+')</option>'}).join('')+'</select></div>'+
     '<div class="pdt-field" style="margin-bottom:8px"><label>Mensagem</label>'+
       '<div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap">'+
         ['nome','data_consulta','hora','profissional','procedimento'].map(function(v){return '<button type="button" onclick="campInsertVar(\''+v+'\')" style="border:1px solid var(--border);background:var(--white);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif;color:var(--green)">{{'+v+'}}</button>'}).join('')+
@@ -6555,7 +6556,7 @@ function campBuscarPaciente(){
       }
       results.innerHTML=pacs.map(function(p){
         return '<div onclick="campSelecionarPaciente('+p.id+',\''+p.nome.replace(/'/g,"\\'")+'\',\''+(p.email||'').replace(/'/g,"\\'")+'\',\''+(p.telefone||'').replace(/'/g,"\\'")+'\')" style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border2);transition:background .1s;display:flex;justify-content:space-between;align-items:center" onmouseover="this.style.background=\'var(--gray1)\'" onmouseout="this.style.background=\'\'">'+
-          '<div><div style="font-weight:500;color:var(--text)">'+p.nome+'</div><div style="font-size:11px;color:var(--text3)">'+(p.telefone||'Sem telefone')+' · '+(p.email||'Sem email')+'</div></div>'+
+          '<div><div style="font-weight:500;color:var(--text)">'+escHtml(p.nome)+'</div><div style="font-size:11px;color:var(--text3)">'+escHtml(p.telefone||'Sem telefone')+' · '+escHtml(p.email||'Sem email')+'</div></div>'+
         '</div>'
       }).join('')
       results.style.display='block'
@@ -6654,7 +6655,7 @@ async function enviarCampanha(id,nome){
               else if(msg.indexOf('access token')>-1||msg.indexOf('OAuthException')>-1)msg='Token do WhatsApp expirado ou inválido. Gere um novo no Meta Business Manager'
               else if(msg.indexOf('rate limit')>-1)msg='Limite de envios atingido. Tente novamente em alguns minutos'
               else{try{var parsed=JSON.parse(msg.replace(/^(Email|WhatsApp): /,''));msg=(parsed.message||parsed.error&&parsed.error.message||msg).substring(0,120)}catch(x){msg=msg.substring(0,120)}}
-              errDetalhes+='• ['+e.canal.toUpperCase()+'] '+(e.destinatario||'—')+': '+msg+'\n'
+              errDetalhes+='• ['+e.canal.toUpperCase()+'] '+escHtml(e.destinatario||'—')+': '+msg+'\n'
             })
           }
         }catch(x){}
@@ -6685,10 +6686,10 @@ async function loadTemplates(){
           var cor=tipoCor[t.tipo]||'#757575'
           return '<div class="card" style="padding:16px">'+
             '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
-              '<span style="font-size:14px;font-weight:500;color:var(--text)">'+t.nome+'</span>'+
+              '<span style="font-size:14px;font-weight:500;color:var(--text)">'+escHtml(t.nome)+'</span>'+
               '<span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:500;background:'+cor+'15;color:'+cor+'">'+t.tipo.toUpperCase()+'</span>'+
             '</div>'+
-            (t.assunto?'<div style="font-size:12px;color:var(--text3);margin-bottom:6px">Assunto: '+t.assunto+'</div>':'')+
+            (t.assunto?'<div style="font-size:12px;color:var(--text3);margin-bottom:6px">Assunto: '+escHtml(t.assunto)+'</div>':'')+
             '<div style="font-size:12px;color:var(--text2);background:var(--gray1);border-radius:4px;padding:10px;margin-bottom:12px;max-height:80px;overflow:hidden;line-height:1.5">'+t.corpo+'</div>'+
             '<div style="display:flex;gap:6px;justify-content:flex-end">'+
               '<button class="pdt-icon-btn" title="Editar" onclick="openNovoTemplate('+t.id+')">✏️</button>'+
@@ -6780,7 +6781,7 @@ async function loadHistorico(){
             else{try{var ep=JSON.parse(emsg.replace(/^(Email|WhatsApp): /,''));emsg=(ep.message||ep.error&&ep.error.message||emsg).substring(0,80)}catch(x){emsg=emsg.substring(0,80)}}
             erroTip='<div style="font-size:11px;color:var(--red);margin-top:2px">'+emsg+'</div>'
           }
-          return '<tr><td style="font-size:12px;color:var(--text3)">'+fmtDt((e.enviado_em||e.created_at||'').slice(0,10))+'</td><td class="pname">'+(e.paciente_nome||'—')+'</td><td>'+(canalIcon[e.canal]||'')+' '+(e.canal||'')+'</td><td style="font-size:12px;color:var(--text3)">'+(e.campanha_nome||'—')+'</td><td>'+stBadge(e.status)+erroTip+'</td><td style="font-size:12px;color:var(--text3)">'+(e.destinatario||'—')+'</td></tr>'
+          return '<tr><td style="font-size:12px;color:var(--text3)">'+fmtDt((e.enviado_em||e.created_at||'').slice(0,10))+'</td><td class="pname">'+(e.paciente_nome||'—')+'</td><td>'+(canalIcon[e.canal]||'')+' '+(e.canal||'')+'</td><td style="font-size:12px;color:var(--text3)">'+(e.campanha_nome||'—')+'</td><td>'+stBadge(e.status)+erroTip+'</td><td style="font-size:12px;color:var(--text3)">'+escHtml(e.destinatario||'—')+'</td></tr>'
         }).join('')+'</tbody></table>'+
         '<div style="display:flex;justify-content:center;gap:8px;margin-top:12px">'+
           '<button class="pdt-btn-outline" style="font-size:12px;padding:4px 12px" onclick="_mktHistPage=Math.max(1,_mktHistPage-1);loadHistorico()" '+(_mktHistPage<=1?'disabled':'')+'>‹ Anterior</button>'+
@@ -6865,11 +6866,11 @@ async function loadMarketing(){
     // Aniversariantes (HTML)
     var anivs=d.aniversariantes_mes||[]
     document.getElementById('mkt-aniv').innerHTML=anivs.length?anivs.map(function(a){var wa=a.telefone?'https://wa.me/55'+a.telefone.replace(/\D/g,''):''
-      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border2)"><div style="width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+a.dia+'</div><div style="flex:1;font-size:13px">'+a.nome+'</div>'+(wa?'<a href="'+wa+'" target="_blank" class="wa-btn" style="font-size:11px">WhatsApp</a>':'')+'</div>'}).join(''):'<div style="color:var(--text3);padding:20px;text-align:center">Nenhum aniversariante este mês</div>'
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border2)"><div style="width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+a.dia+'</div><div style="flex:1;font-size:13px">'+escHtml(a.nome)+'</div>'+(wa?'<a href="'+wa+'" target="_blank" class="wa-btn" style="font-size:11px">WhatsApp</a>':'')+'</div>'}).join(''):'<div style="color:var(--text3);padding:20px;text-align:center">Nenhum aniversariante este mês</div>'
 
     // Top Pacientes Receita (HTML)
     var tpr=d.top_pacientes_receita||[]
-    document.getElementById('mkt-top-pac').innerHTML='<table class="tbl" style="width:100%"><thead><tr><th>Paciente</th><th>Pgtos</th><th>Total</th></tr></thead><tbody>'+tpr.map(function(p,i){return '<tr><td class="pname"><span style="color:var(--orange);font-weight:700;margin-right:6px">#'+(i+1)+'</span>'+p.paciente_nome+'</td><td>'+p.pagamentos+'</td><td style="color:var(--green);font-weight:500">'+fmtBrl(p.total)+'</td></tr>'}).join('')+'</tbody></table>'
+    document.getElementById('mkt-top-pac').innerHTML='<table class="tbl" style="width:100%"><thead><tr><th>Paciente</th><th>Pgtos</th><th>Total</th></tr></thead><tbody>'+tpr.map(function(p,i){return '<tr><td class="pname"><span style="color:var(--orange);font-weight:700;margin-right:6px">#'+(i+1)+'</span>'+escHtml(p.paciente_nome)+'</td><td>'+p.pagamentos+'</td><td style="color:var(--green);font-weight:500">'+fmtBrl(p.total)+'</td></tr>'}).join('')+'</tbody></table>'
 
   }catch(e){kpiEl.innerHTML='<div style="grid-column:1/-1;color:var(--red);text-align:center;padding:20px">'+e.message+'</div>'}
 }
@@ -7476,7 +7477,7 @@ async function renderPlanoFichaClinica(el,p){
     html+='<div id="plano-section-planos">'
 
     var profs=ST.profissionais||[]
-    var profOpts='<option value="">Selecione...</option>'+profs.map(function(pr){return '<option value="'+pr.id+'|'+(pr.nome||pr.name||'')+'">'+( pr.nome||pr.name||'')+'</option>'}).join('')
+    var profOpts='<option value="">Selecione...</option>'+profs.map(function(pr){return '<option value="'+pr.id+'|'+escHtml(pr.nome||pr.name||'')+'">'+( pr.nome||pr.name||'')+'</option>'}).join('')
 
     if(!orcamentos.length){
       html+='<div style="text-align:center;padding:30px;color:#9e9e9e">Nenhum plano de tratamento aprovado</div>'
@@ -7519,11 +7520,11 @@ async function renderPlanoFichaClinica(el,p){
                   (!temPermissao?'<div style="padding:10px 14px;font-size:12px;color:var(--text3)">Sem permissao para editar</div>':'')+
                 '</div>'+
               '</div>'+
-              '<div style="min-width:180px"><div style="font-size:10px;color:var(--text3)">Procedimento</div><div style="font-size:13px;color:var(--text);font-weight:500">'+(it.procedimento_nome||'—')+'</div></div>'+
+              '<div style="min-width:180px"><div style="font-size:10px;color:var(--text3)">Procedimento</div><div style="font-size:13px;color:var(--text);font-weight:500">'+escHtml(it.procedimento_nome||'—')+'</div></div>'+
               '<div style="min-width:80px"><div style="font-size:10px;color:var(--text3)">Status</div><div style="font-size:13px;color:var(--text)">Executado</div></div>'+
               '<div style="min-width:90px"><div style="font-size:10px;color:var(--text3)">Data de Execucao</div><div style="font-size:13px;color:var(--text)">'+fmtDt(it.data_execucao)+'</div></div>'+
-              '<div style="min-width:80px"><div style="font-size:10px;color:var(--text3)">Dente/Regiao</div><div style="font-size:13px;color:var(--text)">'+(it.dente||it.regiao||'—')+'</div></div>'+
-              '<div style="min-width:150px"><div style="font-size:10px;color:var(--text3)">Profissional</div><div style="font-size:13px;color:#E65100;font-weight:500">'+(it.profissional_nome||'—')+'</div></div>'+
+              '<div style="min-width:80px"><div style="font-size:10px;color:var(--text3)">Dente/Regiao</div><div style="font-size:13px;color:var(--text)">'+escHtml(it.dente||it.regiao||'—')+'</div></div>'+
+              '<div style="min-width:150px"><div style="font-size:10px;color:var(--text3)">Profissional</div><div style="font-size:13px;color:#E65100;font-weight:500">'+escHtml(it.profissional_nome||'—')+'</div></div>'+
               '<div style="margin-left:auto;text-align:right"><div style="font-size:10px;color:var(--text3)">Valor</div><div style="font-size:14px;font-weight:600;color:var(--text)">'+fmtBrl(it.valor_unitario*(it.quantidade||1))+'</div></div>'+
             '</div>'
           })
@@ -7538,19 +7539,19 @@ async function renderPlanoFichaClinica(el,p){
             // Better approach: rebuild with selection
             var selOpts='<option value="">Selecione...</option>'+profs.map(function(pr){
               var sel=(pr.id==it.profissional_id)?' selected':''
-              return '<option value="'+pr.id+'|'+(pr.nome||pr.name||'')+'"'+sel+'>'+(pr.nome||pr.name||'')+'</option>'
+              return '<option value="'+pr.id+'|'+escHtml(pr.nome||pr.name||'')+'"'+sel+'>'+escHtml(pr.nome||pr.name||'')+'</option>'
             }).join('')
 
             html+='<div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #E0E0E0;flex-wrap:wrap">'+
               '<div style="font-size:14px;font-weight:600;color:var(--text3);min-width:20px">'+( idx+1)+'</div>'+
-              '<div style="min-width:160px"><div style="font-size:10px;color:var(--text3)">Procedimento</div><div style="font-size:13px;color:var(--text);font-weight:500">'+(it.procedimento_nome||'—')+'</div></div>'+
+              '<div style="min-width:160px"><div style="font-size:10px;color:var(--text3)">Procedimento</div><div style="font-size:13px;color:var(--text);font-weight:500">'+escHtml(it.procedimento_nome||'—')+'</div></div>'+
               '<div style="min-width:200px">'+
                 '<div style="font-size:10px;color:#E65100;font-weight:500">Profissional</div>'+
                 '<select id="fc-prof-'+it.id+'" style="border:1.5px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--text);background:#fff;outline:none;min-width:200px">'+selOpts+'</select>'+
               '</div>'+
               '<button onclick="abrirExecutarModal('+it.id+','+pacId+',\''+((it.procedimento_nome||'').replace(/'/g,"\\'"))+'\')" style="background:#2E7D52;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Executar</button>'+
               '<div style="min-width:70px"><div style="font-size:10px;color:var(--text3)">Status</div><div style="font-size:13px">Aprovado</div></div>'+
-              '<div style="min-width:80px"><div style="font-size:10px;color:var(--text3)">Dente/Regiao</div><div style="font-size:13px">'+(it.dente||it.regiao||'—')+'</div></div>'+
+              '<div style="min-width:80px"><div style="font-size:10px;color:var(--text3)">Dente/Regiao</div><div style="font-size:13px">'+escHtml(it.dente||it.regiao||'—')+'</div></div>'+
               '<div style="margin-left:auto;text-align:right"><div style="font-size:10px;color:var(--text3)">Valor</div><div style="font-size:14px;font-weight:600;color:#E65100">'+fmtBrl(it.valor_unitario*(it.quantidade||1))+'</div></div>'+
             '</div>'
           })
@@ -7678,7 +7679,7 @@ function editarExecucao(itemId,pacId,procNome,dataExec,profNome){
   var profs=ST.profissionais||[]
   var profOpts='<option value="">Selecione...</option>'+profs.map(function(pr){
     var sel=(pr.nome||pr.name||'')===profNome?' selected':''
-    return '<option value="'+pr.id+'|'+(pr.nome||pr.name||'')+'"'+sel+'>'+(pr.nome||pr.name||'')+'</option>'
+    return '<option value="'+pr.id+'|'+escHtml(pr.nome||pr.name||'')+'"'+sel+'>'+escHtml(pr.nome||pr.name||'')+'</option>'
   }).join('')
 
   var m=document.createElement('div')
@@ -7750,7 +7751,7 @@ function abrirExecutarModal(itemId,pacId,procNome){
 
   var profOpts='<option value="">Selecione...</option>'+profs.map(function(pr){
     var sel=(pr.id==profId)?' selected':''
-    return '<option value="'+pr.id+'|'+(pr.nome||pr.name||'')+'"'+sel+'>'+(pr.nome||pr.name||'')+'</option>'
+    return '<option value="'+pr.id+'|'+escHtml(pr.nome||pr.name||'')+'"'+sel+'>'+escHtml(pr.nome||pr.name||'')+'</option>'
   }).join('')
 
   var m=document.createElement('div')
@@ -7851,9 +7852,9 @@ async function renderRecibosTab(el,p){
       html+='<tr><td>'+fmtDt(r.data_emissao)+'</td>'+
         '<td><span class="badge badge-'+tipoCor+'">'+tipoLabel+'</span></td>'+
         '<td style="font-size:12px">'+(r.numero_recibo||'—')+'</td>'+
-        '<td>'+(r.nome_profissional||'—')+'</td>'+
-        '<td style="font-size:12px">'+(r.cro_profissional||'—')+'</td>'+
-        '<td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis">'+(r.descricao_servico||'—')+'</td>'+
+        '<td>'+escHtml(r.nome_profissional||'—')+'</td>'+
+        '<td style="font-size:12px">'+escHtml(r.cro_profissional||'—')+'</td>'+
+        '<td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis">'+escHtml(r.descricao_servico||'—')+'</td>'+
         '<td style="text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(r.valor)+'</td>'+
         '<td><span class="badge badge-'+stClass+'">'+(r.status||'rascunho').toUpperCase()+'</span></td>'+
         '<td>'+acoes+'</td></tr>'
@@ -8073,7 +8074,7 @@ function copiarTodosReceitaSaude(){
       'Valor: '+fmtBrl(rec.valor||0)+'\n'+
       'Data: '+(rec.data_emissao?fmtDt(rec.data_emissao):'')+'\n'+
       'Descricao: '+(rec.descricao_servico||'')+'\n'+
-      (rec.numero_recibo?'Documento: '+rec.numero_recibo+'\n':'')
+      (rec.numero_recibo?'Documento: '+escHtml(rec.numero_recibo)+'\n':'')
     navigator.clipboard.writeText(texto).then(function(){alert('Todos os dados copiados para a area de transferencia!')})
   }catch(e){alert('Erro ao copiar')}
 }
@@ -8794,7 +8795,7 @@ async function renderBoletos(){
     rows.forEach(function(r){
       var stClass=r.status==='pago'?'green':r.status==='vencido'?'red':'orange'
       var acoes=r.invoice_url?'<a href="'+r.invoice_url+'" target="_blank" style="color:var(--green);font-size:12px;text-decoration:none">Ver Boleto</a>':''
-      html+='<tr><td style="color:var(--blue)">'+(r.paciente_nome||'—')+'</td><td>'+(r.descricao||'—')+'</td><td style="font-weight:500;color:#1B5E3B">'+fmtBrl(r.valor)+'</td><td>'+fmtDt(r.data_vencimento)+'</td><td>'+(r.data_pagamento?fmtDt(r.data_pagamento):'—')+'</td><td><span class="badge badge-'+stClass+'">'+r.status.toUpperCase()+'</span></td><td>'+acoes+'</td></tr>'
+      html+='<tr><td style="color:var(--blue)">'+escHtml(r.paciente_nome||'—')+'</td><td>'+escHtml(r.descricao||'—')+'</td><td style="font-weight:500;color:#1B5E3B">'+fmtBrl(r.valor)+'</td><td>'+fmtDt(r.data_vencimento)+'</td><td>'+(r.data_pagamento?fmtDt(r.data_pagamento):'—')+'</td><td><span class="badge badge-'+stClass+'">'+r.status.toUpperCase()+'</span></td><td>'+acoes+'</td></tr>'
     })
     html+='</tbody></table>'
     parent.innerHTML=html
@@ -8822,9 +8823,9 @@ async function renderRecebiveis(){
       return '<div style="display:grid;grid-template-columns:100px 80px 1fr 1fr 100px 100px 100px 1fr 80px 80px 80px 80px 80px 80px;padding:8px 14px;border-bottom:1px solid var(--border2);font-size:11px;background:var(--white);align-items:center">'+
         '<span>'+fmtDt(r.data_pagamento)+'</span>'+
         '<span style="color:'+(r.confirmado?'var(--green)':'var(--blue)')+'">'+status+'</span>'+
-        '<span>KLINIK</span><span style="color:var(--blue)">'+(r.paciente_nome||'—')+'</span>'+
+        '<span>KLINIK</span><span style="color:var(--blue)">'+escHtml(r.paciente_nome||'—')+'</span>'+
         '<span>'+fmtDt(r.data_vencimento)+'</span><span>'+fmtDt(r.data_pagamento)+'</span><span>'+fmtDt(r.data_recebimento)+'</span>'+
-        '<span>'+(r.descricao||'—')+'</span><span>'+(r.forma_pagamento||'—')+'</span>'+
+        '<span>'+escHtml(r.descricao||'—')+'</span><span>'+(r.forma_pagamento||'—')+'</span>'+
         '<span>'+(r.parcelas||1)+'/'+(r.parcelas||1)+'</span>'+
         '<span style="font-weight:500">'+fmtBrl(v)+'</span><span>—</span><span>—</span><span style="font-weight:500">'+fmtBrl(v)+'</span></div>'
     }).join('')
@@ -8861,7 +8862,7 @@ async function loadConciliacoes(){
     rows.forEach(function(r){
       var stClass=r.status==='concluida'?'green':r.status==='parcial'?'blue':'orange'
       var pct=r.total_itens>0?Math.round((r.total_conciliados/r.total_itens)*100):0
-      html+='<tr><td>'+fmtDt(r.created_at)+'</td><td>'+(r.descricao||'—')+'</td><td>'+fmtDt(r.periodo_de)+' a '+fmtDt(r.periodo_ate)+'</td><td style="text-align:center">'+r.total_itens+'</td><td style="text-align:center">'+r.total_conciliados+' ('+pct+'%)</td><td><span class="badge badge-'+stClass+'">'+(r.status||'pendente').toUpperCase()+'</span></td><td><button onclick="abrirConciliacao('+r.id+')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Detalhar</button></td></tr>'
+      html+='<tr><td>'+fmtDt(r.created_at)+'</td><td>'+escHtml(r.descricao||'—')+'</td><td>'+fmtDt(r.periodo_de)+' a '+fmtDt(r.periodo_ate)+'</td><td style="text-align:center">'+r.total_itens+'</td><td style="text-align:center">'+r.total_conciliados+' ('+pct+'%)</td><td><span class="badge badge-'+stClass+'">'+(r.status||'pendente').toUpperCase()+'</span></td><td><button onclick="abrirConciliacao('+r.id+')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Detalhar</button></td></tr>'
     })
     html+='</tbody></table>'
     el.innerHTML=html
@@ -9005,7 +9006,7 @@ async function loadReceitaSaude(){
       if(r.status==='rascunho'){
         acoes='<button onclick="emitirReceitaSaude('+r.id+')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Emitir</button>'
       }
-      html+='<tr><td>'+fmtDt(r.data_emissao)+'</td><td>'+(r.nome_paciente||'—')+'</td><td style="font-size:12px">'+(r.cpf_paciente||'—')+'</td><td>'+(r.nome_profissional||'—')+'</td><td style="font-size:12px">'+(r.cro_profissional||'—')+'</td><td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis">'+(r.descricao_servico||'—')+'</td><td style="text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(r.valor)+'</td><td><span class="badge badge-'+stClass+'">'+(r.status||'rascunho').toUpperCase()+'</span></td><td>'+acoes+'</td></tr>'
+      html+='<tr><td>'+fmtDt(r.data_emissao)+'</td><td>'+(r.nome_paciente||'—')+'</td><td style="font-size:12px">'+(r.cpf_paciente||'—')+'</td><td>'+escHtml(r.nome_profissional||'—')+'</td><td style="font-size:12px">'+escHtml(r.cro_profissional||'—')+'</td><td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis">'+escHtml(r.descricao_servico||'—')+'</td><td style="text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(r.valor)+'</td><td><span class="badge badge-'+stClass+'">'+(r.status||'rascunho').toUpperCase()+'</span></td><td>'+acoes+'</td></tr>'
     })
     html+='</tbody></table>'
     el.innerHTML=html
@@ -9520,7 +9521,7 @@ async function renderCartoes(){
       return '<div style="display:grid;grid-template-columns:100px 100px 100px 80px 1fr 100px 80px 120px 80px 80px 70px;padding:10px 14px;border-bottom:1px solid var(--border2);font-size:12px;background:var(--white);align-items:center;gap:8px">'+
         '<span>'+fmtDt(r.data_vencimento)+'</span><span>'+fmtDt(r.data_pagamento)+'</span><span>'+fmtDt(r.data_recebimento)+'</span>'+
         '<span style="font-size:11px">'+(r.forma_pagamento||'')+'</span>'+
-        '<span style="color:var(--blue);cursor:pointer">'+(r.paciente_nome||'—')+'</span><span>—</span>'+
+        '<span style="color:var(--blue);cursor:pointer">'+escHtml(r.paciente_nome||'—')+'</span><span>—</span>'+
         '<span>'+(r.bandeira||'—')+'</span><span>'+(r.parcelas||1)+'x</span>'+
         '<span>'+fmtBrl(v)+'</span><span>—</span><span>'+fmtBrl(v)+'</span></div>'
     }).join('')
@@ -9551,7 +9552,7 @@ async function renderPlanos(){
       if(st!=='recebido'){
         acoes='<button onclick="darBaixaPlano('+r.id+',\''+((r.valor||0))+'\')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Baixa</button>'
       }
-      html+='<tr><td>'+fmtDt(r.created_at||r.data_execucao)+'</td><td style="color:var(--blue)">'+(r.paciente_nome||'—')+'</td><td>'+(r.guia||'—')+'</td><td>'+(r.procedimento||'—')+'</td><td>'+(r.convenio||'—')+'</td><td style="text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(r.valor)+'</td><td><span class="badge badge-'+stClass+'">'+stLabel+'</span></td><td>'+acoes+'</td></tr>'
+      html+='<tr><td>'+fmtDt(r.created_at||r.data_execucao)+'</td><td style="color:var(--blue)">'+escHtml(r.paciente_nome||'—')+'</td><td>'+(r.guia||'—')+'</td><td>'+(r.procedimento||'—')+'</td><td>'+(r.convenio||'—')+'</td><td style="text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(r.valor)+'</td><td><span class="badge badge-'+stClass+'">'+stLabel+'</span></td><td>'+acoes+'</td></tr>'
     })
     html+='</tbody></table>'
     el.innerHTML=html
@@ -9625,7 +9626,7 @@ async function renderCPagar(){
         acoes='<button onclick="darBaixaCPagar('+r.id+')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif;margin-right:4px">Pagar</button>'+
           '<button onclick="cancelarCPagar('+r.id+')" style="background:transparent;color:var(--red);border:1px solid var(--red);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">X</button>'
       }
-      html+='<tr><td><span class="badge badge-'+stClass+'">'+stLabel+'</span></td><td style="font-size:12px">'+(r.classificacao||'—')+'</td><td style="font-size:12px;color:var(--text3)">'+(r.categoria||'—')+'</td><td>'+(r.descricao||'—')+'</td><td style="color:var(--text3)">'+(r.fornecedor||'—')+'</td><td>'+fmtDt(r.vencimento)+'</td><td style="text-align:right;font-weight:500;color:#C62828">'+fmtBrl(r.valor)+'</td><td>'+acoes+'</td></tr>'
+      html+='<tr><td><span class="badge badge-'+stClass+'">'+stLabel+'</span></td><td style="font-size:12px">'+(r.classificacao||'—')+'</td><td style="font-size:12px;color:var(--text3)">'+(r.categoria||'—')+'</td><td>'+escHtml(r.descricao||'—')+'</td><td style="color:var(--text3)">'+(r.fornecedor||'—')+'</td><td>'+fmtDt(r.vencimento)+'</td><td style="text-align:right;font-weight:500;color:#C62828">'+fmtBrl(r.valor)+'</td><td>'+acoes+'</td></tr>'
     })
     html+='</tbody></table>'
     el.innerHTML=html
@@ -9710,7 +9711,7 @@ function cpClassifChange(){
   var classif=(document.getElementById('cp-classif')||{}).value||''
   var cats=(_cpCategorias||[]).filter(function(c){return c.classificacao===classif})
   var sel=document.getElementById('cp-cat');if(!sel)return
-  sel.innerHTML='<option value="">Selecione...</option>'+cats.map(function(c){return '<option value="'+c.id+'" data-nome="'+c.nome+'">'+c.nome+'</option>'}).join('')
+  sel.innerHTML='<option value="">Selecione...</option>'+cats.map(function(c){return '<option value="'+c.id+'" data-nome="'+escHtml(c.nome)+'">'+escHtml(c.nome)+'</option>'}).join('')
 }
 
 async function salvarCPagar(){
@@ -9777,7 +9778,7 @@ async function renderCReceber(){
       var stClass=r.status==='pago'?'green':r.status==='vencido'?'red':'orange'
       var stLabel=r.status==='pago'?'RECEBIDO':r.status==='vencido'?'VENCIDO':'PENDENTE'
       var procText=(r.procedimentos||'').length>40?r.procedimentos.substring(0,37)+'...':r.procedimentos||'—'
-      html+='<tr><td style="color:var(--blue)">'+(r.paciente_nome||'—')+'</td><td style="font-size:12px">'+r.numero_parcela+'/'+r.total_parcelas+(r.tipo==='entrada'?' (Entrada)':'')+'</td><td style="font-size:12px;color:var(--text3)">'+procText+'</td><td style="font-size:12px">'+(formaLabel[r.forma_pagamento]||r.forma_pagamento||'—')+'</td><td>'+fmtDt(r.data_vencimento)+'</td><td style="text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(r.valor)+'</td><td><span class="badge badge-'+stClass+'">'+stLabel+'</span></td></tr>'
+      html+='<tr><td style="color:var(--blue)">'+escHtml(r.paciente_nome||'—')+'</td><td style="font-size:12px">'+r.numero_parcela+'/'+r.total_parcelas+(r.tipo==='entrada'?' (Entrada)':'')+'</td><td style="font-size:12px;color:var(--text3)">'+procText+'</td><td style="font-size:12px">'+(formaLabel[r.forma_pagamento]||r.forma_pagamento||'—')+'</td><td>'+fmtDt(r.data_vencimento)+'</td><td style="text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(r.valor)+'</td><td><span class="badge badge-'+stClass+'">'+stLabel+'</span></td></tr>'
     })
     html+='</tbody></table>'
     el.innerHTML=html
@@ -9814,7 +9815,7 @@ async function renderExtrato(){
           return '<div class="ext-tbl-row" style="grid-template-columns:100px 80px 1fr 1fr 90px">'+
             '<span class="ext-tipo-badge ext-tipo-entrada">ENTRADA</span>'+
             '<span style="font-size:11px;color:var(--text3)">'+(r.origem||'')+'</span>'+
-            '<span style="color:var(--blue);cursor:pointer">'+(r.descricao||'—')+'</span>'+
+            '<span style="color:var(--blue);cursor:pointer">'+escHtml(r.descricao||'—')+'</span>'+
             '<span style="color:var(--text3)">'+(r.forma||'—')+'</span>'+
             '<span style="text-align:right;font-weight:500;color:var(--green)">'+fmtBrl(v)+'</span></div>'
         }).join('')+
@@ -9863,7 +9864,7 @@ function openApptPanel(agId){
     // Header with colored bar
     '<div style="height:4px;background:'+cor+';border-radius:8px 8px 0 0"></div>'+
     '<div class="appt-panel-header">'+
-      '<div class="appt-panel-av" style="'+(apptFoto?'background:url('+apptFoto+') center/cover;color:transparent':'background:'+cor+'20;color:'+cor)+'">'+ini+'</div>'+
+      '<div class="appt-panel-av" style="'+(apptFoto?'background:url('+escCssUrl(apptFoto)+') center/cover;color:transparent':'background:'+cor+'20;color:'+cor)+'">'+ini+'</div>'+
       '<div>'+
         '<div class="appt-panel-name">'+nome+'</div>'+
         '<div class="appt-panel-phone">'+
