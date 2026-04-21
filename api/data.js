@@ -1165,12 +1165,13 @@ module.exports = async function handler(req, res) {
             var cp = req.body || {}
             var cpNome = (cp.nome || '').trim()
             if (!cpNome) return res.status(400).json({ success: false, error: 'Nome obrigatório' })
-            // Ensure extra columns exist on profissionais
-            var cpCols = ['rg TEXT','sexo TEXT','estado_civil TEXT','data_nascimento TEXT','endereco TEXT','numero TEXT','bairro TEXT','cidade TEXT','uf TEXT','cep TEXT','complemento TEXT','cro_uf TEXT','cpf TEXT','atualizado_em TEXT']
+            // Ensure extra columns exist on profissionais (CREATE TABLE only has a subset)
+            var cpCols = ['rg TEXT','sexo TEXT','estado_civil TEXT','data_nascimento TEXT','endereco TEXT','numero TEXT','bairro TEXT','cidade TEXT','uf TEXT','cep TEXT','complemento TEXT','cro_uf TEXT','cpf TEXT','whatsapp TEXT','atualizado_em TEXT']
             for (var cpi=0;cpi<cpCols.length;cpi++){try{await client.execute("ALTER TABLE profissionais ADD COLUMN "+cpCols[cpi])}catch(e){}}
+            var cpCor = (cp.cor_agenda || '').trim() || '#9C27B0'
             var cpIns = await client.execute({
-                sql: "INSERT INTO profissionais(clinica_id,nome,especialidade,cpf,email,telefone,cro,cro_uf,rg,sexo,estado_civil,data_nascimento,endereco,numero,bairro,cidade,uf,cep,complemento,ativo,created_at,atualizado_em) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,datetime('now'),datetime('now'))",
-                args: [clinica_id, cpNome, cp.especialidade||'', cp.cpf||'', cp.email||'', cp.telefone||'', cp.cro||'', cp.cro_uf||'', cp.rg||'', cp.sexo||'', cp.estado_civil||'', cp.data_nascimento||'', cp.endereco||'', cp.numero||'', cp.bairro||'', cp.cidade||'', cp.uf||'', cp.cep||'', cp.complemento||'']
+                sql: "INSERT INTO profissionais(clinica_id,nome,especialidade,cpf,email,telefone,whatsapp,cro,cro_uf,rg,sexo,estado_civil,data_nascimento,endereco,numero,bairro,cidade,uf,cep,complemento,cor_agenda,ativo,created_at,atualizado_em) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,datetime('now'),datetime('now'))",
+                args: [clinica_id, cpNome, cp.especialidade||'', cp.cpf||'', cp.email||'', cp.telefone||'', cp.whatsapp||'', cp.cro||'', cp.cro_uf||'', cp.rg||'', cp.sexo||'', cp.estado_civil||'', cp.data_nascimento||'', cp.endereco||'', cp.numero||'', cp.bairro||'', cp.cidade||'', cp.uf||'', cp.cep||'', cp.complemento||'', cpCor]
             })
             var cpNewId = Number(cpIns.lastInsertRowid)
             // Vincula a um usuário existente, se informado (e se ele pertencer à mesma clínica)

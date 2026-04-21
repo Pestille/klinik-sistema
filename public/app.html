@@ -4765,48 +4765,54 @@ async function salvarProfissional(){
 }
 
 // ── NOVO PROFISSIONAL ────────────────────────────────────────────
+var _npCor='#9C27B0'
+function npSelectCor(c){
+  _npCor=c
+  document.querySelectorAll('.np-cor-dot').forEach(function(el){
+    el.style.borderColor=(el.getAttribute('data-cor')===c)?'var(--text)':'transparent'
+  })
+}
+function _npSection(title){
+  return '<div style="font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin:16px 0 10px 0">'+escHtml(title)+'</div>'
+}
 async function abrirNovoProfissional(){
-  // Form HTML
+  _npCor='#9C27B0'
   var body=document.getElementById('prof-modal-body')
+  // Paleta de cores
+  var paletaHtml=PALETA_CORES.map(function(c){
+    return '<div class="np-cor-dot" data-cor="'+c+'" onclick="npSelectCor(\''+c+'\')" style="width:28px;height:28px;border-radius:50%;background:'+c+';cursor:pointer;border:2px solid '+(c===_npCor?'var(--text)':'transparent');transition:border-color .12s" title="'+c+'"></div>'
+  }).join('')
   body.innerHTML=
-    '<div style="display:flex;flex-direction:column;gap:20px">'+
-      // Dados profissionais
-      '<div>'+
-        '<div style="font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Dados profissionais</div>'+
-        '<div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">'+
-          '<div class="form-group"><label class="form-label">Nome completo *</label><input class="form-input" id="np-nome" autocomplete="off"></div>'+
-          '<div class="form-group"><label class="form-label">Especialidade</label><input class="form-input" id="np-esp" placeholder="Ex.: Clínico Geral"></div>'+
-        '</div>'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr 80px;gap:12px">'+
-          '<div class="form-group"><label class="form-label">CPF</label><input class="form-input" id="np-cpf" placeholder="000.000.000-00"></div>'+
-          '<div class="form-group"><label class="form-label">CRO</label><input class="form-input" id="np-cro"></div>'+
-          '<div class="form-group"><label class="form-label">UF</label><input class="form-input" id="np-cro-uf" maxlength="2" value="MS" style="text-transform:uppercase"></div>'+
-        '</div>'+
-      '</div>'+
-      // Contato
-      '<div>'+
-        '<div style="font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Contato</div>'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
-          '<div class="form-group"><label class="form-label">Email</label><input class="form-input" id="np-email" type="email"></div>'+
-          '<div class="form-group"><label class="form-label">Telefone</label><input class="form-input" id="np-tel" placeholder="(67) 99999-9999"></div>'+
-        '</div>'+
-      '</div>'+
-      // Usuário vinculado
-      '<div>'+
-        '<div style="font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Usuário vinculado (opcional)</div>'+
-        '<div class="form-group"><label class="form-label">Conta de acesso do profissional</label><select class="form-input" id="np-usuario-id"><option value="">— Sem vínculo —</option></select></div>'+
-        '<div id="np-usuario-hint" style="font-size:12px;color:var(--text3);margin-top:-8px">Carregando usuários...</div>'+
-      '</div>'+
-    '</div>'
+    _npSection('Dados pessoais')+
+    '<div class="form-row c2"><div class="form-group"><label class="form-label">Nome Completo *</label><input class="form-input" id="np-f-nome" placeholder="Nome completo"></div><div class="form-group"><label class="form-label">CPF</label><input class="form-input" id="np-f-cpf" placeholder="000.000.000-00" oninput="mascaraCpf(this)" onblur="validarCpfField(this)"></div></div>'+
+    '<div class="form-row c3"><div class="form-group"><label class="form-label">Nascimento</label><input class="form-input" id="np-f-nasc" type="date"></div><div class="form-group"><label class="form-label">Sexo</label><select class="form-input" id="np-f-sexo"><option value="">—</option><option>Feminino</option><option>Masculino</option></select></div><div class="form-group"><label class="form-label">Estado Civil</label><select class="form-input" id="np-f-civil"><option value="">—</option><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option></select></div></div>'+
+    '<div class="form-row c2"><div class="form-group"><label class="form-label">RG</label><input class="form-input" id="np-f-rg"></div><div class="form-group"></div></div>'+
+
+    _npSection('Dados profissionais')+
+    '<div class="form-row c3"><div class="form-group"><label class="form-label">Especialidade</label><input class="form-input" id="np-f-esp" placeholder="Ex.: Ortodontia"></div><div class="form-group"><label class="form-label">CRO</label><input class="form-input" id="np-f-cro"></div><div class="form-group"><label class="form-label">UF CRO</label><input class="form-input" id="np-f-cro-uf" maxlength="2" value="MS" style="text-transform:uppercase"></div></div>'+
+    '<div class="form-group"><label class="form-label">Cor na agenda</label><div style="display:flex;flex-wrap:wrap;gap:8px;padding:6px 0">'+paletaHtml+'</div></div>'+
+
+    _npSection('Contato')+
+    '<div class="form-row c2"><div class="form-group"><label class="form-label">Telefone</label><input class="form-input" id="np-f-tel" placeholder="(67) 99999-9999"></div><div class="form-group"><label class="form-label">WhatsApp</label><input class="form-input" id="np-f-whats" placeholder="(67) 99999-9999"></div></div>'+
+    '<div class="form-group"><label class="form-label">Email</label><input class="form-input" id="np-f-email" type="email" placeholder="email@email.com"></div>'+
+
+    _npSection('Endereço')+
+    '<div class="form-row c2"><div class="form-group"><label class="form-label">CEP</label><input class="form-input" id="np-f-cep" placeholder="79000-000" oninput="buscarCep(this.value,\'np-f\')"></div><div class="form-group"><label class="form-label">Endereço</label><input class="form-input" id="np-f-endereco" placeholder="Rua, avenida..."></div></div>'+
+    '<div class="form-row c3"><div class="form-group"><label class="form-label">Número</label><input class="form-input" id="np-f-numero"></div><div class="form-group"><label class="form-label">Bairro</label><input class="form-input" id="np-f-bairro"></div><div class="form-group"><label class="form-label">Cidade</label><input class="form-input" id="np-f-cidade" placeholder="Campo Grande"></div></div>'+
+    '<div class="form-row c2"><div class="form-group"><label class="form-label">UF</label><input class="form-input" id="np-f-uf" maxlength="2" style="text-transform:uppercase"></div><div class="form-group"><label class="form-label">Complemento</label><input class="form-input" id="np-f-complemento" placeholder="Apto, sala, bloco..."></div></div>'+
+
+    _npSection('Acesso ao sistema')+
+    '<div class="form-group"><label class="form-label">Usuário vinculado (opcional)</label><select class="form-input" id="np-f-usuario-id"><option value="">— Sem vínculo —</option></select></div>'+
+    '<div id="np-usuario-hint" style="font-size:12px;color:var(--text3);margin-top:-8px">Carregando usuários...</div>'
+
   openModal('profissional')
-  // Foca no nome
-  setTimeout(function(){var el=document.getElementById('np-nome');if(el)el.focus()},50)
+  setTimeout(function(){var el=document.getElementById('np-f-nome');if(el)el.focus()},50)
   // Carrega usuários da clínica que ainda não têm profissional vinculado
   try{
     var r=await fetch('/api/auth?action=listar-usuarios',{headers:_apiHeaders()})
     var d=await r.json()
     var users=(d.data||[]).filter(function(u){return u.ativo && !u.profissional_id})
-    var sel=document.getElementById('np-usuario-id')
+    var sel=document.getElementById('np-f-usuario-id')
     var hint=document.getElementById('np-usuario-hint')
     if(!sel)return
     if(!users.length){
@@ -4816,7 +4822,7 @@ async function abrirNovoProfissional(){
     users.forEach(function(u){
       var opt=document.createElement('option')
       opt.value=u.id
-      opt.textContent=u.nome+' ('+u.perfil+')'
+      opt.textContent=u.nome+' ('+u.email+')'
       sel.appendChild(opt)
     })
     hint.textContent='Cadastre o usuário em Configuração → Usuários antes, se quiser que o profissional acesse o sistema.'
@@ -4828,23 +4834,37 @@ async function abrirNovoProfissional(){
 
 async function criarProfissional(){
   var gv=function(id){var el=document.getElementById(id);return el?(el.value||'').trim():''}
-  var nome=gv('np-nome')
+  var nome=gv('np-f-nome')
   if(!nome){alert('Nome é obrigatório');return}
+  var cpfRaw=gv('np-f-cpf').replace(/\D/g,'')
+  if(cpfRaw && !validarCpf(cpfRaw)){alert('CPF inválido');return}
   var body={
     nome:nome,
-    especialidade:gv('np-esp'),
-    cpf:gv('np-cpf'),
-    cro:gv('np-cro'),
-    cro_uf:(gv('np-cro-uf')||'').toUpperCase(),
-    email:gv('np-email'),
-    telefone:gv('np-tel'),
-    usuario_id:gv('np-usuario-id')||null
+    cpf:gv('np-f-cpf'),
+    data_nascimento:gv('np-f-nasc'),
+    sexo:gv('np-f-sexo'),
+    estado_civil:gv('np-f-civil'),
+    rg:gv('np-f-rg'),
+    especialidade:gv('np-f-esp'),
+    cro:gv('np-f-cro'),
+    cro_uf:(gv('np-f-cro-uf')||'').toUpperCase(),
+    cor_agenda:_npCor,
+    telefone:gv('np-f-tel'),
+    whatsapp:gv('np-f-whats'),
+    email:gv('np-f-email'),
+    cep:gv('np-f-cep'),
+    endereco:gv('np-f-endereco'),
+    numero:gv('np-f-numero'),
+    bairro:gv('np-f-bairro'),
+    cidade:gv('np-f-cidade'),
+    uf:(gv('np-f-uf')||'').toUpperCase(),
+    complemento:gv('np-f-complemento'),
+    usuario_id:gv('np-f-usuario-id')||null
   }
   try{
     var d=await apiPost('criar-profissional',body)
     if(d.success){
       closeModal('profissional')
-      // Recarrega lista e abre detalhe do novo profissional
       await loadProfissionais()
       var idx=(ST.profissionais||[]).findIndex(function(p){return p.id===d.id})
       if(idx>=0)verProfissional(idx)
