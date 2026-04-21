@@ -74,50 +74,6 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ status: 'online', latencia_ms: lat, timestamp: new Date().toISOString() })
         }
 
-        // ── ADMIN: RESET SISTEMA ────────────────────────────────────────────
-        // Zera todas as tabelas operacionais, preservando apenas o admin autenticado,
-        // sua clínica e sua sessão atual. Exige perfil=admin + confirmacao textual.
-        if (route === 'admin-reset-sistema') {
-            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
-            if (auth.perfil !== 'admin') return res.status(403).json({ success: false, error: 'Apenas admin pode resetar o sistema' })
-            var resetBody = req.body || {}
-            if (resetBody.confirmacao !== 'RESETAR SISTEMA') {
-                return res.status(400).json({ success: false, error: 'Campo confirmacao deve ser exatamente "RESETAR SISTEMA"' })
-            }
-            var keepUserId = auth.usuario_id
-            var keepClinicaId = clinica_id
-            var preservedTables = ['clinicas', 'usuarios', 'sessoes']
-            var tr = await client.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
-            var resetStmts = [
-                { sql: "DELETE FROM usuarios WHERE id!=?", args: [keepUserId] },
-                { sql: "DELETE FROM sessoes WHERE usuario_id!=?", args: [keepUserId] },
-                { sql: "DELETE FROM clinicas WHERE id!=?", args: [keepClinicaId] }
-            ]
-            var wipedTables = []
-            for (var ri = 0; ri < tr.rows.length; ri++) {
-                var tname = tr.rows[ri].name
-                if (preservedTables.indexOf(tname) !== -1) continue
-                if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(tname)) continue
-                resetStmts.push({ sql: "DELETE FROM " + tname, args: [] })
-                resetStmts.push({ sql: "DELETE FROM sqlite_sequence WHERE name=?", args: [tname] })
-                wipedTables.push(tname)
-            }
-            try {
-                await client.batch(resetStmts, 'write')
-            } catch(resetErr) {
-                console.error('[admin-reset-sistema] batch error:', resetErr.message)
-                return res.status(500).json({ success: false, error: 'Erro no batch: ' + resetErr.message })
-            }
-            return res.status(200).json({
-                success: true,
-                msg: 'Sistema resetado',
-                usuario_preservado_id: keepUserId,
-                clinica_preservada_id: keepClinicaId,
-                tabelas_limpas: wipedTables,
-                total_tabelas_limpas: wipedTables.length
-            })
-        }
-
         // ── DASHBOARD ───────────────────────────────────────────────────────
         if (route === 'dashboard') {
             var hoje = new Date().toISOString().slice(0, 10)
