@@ -4780,7 +4780,7 @@ async function abrirNovoProfissional(){
   var body=document.getElementById('prof-modal-body')
   // Paleta de cores
   var paletaHtml=PALETA_CORES.map(function(c){
-    return '<div class="np-cor-dot" data-cor="'+c+'" onclick="npSelectCor(\''+c+'\')" style="width:28px;height:28px;border-radius:50%;background:'+c+';cursor:pointer;border:2px solid '+(c===_npCor?'var(--text)':'transparent');transition:border-color .12s" title="'+c+'"></div>'
+    return '<div class="np-cor-dot" data-cor="'+c+'" onclick="npSelectCor(\''+c+'\')" style="width:28px;height:28px;border-radius:50%;background:'+c+';cursor:pointer;border:2px solid '+(c===_npCor?'var(--text)':'transparent')+';transition:border-color .12s" title="'+c+'"></div>'
   }).join('')
   body.innerHTML=
     _npSection('Dados pessoais')+
