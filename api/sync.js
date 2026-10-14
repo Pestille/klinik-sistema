@@ -161,8 +161,12 @@ async function sondar(params) {
     var eps = String(params.eps || '').split(',').map(function(s){ return s.trim() })
         .filter(function(s){ return /^[a-z_]+(\/[a-z_]+){0,2}$/.test(s) }).slice(0, 40)
     if (!eps.length) return { tipo: 'sondar', erro: 'Informe eps=endpoint1,endpoint2 (letras minúsculas, _ e /)' }
-    var dt = hoje365()
+    var dias = Math.min(Math.max(parseInt(params.dias || '365', 10) || 365, 1), 365)
+    var fim = new Date(), ini = new Date(); ini.setDate(ini.getDate() - dias)
+    var dt = { from: ini.toISOString().slice(0,10), to: fim.toISOString().slice(0,10) }
     var base = { from: dt.from, to: dt.to, initial_date: dt.from, final_date: dt.to, limit: 2, page: 1 }
+    // patient/get exige um identificador: aceita ?patient_id= (só para sondagem de estrutura)
+    if (params.patient_id && /^\d+$/.test(String(params.patient_id))) base.PatientId = base.patient_id = base.id = String(params.patient_id)
     var results = await Promise.allSettled(eps.map(function(ep){ return fetchPage(ep, base) }))
     return {
         tipo: 'sondar',
