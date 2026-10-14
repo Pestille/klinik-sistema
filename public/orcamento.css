@@ -1,0 +1,27 @@
+/* public/orcamento.css — Orçamentos e tabelas de preço (Fase 4) */
+
+/* Seletor de dentes */
+.oc-dentes{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin:8px 0}
+.oc-dente{width:36px;padding:8px 0;text-align:center;font-size:13px;font-variant-numeric:tabular-nums;color:var(--text2);border:1.5px solid var(--border);border-radius:6px;background:var(--surface,#fff);cursor:pointer;user-select:none;transition:background .12s ease,border-color .12s ease}
+.oc-dente:hover{background:#E8F5E9;border-color:var(--green3)}
+.oc-dente.on{background:var(--green);border-color:var(--green);color:#fff}
+.oc-dentes + .oc-dentes{border-top:1px dashed var(--border);padding-top:8px}
+
+/* Lista de orçamentos no prontuário */
+.oc-orc-h{display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;transition:background .12s ease}
+.oc-orc-h:hover{background:#FAFAFA}
+
+/* Badge de procedimento aprovado e não executado */
+.pc-badge.err{background:#FFEBEE;color:var(--red)}
+
+/* Odontograma + procedimentos orçados (abaixo do mapa) */
+.oc-odo{display:flex;flex-direction:column;gap:16px}
+
+/* Cards das tabelas de preço */
+.oc-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.oc-card{display:flex;flex-direction:column;gap:4px;min-height:150px}
+.oc-card.inativa{opacity:.6}
+
+/* Tabelas largas rolam dentro do card no celular */
+.oc-scroll{overflow-x:auto}
+@media (max-width:600px){.oc-orc-h{flex-wrap:wrap}.oc-orc-h > div:first-of-type{flex:1 1 100% !important;order:3}}
