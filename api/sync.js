@@ -505,10 +505,18 @@ async function syncPagamentos(client) {
 
 // ── HANDLER PRINCIPAL ─────────────────────────────────────────────────────────
 module.exports = async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+    var { authenticateRequest, setCorsHeaders } = require('./middleware')
+    setCorsHeaders(req, res)
     if (req.method === 'OPTIONS') { res.status(200).end(); return }
+
+    // As credenciais Clinicorp do ambiente pertencem à Klinik: só um admin
+    // logado da própria Klinik pode disparar syncs ou explorar a API.
+    var auth = await authenticateRequest(req)
+    if (!auth) return res.status(401).json({ error: 'Não autenticado' })
+    var klinikId = parseInt(process.env.KLINIK_CLINICA_ID || '1', 10)
+    if (auth.perfil !== 'admin' || auth.clinica_id !== klinikId) {
+        return res.status(403).json({ error: 'Sem permissão' })
+    }
 
     var params     = req.method === 'POST' ? (req.body || {}) : req.query
     var tipo       = params.tipo

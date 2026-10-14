@@ -2392,7 +2392,7 @@ async function salvarPerfilSenha() {
 
 // ── API ──────────────────────────────────────────────────────────
 async function api(ep) {
-  const r = await fetch('/api/clinicorp?endpoint='+ep)
+  const r = await fetch('/api/clinicorp?endpoint='+ep, { headers: _apiHeaders() })
   if (!r.ok) throw new Error('HTTP '+r.status)
   const d = await r.json()
   if (!d.ok) throw new Error(d.error||'Erro')
