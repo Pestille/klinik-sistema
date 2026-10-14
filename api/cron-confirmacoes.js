@@ -3,6 +3,7 @@
 // Multi-tenant: processa TODAS as clínicas
 
 var { getClient } = require('../lib/db')
+var { runMigrations } = require('../lib/migrations')
 
 module.exports = async function handler(req, res) {
     // Security: only allow Vercel cron or manual trigger with secret
@@ -14,6 +15,7 @@ module.exports = async function handler(req, res) {
 
     try {
         var client = getClient()
+        await runMigrations(client)
 
         // Ensure tables exist
         try { await client.execute("CREATE TABLE IF NOT EXISTS campanhas (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, tipo TEXT NOT NULL, segmento TEXT NOT NULL, filtro_json TEXT, assunto TEXT, template TEXT NOT NULL, status TEXT DEFAULT 'rascunho', agendada_para TEXT, total_destinatarios INTEGER DEFAULT 0, total_enviados INTEGER DEFAULT 0, total_erros INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')), clinica_id INTEGER)") } catch(e) {}
@@ -29,6 +31,11 @@ module.exports = async function handler(req, res) {
         var amanha = new Date()
         amanha.setDate(amanha.getDate() + 1)
         var dataAmanha = amanha.toISOString().slice(0, 10)
+        // Cada agendamento escolhe quando receber a confirmação (confirmacao_envio):
+        // 'mesmo_dia' | '1_dia' (padrão, também NULL) | '2_dias' | 'nao'
+        var dataHoje = new Date().toISOString().slice(0, 10)
+        var em2 = new Date(); em2.setDate(em2.getDate() + 2)
+        var dataEm2 = em2.toISOString().slice(0, 10)
 
         var totalGlobalEnv = 0, totalGlobalErr = 0, totalGlobalAg = 0
         var clinicasProcessadas = []
@@ -67,8 +74,8 @@ module.exports = async function handler(req, res) {
 
             // Get tomorrow's appointments for this clinic
             var agR = await client.execute({
-                sql: "SELECT a.id,a.data_hora,a.hora_fim,a.procedimento,a.tipo,a.paciente_id,COALESCE(p.nome,a.paciente_nome) as paciente_nome,p.email,p.telefone,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE DATE(a.data_hora)=? AND (a.status IS NULL OR a.status NOT IN ('cancelado','realizado')) AND a.clinica_id=?",
-                args: [dataAmanha, clinica_id]
+                sql: "SELECT a.id,a.data_hora,a.hora_fim,a.procedimento,a.tipo,a.paciente_id,a.canal_envio,COALESCE(p.nome,a.paciente_nome) as paciente_nome,p.email,p.telefone,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE ((DATE(a.data_hora)=? AND a.confirmacao_envio='mesmo_dia') OR (DATE(a.data_hora)=? AND (a.confirmacao_envio IS NULL OR a.confirmacao_envio='1_dia')) OR (DATE(a.data_hora)=? AND a.confirmacao_envio='2_dias')) AND (a.status IS NULL OR a.status NOT IN ('cancelado','realizado','desmarcado')) AND a.clinica_id=?",
+                args: [dataHoje, dataAmanha, dataEm2, clinica_id]
             })
 
             if (!agR.rows.length) {
@@ -100,7 +107,7 @@ module.exports = async function handler(req, res) {
                 var msgFinal = (tpl.corpo || '').replace(/\{\{(\w+)\}\}/g, function(_, key) { return vars[key] || '' })
 
                 // Send email (only if clinic enabled it)
-                if (cliCfg.cfg_confirmacao_email && resendKey && ag.email) {
+                if (cliCfg.cfg_confirmacao_email && resendKey && ag.email && (!ag.canal_envio || ag.canal_envio === 'email' || ag.canal_envio === 'ambos')) {
                     try {
                         var emailRes = await fetch('https://api.resend.com/emails', {
                             method: 'POST',
@@ -123,7 +130,7 @@ module.exports = async function handler(req, res) {
                 }
 
                 // Send WhatsApp (only if clinic enabled it)
-                if (cliCfg.cfg_confirmacao_wa && waToken && waPhoneId && ag.telefone) {
+                if (cliCfg.cfg_confirmacao_wa && waToken && waPhoneId && ag.telefone && (!ag.canal_envio || ag.canal_envio === 'whatsapp' || ag.canal_envio === 'ambos')) {
                     try {
                         var waPhone = (ag.telefone || '').replace(/\D/g, '')
                         if (waPhone.length <= 11) waPhone = '55' + waPhone

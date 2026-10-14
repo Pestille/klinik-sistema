@@ -562,6 +562,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 .login-btn:disabled{opacity:.6;cursor:not-allowed}
 .login-error{color:var(--red);font-size:12px;text-align:center;margin-top:12px;min-height:18px}
 </style>
+<link rel="stylesheet" href="/agenda.css">
 </head>
 <body>
 
@@ -825,85 +826,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     </div>
 
     <!-- AGENDA -->
-    <div class="page" id="p-agenda">
-      <div class="agenda-topbar">
-        <div class="novo-wrap">
-        <button class="btn-novo" onclick="toggleNovoDrop()" id="btn-novo">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          Novo
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-left:2px"><path d="M7 10l5 5 5-5z"/></svg>
-        </button>
-        <div class="novo-drop" id="novo-drop">
-          <div class="novo-drop-item" onclick="openNovaConsulta();closeNovoDrop()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M12 14v4M10 16h4"/></svg>
-            Novo agendamento
-          </div>
-          <div class="novo-drop-item" onclick="closeNovoDrop()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 13h8M8 17h5"/></svg>
-            Novo compromisso
-          </div>
-          <div class="novo-drop-item" onclick="closeNovoDrop()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            Alerta de retorno
-          </div>
-        </div>
-      </div>
-        <button class="btn-ico" onclick="agendaPrev()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
-        <button class="btn-hoje" onclick="agendaHoje()">Hoje</button>
-        <button class="btn-ico" onclick="agendaNext()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
-        <div class="agenda-date" id="agenda-date-title">Sábado, 21 de Março de 2026</div>
-        <button class="btn-ico" title="Recarregar" onclick="_agendaMesesCarregados={};ST.agendamentos=[];loadAgenda()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button>
-        <span class="agenda-warn" id="agenda-warn-txt" onclick="nav('confirmacoes')"></span>
-        <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
-          <select class="agenda-interval-sel" id="agenda-interval-sel" onchange="setAgendaInterval(Number(this.value))" title="Intervalo de tempo">
-            <option value="5">5 min</option>
-            <option value="10">10 min</option>
-            <option value="15" selected>15 min</option>
-            <option value="20">20 min</option>
-            <option value="30">30 min</option>
-          </select>
-          <select class="agenda-view-sel" id="agenda-view-sel" onchange="agendaChangeView(this.value)"><option value="dia">Dia</option><option value="semana">Semana</option><option value="mes">Mês</option></select>
-        </div>
-      </div>
-      <div class="agenda-body">
-        <div class="agenda-left">
-          <div class="mini-cal">
-            <div class="mini-cal-nav">
-              <button class="mini-cal-nav-btn" onclick="miniCalPrev()">‹</button>
-              <div class="mini-cal-month" id="mini-cal-month">março 2026</div>
-              <button class="mini-cal-nav-btn" onclick="miniCalNext()">›</button>
-            </div>
-            <div class="mini-cal-days">
-              <div class="mini-cal-dh">dom</div><div class="mini-cal-dh">seg</div><div class="mini-cal-dh">ter</div>
-              <div class="mini-cal-dh">qua</div><div class="mini-cal-dh">qui</div><div class="mini-cal-dh">sex</div><div class="mini-cal-dh">sáb</div>
-            </div>
-            <div id="mini-cal-grid" class="mini-cal-days" style="margin-top:2px"></div>
-          </div>
-          <div class="agenda-profs" id="profs-panel">
-            <div class="agenda-profs-header">
-              Profissionais
-              <span class="agenda-profs-all" onclick="toggleAllProfs()">Todos</span>
-            </div>
-            <div id="profs-list"></div>
-          </div>
-          <div class="agenda-alerts">
-            <div class="agenda-alerts-header">
-              Alertas de retorno
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="color:var(--gray5)"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-            </div>
-            <div id="alerts-list">
-              <div class="alert-row"><span>JOSE SOUZA DA SIL...</span><span class="alert-date">17/02</span></div>
-              <div class="alert-row"><span>RENATO LIMA DA SIL...</span><span class="alert-date">17/02</span></div>
-              <div class="alert-row"><span>CARLA WENIA DA R...</span><span class="alert-date">17/02</span></div>
-            </div>
-          </div>
-        </div>
-        <div class="agenda-grid-wrap">
-          <div id="agenda-loading" class="loading"><div class="spin"></div><div>Carregando agenda...</div></div>
-          <div id="agenda-grid" class="agenda-grid hidden"></div>
-        </div>
-      </div>
-    </div>
+    <div class="page" id="p-agenda"></div>
 
     <!-- PACIENTES -->
     <div class="page" id="p-pacientes">
@@ -1816,181 +1739,6 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
   </div>
 </div>
 
-<div class="modal-ov" id="modal-nova-consulta" onclick="if(event.target===this)closeNovaConsulta()">
-  <div class="modal nc-modal">
-    <div class="modal-head" style="padding:16px 20px 14px">
-      <div class="modal-title">Nova consulta</div>
-      <button class="modal-close" onclick="closeNovaConsulta()">✕</button>
-    </div>
-    <div class="modal-body" style="padding:18px 20px;overflow-y:auto">
-      <div class="nc-tabs">
-        <div class="nc-tab active" onclick="ncTab('consulta',this)">Consulta</div>
-        <div class="nc-tab" onclick="ncTab('compromisso',this)">Compromisso</div>
-      </div>
-
-      <!-- Busca paciente -->
-      <div id="nc-search-section">
-        <div class="pac-search-wrap">
-          <input class="pac-search-input" id="nc-pac-input" placeholder="Nome do paciente" oninput="ncSearchPac(this.value)" autocomplete="off">
-          <button class="pac-search-clear" onclick="ncClearSearch()" style="display:none" id="nc-clear-btn">✕</button>
-        </div>
-        <div class="pac-dropdown hidden" id="nc-pac-drop"></div>
-      </div>
-
-      <!-- Paciente selecionado -->
-      <div class="hidden" id="nc-pac-selected">
-        <div class="pac-selected">
-          <div class="pac-selected-name" id="nc-pac-name">—</div>
-          <button class="pac-selected-clear" onclick="ncDeselectPac()">✕</button>
-        </div>
-        <div class="pac-info">
-          <span id="nc-pac-info">—</span>
-          <a href="#">Editar</a>
-        </div>
-
-        <div class="nc-checks" id="nc-primeira-row">
-          <label class="nc-check-label" id="lbl-primeira">
-            <input type="checkbox" id="nc-primeira" onchange="ncPrimeiraChange(this)">
-            Primeira consulta
-          </label>
-          <select class="nc-como" id="nc-como-conheceu">
-            <option value="">Como conheceu?</option>
-            <option>...</option>
-            <option>Controle de Indicação</option>
-            <option>Escola</option>
-            <option>Facebook</option>
-            <option>Google</option>
-            <option>Indicado por</option>
-            <option>Instagram</option>
-            <option>Outdoor</option>
-            <option>Outros</option>
-            <option>Panfleto</option>
-            <option>Placa</option>
-            <option>Plano/Convênio</option>
-            <option>Rádio</option>
-            <option>TikTok</option>
-          </select>
-          <label class="nc-check-label">
-            <input type="checkbox" id="nc-multiplos">
-            Múltiplos agendamentos
-          </label>
-        </div>
-
-        <div style="margin-bottom:12px">
-          <div class="nc-field-label">Observações para consulta</div>
-          <textarea class="form-input" placeholder="Observações" style="min-height:70px;resize:vertical" id="nc-obs"></textarea>
-        </div>
-
-        <button class="nc-add-proc">
-          <span style="font-size:18px;font-weight:300;color:var(--green)">+</span>
-          Adicionar procedimentos
-        </button>
-
-        <!-- Data / Profissional / Categoria -->
-        <div class="nc-field-row">
-          <div>
-            <div class="nc-field-label">Data</div>
-            <div class="nc-date-btn" id="nc-data-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
-              <span id="nc-data-txt">14 mar, 2026</span>
-            </div>
-          </div>
-          <div>
-            <div class="nc-field-label">Profissional</div>
-            <select class="nc-prof-sel" id="nc-prof-sel" onchange="ncProfChange()">
-              <option value="">Selecione...</option>
-            </select>
-          </div>
-          <div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-              <div class="nc-field-label">Categoria</div>
-              <a href="#" style="font-size:11px;color:var(--green)">Editar categorias</a>
-            </div>
-            <select class="nc-cat-sel" id="nc-cat-sel">
-              <option value="">Selecione</option>
-              <option value="avaliacao">⬡ Avaliação</option>
-              <option value="cirurgia">🟢 Cirurgia</option>
-              <option value="clareamento">🔴 Clareamento</option>
-              <option value="consulta">⚫ CONSULTA</option>
-              <option value="endodontia">🟢 Endodontia</option>
-              <option value="harmonizacao">🟡 Harmonização</option>
-              <option value="implante">🔵 Implante</option>
-              <option value="instalacao">🟢 Instalação aparelho</option>
-              <option value="manutencao">⬡ Manutenção</option>
-              <option value="restauracao">🟠 Restauração</option>
-              <option value="ortodontia">🔵 Ortodontia</option>
-              <option value="protese">⚪ Prótese</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Duração + Grade de horários -->
-        <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px">
-          <div>
-            <div class="nc-field-label">Duração do atendimento</div>
-            <select id="nc-duracao" class="nc-prof-sel" onchange="renderNcHorarios()" style="min-width:140px">
-              <option value="5">5 minutos</option>
-              <option value="10">10 minutos</option>
-              <option value="15">15 minutos</option>
-              <option value="20">20 minutos</option>
-              <option value="25">25 minutos</option>
-              <option value="30" selected>30 minutos</option>
-              <option value="45">45 minutos</option>
-              <option value="60">1 hora</option>
-              <option value="90">1h30</option>
-              <option value="120">2 horas</option>
-            </select>
-          </div>
-          <div>
-            <div class="nc-field-label">Horário</div>
-            <span id="nc-hora-selecionada" style="font-size:14px;font-weight:500;color:var(--text)">—</span>
-          </div>
-        </div>
-        <div class="horario-grid" id="nc-horarios"></div>
-
-        <!-- Confirmação / Alertas -->
-        <div class="nc-confirm-row">
-          <div>
-            <div class="nc-field-label">Confirmação</div>
-            <select class="nc-prof-sel">
-              <option>-- Não enviar --</option>
-              <option>1 dia antes</option>
-              <option>2 dias antes</option>
-              <option>3 dias antes</option>
-            </select>
-          </div>
-          <div>
-            <div class="nc-field-label">Alerta de consulta</div>
-            <select class="nc-prof-sel">
-              <option>-- Não enviar --</option>
-              <option>1 hora antes</option>
-              <option>2 horas antes</option>
-            </select>
-          </div>
-          <div>
-            <div class="nc-field-label">Enviar por</div>
-            <div class="send-via-wrap">
-              <div class="nc-date-btn" style="cursor:pointer;justify-content:space-between" onclick="toggleSendVia()">
-                <span id="send-via-txt">2 selecionados</span>
-                <span>▾</span>
-              </div>
-              <div class="send-via-drop" id="send-via-drop">
-                <div class="send-via-opt"><input type="checkbox" checked id="sv-whatsapp">Whatsapp</div>
-                <div class="send-via-opt"><input type="checkbox" checked id="sv-email">Email</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div style="font-size:11px;color:var(--text3);margin-top:-8px;margin-bottom:12px">Não é possível enviar alertas para agendamentos no mesmo dia, pois o envio automático ocorre às 7h da manhã.</div>
-      </div>
-
-    </div>
-    <div class="nc-footer">
-      <button class="btn" onclick="closeNovaConsulta()">Cancelar</button>
-      <button class="btn-confirm-consulta" id="nc-confirmar" disabled onclick="confirmarConsulta()">Confirmar consulta</button>
-    </div>
-  </div>
-</div>
 
 <div class="modal-ov" id="modal-paciente" onclick="if(event.target===this)closeModal('paciente')">
   <div class="modal lg">
@@ -2446,428 +2194,6 @@ async function loadDashboard() {
   } catch(e) { console.error('[loadDashboard]', e) }
 }
 
-// ── AGENDA ──────────────────────────────────────────────────────
-var _agendaMesesCarregados={}
-function _mapAgendamento(a){
-  var dh=a.data_hora||''
-  return {
-    id:a.id, date:dh.slice(0,10), fromTime:dh.slice(11,16)||'',
-    toTime:a.hora_fim||'', PatientName:a.paciente_nome||'', patientName:a.paciente_nome||'',
-    MobilePhone:a.paciente_telefone||'', ProfessionalId:a.profissional_id,
-    ProfessionalName:a.profissional_nome||'', professionalId:a.profissional_id,
-    CategoryDescription:a.tipo||'', status:a.status||'agendado',
-    procedureName:a.procedimento||'', value:a.valor||0, observations:a.observacoes||'',
-    paciente_foto:a.paciente_foto||'', paciente_id:a.paciente_id
-  }
-}
-
-async function loadAgenda() {
-  var loadEl = document.getElementById('agenda-loading')
-  var gridEl = document.getElementById('agenda-grid')
-  if (loadEl) loadEl.classList.remove('hidden')
-  if (gridEl) gridEl.classList.add('hidden')
-  try {
-    // Load professionals if not loaded yet
-    if(!ST.profissionais||!ST.profissionais.length){
-      try{
-        var pd=await apiData('profissionais')
-        ST.profissionais=(pd.data||pd.profissionais||[]).map(function(p){return {id:p.id,nome:p.nome,name:p.nome,Name:p.nome,specialty:p.especialidade,especialidade:p.especialidade,cpf:p.cpf||'',email:p.email||'',telefone:p.telefone||'',cro:p.cro||'',cro_uf:p.cro_uf||'',rg:p.rg||'',sexo:p.sexo||'',estado_civil:p.estado_civil||'',data_nascimento:p.data_nascimento||'',endereco:p.endereco||'',numero:p.numero||'',bairro:p.bairro||'',cidade:p.cidade||'',uf:p.uf||'',cep:p.cep||'',complemento:p.complemento||'',total_agendamentos:p.total_agendamentos||0}})
-      }catch(e2){ST.profissionais=[]}
-    }
-    // Load current month's agendamentos
-    var mesAtual=agendaDate.getFullYear()+'-'+String(agendaDate.getMonth()+1).padStart(2,'0')
-    await loadAgendaMes(mesAtual)
-    renderMiniCal()
-    renderProfsList()
-    renderAgendaGrid()
-    renderPacientes()
-    filterProntList()
-    if (loadEl) loadEl.classList.add('hidden')
-    if (gridEl) gridEl.classList.remove('hidden')
-  } catch(e) {
-    if (loadEl) loadEl.innerHTML='<div style="color:var(--red);text-align:center">'+e.message+'<br><br><button class="btn" onclick="loadAgenda()">Tentar novamente</button></div>'
-  }
-}
-
-async function loadAgendaMes(mes){
-  if(_agendaMesesCarregados[mes])return // Already loaded
-  try{
-    var d=await apiData('agendamentos',{mes:mes,limit:2000})
-    var rows=d.agendamentos||[]
-    var mapped=rows.map(_mapAgendamento)
-    // Merge into ST.agendamentos (avoid duplicates)
-    if(!ST.agendamentos)ST.agendamentos=[]
-    var existingIds={}
-    ST.agendamentos.forEach(function(a){existingIds[a.id]=true})
-    for(var i=0;i<mapped.length;i++){
-      if(!existingIds[mapped[i].id]){
-        ST.agendamentos.push(mapped[i])
-        existingIds[mapped[i].id]=true
-      }
-    }
-    _agendaMesesCarregados[mes]=true
-  }catch(e){console.error('[loadAgendaMes]',mes,e.message)}
-}
-
-async function ensureAgendaMonth(){
-  var mes=agendaDate.getFullYear()+'-'+String(agendaDate.getMonth()+1).padStart(2,'0')
-  if(!_agendaMesesCarregados[mes]){
-    await loadAgendaMes(mes)
-  }
-}
-
-function formatAgendaDate(d) {
-  return DIAS_FULL[d.getDay()]+', '+d.getDate()+' de '+MESES_PT[d.getMonth()]+' de '+d.getFullYear()
-}
-
-async function agendaPrev() {
-  if(agendaView==='semana'){agendaDate.setDate(agendaDate.getDate()-7)}
-  else if(agendaView==='mes'){agendaDate.setMonth(agendaDate.getMonth()-1)}
-  else{agendaDate.setDate(agendaDate.getDate()-1)}
-  await ensureAgendaMonth();renderMiniCal();renderAgendaGrid()
-}
-async function agendaNext() {
-  if(agendaView==='semana'){agendaDate.setDate(agendaDate.getDate()+7)}
-  else if(agendaView==='mes'){agendaDate.setMonth(agendaDate.getMonth()+1)}
-  else{agendaDate.setDate(agendaDate.getDate()+1)}
-  await ensureAgendaMonth();renderMiniCal();renderAgendaGrid()
-}
-async function agendaHoje() { agendaDate = new Date(); await ensureAgendaMonth(); renderMiniCal(); renderAgendaGrid() }
-async function agendaChangeView(v) { agendaView = v; await ensureAgendaMonth(); renderAgendaGrid() }
-function setAgendaInterval(min) { agendaInterval = min; renderAgendaGrid() }
-
-function renderMiniCal() {
-  var ano = miniCalDate.getFullYear(), mes = miniCalDate.getMonth()
-  var mcMonth = document.getElementById('mini-cal-month')
-  if(!mcMonth) return
-  mcMonth.textContent = MESES_PT[mes]+' '+ano
-  var hoje = new Date()
-  var primeiro = new Date(ano,mes,1)
-  var ultimo = new Date(ano,mes+1,0)
-  var html = ''
-  for (var i=0;i<primeiro.getDay();i++) {
-    var dd=new Date(ano,mes,1-primeiro.getDay()+i)
-    html+='<div class="mini-cal-d other">'+dd.getDate()+'</div>'
-  }
-  for (var d=1;d<=ultimo.getDate();d++) {
-    var isToday = d===hoje.getDate()&&mes===hoje.getMonth()&&ano===hoje.getFullYear()
-    var isSel = d===agendaDate.getDate()&&mes===agendaDate.getMonth()&&ano===agendaDate.getFullYear()
-    html+='<div class="mini-cal-d '+(isToday&&!isSel?'today':'')+' '+(isSel?'selected':'')+'" onclick="selectMiniCalDay('+d+','+mes+','+ano+')">'+d+'</div>'
-  }
-  var mcGrid = document.getElementById('mini-cal-grid')
-  if(mcGrid) mcGrid.innerHTML = html
-}
-
-function miniCalPrev() { miniCalDate.setMonth(miniCalDate.getMonth()-1); renderMiniCal() }
-function miniCalNext() { miniCalDate.setMonth(miniCalDate.getMonth()+1); renderMiniCal() }
-async function selectMiniCalDay(d,m,y) { agendaDate=new Date(y,m,d); await ensureAgendaMonth(); renderMiniCal(); renderAgendaGrid() }
-
-function renderProfsList() {
-  var profs = ST.profissionais || (ST.dashboard&&ST.dashboard.profissionais) || []
-  // Initialize filter if empty
-  if(Object.keys(agendaProfsFilter).length===0){
-    profs.forEach(function(p,i){ agendaProfsFilter[String(p.id||p.Id||i)] = true })
-  }
-  var profsListEl = document.getElementById('profs-list')
-  if(!profsListEl) return
-  profsListEl.innerHTML = profs.map(function(p,i){
-    var nome = p.name||p.Name||p.nome||'Profissional'
-    var cor = PROF_CORES[i%PROF_CORES.length]
-    var profKey = String(p.id||p.Id||i)
-    var checked = agendaProfsFilter[profKey] !== false
-    return '<div class="prof-check" onclick="toggleProfFilter(\''+profKey+'\')">'+
-      '<div class="prof-check-box" style="border-color:'+cor+';'+(checked?'background:'+cor:'background:transparent')+'">'+
-      (checked?'<svg width="8" height="8" viewBox="0 0 12 12" fill="white"><path d="M1 6l4 4 6-6" stroke="white" stroke-width="2" fill="none"/></svg>':'')+
-      '</div>'+
-      '<div class="prof-check-name">'+escHtml(nome.toUpperCase().substring(0,20))+'</div>'+
-    '</div>'
-  }).join('')
-}
-
-function toggleProfFilter(key) {
-  agendaProfsFilter[key] = !agendaProfsFilter[key]
-  renderProfsList()
-  renderAgendaGrid()
-}
-
-function toggleAllProfs() {
-  var profs = ST.profissionais || (ST.dashboard&&ST.dashboard.profissionais) || []
-  var allOn = profs.every(function(p,i){ return agendaProfsFilter[String(p.id||p.Id||i)] !== false })
-  profs.forEach(function(p,i){ agendaProfsFilter[String(p.id||p.Id||i)] = !allOn })
-  renderProfsList()
-  renderAgendaGrid()
-}
-
-function getStatusIcon(status) {
-  if(!status) return ''
-  var s = status.toLowerCase()
-  if(s==='confirmado'||s==='confirmed') return '<span title="Confirmado pelo paciente" style="font-size:11px;color:#4CAF50">&#10004;</span>'
-  if(s==='nao_confirmado') return '<span title="Paciente nao confirmou" style="font-size:11px;color:#F44336">&#10008;</span>'
-  if(s==='atendido'||s==='completed'||s==='realizado') return '<span title="Atendido" style="font-size:11px;color:#2196F3">&#9679;</span>'
-  if(s==='cancelado'||s==='cancelled') return '<span title="Cancelado" style="font-size:11px;color:#F44336">&#10007;</span>'
-  if(s==='faltou'||s==='no_show') return '<span title="Faltou" style="font-size:11px;color:#FF9800">&#9888;</span>'
-  if(s==='em_espera') return '<span title="Em espera" style="font-size:11px;color:#FF9800">&#9202;</span>'
-  if(s==='em_atendimento') return '<span title="Em atendimento" style="font-size:11px;color:#2196F3">&#9881;</span>'
-  return ''
-}
-
-function agendaDblClick(profId, timeStr) {
-  openNovaConsulta(profId, timeStr)
-}
-
-function renderAgendaGrid() {
-  var el = document.getElementById('agenda-grid')
-  if(!el) return
-  var dtTitle = document.getElementById('agenda-date-title')
-  if(dtTitle) dtTitle.textContent = formatAgendaDate(agendaDate)
-  renderMiniCal()
-
-  if(agendaView==='mes') { renderAgendaMonth(el); return }
-  if(agendaView==='semana') { renderAgendaWeek(el); return }
-
-  // Day view: professionals as ROWS, time as COLUMNS (horizontal)
-  var ag = ST.agendamentos||[]
-  var dtStr = agendaDate.toISOString().slice(0,10)
-  var allProfs = ST.profissionais || (ST.dashboard&&ST.dashboard.profissionais) || []
-  var profs = allProfs.filter(function(p,i){ return agendaProfsFilter[String(p.id||p.Id||i)] !== false })
-  var START_H=7, END_H=21
-  var interval = agendaInterval
-  var slotsPerHour = 60/interval
-  var totalSlots = (END_H-START_H)*slotsPerHour
-  var PX_SLOT_W = Math.max(20, Math.floor(80/slotsPerHour))
-  var now = new Date()
-  var nowH = now.getHours(), nowM = now.getMinutes()
-  var todayAg = ag.filter(function(a){return !a.Deleted&&a.date&&a.date.slice(0,10)===dtStr})
-
-  // Build prof ID to color/index map
-  var profMap = {}
-  allProfs.forEach(function(p,i){
-    profMap[String(p.id||p.Id||'')] = { idx: i, cor: PROF_CORES[i%PROF_CORES.length], name: p.name||p.Name||p.nome||'Profissional' }
-  })
-
-  // Hour header row (horizontal)
-  var html = '<div class="agenda-hour-headers">'
-  html += '<div class="agenda-prof-spacer"></div>'
-  for(var h=START_H;h<END_H;h++){
-    var isNowH = h===nowH && agendaDate.toDateString()===now.toDateString()
-    var colW = slotsPerHour*PX_SLOT_W
-    html += '<div class="agenda-hour-header'+(isNowH?' now-hour':'')+'" style="min-width:'+colW+'px;width:'+colW+'px">'+String(h).padStart(2,'0')+':00'
-    if(slotsPerHour>1){
-      html += '<div class="agenda-q-marks">'
-      for(var qi=0;qi<slotsPerHour;qi++){
-        html += '<span>'+String(qi*interval).padStart(2,'0')+'</span>'
-      }
-      html += '</div>'
-    }
-    html += '</div>'
-  }
-  html += '</div>'
-
-  // Grid body with professional rows
-  html += '<div class="agenda-grid-body">'
-
-  profs.forEach(function(p,pi){
-    var profId = String(p.id||p.Id||'')
-    var nome = p.name||p.Name||p.nome||'Profissional'
-    var globalIdx = allProfs.indexOf(p)
-    if(globalIdx<0) globalIdx = pi
-    var cor = PROF_CORES[globalIdx%PROF_CORES.length]
-    var profAg = todayAg.filter(function(a){ return String(a.ProfessionalId||a.professionalId||'')===profId })
-    var count = profAg.length
-    var ini = nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
-
-    html += '<div class="agenda-prof-row">'
-    // Prof info (sticky left)
-    html += '<div class="agenda-prof-info">'
-    html += '<div class="agenda-prof-av" style="background:'+cor+'">'+ini+'</div>'
-    html += '<div><div class="agenda-prof-name" title="'+nome+'">'+nome.split(' ').slice(0,2).join(' ')+'</div>'
-    html += '<div class="agenda-prof-count">'+count+' pac.</div></div>'
-    html += '</div>'
-
-    // Slots row
-    html += '<div class="agenda-slots-row">'
-    for(var s=0;s<totalSlots;s++){
-      var slotMin = s*interval
-      var sh = START_H + Math.floor(slotMin/60)
-      var sm = slotMin%60
-      var isHourStart = sm===0
-      var timeStr = String(sh).padStart(2,'0')+':'+String(sm).padStart(2,'0')
-      html += '<div class="slot-cell'+(isHourStart?' hour-start':'')+'" style="width:'+PX_SLOT_W+'px" ondblclick="agendaDblClick(\''+profId+'\',\''+timeStr+'\')"></div>'
-    }
-
-    // Appointment blocks (absolute positioned horizontally)
-    profAg.forEach(function(a){
-      var parts = (a.fromTime||'9:00').split(':').map(Number)
-      var aH=parts[0], aM=parts[1]||0
-      var parts2 = (a.toTime||((aH+1)+':'+String(aM).padStart(2,'0'))).replace(/h$/,'').split(':').map(Number)
-      var aH2=parts2[0], aM2=parts2[1]||0
-      var durMin = (aH2*60+aM2)-(aH*60+aM)
-      if(durMin<=0) durMin=30
-      var startMinFromLeft = (aH-START_H)*60 + aM
-      var left = (startMinFromLeft/interval)*PX_SLOT_W
-      var width = Math.max(PX_SLOT_W, (durMin/interval)*PX_SLOT_W)
-      var statusIcon = getStatusIcon(a.status)
-      html += '<div class="appt-block" style="left:'+left+'px;width:'+width+'px;background:'+cor+'dd;color:#fff" onclick="event.stopPropagation();openApptPanel('+a.id+')" ondblclick="event.stopPropagation();editarAgendamento('+a.id+',\''+profId+'\',\''+a.fromTime+'\',\''+String(aH2).padStart(2,'0')+':'+String(aM2).padStart(2,'0')+'\',\''+((a.PatientName||a.patientName||'').replace(/'/g,"\\'"))+'\',\''+((a.CategoryDescription||'').replace(/'/g,"\\'"))+'\',\''+((a.observations||'').replace(/'/g,"\\'"))+'\','+durMin+')">'
-      html += '<div class="appt-name">'+statusIcon+' '+(a.PatientName||a.patientName||'Paciente')+'</div>'
-      if(width>80) html += '<div class="appt-time">'+(a.fromTime||'--')+' - '+String(aH2).padStart(2,'0')+':'+String(aM2).padStart(2,'0')+'</div>'
-      html += '</div>'
-    })
-
-    html += '</div>' // end slots-row
-    html += '</div>' // end prof-row
-  })
-
-  // If no profs, show message
-  if(!profs.length){
-    html += '<div class="agenda-prof-row"><div class="agenda-prof-info" style="width:100%;max-width:100%;justify-content:center;color:var(--text3);font-size:13px">Nenhum profissional selecionado</div></div>'
-  }
-
-  // Now marker (vertical line)
-  if(nowH>=START_H && nowH<END_H && agendaDate.toDateString()===now.toDateString()){
-    var nowMinFromLeft = (nowH-START_H)*60 + nowM
-    var nowLeft = 140 + (nowMinFromLeft/interval)*PX_SLOT_W
-    html += '<div class="now-line" style="left:'+nowLeft+'px"></div>'
-  }
-
-  html += '</div>' // end grid-body
-
-  el.innerHTML = html
-  el.classList.remove('hidden')
-
-  // Auto-scroll to current time or 8am
-  var bodyEl = el.querySelector('.agenda-grid-body')
-  if(bodyEl){
-    if(nowH>=START_H && nowH<END_H && agendaDate.toDateString()===now.toDateString()){
-      var scrollTo = Math.max(0, ((nowH-START_H)*60+nowM-30)/interval*PX_SLOT_W)
-      bodyEl.scrollLeft = scrollTo
-    } else {
-      bodyEl.scrollLeft = ((8-START_H)*60/interval)*PX_SLOT_W
-    }
-  }
-}
-
-function renderAgendaWeek(el) {
-  var ag = ST.agendamentos||[]
-  var allProfs = ST.profissionais || (ST.dashboard&&ST.dashboard.profissionais) || []
-  var now = new Date()
-  var START_H=7, END_H=21
-  var DIAS_CURTO = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
-
-  // Find start of week (Sunday)
-  var weekStart = new Date(agendaDate)
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay())
-
-  var days = []
-  for(var i=0;i<7;i++){
-    var d = new Date(weekStart)
-    d.setDate(d.getDate()+i)
-    days.push(d)
-  }
-
-  // Build prof color map
-  var profColorMap = {}
-  allProfs.forEach(function(p,idx){ profColorMap[String(p.id||p.Id||'')] = PROF_CORES[idx%PROF_CORES.length] })
-
-  var html = '<div class="agenda-week-grid" style="overflow:auto;max-height:100%">'
-
-  // Header row
-  html += '<div class="agenda-week-day-hdr"></div>'
-  days.forEach(function(d){
-    var isToday = d.toDateString()===now.toDateString()
-    html += '<div class="agenda-week-day-hdr'+(isToday?' today':'')+'">'+DIAS_CURTO[d.getDay()]+' '+d.getDate()+'/'+String(d.getMonth()+1).padStart(2,'0')+'</div>'
-  })
-
-  // Hour rows
-  for(var h=START_H;h<END_H;h++){
-    html += '<div class="agenda-week-time">'+String(h).padStart(2,'0')+':00</div>'
-    days.forEach(function(d){
-      var dtStr = d.toISOString().slice(0,10)
-      var hourAg = ag.filter(function(a){
-        if(a.Deleted||!a.date||a.date.slice(0,10)!==dtStr) return false
-        var parts = (a.fromTime||'').split(':').map(Number)
-        return parts[0]===h
-      })
-      html += '<div class="agenda-week-cell" ondblclick="selectMiniCalDay('+d.getDate()+','+d.getMonth()+','+d.getFullYear()+')">'
-      hourAg.slice(0,3).forEach(function(a){
-        var profId = String(a.ProfessionalId||a.professionalId||'')
-        var cor = profColorMap[profId]||'var(--gray5)'
-        html += '<div class="agenda-week-appt" style="background:'+cor+'dd" title="'+(a.PatientName||a.patientName||'')+' '+(a.fromTime||'')+'">'+(a.PatientName||a.patientName||'').split(' ')[0]+' '+(a.fromTime||'')+'</div>'
-      })
-      if(hourAg.length>3) html += '<div style="font-size:9px;color:var(--text3);padding:1px 4px">+'+(hourAg.length-3)+' mais</div>'
-      html += '</div>'
-    })
-  }
-
-  html += '</div>'
-  el.innerHTML = html
-  el.classList.remove('hidden')
-}
-
-function renderAgendaMonth(el) {
-  var ag = ST.agendamentos||[]
-  var allProfs = ST.profissionais || (ST.dashboard&&ST.dashboard.profissionais) || []
-  var now = new Date()
-  var year = agendaDate.getFullYear(), month = agendaDate.getMonth()
-  var firstDay = new Date(year,month,1)
-  var lastDay = new Date(year,month+1,0)
-  var DIAS_CURTO = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB']
-
-  // Build prof color map
-  var profColorMap = {}
-  allProfs.forEach(function(p,idx){ profColorMap[String(p.id||p.Id||'')] = PROF_CORES[idx%PROF_CORES.length] })
-
-  // Count appointments per day
-  var countByDay = {}
-  var profsByDay = {}
-  ag.forEach(function(a){
-    if(a.Deleted||!a.date) return
-    var dKey = a.date.slice(0,10)
-    if(!countByDay[dKey]) countByDay[dKey]=0
-    countByDay[dKey]++
-    if(!profsByDay[dKey]) profsByDay[dKey]={}
-    var pid = String(a.ProfessionalId||a.professionalId||'')
-    if(pid) profsByDay[dKey][pid] = (profsByDay[dKey][pid]||0)+1
-  })
-
-  var html = '<div class="agenda-month-grid">'
-
-  // Day headers
-  DIAS_CURTO.forEach(function(d){ html += '<div class="agenda-month-hdr">'+d+'</div>' })
-
-  // Calendar cells
-  var startOffset = firstDay.getDay()
-  var totalCells = Math.ceil((startOffset + lastDay.getDate())/7)*7
-
-  for(var i=0;i<totalCells;i++){
-    var cellDate = new Date(year,month,1-startOffset+i)
-    var isOther = cellDate.getMonth()!==month
-    var isToday = cellDate.toDateString()===now.toDateString()
-    var dStr = cellDate.toISOString().slice(0,10)
-    var count = countByDay[dStr]||0
-    var profCounts = profsByDay[dStr]||{}
-
-    html += '<div class="agenda-month-cell'+(isOther?' other-month':'')+(isToday?' today':'')+'" onclick="selectMiniCalDay('+cellDate.getDate()+','+cellDate.getMonth()+','+cellDate.getFullYear()+');agendaChangeView(\'dia\');document.getElementById(\'agenda-view-sel\').value=\'dia\'">'
-    html += '<div class="agenda-month-day">'+cellDate.getDate()+'</div>'
-    if(count>0){
-      html += '<div class="agenda-month-count" style="font-weight:500;color:var(--text2)">'+count+' agendamentos</div>'
-      // Show top 3 prof color dots
-      var pids = Object.keys(profCounts).slice(0,4)
-      if(pids.length){
-        html += '<div style="display:flex;gap:3px;margin-top:4px;flex-wrap:wrap">'
-        pids.forEach(function(pid){
-          var cor = profColorMap[pid]||'var(--gray5)'
-          html += '<div class="agenda-month-dot" style="background:'+cor+'" title="'+profCounts[pid]+' agendamentos"></div>'
-        })
-        html += '</div>'
-      }
-    }
-    html += '</div>'
-  }
-
-  html += '</div>'
-  el.innerHTML = html
-  el.classList.remove('hidden')
-}
 
 // ── PACIENTES ──────────────────────────────────────────────────
 var _pacBuscaTimer=null
@@ -2991,7 +2317,7 @@ async function abrirProntuario(nome, id) {
         '</div>'+
         '<div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">'+
           '<div style="display:flex;gap:8px"><button class="pdt-icon-btn" title="Excluir">🗑</button><button class="pdt-icon-btn" title="Inativar">🚫</button><button class="pdt-icon-btn" title="Imprimir">🖨</button><button class="pdt-icon-btn" title="WhatsApp" onclick="window.open(\'https://wa.me/55'+(tel||'').replace(/\\D/g,'')+'\')">💬</button><button class="pdt-btn-outline" onclick="openModal(\'paciente\')">+ Novo Paciente</button></div>'+
-          '<div style="display:flex;gap:8px"><div style="border:1px solid #e0e0e0;border-radius:4px;padding:8px 14px;font-size:12px;color:#616161"><span>🕐 Alerta de retorno</span><div style="color:#E65100;cursor:pointer;margin-top:2px">Criar alerta</div></div></div>'+
+          '<div style="display:flex;gap:8px"><div style="border:1px solid #e0e0e0;border-radius:4px;padding:8px 14px;font-size:12px;color:#616161"><span>🕐 Alerta de retorno</span><div style="color:#E65100;cursor:pointer;margin-top:2px" onclick="novoAlertaRetorno({id:_prontData.paciente.id,nome:_prontData.paciente.nome,telefone:_prontData.paciente.telefone})">Criar alerta</div></div>'+'<div style="border:1px solid #e0e0e0;border-radius:4px;padding:8px 14px;font-size:12px;color:#616161"><span>📅 Consulta</span><div style="color:#E65100;cursor:pointer;margin-top:2px" onclick="novoAgendamentoPaciente({id:_prontData.paciente.id,nome:_prontData.paciente.nome,telefone:_prontData.paciente.telefone})">Agendar</div></div></div>'+
         '</div>'+
       '</div>'
 
@@ -4526,7 +3852,7 @@ function verProfissional(idx){
 
   renderProfDados(p,cor)
   renderProfContato(p)
-  renderProfAgendaTrabalho()
+  renderProfAgendaTrabalho(p)
   renderProfConfigComissao(p)
   renderProfAnaliseComissao(p)
   renderProfComissoes(p)
@@ -4902,41 +4228,27 @@ async function criarProfissional(){
   }catch(e){alert('Erro: '+e.message)}
 }
 
-function renderProfAgendaTrabalho(){
-  var dias=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado']
-  var html=
-    '<div style="border:1px solid #e0e0e0;border-radius:4px;padding:20px;margin-bottom:16px;background:#fff">'+
-      '<div style="font-size:14px;font-weight:500;color:#212121;margin-bottom:12px">Disponibilizar Agenda de Atendimentos <span style="color:#9e9e9e;cursor:help">ⓘ</span></div>'+
-      '<div style="display:flex;gap:20px;font-size:14px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="prof-agenda-disp" checked style="accent-color:#E65100"> Sim</label><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="prof-agenda-disp" style="accent-color:#E65100"> Não</label></div>'+
-    '</div>'+
-    '<div style="border:1px solid #e0e0e0;border-radius:4px;padding:20px;margin-bottom:16px;background:#fff">'+
-      '<div style="font-size:14px;font-weight:500;color:#212121;margin-bottom:12px">Visualizar Agenda</div>'+
-      '<div style="display:flex;gap:20px;font-size:14px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="prof-agenda-vis" style="accent-color:#E65100"> Própria</label><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="prof-agenda-vis" checked style="accent-color:#E65100"> Clínica</label></div>'+
-    '</div>'+
-    '<div style="display:flex;gap:24px">'+
-    // Legenda
-    '<div style="flex-shrink:0;padding-top:40px">'+
-      '<div style="display:flex;flex-direction:column;gap:8px;font-size:13px">'+
-        '<div style="display:flex;align-items:center;gap:8px"><div style="width:16px;height:16px;border:1px solid #e0e0e0;background:#fff;border-radius:2px"></div>Disponível</div>'+
-        '<div style="display:flex;align-items:center;gap:8px"><div style="width:16px;height:16px;background:#616161;border-radius:2px"></div>Indisponível</div>'+
-        '<div style="display:flex;align-items:center;gap:8px"><div style="width:16px;height:16px;background:#8D6E63;border-radius:2px"></div>Clínica indisponível</div>'+
-      '</div>'+
-    '</div>'+
-    // Grid
-    '<div style="flex:1;overflow-x:auto"><div class="awg"><div class="awg-h">Horário</div>'
-  dias.forEach(function(d){html+='<div class="awg-h">'+d+'</div>'})
-  for(var h=8;h<=19;h++){
-    for(var m=0;m<60;m+=30){
-      var t=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')
-      html+='<div class="awg-t">'+t+'</div>'
-      dias.forEach(function(){
-        var cl=(h>=8&&h<12)||(h>=14&&h<18)?'avail':'unavail'
-        html+='<div class="awg-c '+cl+'" onclick="this.className=this.className.includes(\'avail\')?\'awg-c unavail\':this.className.includes(\'unavail\')?\'awg-c clinic\':\'awg-c avail\'"></div>'
-      })
-    }
-  }
-  html+='</div></div></div>'
-  document.getElementById('pdt-agenda-trabalho').innerHTML=html
+// Agenda de trabalho do profissional — horários reais (lib/rotas/agenda.js), editados pelo
+// mesmo modal da Agenda (⚙ › Horários de atendimento)
+async function renderProfAgendaTrabalho(p){
+  var box=document.getElementById('pdt-agenda-trabalho');if(!box)return
+  if(!p||!p.id){box.innerHTML='';return}
+  box.innerHTML='<div style="color:var(--text3);font-size:13px">Carregando horários...</div>'
+  try{
+    var c=await apiData('agenda-config',{})
+    var hs=(c.horarios_profissionais||[]).filter(function(h){return h.profissional_id===p.id})
+    var usa=hs.length?hs:(c.horarios_clinica||[])
+    var dias=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado']
+    var linhas=dias.map(function(d,i){
+      var ints=usa.filter(function(h){return h.dia_semana===i}).map(function(h){return h.hora_inicio+' às '+h.hora_fim})
+      return '<tr><td style="padding:10px 16px;border-bottom:1px solid var(--border2);color:var(--text2)">'+d+'</td><td style="padding:10px 16px;border-bottom:1px solid var(--border2);color:'+(ints.length?'var(--text2)':'var(--text3)')+'">'+(ints.length?ints.join(' e '):'Não atende')+'</td></tr>'
+    }).join('')
+    box.innerHTML='<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:20px 24px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Horários de atendimento</div>'+
+      '<button class="btn btn-primary" onclick="abrirHorariosAgenda('+Number(p.id)+')">Editar horários</button></div>'+
+      (hs.length?'':'<div style="font-size:12px;color:var(--text3);margin-bottom:8px">Sem horário próprio: segue o horário de funcionamento da clínica.</div>')+
+      '<table style="width:100%;border-collapse:collapse;font-size:14px">'+linhas+'</table></div>'
+  }catch(e){box.innerHTML='<div style="color:var(--red);font-size:13px">'+escHtml(e.message)+'</div>'}
 }
 
 async function renderProfConfigComissao(p){
@@ -5516,7 +4828,7 @@ async function loadRelAgendamentos(){
 // ── CONFIGURAÇÕES ──────────────────────────────────────────────
 function renderConfiguracoes() {
   var cfgEl=document.getElementById('cfg-list');if(!cfgEl)return
-  var itens=['Dados da Clínica / Cobrança','Exportar Dados','Administração de Dados','Listas/Tabelas de Preço','Especialidades','Orçamento','Personalização do Sistema','Segurança']
+  var itens=['Dados da Clínica / Cobrança','Agenda','Exportar Dados','Administração de Dados','Listas/Tabelas de Preço','Especialidades','Orçamento','Personalização do Sistema','Segurança']
   var conteudos={
     'Dados da Clínica / Cobrança':'<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Configure os dados da clínica para emissão de cobranças (PIX e Boleto).</div>'+
       '<div id="cfg-clinica-form">'+
@@ -5607,6 +4919,8 @@ function renderConfiguracoes() {
       }).join('')+
       '</div>'
   }
+  conteudos['Agenda']='<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Horário de funcionamento da clínica, agenda de trabalho de cada profissional e categorias de agendamento.</div>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" onclick="abrirHorariosAgenda()">Horários de atendimento</button><button class="btn" onclick="abrirCategoriasAgenda()">Categorias</button></div>'
   conteudos['Administração de Dados']='<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Registros excluídos ficam aqui e podem ser restaurados. Apenas administradores.</div>'+
     '<div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:16px">'+
       '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Tipo</label>'+
@@ -8713,7 +8027,6 @@ async function processarPerguntaVoz(texto){
 }
 
 // ── INIT ────────────────────────────────────────────────────────
-renderMiniCal()
 loadDashboard()
 loadMinhasPermissoes()
 iniciarPollingAsaasGlobal()
@@ -8891,7 +8204,7 @@ iniciarPollingAsaasGlobal()
 // DROPDOWN NOVO
 // ══════════════════════════════════════════════════════
 function toggleNovoDrop(){document.getElementById('novo-drop').classList.toggle('open')}
-function closeNovoDrop(){document.getElementById('novo-drop').classList.remove('open')}
+function closeNovoDrop(){var d=document.getElementById('novo-drop');if(d)d.classList.remove('open')}
 
 // ══════════════════════════════════════════════════════
 // FIN TABS — versão definitiva
@@ -10003,354 +9316,6 @@ async function renderExtrato(){
   }catch(e){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">'+e.message+'</div>'}
 }
 
-// ══════════════════════════════════════════════════════
-// NOVA CONSULTA
-// ══════════════════════════════════════════════════════
-const HORAS_NC=['8:00','8:15','8:30','8:45','9:00','9:15','9:30','9:45','10:00','10:15','10:30','10:45','11:00','11:15','11:30','11:45','12:00','12:15','12:30','12:45','13:00','13:15','13:30','13:45','14:00','14:15','14:30','14:45','15:00','15:15','15:30','15:45','16:00','16:15','16:30','16:45','17:00','17:15','17:30','17:45','18:00','18:15','18:30','18:45','19:00','19:15','19:30','19:45']
-// ── APPOINTMENT DETAIL PANEL ──
-function openApptPanel(agId){
-  var ag=ST.agendamentos||[]
-  var a=null;ag.forEach(function(x){if(x.id===agId)a=x})
-  if(!a)return
-  var allProfs=ST.profissionais||(ST.dashboard&&ST.dashboard.profissionais)||[]
-  var profId=String(a.ProfessionalId||a.professionalId||'')
-  var profInfo=null;var profIdx=0
-  allProfs.forEach(function(p,i){if(String(p.id||p.Id||'')===profId){profInfo=p;profIdx=i}})
-  var cor=PROF_CORES[profIdx%PROF_CORES.length]
-  var nome=a.PatientName||a.patientName||'Paciente'
-  var ini=nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
-  var apptFoto=a.paciente_foto||''
-  var tel=a.MobilePhone||''
-  var profNome=profInfo?(profInfo.name||profInfo.Name||profInfo.nome||''):(a.ProfessionalName||'')
-  var fromTime=a.fromTime||'--'
-  var toTime=a.toTime||''
-  if(!toTime){var p1=(a.fromTime||'9:00').split(':').map(Number);toTime=String(p1[0]+1).padStart(2,'0')+':'+String(p1[1]||0).padStart(2,'0')}
-  var dataFmt=agendaDate.getDate()+' de '+MESES_PT[agendaDate.getMonth()]+' de '+agendaDate.getFullYear()
-  var diaSemana=DIAS_FULL[agendaDate.getDay()]
-  var status=a.status||'agendado'
-  var statusColors={agendado:'#1565C0',confirmado:'#2E7D52',em_espera:'#FF6D00',em_atendimento:'#7B1FA2',atendido:'#4CAF50',atrasado:'#E65100',faltou:'#C62828',cancelado:'#757575'}
-  var stCor=statusColors[status]||'#1565C0'
-
-  // Duration calc
-  var p1t=(a.fromTime||'9:00').split(':').map(Number)
-  var p2t=toTime.replace(/h$/,'').split(':').map(Number)
-  var durMin=(p2t[0]*60+(p2t[1]||0))-(p1t[0]*60+(p1t[1]||0))
-  if(durMin<=0)durMin=30
-
-  var panel=document.getElementById('appt-panel')
-  panel.innerHTML=
-    // Header with colored bar
-    '<div style="height:4px;background:'+cor+';border-radius:8px 8px 0 0"></div>'+
-    '<div class="appt-panel-header">'+
-      '<div class="appt-panel-av" style="'+(apptFoto?'background:url('+escCssUrl(apptFoto)+') center/cover;color:transparent':'background:'+cor+'20;color:'+cor)+'">'+ini+'</div>'+
-      '<div>'+
-        '<div class="appt-panel-name">'+nome+'</div>'+
-        '<div class="appt-panel-phone">'+
-          (tel?'<span>'+tel+'</span>':'<span style="color:var(--text3)">Sem telefone</span>')+
-          '<span class="badge" style="background:'+stCor+'20;color:'+stCor+';padding:2px 8px;border-radius:4px;font-size:10px;font-weight:500">'+status.toUpperCase().replace('_',' ')+'</span>'+
-        '</div>'+
-      '</div>'+
-      '<button class="appt-panel-close" onclick="closeApptPanel()">&times;</button>'+
-    '</div>'+
-    // Action buttons
-    '<div class="appt-panel-actions">'+
-      '<button class="appt-panel-action" onclick="closeApptPanel();abrirProntuario(\''+nome.replace(/'/g,"\\'")+'\','+(a.paciente_id||0)+')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>Prontuário</button>'+
-      (tel?'<button class="appt-panel-action" onclick="window.open(\'https://wa.me/55'+tel.replace(/\\D/g,'')+'\',\'_blank\')"><svg viewBox="0 0 24 24" fill="#25D366" stroke="none"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg></button>':'')+
-      '<button class="appt-panel-action" onclick="closeApptPanel();nav(\'financeiro\')" title="Financeiro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></button>'+
-    '</div>'+
-    // Financial status
-    '<div class="appt-panel-fin ok">Financeiro OK</div>'+
-    // Date/time detail
-    '<div class="appt-panel-detail">'+
-      '<div class="appt-panel-detail-icon">📅</div>'+
-      '<div class="appt-panel-detail-text">'+diaSemana+', '+dataFmt+' | '+fromTime+' — '+toTime+'<small>'+profNome+' · '+durMin+' min</small></div>'+
-      '<div class="appt-panel-detail-actions">'+
-        '<button class="appt-panel-detail-btn" title="Editar" onclick="closeApptPanel();editarAgendamento('+a.id+',\''+profId+'\',\''+fromTime+'\',\''+toTime+'\',\''+nome.replace(/'/g,"\\'")+'\',\''+((a.CategoryDescription||'').replace(/'/g,"\\'"))+'\',\''+((a.observations||'').replace(/'/g,"\\'"))+'\','+durMin+')">✏️</button>'+
-        '<button class="appt-panel-detail-btn danger" title="Cancelar" onclick="cancelarAgendamento('+a.id+')">✕</button>'+
-        '<button class="appt-panel-detail-btn danger" title="Excluir" onclick="excluirAgendamento('+a.id+')">🗑️</button>'+
-      '</div>'+
-    '</div>'+
-    // Category/tags
-    (a.CategoryDescription?'<div class="appt-panel-tags"><span style="font-size:12px;color:var(--text3);margin-right:8px">Categoria</span><span class="appt-panel-tag" style="background:'+cor+'20;color:'+cor+'">'+a.CategoryDescription+'</span></div>':'')+
-    // Footer: who booked + status selector
-    '<div class="appt-panel-footer">'+
-      '<div class="appt-panel-footer-info">Agendamento #'+a.id+'</div>'+
-      '<select class="appt-status-sel" onchange="alterarStatusAgendamento('+a.id+',this.value)" style="border-color:'+stCor+'">'+
-        ['agendado','confirmado','em_espera','em_atendimento','atendido','atrasado','faltou','cancelado'].map(function(s){
-          return '<option value="'+s+'"'+(s===status?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1).replace('_',' ')+'</option>'
-        }).join('')+
-      '</select>'+
-    '</div>'
-
-  document.getElementById('appt-panel-overlay').classList.add('open')
-}
-
-function closeApptPanel(){
-  document.getElementById('appt-panel-overlay').classList.remove('open')
-}
-
-async function alterarStatusAgendamento(id,novoStatus){
-  try{
-    await apiPost('salvar-agendamento',{id:id,status:novoStatus,paciente_nome:'_keep_',data:'_keep_',hora:'_keep_'})
-    // Update local state
-    (ST.agendamentos||[]).forEach(function(a){if(a.id===id)a.status=novoStatus})
-    renderAgendaGrid()
-    openApptPanel(id) // Refresh panel
-  }catch(e){alert('Erro: '+e.message)}
-}
-
-async function cancelarAgendamento(id){
-  if(!confirm('Cancelar este agendamento?'))return
-  try{
-    await apiPost('salvar-agendamento',{id:id,status:'cancelado',paciente_nome:'_keep_',data:'_keep_',hora:'_keep_'})
-    closeApptPanel()
-    loadAgenda()
-  }catch(e){alert('Erro: '+e.message)}
-}
-
-async function excluirAgendamento(id){
-  if(!confirm('Excluir este agendamento permanentemente?'))return
-  try{
-    await apiPost('excluir-agendamento',{id:id})
-    closeApptPanel()
-    loadAgenda()
-  }catch(e){alert('Erro: '+e.message)}
-}
-
-let ncSelectedPac=null,ncSelectedHora=null,ncEditId=null
-function editarAgendamento(id,profId,horaInicio,horaFim,pacNome,tipo,obs,durMin){
-  ncEditId=id
-  openNovaConsulta(profId,horaInicio)
-  // Pre-fill patient (id vem do agendamento em memória, para não depender do nome)
-  var agEd=(ST.agendamentos||[]).filter(function(x){return x.id===id})[0]
-  ncSelectedPac={nome:pacNome,tel:'',email:'',id:agEd?agEd.paciente_id:null}
-  var searchSec=document.getElementById('nc-search-section');if(searchSec)searchSec.classList.add('hidden')
-  var pacSel=document.getElementById('nc-pac-selected');if(pacSel)pacSel.classList.remove('hidden')
-  var pacName=document.getElementById('nc-pac-name');if(pacName)pacName.textContent=pacNome
-  var pacInfo=document.getElementById('nc-pac-info');if(pacInfo)pacInfo.textContent='Editando agendamento existente'
-  var confirmBtn=document.getElementById('nc-confirmar');if(confirmBtn){confirmBtn.disabled=false;confirmBtn.textContent='Salvar alterações'}
-  // Pre-fill duration
-  var durSel=document.getElementById('nc-duracao')
-  if(durSel){
-    var found=false
-    for(var i=0;i<durSel.options.length;i++){if(parseInt(durSel.options[i].value)===durMin){durSel.selectedIndex=i;found=true;break}}
-    if(!found){var opt=document.createElement('option');opt.value=durMin;opt.textContent=durMin+' minutos';durSel.appendChild(opt);durSel.value=String(durMin)}
-  }
-  // Pre-fill category
-  var catSel=document.getElementById('nc-cat-sel')
-  if(catSel&&tipo){for(var c=0;c<catSel.options.length;c++){if(catSel.options[c].text.toLowerCase().includes(tipo.toLowerCase())){catSel.selectedIndex=c;break}}}
-  // Pre-fill obs
-  var obsEl=document.getElementById('nc-obs');if(obsEl)obsEl.value=obs||''
-  // Re-render horarios with duration
-  renderNcHorarios()
-}
-function openNovaConsulta(prefillProfId, prefillTime){
-  ncEditId=null
-  document.getElementById('modal-nova-consulta').classList.add('open')
-  var profs=ST.dashboard&&ST.dashboard.profissionais||ST.profissionais||[]
-  var sel=document.getElementById('nc-prof-sel')
-  if(sel){
-    sel.innerHTML='<option value="">Selecione...</option>'+profs.map(function(p,i){return '<option value="'+i+'">'+(p.name||p.Name||'Profissional')+'</option>'}).join('')
-    if(prefillProfId){
-      for(var i=0;i<profs.length;i++){
-        if(String(profs[i].id||profs[i].Id||'')===String(prefillProfId)){sel.selectedIndex=i+1;break}
-      }
-    } else if(profs.length>0){sel.selectedIndex=1}
-  }
-  // Update date display
-  var dtEl=document.getElementById('nc-data-txt')
-  if(dtEl){
-    var dd=agendaDate.getDate(),mm=MESES_PT[agendaDate.getMonth()].substring(0,3),yy=agendaDate.getFullYear()
-    dtEl.textContent=dd+' '+mm+', '+yy
-  }
-  if(prefillTime){ncSelectedHora=prefillTime}
-  renderNcHorarios()
-}
-function closeNovaConsulta(){document.getElementById('modal-nova-consulta').classList.remove('open');ncReset()}
-function ncReset(){
-  ncSelectedPac=null;ncSelectedHora=null;ncEditId=null
-  const inp=document.getElementById('nc-pac-input');if(inp)inp.value=''
-  const drop=document.getElementById('nc-pac-drop');if(drop){drop.classList.add('hidden');drop.innerHTML=''}
-  const ss=document.getElementById('nc-search-section');if(ss)ss.classList.remove('hidden')
-  const ps=document.getElementById('nc-pac-selected');if(ps)ps.classList.add('hidden')
-  const btn=document.getElementById('nc-confirmar');if(btn)btn.disabled=true
-  const cl=document.getElementById('nc-clear-btn');if(cl)cl.style.display='none'
-}
-function ncTab(tab,el){document.querySelectorAll('.nc-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active')}
-var _ncSearchTimer=null
-function ncSearchPac(q){
-  var drop=document.getElementById('nc-pac-drop'),btn=document.getElementById('nc-clear-btn')
-  if(btn)btn.style.display=q?'block':'none'
-  if(!q||q.length<2){if(drop)drop.classList.add('hidden');return}
-  clearTimeout(_ncSearchTimer)
-  _ncSearchTimer=setTimeout(async function(){
-    try{
-      var d=await apiData('busca',{q:q})
-      var pacs=d.pacientes||[]
-      var AVC=['#E91E63','#9C27B0','#3F51B5','#009688','#FF5722','#795548']
-      if(drop){
-        drop.classList.remove('hidden')
-        drop.innerHTML='<div class="pac-new" onclick="ncSelectNew(\''+q.replace(/'/g,"\\'").toUpperCase()+'\')"><span class="pac-new-plus">+</span>Novo paciente: '+q+'</div>'+
-          (pacs.length?'<div class="pac-section-label">Pacientes cadastrados</div>':'')+
-          pacs.map(function(p,i){
-            var nome=p.nome||p.Name||''
-            var ini=nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
-            var cor=AVC[i%AVC.length]
-            var pacObj=JSON.stringify({nome:nome,tel:p.telefone||'',email:p.email||'',id:p.id}).replace(/"/g,'&quot;')
-            return '<div class="pac-result" onclick="ncSelectPac('+pacObj+')"><div class="pac-av-sm" style="background:'+cor+'">'+ini+'</div><div class="pac-name">'+nome+'</div></div>'
-          }).join('')
-      }
-    }catch(e){if(drop)drop.classList.add('hidden')}
-  },300)
-}
-function ncClearSearch(){const inp=document.getElementById('nc-pac-input');if(inp)inp.value='';const drop=document.getElementById('nc-pac-drop');if(drop)drop.classList.add('hidden');const btn=document.getElementById('nc-clear-btn');if(btn)btn.style.display='none'}
-function ncSelectPac(pac){
-  ncSelectedPac=pac
-  document.getElementById('nc-search-section').classList.add('hidden')
-  document.getElementById('nc-pac-selected').classList.remove('hidden')
-  document.getElementById('nc-pac-name').textContent=pac.nome
-  document.getElementById('nc-pac-info').textContent=pac.tel?`Telefone: ${pac.tel} | Email: ${pac.email||'—'}`:'Sem contato cadastrado'
-  document.getElementById('nc-confirmar').disabled=false
-}
-function ncSelectNew(nome){
-  ncSelectedPac={nome:nome.toUpperCase(),tel:'',email:''}
-  document.getElementById('nc-search-section').classList.add('hidden')
-  document.getElementById('nc-pac-selected').classList.remove('hidden')
-  document.getElementById('nc-pac-name').textContent=nome.toUpperCase()
-  document.getElementById('nc-pac-info').textContent='Novo paciente — preencha os dados após salvar'
-  document.getElementById('nc-confirmar').disabled=false
-}
-function ncDeselectPac(){
-  ncSelectedPac=null
-  document.getElementById('nc-search-section').classList.remove('hidden')
-  document.getElementById('nc-pac-selected').classList.add('hidden')
-  const inp=document.getElementById('nc-pac-input');if(inp)inp.value=''
-  document.getElementById('nc-confirmar').disabled=true
-}
-function ncPrimeiraChange(el){const s=document.getElementById('nc-como-conheceu');if(s)s.style.display=el.checked?'inline-block':'none'}
-function ncProfChange(){renderNcHorarios()}
-function renderNcHorarios(){
-  var ag=ST.agendamentos||[],hojeStr=agendaDate.toISOString().slice(0,10)
-  var interval=agendaInterval
-  var durSel=document.getElementById('nc-duracao')
-  var durMin=durSel?parseInt(durSel.value)||30:30
-  var slotsNeeded=Math.ceil(durMin/interval)
-
-  // Build set of occupied time slots (each slot = interval minutes)
-  var profSel=document.getElementById('nc-prof-sel')
-  var profIdx=profSel?profSel.selectedIndex-1:-1
-  var profId=profIdx>=0&&ST.profissionais&&ST.profissionais[profIdx]?String(ST.profissionais[profIdx].id):'all'
-  var todayAg=ag.filter(function(a){
-    if(a.Deleted||!a.date||a.date.slice(0,10)!==hojeStr) return false
-    if(profId!=='all'&&String(a.ProfessionalId||a.professionalId||'')!==profId) return false
-    if(ncEditId&&a.id===ncEditId) return false // Exclude the appointment being edited
-    return true
-  })
-  var occupiedSlots=new Set()
-  todayAg.forEach(function(a){
-    var p1=(a.fromTime||'').split(':').map(Number)
-    var p2=(a.toTime||'').replace(/h$/,'').split(':').map(Number)
-    var startMin=p1[0]*60+(p1[1]||0)
-    var endMin=p2[0]*60+(p2[1]||0)
-    if(endMin<=startMin) endMin=startMin+30
-    for(var m=startMin;m<endMin;m+=interval){
-      occupiedSlots.add(String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'))
-    }
-  })
-
-  // Generate all time slots based on system interval
-  var START_H=7,END_H=21
-  var slots=[]
-  for(var h=START_H;h<END_H;h++){
-    for(var m=0;m<60;m+=interval){
-      slots.push(String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'))
-    }
-  }
-
-  // Calculate which slots are part of the selected range
-  var selStartIdx=-1
-  if(ncSelectedHora){
-    selStartIdx=slots.indexOf(ncSelectedHora)
-  }
-
-  var el=document.getElementById('nc-horarios');if(!el)return
-  el.innerHTML=slots.map(function(slot,idx){
-    var isOccupied=occupiedSlots.has(slot)
-    // Check if selecting here would overlap with occupied slots
-    var wouldOverlap=false
-    for(var k=0;k<slotsNeeded;k++){
-      if(idx+k>=slots.length||occupiedSlots.has(slots[idx+k])){wouldOverlap=true;break}
-    }
-    var isSelected=selStartIdx>=0&&idx>=selStartIdx&&idx<selStartIdx+slotsNeeded
-    var cls='h-slot'
-    if(isOccupied) cls+=' occupied'
-    else if(isSelected) cls+=' selected'
-    var onclick=isOccupied?'':'ncSelectHora(\''+slot+'\','+idx+')'
-    return '<div class="'+cls+'" onclick="'+onclick+'">'+slot+'</div>'
-  }).join('')
-
-  // Update hora display
-  var horaEl=document.getElementById('nc-hora-selecionada')
-  if(horaEl){
-    if(ncSelectedHora&&selStartIdx>=0){
-      var endIdx=Math.min(selStartIdx+slotsNeeded,slots.length)-1
-      var endSlotMin=(parseInt(slots[endIdx].split(':')[0])*60+parseInt(slots[endIdx].split(':')[1]))+interval
-      var endH=String(Math.floor(endSlotMin/60)).padStart(2,'0')
-      var endM=String(endSlotMin%60).padStart(2,'0')
-      horaEl.textContent=ncSelectedHora+' — '+endH+':'+endM+' ('+durMin+'min)'
-    }else{
-      horaEl.textContent='—'
-    }
-  }
-}
-function ncSelectHora(h,idx){
-  ncSelectedHora=h
-  renderNcHorarios()
-}
-
-async function confirmarConsulta(){
-  if(!ncSelectedPac||!ncSelectedHora){alert('Selecione paciente e horário');return}
-  var btn=document.getElementById('nc-confirmar');btn.disabled=true;btn.textContent='Salvando...'
-  try{
-    var dataTxt=document.getElementById('nc-data-txt').textContent||''
-    // Extrai data do texto "14 mar, 2026"
-    var hoje=agendaDate.toISOString().slice(0,10)
-    var profSel=document.getElementById('nc-prof-sel')
-    var profNome='';var profIdx=profSel?profSel.selectedIndex-1:-1
-    if(profIdx>=0&&ST.profissionais&&ST.profissionais[profIdx])profNome=ST.profissionais[profIdx].name||ST.profissionais[profIdx].Name||ST.profissionais[profIdx].nome||''
-    var profId=profIdx>=0&&ST.profissionais&&ST.profissionais[profIdx]?ST.profissionais[profIdx].id:null
-    var catSel=document.getElementById('nc-cat-sel')
-    var tipo=catSel?catSel.options[catSel.selectedIndex].text:''
-    var obs=document.getElementById('nc-obs').value||''
-    var durSel2=document.getElementById('nc-duracao')
-    var durMin2=durSel2?parseInt(durSel2.value)||30:30
-    var hParts=ncSelectedHora.split(':').map(Number)
-    var endTotalMin=hParts[0]*60+(hParts[1]||0)+durMin2
-    var horaFim=String(Math.floor(endTotalMin/60)).padStart(2,'0')+':'+String(endTotalMin%60).padStart(2,'0')
-    var body={
-      paciente_id:ncSelectedPac.id||null,
-      paciente_nome:ncSelectedPac.nome,
-      data:hoje,
-      hora:ncSelectedHora,
-      hora_fim:horaFim,
-      profissional_id:profId,
-      profissional_nome:profNome,
-      tipo:tipo,
-      observacoes:obs,
-      status:'agendado'
-    }
-    if(ncEditId) body.id=ncEditId
-    var d=await apiPost('salvar-agendamento',body)
-    if(d.success){
-      var wasEdit=!!ncEditId
-      closeNovaConsulta()
-      alert(wasEdit?'Agendamento atualizado!':'Consulta agendada!')
-      loadAgenda()
-    }else{alert(d.error||'Erro ao agendar')}
-  }catch(e){alert('Erro: '+e.message)}
-  btn.disabled=false;btn.textContent='Confirmar consulta'
-}
-function toggleSendVia(){const d=document.getElementById('send-via-drop');if(d)d.classList.toggle('open')}
 
 // ══════════════════════════════════════════════════════
 // MODULE CARD HOVER
@@ -10360,10 +9325,7 @@ document.querySelectorAll('.module-card').forEach(card=>{
   card.addEventListener('mouseleave',()=>{const i=card.querySelector('.module-icon');if(i){i.classList.remove('hov');card.style.borderColor='transparent'}})
 })
 </script>
-<!-- Appointment Detail Panel -->
-<div class="appt-panel-overlay" id="appt-panel-overlay" onclick="if(event.target===this)closeApptPanel()">
-  <div class="appt-panel" id="appt-panel"></div>
-</div>
+<script src="/agenda.js"></script>
 <script src="/klinik-turso.js"></script>
 </body>
 </html>

@@ -985,8 +985,8 @@ module.exports = async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var b = req.body || {}
             if (!b.nome) return res.status(400).json({ success: false, error: 'Nome obrigatório' })
-            await client.execute({ sql: "INSERT INTO pacientes(nome,cpf,telefone,whatsapp,email,data_nascimento,sexo,estado_civil,como_conheceu,endereco,bairro,cidade,cep,convenio,alerta_medico,ativo,criado_em,atualizado_em,clinica_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,datetime('now'),datetime('now'),?)", args: [b.nome, b.cpf||'', b.telefone||'', b.whatsapp||'', b.email||'', b.data_nascimento||'', b.sexo||'', b.estado_civil||'', b.como_conheceu||'', b.endereco||'', b.bairro||'', b.cidade||'', b.cep||'', b.convenio||'', b.alerta_medico||'', clinica_id] })
-            return res.status(200).json({ success: true, msg: 'Paciente salvo' })
+            var insPac = await client.execute({ sql: "INSERT INTO pacientes(nome,cpf,telefone,whatsapp,email,data_nascimento,sexo,estado_civil,como_conheceu,endereco,bairro,cidade,cep,convenio,alerta_medico,ativo,criado_em,atualizado_em,clinica_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,datetime('now'),datetime('now'),?)", args: [b.nome, b.cpf||'', b.telefone||'', b.whatsapp||'', b.email||'', b.data_nascimento||'', b.sexo||'', b.estado_civil||'', b.como_conheceu||'', b.endereco||'', b.bairro||'', b.cidade||'', b.cep||'', b.convenio||'', b.alerta_medico||'', clinica_id] })
+            return res.status(200).json({ success: true, msg: 'Paciente salvo', id: Number(insPac.lastInsertRowid) })
         }
 
         // ── PROCEDIMENTOS (lista para selects) ────────────────────────
