@@ -565,6 +565,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 <link rel="stylesheet" href="/agenda.css">
 <link rel="stylesheet" href="/orcamento.css">
 <link rel="stylesheet" href="/crc.css">
+<link rel="stylesheet" href="/financeiro.css">
 <link rel="stylesheet" href="/paciente.css">
 </head>
 <body>
@@ -8240,10 +8241,9 @@ function closeNovoDrop(){var d=document.getElementById('novo-drop');if(d)d.class
 // ══════════════════════════════════════════════════════
 // Navega do card Geral para a aba — encontra o htab pelo ID
 function finNavTo(id){
-  var tabs=document.querySelectorAll('.fin-htab')
-  var map={geral:0,contacorrente:1,fluxocaixa:2,boletos:3,cheques:4,cartoes:5,planos:6,recebiveis:7,contaspagar:8,contasreceber:9,extrato:10,dre:11,conciliacoes:12,receitasaude:13,carteira:14}
-  var idx=map[id]
-  var el=(idx!==undefined&&tabs[idx])?tabs[idx]:null
+  // acha a aba pelo id no onclick (a ordem das abas não é fixa)
+  var el=null
+  document.querySelectorAll('.fin-htab').forEach(function(t){if((t.getAttribute('onclick')||'').indexOf("finTab('"+id+"'")>=0)el=t})
   finTab(id,el)
 }
 
@@ -8666,6 +8666,7 @@ async function loadDRE(){
     html+=dreRow('(-) Custos Fixos','custos_fixos','#C62828',false,false)
     html+=dreRow('(-) Custos Variáveis','custos_variaveis','#C62828',false,false)
     html+=dreRow('(-) Marketing','marketing','#C62828',false,false)
+    html+=dreRow('(-) Outras despesas','outras_despesas','#C62828',false,false)
     html+=dreRow('(=) Resultado Operacional','resultado_operacional','#1565C0',true,true)
     html+=dreRow('(-) Investimentos','investimentos','#C62828',false,false)
     html+=dreRow('(=) RESULTADO FINAL','resultado_final',null,true,true)
@@ -9357,6 +9358,7 @@ document.querySelectorAll('.module-card').forEach(card=>{
 <script src="/agenda.js"></script>
 <script src="/orcamento.js"></script>
 <script src="/crc.js"></script>
+<script src="/financeiro.js"></script>
 <script src="/paciente.js"></script>
 <script src="/klinik-turso.js"></script>
 </body>
