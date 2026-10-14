@@ -1,0 +1,58 @@
+/* public/crc.css — CRC (Fase 5) */
+
+/* Home: um card por fila */
+#p-crc .gpage-body{padding:20px 24px}
+.crc-home{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.crc-card{cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;min-height:150px;transition:border-color .12s ease,box-shadow .12s ease}
+.crc-card:hover{border-color:var(--green3);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.crc-card.off{cursor:default;opacity:.7}
+.crc-card.off:hover{border-color:var(--border);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.crc-card-t{font-size:15px;font-weight:500;color:var(--text)}
+.crc-card-n{margin-top:auto;margin-bottom:8px;font-size:13px;color:var(--text3)}
+.crc-card-n span{font-size:28px;font-weight:300;letter-spacing:-.02em;color:var(--text);margin-right:4px}
+.crc-sk{height:150px;border-radius:8px;background:linear-gradient(90deg,#F0F0F0 25%,#FAFAFA 50%,#F0F0F0 75%);background-size:200% 100%;animation:crc-shimmer 1.4s infinite ease}
+@keyframes crc-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* Cabeçalho e filtros do quadro */
+.crc-voltar{color:var(--blue);cursor:pointer}
+.crc-filtros{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+.crc-filtros .ag-f{flex:1;min-width:140px;margin:0}
+
+/* Quadro kanban */
+.crc-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;align-items:flex-start}
+.crc-col{flex:0 0 280px;background:#FAFAFA;border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;max-height:calc(100vh - 290px);transition:border-color .12s ease,background .12s ease}
+.crc-col.alvo{border-color:var(--green3);background:#E8F5E9}
+.crc-col-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:12px;border-bottom:1px solid var(--border)}
+.crc-col-h b{font-size:13px;font-weight:500;color:var(--text)}
+.crc-col-h span{font-size:12px;color:var(--text3);white-space:nowrap}
+.crc-col-b{padding:8px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:80px}
+.crc-vazio{font-size:12px;color:var(--text3);text-align:center;padding:16px 0}
+
+/* Cartão */
+.crc-cartao{background:#fff;border:1px solid var(--border);border-radius:6px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);cursor:grab;transition:box-shadow .12s ease,opacity .12s ease}
+.crc-cartao[draggable="false"]{cursor:default}
+.crc-cartao:hover{box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.crc-cartao.arrastando{opacity:.5}
+.crc-cartao.atrasado{border-left:3px solid var(--red)}
+.crc-c-top{display:flex;align-items:center;gap:8px}
+.crc-c-nome{flex:1;min-width:0;font-size:14px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crc-c-nome[data-pac]{cursor:pointer}
+.crc-c-nome[data-pac]:hover{color:var(--green3)}
+.crc-c-dias{font-size:12px;color:var(--text3);white-space:nowrap}
+.crc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--text3)}
+.crc-dot.alta{background:var(--red)}
+.crc-dot.media{background:var(--orange)}
+.crc-dot.baixa{background:var(--green3)}
+.crc-dot.ok{background:var(--border)}
+.crc-c-data{font-size:12px;color:var(--text3);margin-top:4px}
+.crc-c-ctx{display:inline-block;margin-top:8px;font-size:12px;color:var(--text2);background:#F5F5F5;border-radius:4px;padding:4px 8px}
+.crc-c-ret{font-size:12px;color:var(--orange);margin-top:8px}
+.crc-c-ret.err{color:var(--red);font-weight:500}
+.crc-c-acoes{display:flex;gap:4px;flex-wrap:wrap;margin-top:12px}
+
+@media (max-width:700px){
+  #p-crc .gpage-body{padding:16px}
+  #p-crc .gpage-header{flex-wrap:wrap;gap:12px}
+  #p-crc .gpage-header .flex{flex-wrap:wrap}
+  .crc-col{flex-basis:85vw;max-height:none}
+}

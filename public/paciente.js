@@ -288,11 +288,13 @@
         '<div id="pcv-notas">' + (r.notas.length ? r.notas.map(function (n) {
           return '<div class="pc-nota"><div>' + esc(n.texto) + '<small>' + esc(n.autor_nome || '') + ' · ' + br(n.criado_em) + ' ' + String(n.criado_em || '').slice(11, 16) + '</small></div><button class="ag-ico" data-nota="' + n.id + '" title="Remover">✕</button></div>'
         }).join('') : '<div class="ag-empty">Sem notas.</div>') + '</div></div>' +
-      (r.indicados ? '<div class="ag-hint" style="margin-top:12px">Este paciente indicou ' + r.indicados + ' paciente(s). <a href="#" data-tab="indicacoes" style="color:var(--blue)">Ver indicações</a></div>' : '')
+      (r.indicados ? '<div class="ag-hint" style="margin-top:12px">Este paciente indicou ' + r.indicados + ' paciente(s). <a href="#" data-tab="indicacoes" style="color:var(--blue)">Ver indicações</a></div>' : '') +
+      '<div id="pcv-crc"></div>'
     el('pcv-seg').querySelectorAll('[data-s]').forEach(function (s) {
       s.onclick = function () { sec = this.getAttribute('data-s'); el('pcv-seg').querySelectorAll('div').forEach(function (x) { x.classList.toggle('on', x === s) }); el('pcv-info').innerHTML = infos() }
     })
     box.querySelectorAll('[data-tab]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); irAba(this.getAttribute('data-tab')) } })
+    if (window.crcHistoricoPaciente) crcHistoricoPaciente(el('pcv-crc'), p.id)
     el('pcv-edit').onclick = function () { irAba('cadastro') }
     el('pcv-agendar').onclick = function () { novoAgendamentoPaciente({ id: p.id, nome: p.nome, telefone: p.telefone }) }
     el('pcv-alerta').onclick = function () { novoAlertaRetorno({ id: p.id, nome: p.nome, telefone: p.telefone }) }

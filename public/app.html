@@ -564,6 +564,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 </style>
 <link rel="stylesheet" href="/agenda.css">
 <link rel="stylesheet" href="/orcamento.css">
+<link rel="stylesheet" href="/crc.css">
 <link rel="stylesheet" href="/paciente.css">
 </head>
 <body>
@@ -729,7 +730,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
             <div class="module-title">Pacientes</div>
             <div class="module-desc">Acesse prontuários e detalhes dos tratamentos.</div>
           </div>
-          <div class="module-card" onclick="nav('crm')">
+          <div class="module-card" onclick="nav('crc')">
             <div class="module-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="8" height="8" rx="1"/><rect x="14" y="14" width="8" height="8" rx="1"/></svg></div>
             <div class="module-title">CRC</div>
             <div class="module-desc">Mantenha um bom vínculo com seus pacientes.</div>
@@ -1505,10 +1506,8 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
       </div>
     </div>
 
-    <!-- CRC (redireciona para CRM) -->
-    <div class="page gpage" id="p-crc">
-      <div class="gpage-header"><div><div class="gpage-title">CRC — Controle de Relacionamento</div><div class="gpage-sub">Redirecionando para CRM...</div></div></div>
-    </div>
+    <!-- CRC: filas e quadros kanban (public/crc.js) -->
+    <div class="page gpage" id="p-crc"></div>
 
     <!-- CONFIRMAÇÃO E ALERTAS -->
     <div class="page gpage" id="p-confirmacoes">
@@ -2042,7 +2041,7 @@ function routeFromHash(){
 window.addEventListener('popstate',routeFromHash)
 
 function nav(id) {
-  if (id!=='crc') setRouteHash(id==='home'?'':id)
+  setRouteHash(id==='home'?'':id)
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
   const pg = document.getElementById('p-'+id)
   if (pg) pg.classList.add('active')
@@ -2059,7 +2058,7 @@ function nav(id) {
   if (id==='configuracoes') renderConfiguracoes()
   if (id==='usuarios') { loadUsuarios(); loadPermissoesPerfil() }
   if (id==='metas') loadMetas()
-  if (id==='crc') { nav('crm'); return }
+  if (id==='crc' && window.loadCrc) loadCrc()
   if (id==='confirmacoes') loadConfirmacoes()
   if (id==='dashboard') loadAnalytics()
   if (id==='marketing') loadMarketing()
@@ -9357,6 +9356,7 @@ document.querySelectorAll('.module-card').forEach(card=>{
 </script>
 <script src="/agenda.js"></script>
 <script src="/orcamento.js"></script>
+<script src="/crc.js"></script>
 <script src="/paciente.js"></script>
 <script src="/klinik-turso.js"></script>
 </body>
