@@ -12,7 +12,7 @@ function auth() {
     return 'Basic ' + Buffer.from(USUARIO + ':' + TOKEN).toString('base64')
 }
 
-function fetchPage(endpoint, params) {
+function fetchPage(endpoint, params, timeoutMs) {
     return new Promise(function(resolve) {
         var https = require('https')
         var merged = Object.assign({ subscriber_id: SUB, businessId: BID }, params)
@@ -38,7 +38,7 @@ function fetchPage(endpoint, params) {
             })
         })
         req.on('error', function(e){ resolve({ items: [], _err: e.message }) })
-        req.setTimeout(4000, function(){ req.destroy(); resolve({ items: [], _timeout: true }) })
+        req.setTimeout(timeoutMs || 4000, function(){ req.destroy(); resolve({ items: [], _timeout: true }) })
         req.end()
     })
 }
@@ -180,6 +180,61 @@ async function sondar(params) {
                      campos: n > 0 && r.items[0] && typeof r.items[0] === 'object' ? Object.keys(r.items[0]) : null }
         })
     }
+}
+
+// ── RESUMO AGREGADO (admin) ───────────────────────────────────────────────────
+// Só contagens e percentuais para planejar a segmentação — nenhum dado pessoal.
+function _d(n){ var x=new Date(); x.setDate(x.getDate()-n); return x.toISOString().slice(0,10) }
+function _cnt(obj,k){ k = (k===undefined||k===null||k==='') ? '(vazio)' : String(k); obj[k]=(obj[k]||0)+1 }
+async function resumo() {
+    var hoje = _d(0)
+    var semanas = [0,7,14,21].map(function(o){ return { from:_d(o+7), to:_d(o) } })
+    var calls = [fetchPage('appointment/list', { from:_d(365), to:hoje }, 9000)]
+        .concat(semanas.map(function(w){ return fetchPage('estimates/list', w, 9000) }))
+    var rs = await Promise.allSettled(calls)
+    var val = function(i){ return rs[i].status==='fulfilled' ? rs[i].value : { _err:'rejected' } }
+    var out = { tipo:'resumo' }
+
+    var ag = val(0)
+    if (ag._error||ag._timeout||ag._err) out.agendamentos = { erro: ag._error||(ag._timeout?'timeout':ag._err) }
+    else {
+        var itens = ag.items.filter(function(a){ return !a.Deleted })
+        var pac = {}, cat = {}, st = {}, prof = {}
+        itens.forEach(function(a){
+            var id = a.Patient_PersonId || a.PatientName
+            var p = pac[id] || (pac[id] = { email:false, cel:false, ultima:'' })
+            if (a.Email && /@/.test(a.Email)) p.email = true
+            if (a.MobilePhone) p.cel = true
+            if ((a.date||'') > p.ultima) p.ultima = a.date
+            _cnt(cat, a.CategoryDescription); _cnt(st, a.StatusId); _cnt(prof, a.Dentist_PersonId)
+        })
+        var ids = Object.keys(pac), comEmail = 0, comCel = 0, faixas = { 'ate_3m':0, '3a6m':0, '6a12m':0 }
+        ids.forEach(function(k){
+            var p = pac[k]; if (p.email) comEmail++; if (p.cel) comCel++
+            var u = p.ultima.slice(0,10)
+            if (u >= _d(90)) faixas.ate_3m++; else if (u >= _d(180)) faixas['3a6m']++; else faixas['6a12m']++
+        })
+        out.agendamentos = { total: itens.length, excluidos: ag.items.length - itens.length,
+            pacientes_unicos: ids.length, pacientes_com_email: comEmail, pacientes_com_celular: comCel,
+            ultima_visita_no_periodo: faixas, por_categoria: cat, por_status: st, dentistas_distintos: Object.keys(prof).length }
+    }
+
+    var orc = [], erros = []
+    for (var i = 1; i < calls.length; i++) { var r = val(i); if (r._error||r._timeout||r._err) erros.push(r._error||(r._timeout?'timeout':r._err)); else orc = orc.concat(r.items) }
+    var porStatus = {}, valorStatus = {}, aprovados = 0, procs = {}, chavesProc = null
+    orc.forEach(function(o){
+        _cnt(porStatus, o.Status)
+        valorStatus[o.Status] = Math.round(((valorStatus[o.Status]||0) + (parseFloat(o.Amount)||0))*100)/100
+        if (o.ApprovedDate) aprovados++
+        ;(Array.isArray(o.ProcedureList) ? o.ProcedureList : []).forEach(function(pr){
+            if (!chavesProc && pr && typeof pr==='object') chavesProc = Object.keys(pr)
+            _cnt(procs, pr && (pr.ProcedureDescription||pr.Description||pr.Name||pr.description))
+        })
+    })
+    var topProcs = Object.entries(procs).sort(function(a,b){ return b[1]-a[1] }).slice(0,15)
+    out.orcamentos_28_dias = { total: orc.length, com_data_aprovacao: aprovados, por_status: porStatus,
+        valor_por_status: valorStatus, campos_procedimento: chavesProc, procedimentos_mais_orcados: topProcs, erros_semanas: erros }
+    return out
 }
 
 // ── SYNC PROFISSIONAIS ────────────────────────────────────────────────────────
@@ -575,6 +630,10 @@ module.exports = async function handler(req, res) {
     try {
         var resultado
 
+        if (tipo === 'resumo') {
+            resultado = await resumo()
+            return res.json({ success: true, duracao_ms: Date.now() - t0, ...resultado })
+        }
         if (tipo === 'sondar') {
             resultado = await sondar(params)
             return res.json({ success: true, duracao_ms: Date.now() - t0, ...resultado })
