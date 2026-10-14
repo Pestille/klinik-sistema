@@ -6,6 +6,7 @@ var { authenticateRequest, verificarPermissao, setCorsHeaders, checkRateLimit } 
 var { runMigrations } = require('../lib/migrations')
 var { TIPOS: LIXEIRA_TIPOS, moverParaLixeira, restaurar: restaurarDaLixeira } = require('../lib/lixeira')
 var { RECURSOS: PERM_RECURSOS, PERFIS: PERM_PERFIS, mapaPerfil, pode } = require('../lib/permissoes')
+var rotasAgenda = require('../lib/rotas/agenda')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
 // método; { GET, POST } quando leitura e escrita exigem recursos diferentes.
@@ -43,6 +44,9 @@ var ROTA_PERMISSAO = {
     'salvar-paciente': 'pacientes.editar_cadastro', 'salvar-paciente-edit': 'pacientes.editar_cadastro', 'salvar-foto-paciente': 'pacientes.editar_cadastro',
     // Agenda
     'salvar-agendamento': 'agenda.agendar_atendimento', 'excluir-agendamento': 'agenda.agendar_atendimento',
+    'agenda-categorias': 'agenda.editar_horarios', 'agenda-bloqueio': 'agenda.editar_horarios', 'agenda-horarios': 'agenda.editar_horarios',
+    'agenda-cor-profissional': 'agenda.editar_horarios', 'lista-espera': 'agenda.agendar_atendimento',
+    'alertas-retorno': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' },
     // Metas, dashboard, relatórios
     'metas': 'metas.acessar', 'metas-visualizar': 'metas.acessar', 'metas-config': { GET: 'metas.acessar', POST: 'metas.editar' },
     'dashboard-analitico': 'dashboard.acessar', 'analytics': 'dashboard.acessar',
@@ -110,6 +114,9 @@ module.exports = async function handler(req, res) {
                 return res.status(403).json({ success: false, error: 'Seu perfil não tem permissão para esta ação', recurso: recursoPerm })
             }
         }
+
+        // Rotas por módulo (lib/rotas/*) — respondem antes da cadeia antiga
+        if (auth && await rotasAgenda.handle(route, { req: req, res: res, q: q, client: client, auth: auth, clinica_id: clinica_id })) return
 
         // ── LIXEIRA (Administração de Dados) ─────────────────────
         if (route === 'lixeira-listar') {
@@ -283,7 +290,7 @@ module.exports = async function handler(req, res) {
         // ── AGENDAMENTOS ────────────────────────────────────────────────────
         if (route === 'agendamentos') {
             var lim2 = Math.min(parseInt(q.limit) || 1000, 5000)
-            var base = "SELECT a.id,a.data_hora,a.hora_fim,a.tipo,a.status,a.procedimento,a.valor,a.observacoes,a.profissional_id,a.paciente_id,COALESCE(p.nome,a.paciente_nome) as paciente_nome,COALESCE(p.telefone,a.paciente_telefone) as paciente_telefone,p.foto_url as paciente_foto,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id"
+            var base = "SELECT a.id,a.data_hora,a.hora_fim,a.tipo,a.status,a.procedimento,a.valor,a.observacoes,a.profissional_id,a.paciente_id,a.categoria_id,a.primeira_consulta,a.serie_id,a.criado_por_nome,a.criado_em,a.confirmacao_envio,a.alerta_envio,a.canal_envio,COALESCE(p.nome,a.paciente_nome) as paciente_nome,COALESCE(p.telefone,a.paciente_telefone) as paciente_telefone,p.foto_url as paciente_foto,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id"
             var wheres = ["a.clinica_id=?"], argsAg = [clinica_id]
             if (q.dataInicio && q.dataFim) { wheres.push("DATE(a.data_hora) BETWEEN ? AND ?"); argsAg.push(q.dataInicio, q.dataFim) }
             else if (q.data) { wheres.push("DATE(a.data_hora)=?"); argsAg.push(q.data) }
@@ -1288,51 +1295,7 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: true, id: cpNewId, usuario_vinculado: cpLinked, msg: 'Profissional criado' })
         }
 
-        // ── SALVAR AGENDAMENTO ────────────────────────────────────────
-        // ── EXCLUIR AGENDAMENTO ──────────────────────────────────────
-        if (route === 'excluir-agendamento') {
-            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
-            var ea = req.body || {}
-            if (!ea.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
-            if (!await moverParaLixeira(client, auth, 'agendamento', ea.id)) return res.status(404).json({ success: false, error: 'Agendamento não encontrado' })
-            return res.status(200).json({ success: true, msg: 'Agendamento excluído' })
-        }
-
-        if (route === 'salvar-agendamento') {
-            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
-            var sa2 = req.body || {}
-            // Status-only update (partial)
-            if (sa2.id && sa2.paciente_nome === '_keep_') {
-                await client.execute({ sql: "UPDATE agendamentos SET status=?,atualizado_em=datetime('now') WHERE id=? AND clinica_id=?", args: [sa2.status||'agendado', sa2.id, clinica_id] })
-                return res.status(200).json({ success: true, msg: 'Status atualizado' })
-            }
-            if (!sa2.paciente_nome || !sa2.data || !sa2.hora) return res.status(400).json({ success: false, error: 'Paciente, data e hora obrigatórios' })
-            var dataHora2 = sa2.data + ' ' + sa2.hora
-            var horaFim2 = sa2.hora_fim || ''
-            // paciente_id enviado pelo front tem prioridade (validado na clínica);
-            // o nome fica só como fallback para chamadas antigas
-            var pacId2 = null
-            if (sa2.paciente_id) {
-                var rPacId = await client.execute({ sql: "SELECT id FROM pacientes WHERE id=? AND clinica_id=?", args: [sa2.paciente_id, clinica_id] })
-                if (!rPacId.rows.length) return res.status(404).json({ success: false, error: 'Paciente não encontrado' })
-                pacId2 = rPacId.rows[0].id
-            } else if (sa2.paciente_nome) {
-                var rPac = await client.execute({ sql: "SELECT id FROM pacientes WHERE nome=? AND clinica_id=? LIMIT 1", args: [sa2.paciente_nome, clinica_id] })
-                if (rPac.rows.length) pacId2 = rPac.rows[0].id
-            }
-            // Resolve profissional_id pelo nome
-            var profId2 = sa2.profissional_id || null
-            if (!profId2 && sa2.profissional_nome) {
-                var rProf = await client.execute({ sql: "SELECT id FROM profissionais WHERE nome=? AND clinica_id=? LIMIT 1", args: [sa2.profissional_nome, clinica_id] })
-                if (rProf.rows.length) profId2 = rProf.rows[0].id
-            }
-            if (sa2.id) {
-                await client.execute({ sql: "UPDATE agendamentos SET paciente_id=?,profissional_id=?,data_hora=?,hora_fim=?,tipo=?,status=?,procedimento=?,observacoes=?,paciente_nome=?,profissional_nome=?,atualizado_em=datetime('now') WHERE id=? AND clinica_id=?", args: [pacId2, profId2, dataHora2, horaFim2, sa2.tipo||'', sa2.status||'agendado', sa2.procedimento||'', sa2.observacoes||'', sa2.paciente_nome||'', sa2.profissional_nome||'', sa2.id, clinica_id] })
-                return res.status(200).json({ success: true, msg: 'Agendamento atualizado' })
-            }
-            await client.execute({ sql: "INSERT INTO agendamentos(paciente_id,profissional_id,data_hora,hora_fim,tipo,status,procedimento,observacoes,paciente_nome,profissional_nome,criado_em,atualizado_em,clinica_id) VALUES(?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'),?)", args: [pacId2, profId2, dataHora2, horaFim2, sa2.tipo||'', sa2.status||'agendado', sa2.procedimento||'', sa2.observacoes||'', sa2.paciente_nome||'', sa2.profissional_nome||'', clinica_id] })
-            return res.status(200).json({ success: true, msg: 'Agendamento salvo' })
-        }
+        // salvar-agendamento / excluir-agendamento: lib/rotas/agenda.js
 
         // ── SALVAR PAGAMENTO ──────────────────────────────────────────
         if (route === 'salvar-pagamento') {
