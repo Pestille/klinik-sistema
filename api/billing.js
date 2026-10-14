@@ -1,11 +1,25 @@
 // api/billing.js — Stripe billing: checkout, webhooks, portal
 var { getClient } = require('./db')
+var { authenticateRequest, setCorsHeaders } = require('./middleware')
 
 // Stripe raw body parsing for webhooks
 module.exports = async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*')
+    setCorsHeaders(req, res)
     res.setHeader('Content-Type', 'application/json')
     if (req.method === 'OPTIONS') { res.status(200).end(); return }
+
+    // Tudo exceto o webhook do Stripe exige sessão; clinica_id vem sempre da
+    // sessão (nunca do body/query) e checkout/portal são só para admin.
+    if ((req.query || {}).action !== 'webhook') {
+        var authB = await authenticateRequest(req)
+        if (!authB) return res.status(401).json({ success: false, error: 'Não autenticado' })
+        var actB = (req.query || {}).action
+        if ((actB === 'checkout' || actB === 'portal') && authB.perfil !== 'admin') {
+            return res.status(403).json({ success: false, error: 'Apenas admin' })
+        }
+        req.body = Object.assign({}, req.body || {}, { clinica_id: authB.clinica_id })
+        req.query = Object.assign({}, req.query || {}, { clinica_id: authB.clinica_id })
+    }
 
     var stripeKey = process.env.STRIPE_SECRET_KEY || ''
     var webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || ''
@@ -139,7 +153,9 @@ module.exports = async function handler(req, res) {
                     return res.status(400).json({ error: 'Webhook signature failed' })
                 }
             } else {
-                event = req.body
+                // Sem segredo não há como provar que o evento veio do Stripe
+                console.error('[billing] STRIPE_WEBHOOK_SECRET ausente — webhook recusado')
+                return res.status(500).json({ error: 'Webhook não configurado' })
             }
 
             var evType = event.type

@@ -71,7 +71,7 @@ module.exports = async function handler(req, res) {
   var auth = await authenticateRequest(req)
   if (!auth) { res.status(401).json({ ok:false, error:'Não autenticado' }); return }
   var klinikId = parseInt(process.env.KLINIK_CLINICA_ID || '1', 10)
-  if (auth.clinica_id !== klinikId) { res.status(403).json({ ok:false, error:'Sem permissão' }); return }
+  if (auth.clinica_id !== klinikId || auth.perfil !== 'admin') { res.status(403).json({ ok:false, error:'Sem permissão' }); return }
 
   var ep = (req.query||{}).endpoint
   if (!ep) { res.status(400).json({ ok:false, error:'endpoint required' }); return }

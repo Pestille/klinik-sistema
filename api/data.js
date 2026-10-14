@@ -30,6 +30,21 @@ module.exports = async function handler(req, res) {
         clinica_id = auth.clinica_id
     }
 
+    // Rotas que alteram permissões, rodam migrações/importações em massa, exportam
+    // a base ou mexem na configuração de cobrança: só admin. marketing-migrate fica
+    // de fora porque é idempotente e é chamada ao abrir a tela de Marketing.
+    var adminRoutes = [
+        'permissoes-salvar', 'permissoes-migrate', 'migrate-saas',
+        'anamnese-migrate', 'comissoes-migrate', 'orcamentos-migrate', 'pagamentos-migrate',
+        'financeiro-migrate', 'financeiro-migrate-v2', 'financeiro-migrate-v3',
+        'importar-clinicorp', 'importar-pacientes-lote', 'importar-orcamentos-lote', 'importar-tabela-precos',
+        'atualizar-rg-lote', 'enriquecer-pacientes', 'exportar-dados', 'salvar-dados-clinica',
+        'diagnostico-integracoes', 'testar-integracoes', 'testar-envio-wa'
+    ]
+    if (adminRoutes.indexOf(route) !== -1 && (!auth || auth.perfil !== 'admin')) {
+        return res.status(403).json({ success: false, error: 'Apenas admin' })
+    }
+
     try {
         var client = getClient()
 
@@ -925,12 +940,15 @@ module.exports = async function handler(req, res) {
         // ── IMPORTAR DADOS CLINICORP (varredura completa) ──────────
         if (route === 'importar-clinicorp') {
             var https2 = require('https')
-            var USUARIO2 = process.env.CLINICORP_USUARIO || 'klinik'
-            var TOKEN2 = process.env.CLINICORP_TOKEN || '23b73dd0-f3a9-4aef-97ff-9db567d283b5'
+            var USUARIO2 = process.env.CLINICORP_USUARIO || ''
+            var TOKEN2 = process.env.CLINICORP_TOKEN || ''
+            var SUB2 = process.env.CLINICORP_SUB || ''
+            var BID2 = process.env.CLINICORP_BID || ''
+            if (!USUARIO2 || !TOKEN2 || !SUB2 || !BID2) return res.status(500).json({ success: false, error: 'Credenciais Clinicorp não configuradas (CLINICORP_USUARIO/TOKEN/SUB/BID)' })
             var auth2 = 'Basic ' + Buffer.from(USUARIO2 + ':' + TOKEN2).toString('base64')
             function fetchClinicorp(ep, params2) {
                 return new Promise(function(resolve2) {
-                    var qs2 = '?' + Object.entries(Object.assign({ subscriber_id: 'klinik', businessId: '5073030694043648' }, params2)).map(function(kv) { return encodeURIComponent(kv[0]) + '=' + encodeURIComponent(kv[1]) }).join('&')
+                    var qs2 = '?' + Object.entries(Object.assign({ subscriber_id: SUB2, businessId: BID2 }, params2)).map(function(kv) { return encodeURIComponent(kv[0]) + '=' + encodeURIComponent(kv[1]) }).join('&')
                     var req2 = https2.request({ hostname: 'api.clinicorp.com', path: '/rest/v1/' + ep + qs2, method: 'GET', headers: { 'Authorization': auth2, 'accept': 'application/json' } }, function(r2) {
                         var body2 = ''; r2.on('data', function(c) { body2 += c }); r2.on('end', function() { try { resolve2(JSON.parse(body2)) } catch(e2) { resolve2([]) } })
                     }); req2.on('error', function() { resolve2([]) }); req2.setTimeout(8000, function() { req2.destroy(); resolve2([]) }); req2.end()

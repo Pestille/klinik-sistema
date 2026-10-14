@@ -98,9 +98,16 @@ module.exports = async function handler(req, res) {
         if (!senhaValida) return res.status(401).json({ success: false, error: 'Email ou senha inválidos' })
         if (!user.ativo) return res.status(403).json({ success: false, error: 'Usuário desativado' })
 
-        // Se deve redefinir, retorna flag (frontend mostrará tela de redefinição)
+        // Se deve redefinir, retorna flag (frontend mostrará tela de redefinição).
+        // O reset_token prova que quem chama redefinir-senha acabou de acertar a
+        // senha atual — sem ele, qualquer um trocaria a senha de qualquer usuario_id.
         if (user.deve_redefinir) {
-            return res.status(200).json({ success: true, deve_redefinir: true, usuario_id: user.id, nome: user.nome })
+            try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_redefinir TEXT") } catch(e) {}
+            try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_redefinir_expira TEXT") } catch(e) {}
+            var resetToken = gerarToken()
+            var expiraReset = new Date(); expiraReset.setMinutes(expiraReset.getMinutes() + 15)
+            await client.execute({ sql: "UPDATE usuarios SET token_redefinir=?, token_redefinir_expira=? WHERE id=?", args: [resetToken, expiraReset.toISOString(), user.id] })
+            return res.status(200).json({ success: true, deve_redefinir: true, usuario_id: user.id, nome: user.nome, reset_token: resetToken })
         }
 
         // Cria sessão (expira em 7 dias)
@@ -116,13 +123,20 @@ module.exports = async function handler(req, res) {
     if (action === 'redefinir-senha') {
         if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
         var br = req.body || {}
-        if (!br.usuario_id || !br.nova_senha) return res.status(400).json({ success: false, error: 'usuario_id e nova_senha obrigatórios' })
+        if (!br.usuario_id || !br.nova_senha || !br.reset_token) return res.status(400).json({ success: false, error: 'usuario_id, reset_token e nova_senha obrigatórios' })
+
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_redefinir TEXT") } catch(e) {}
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_redefinir_expira TEXT") } catch(e) {}
+        var rr = await client.execute({ sql: "SELECT token_redefinir_expira FROM usuarios WHERE id=? AND token_redefinir=? AND deve_redefinir=1 AND ativo=1", args: [br.usuario_id, String(br.reset_token)] })
+        if (!rr.rows.length || !rr.rows[0].token_redefinir_expira || new Date(rr.rows[0].token_redefinir_expira) < new Date()) {
+            return res.status(401).json({ success: false, error: 'Sessão de redefinição expirada. Faça login novamente.' })
+        }
 
         var erroSenha = validarSenha(br.nova_senha)
         if (erroSenha) return res.status(400).json({ success: false, error: erroSenha })
 
         var hashR = bcrypt.hashSync(br.nova_senha, 10)
-        await client.execute({ sql: "UPDATE usuarios SET senha_hash=?, deve_redefinir=0 WHERE id=?", args: [hashR, br.usuario_id] })
+        await client.execute({ sql: "UPDATE usuarios SET senha_hash=?, deve_redefinir=0, token_redefinir=NULL, token_redefinir_expira=NULL WHERE id=?", args: [hashR, br.usuario_id] })
         await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=?", args: [br.usuario_id] })
 
         // Cria nova sessão
@@ -166,8 +180,14 @@ module.exports = async function handler(req, res) {
     // ── CRIAR USUÁRIO ──────────────────────────────────────────
     if (action === 'criar-usuario') {
         if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+        var { authenticateRequest: authCU } = require('./middleware')
+        var authCr = await authCU(req)
+        if (!authCr) return res.status(401).json({ success: false, error: 'Não autenticado' })
+        if (authCr.perfil !== 'admin') return res.status(403).json({ success: false, error: 'Apenas admin' })
         var b2 = req.body || {}
-        if (!b2.nome || !b2.email || !b2.email_pessoal || !b2.clinica_id) return res.status(400).json({ success: false, error: 'Nome, login, email pessoal e clinica_id obrigatórios' })
+        // clinica_id vem sempre da sessão do admin — nunca do body
+        b2.clinica_id = authCr.clinica_id
+        if (!b2.nome || !b2.email || !b2.email_pessoal) return res.status(400).json({ success: false, error: 'Nome, login e email pessoal obrigatórios' })
 
         var existe = await client.execute({ sql: "SELECT id FROM usuarios WHERE email=?", args: [b2.email.toLowerCase().trim()] })
         if (existe.rows.length) return res.status(409).json({ success: false, error: 'Email já cadastrado' })
@@ -438,14 +458,23 @@ module.exports = async function handler(req, res) {
     // ── ALTERAR SENHA ──────────────────────────────────────────
     if (action === 'alterar-senha') {
         if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+        var { authenticateRequest: authAS } = require('./middleware')
+        var authAl = await authAS(req)
+        if (!authAl) return res.status(401).json({ success: false, error: 'Não autenticado' })
         var b3 = req.body || {}
         if (!b3.usuario_id || !b3.nova_senha) return res.status(400).json({ success: false, error: 'usuario_id e nova_senha obrigatórios' })
+        // Admin troca a senha de usuários da própria clínica; os demais só a própria
+        if (authAl.perfil !== 'admin' && Number(b3.usuario_id) !== Number(authAl.usuario_id)) {
+            return res.status(403).json({ success: false, error: 'Apenas admin' })
+        }
+        var owAl = await client.execute({ sql: "SELECT id FROM usuarios WHERE id=? AND clinica_id=?", args: [b3.usuario_id, authAl.clinica_id] })
+        if (!owAl.rows.length) return res.status(404).json({ success: false, error: 'Usuário não encontrado' })
 
         var erroSenha2 = validarSenha(b3.nova_senha)
         if (erroSenha2) return res.status(400).json({ success: false, error: erroSenha2 })
 
         var hash3 = bcrypt.hashSync(b3.nova_senha, 10)
-        await client.execute({ sql: "UPDATE usuarios SET senha_hash=?, deve_redefinir=0 WHERE id=?", args: [hash3, b3.usuario_id] })
+        await client.execute({ sql: "UPDATE usuarios SET senha_hash=?, deve_redefinir=0 WHERE id=? AND clinica_id=?", args: [hash3, b3.usuario_id, authAl.clinica_id] })
         await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=?", args: [b3.usuario_id] })
         return res.status(200).json({ success: true, msg: 'Senha alterada' })
     }

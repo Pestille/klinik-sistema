@@ -2074,6 +2074,7 @@ async function checkAuth() {
 }
 
 var _redefineUserId = null
+var _redefineToken = null
 
 async function doLogin() {
   var email = document.getElementById('login-email').value.trim()
@@ -2088,6 +2089,7 @@ async function doLogin() {
     var d = await r.json()
     if (d.success && d.deve_redefinir) {
       _redefineUserId = d.usuario_id
+      _redefineToken = d.reset_token
       document.getElementById('redefine-nome').textContent = 'Olá, ' + d.nome
       document.getElementById('login-form').style.display = 'none'
       document.getElementById('redefine-form').style.display = 'block'
@@ -2114,7 +2116,7 @@ async function doRedefinir() {
   if (!/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?`~]/.test(senha)) { errEl.textContent = 'Deve conter pelo menos 1 caractere especial (!@#$%...)'; return }
   btn.disabled = true; btn.textContent = 'Salvando...'
   try {
-    var r = await fetch('/api/auth?action=redefinir-senha', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario_id: _redefineUserId, nova_senha: senha }) })
+    var r = await fetch('/api/auth?action=redefinir-senha', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario_id: _redefineUserId, reset_token: _redefineToken, nova_senha: senha }) })
     var d = await r.json()
     if (d.success) {
       localStorage.setItem('klinov_token', d.token)
@@ -5858,7 +5860,7 @@ async function alterarSenhaUsuario(){
   if(!/[0-9]/.test(senha)){alert('Senha deve conter pelo menos 1 número');return}
   if(!/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?`~]/.test(senha)){alert('Senha deve conter pelo menos 1 caractere especial');return}
   try{
-    var r=await fetch('/api/auth?action=alterar-senha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario_id:parseInt(id),nova_senha:senha})})
+    var r=await fetch('/api/auth?action=alterar-senha',{method:'POST',headers:_apiHeaders(),body:JSON.stringify({usuario_id:parseInt(id),nova_senha:senha})})
     var d=await r.json()
     if(d.success){closeModal('alterar-senha');alert('Senha alterada!')}
     else{alert(d.error||'Erro')}
