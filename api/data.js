@@ -9,6 +9,7 @@ var { RECURSOS: PERM_RECURSOS, PERFIS: PERM_PERFIS, mapaPerfil, pode } = require
 var rotasAgenda = require('../lib/rotas/agenda')
 var rotasPacientes = require('../lib/rotas/pacientes')
 var rotasOrcamentos = require('../lib/rotas/orcamentos')
+var rotasCrc = require('../lib/rotas/crc')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
 // método; { GET, POST } quando leitura e escrita exigem recursos diferentes.
@@ -55,6 +56,7 @@ var ROTA_PERMISSAO = {
     'paciente-evolucoes': { GET: 'pacientes.prontuario', POST: 'pacientes.ficha_clinica' }, 'paciente-indicacoes': 'pacientes.indicacoes',
     'documento-modelos': { GET: 'pacientes.documentos', POST: 'configuracoes.editar' },
     // Orçamentos e tabelas de preço (lib/rotas/orcamentos.js)
+    'crc-filas': { GET: 'crc.acessar', POST: 'crc.editar' }, 'crc-quadro': 'crc.acessar', 'crc-cartao': 'crc.acessar', 'crc-interacao': 'crc.acessar', 'crc-interacoes': 'crc.acessar',
     'precos-tabelas': { GET: 'pacientes.orcamentos', POST: 'configuracoes.editar' }, 'precos-itens': { GET: 'pacientes.orcamentos', POST: 'configuracoes.editar' },
     'orcamento-duplicar': 'pacientes.orcamentos', 'orcamento-documento': 'pacientes.orcamentos', 'documento-preparar': 'pacientes.documentos', 'documentos-emitidos': 'pacientes.documentos',
     // Metas, dashboard, relatórios
@@ -130,6 +132,7 @@ module.exports = async function handler(req, res) {
         if (auth && await rotasAgenda.handle(route, ctxRota)) return
         if (auth && await rotasPacientes.handle(route, ctxRota)) return
         if (auth && await rotasOrcamentos.handle(route, ctxRota)) return
+        if (auth && await rotasCrc.handle(route, ctxRota)) return
 
         // ── LIXEIRA (Administração de Dados) ─────────────────────
         if (route === 'lixeira-listar') {
