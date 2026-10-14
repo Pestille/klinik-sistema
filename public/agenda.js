@@ -571,6 +571,8 @@
   }
 
   function cadastroRapido(nome, pronto) {
+    // cadastro completo (paciente.js) quando disponível
+    if (window.abrirCadastroPaciente) { abrirCadastroPaciente(pronto); var n = document.getElementById('pcn-nome'); if (n) n.value = nome; return }
     var tel = prompt('Celular / WhatsApp de ' + nome + ' (opcional):', '')
     if (tel === null) return
     apiPost('salvar-paciente', { nome: nome, telefone: tel, whatsapp: tel }).then(function (r) {
