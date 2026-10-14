@@ -7,6 +7,7 @@ var { runMigrations } = require('../lib/migrations')
 var { TIPOS: LIXEIRA_TIPOS, moverParaLixeira, restaurar: restaurarDaLixeira } = require('../lib/lixeira')
 var { RECURSOS: PERM_RECURSOS, PERFIS: PERM_PERFIS, mapaPerfil, pode } = require('../lib/permissoes')
 var rotasAgenda = require('../lib/rotas/agenda')
+var rotasPacientes = require('../lib/rotas/pacientes')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
 // método; { GET, POST } quando leitura e escrita exigem recursos diferentes.
@@ -47,6 +48,11 @@ var ROTA_PERMISSAO = {
     'agenda-categorias': 'agenda.editar_horarios', 'agenda-bloqueio': 'agenda.editar_horarios', 'agenda-horarios': 'agenda.editar_horarios',
     'agenda-cor-profissional': 'agenda.editar_horarios', 'lista-espera': 'agenda.agendar_atendimento',
     'alertas-retorno': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' },
+    // Paciente e prontuário (lib/rotas/pacientes.js)
+    'pacientes-lista': 'pacientes.acessar', 'paciente-resumo': 'pacientes.acessar', 'paciente-notas': 'pacientes.acessar',
+    'paciente-salvar': 'pacientes.editar_cadastro', 'paciente-status': 'pacientes.editar_cadastro', 'excluir-paciente': 'pacientes.excluir',
+    'paciente-evolucoes': { GET: 'pacientes.prontuario', POST: 'pacientes.ficha_clinica' }, 'paciente-indicacoes': 'pacientes.indicacoes',
+    'documento-modelos': { GET: 'pacientes.documentos', POST: 'configuracoes.editar' }, 'documento-preparar': 'pacientes.documentos', 'documentos-emitidos': 'pacientes.documentos',
     // Metas, dashboard, relatórios
     'metas': 'metas.acessar', 'metas-visualizar': 'metas.acessar', 'metas-config': { GET: 'metas.acessar', POST: 'metas.editar' },
     'dashboard-analitico': 'dashboard.acessar', 'analytics': 'dashboard.acessar',
@@ -116,7 +122,9 @@ module.exports = async function handler(req, res) {
         }
 
         // Rotas por módulo (lib/rotas/*) — respondem antes da cadeia antiga
-        if (auth && await rotasAgenda.handle(route, { req: req, res: res, q: q, client: client, auth: auth, clinica_id: clinica_id })) return
+        var ctxRota = { req: req, res: res, q: q, client: client, auth: auth, clinica_id: clinica_id }
+        if (auth && await rotasAgenda.handle(route, ctxRota)) return
+        if (auth && await rotasPacientes.handle(route, ctxRota)) return
 
         // ── LIXEIRA (Administração de Dados) ─────────────────────
         if (route === 'lixeira-listar') {
