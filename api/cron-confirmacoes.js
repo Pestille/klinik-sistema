@@ -2,7 +2,7 @@
 // Roda via Vercel Cron: 0 11 * * * (8h BRT / Campo Grande)
 // Multi-tenant: processa TODAS as clínicas
 
-var { getClient } = require('./db')
+var { getClient } = require('../lib/db')
 
 module.exports = async function handler(req, res) {
     // Security: only allow Vercel cron or manual trigger with secret

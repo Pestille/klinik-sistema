@@ -1,6 +1,6 @@
 // api/asaas-webhook.js — Webhook do Asaas para validação de saques e notificações
 var crypto = require('crypto')
-var { getClient } = require('./db')
+var { getClient } = require('../lib/db')
 
 // Compara o header `asaas-access-token` enviado pela Asaas com o segredo
 // configurado no painel Asaas (e aqui via env ASAAS_WEBHOOK_TOKEN).

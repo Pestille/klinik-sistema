@@ -1,8 +1,8 @@
 // api/data.js — Router consolidado (Turso DB)
 // Schema real: agendamentos.data_hora, financeiro.data_pagamento, pacientes.criado_em
 
-var { getClient } = require('./db')
-var { authenticateRequest, verificarPermissao, setCorsHeaders, checkRateLimit } = require('./middleware')
+var { getClient } = require('../lib/db')
+var { authenticateRequest, verificarPermissao, setCorsHeaders, checkRateLimit } = require('../lib/middleware')
 
 module.exports = async function handler(req, res) {
     setCorsHeaders(req, res)
@@ -136,14 +136,17 @@ module.exports = async function handler(req, res) {
             var pnome = q.nome || ''
             var sqlP, argP
             if (pid) { sqlP = "SELECT * FROM pacientes WHERE id=? AND clinica_id=?"; argP = [pid, clinica_id] }
-            else { sqlP = "SELECT * FROM pacientes WHERE nome LIKE ? AND clinica_id=? LIMIT 1"; argP = ['%'+pnome+'%', clinica_id] }
+            // Fallback por nome (telas antigas sem id): nome exato tem prioridade sobre o parcial
+            else { sqlP = "SELECT * FROM pacientes WHERE nome LIKE ? AND clinica_id=? ORDER BY (nome=?) DESC, length(nome) LIMIT 1"; argP = ['%'+pnome+'%', clinica_id, pnome] }
             var rp = await client.execute({ sql: sqlP, args: argP })
             if (!rp.rows.length) return res.status(404).json({ success: false, error: 'Paciente não encontrado' })
             var pac = rp.rows[0]
             var rpId = pac.id
             var rs5 = await Promise.all([
-                client.execute({ sql: "SELECT a.*,COALESCE(pr.nome,a.profissional_nome) as prof_nome FROM agendamentos a LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE (a.paciente_id=? OR a.paciente_nome LIKE ?) AND a.clinica_id=? ORDER BY a.data_hora DESC LIMIT 100", args: [rpId, '%'+pac.nome+'%', clinica_id] }),
-                client.execute({ sql: "SELECT * FROM pagamentos WHERE (paciente_id=? OR paciente_nome LIKE ?) AND clinica_id=? ORDER BY data_pagamento DESC LIMIT 100", args: [rpId, '%'+pac.nome+'%', clinica_id] }),
+                // Registros antigos sem paciente_id casam só pelo nome EXATO — LIKE '%nome%'
+                // trazia agendamentos/pagamentos de homônimos ("Maria" pegava "Maria Silva").
+                client.execute({ sql: "SELECT a.*,COALESCE(pr.nome,a.profissional_nome) as prof_nome FROM agendamentos a LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE (a.paciente_id=? OR (a.paciente_id IS NULL AND a.paciente_nome=?)) AND a.clinica_id=? ORDER BY a.data_hora DESC LIMIT 100", args: [rpId, pac.nome, clinica_id] }),
+                client.execute({ sql: "SELECT * FROM pagamentos WHERE (paciente_id=? OR (paciente_id IS NULL AND paciente_nome=?)) AND clinica_id=? ORDER BY data_pagamento DESC LIMIT 100", args: [rpId, pac.nome, clinica_id] }),
                 client.execute({ sql: "SELECT * FROM financeiro WHERE paciente_id=? AND clinica_id=? ORDER BY data_pagamento DESC LIMIT 50", args: [rpId, clinica_id] }),
             ])
             // Anamnese
@@ -1226,9 +1229,14 @@ module.exports = async function handler(req, res) {
             if (!sa2.paciente_nome || !sa2.data || !sa2.hora) return res.status(400).json({ success: false, error: 'Paciente, data e hora obrigatórios' })
             var dataHora2 = sa2.data + ' ' + sa2.hora
             var horaFim2 = sa2.hora_fim || ''
-            // Resolve paciente_id pelo nome
+            // paciente_id enviado pelo front tem prioridade (validado na clínica);
+            // o nome fica só como fallback para chamadas antigas
             var pacId2 = null
-            if (sa2.paciente_nome) {
+            if (sa2.paciente_id) {
+                var rPacId = await client.execute({ sql: "SELECT id FROM pacientes WHERE id=? AND clinica_id=?", args: [sa2.paciente_id, clinica_id] })
+                if (!rPacId.rows.length) return res.status(404).json({ success: false, error: 'Paciente não encontrado' })
+                pacId2 = rPacId.rows[0].id
+            } else if (sa2.paciente_nome) {
                 var rPac = await client.execute({ sql: "SELECT id FROM pacientes WHERE nome=? AND clinica_id=? LIMIT 1", args: [sa2.paciente_nome, clinica_id] })
                 if (rPac.rows.length) pacId2 = rPac.rows[0].id
             }
@@ -1252,7 +1260,11 @@ module.exports = async function handler(req, res) {
             var spg = req.body || {}
             if (!spg.valor) return res.status(400).json({ success: false, error: 'Valor obrigatório' })
             var pacIdPg = null
-            if (spg.paciente_nome) {
+            if (spg.paciente_id) {
+                var rPacIdPg = await client.execute({ sql: "SELECT id FROM pacientes WHERE id=? AND clinica_id=?", args: [spg.paciente_id, clinica_id] })
+                if (!rPacIdPg.rows.length) return res.status(404).json({ success: false, error: 'Paciente não encontrado' })
+                pacIdPg = rPacIdPg.rows[0].id
+            } else if (spg.paciente_nome) {
                 var rPacPg = await client.execute({ sql: "SELECT id FROM pacientes WHERE nome=? AND clinica_id=? LIMIT 1", args: [spg.paciente_nome, clinica_id] })
                 if (rPacPg.rows.length) pacIdPg = rPacPg.rows[0].id
             }

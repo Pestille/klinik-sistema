@@ -1,7 +1,7 @@
 // api/sync.js — Router consolidado para TODOS os syncs Clinicorp → Turso
 // Campos reais Clinicorp: Amount, ReceiptDate, PatientId, PatientName, id, Deleted
 
-const { getClient } = require('./db')
+const { getClient } = require('../lib/db')
 
 const USUARIO = process.env.CLINICORP_USUARIO || ''
 const TOKEN   = process.env.CLINICORP_TOKEN   || ''
@@ -600,7 +600,7 @@ async function syncPagamentos(client) {
 
 // ── HANDLER PRINCIPAL ─────────────────────────────────────────────────────────
 module.exports = async function handler(req, res) {
-    var { authenticateRequest, setCorsHeaders } = require('./middleware')
+    var { authenticateRequest, setCorsHeaders } = require('../lib/middleware')
     setCorsHeaders(req, res)
     if (req.method === 'OPTIONS') { res.status(200).end(); return }
 

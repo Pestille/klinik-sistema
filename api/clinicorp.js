@@ -63,7 +63,7 @@ async function fetchAll(endpoint, params, maxPages) {
 }
 
 module.exports = async function handler(req, res) {
-  var { authenticateRequest, setCorsHeaders } = require('./middleware')
+  var { authenticateRequest, setCorsHeaders } = require('../lib/middleware')
   setCorsHeaders(req, res)
   if (req.method === 'OPTIONS') { res.status(200).end(); return }
 

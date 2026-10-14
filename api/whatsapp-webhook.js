@@ -1,5 +1,5 @@
 // api/whatsapp-webhook.js — Webhook do WhatsApp para receber respostas dos pacientes
-var { getClient } = require('./db')
+var { getClient } = require('../lib/db')
 
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*')

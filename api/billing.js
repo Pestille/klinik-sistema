@@ -1,6 +1,6 @@
 // api/billing.js — Stripe billing: checkout, webhooks, portal
-var { getClient } = require('./db')
-var { authenticateRequest, setCorsHeaders } = require('./middleware')
+var { getClient } = require('../lib/db')
+var { authenticateRequest, setCorsHeaders } = require('../lib/middleware')
 
 // Stripe raw body parsing for webhooks
 module.exports = async function handler(req, res) {

@@ -5,7 +5,7 @@
 var crypto = require('crypto')
 var bcrypt = require('bcryptjs')
 var nodemailer = require('nodemailer')
-var { getClient } = require('./db')
+var { getClient } = require('../lib/db')
 
 function gerarToken() {
     return crypto.randomBytes(32).toString('hex')
@@ -52,7 +52,7 @@ async function enviarEmail(para, assunto, html) {
     }
 }
 
-var { setCorsHeaders, checkRateLimit } = require('./middleware')
+var { setCorsHeaders, checkRateLimit } = require('../lib/middleware')
 
 module.exports = async function handler(req, res) {
     setCorsHeaders(req, res)
@@ -180,7 +180,7 @@ module.exports = async function handler(req, res) {
     // ── CRIAR USUÁRIO ──────────────────────────────────────────
     if (action === 'criar-usuario') {
         if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
-        var { authenticateRequest: authCU } = require('./middleware')
+        var { authenticateRequest: authCU } = require('../lib/middleware')
         var authCr = await authCU(req)
         if (!authCr) return res.status(401).json({ success: false, error: 'Não autenticado' })
         if (authCr.perfil !== 'admin') return res.status(403).json({ success: false, error: 'Apenas admin' })
@@ -447,7 +447,7 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'listar-usuarios') {
-        var { authenticateRequest } = require('./middleware')
+        var { authenticateRequest } = require('../lib/middleware')
         var authLU = await authenticateRequest(req)
         if (!authLU) return res.status(401).json({ success: false, error: 'Não autenticado' })
         if (authLU.perfil !== 'admin') return res.status(403).json({ success: false, error: 'Apenas admin pode listar usuários' })
@@ -458,7 +458,7 @@ module.exports = async function handler(req, res) {
     // ── ALTERAR SENHA ──────────────────────────────────────────
     if (action === 'alterar-senha') {
         if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
-        var { authenticateRequest: authAS } = require('./middleware')
+        var { authenticateRequest: authAS } = require('../lib/middleware')
         var authAl = await authAS(req)
         if (!authAl) return res.status(401).json({ success: false, error: 'Não autenticado' })
         var b3 = req.body || {}
@@ -482,7 +482,7 @@ module.exports = async function handler(req, res) {
     // ── ATIVAR/DESATIVAR ───────────────────────────────────────
     if (action === 'toggle-usuario') {
         if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
-        var { authenticateRequest: authTU } = require('./middleware')
+        var { authenticateRequest: authTU } = require('../lib/middleware')
         var authTg = await authTU(req)
         if (!authTg) return res.status(401).json({ success: false, error: 'Não autenticado' })
         if (authTg.perfil !== 'admin') return res.status(403).json({ success: false, error: 'Apenas admin' })
@@ -503,7 +503,7 @@ module.exports = async function handler(req, res) {
     // ── EXCLUIR USUÁRIO ──────────────────────────────────────
     if (action === 'excluir-usuario') {
         if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
-        var { authenticateRequest: authEU } = require('./middleware')
+        var { authenticateRequest: authEU } = require('../lib/middleware')
         var authEx = await authEU(req)
         if (!authEx) return res.status(401).json({ success: false, error: 'Não autenticado' })
         if (authEx.perfil !== 'admin') return res.status(403).json({ success: false, error: 'Apenas admin' })
@@ -521,7 +521,7 @@ module.exports = async function handler(req, res) {
     // ── ATUALIZAR PERFIL (self-service) ──────────────────────
     if (action === 'atualizar-perfil') {
         if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
-        var { authenticateRequest: authAP } = require('./middleware')
+        var { authenticateRequest: authAP } = require('../lib/middleware')
         var authAp = await authAP(req)
         if (!authAp) return res.status(401).json({ success: false, error: 'Não autenticado' })
 

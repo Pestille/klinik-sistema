@@ -1,6 +1,6 @@
 // api/voz.js — Endpoint público para assistentes de voz (Siri, Google, Alexa)
 // Autenticação via token pessoal do profissional (token_voz)
-var { getClient } = require('./db')
+var { getClient } = require('../lib/db')
 
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*')

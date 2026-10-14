@@ -5,8 +5,8 @@
 //   ?action=lead      → registra lead do formulário da landing
 
 var bcrypt = require('bcryptjs')
-var { getClient } = require('./db')
-var { setCorsHeaders, checkRateLimit, escapeHtml } = require('./middleware')
+var { getClient } = require('../lib/db')
+var { setCorsHeaders, checkRateLimit, escapeHtml } = require('../lib/middleware')
 
 async function enviarEmail(para, assunto, html) {
     var resendKey = process.env.RESEND_API_KEY || ''
