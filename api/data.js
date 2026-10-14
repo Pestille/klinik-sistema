@@ -10,6 +10,7 @@ var rotasAgenda = require('../lib/rotas/agenda')
 var rotasPacientes = require('../lib/rotas/pacientes')
 var rotasOrcamentos = require('../lib/rotas/orcamentos')
 var rotasCrc = require('../lib/rotas/crc')
+var rotasFinanceiro = require('../lib/rotas/financeiro')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
 // método; { GET, POST } quando leitura e escrita exigem recursos diferentes.
@@ -27,6 +28,9 @@ var ROTA_PERMISSAO = {
     'conta-pagar-baixa': 'financeiro.dar_baixa', 'conta-pagar-cancelar': 'financeiro.editar_contas',
     'boletos-dashboard': 'financeiro.controle_boletos', 'planos-convenio': 'financeiro.controle_planos',
     'dre': 'financeiro.dre',
+    'fin-contas': { GET: 'financeiro.acessar', POST: 'financeiro.editar_contas' }, 'fin-categorias': { GET: 'financeiro.acessar', POST: 'financeiro.editar_contas' },
+    'fin-fornecedores': 'financeiro.contas', 'fin-movimentos': 'financeiro.conta_corrente', 'fin-lancamento': 'financeiro.conta_corrente', 'fin-fluxo': 'financeiro.fluxo_caixa',
+    'fin-pagar': 'financeiro.contas', 'fin-pagar-baixa': 'financeiro.dar_baixa', 'fin-pagar-estornar': 'financeiro.editar_contas', 'fin-receber': 'financeiro.contas',
     'conciliacoes-listar': 'financeiro.conciliacoes', 'conciliacao-importar': 'financeiro.conciliacoes',
     'conciliacao-itens': 'financeiro.conciliacoes', 'conciliacao-conciliar': 'financeiro.conciliacoes',
     'receitas-saude': { GET: 'pacientes.recibos', POST: 'financeiro.receita_saude' }, 'receita-saude-emitir': 'financeiro.receita_saude',
@@ -133,6 +137,7 @@ module.exports = async function handler(req, res) {
         if (auth && await rotasPacientes.handle(route, ctxRota)) return
         if (auth && await rotasOrcamentos.handle(route, ctxRota)) return
         if (auth && await rotasCrc.handle(route, ctxRota)) return
+        if (auth && await rotasFinanceiro.handle(route, ctxRota)) return
 
         // ── LIXEIRA (Administração de Dados) ─────────────────────
         if (route === 'lixeira-listar') {
@@ -2557,7 +2562,7 @@ module.exports = async function handler(req, res) {
                     await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='pago', data_pagamento=? WHERE id=? AND clinica_id=?", args: [cpgData, cpg.ids[cpi], clinica_id] })
                 }
                 // Create lancamento for total
-                var cpgTotal = await client.execute({ sql: "SELECT SUM(valor_comissao) as total, profissional_nome FROM comissoes_lancamentos WHERE id IN (" + cpg.ids.map(function() { return '?' }).join(',') + ")", args: cpg.ids })
+                var cpgTotal = await client.execute({ sql: "SELECT SUM(valor_comissao) as total, profissional_nome FROM comissoes_lancamentos WHERE clinica_id=? AND id IN (" + cpg.ids.map(function() { return '?' }).join(',') + ")", args: [clinica_id].concat(cpg.ids) })
                 if (cpgTotal.rows.length && cpgTotal.rows[0].total) {
                     try {
                         await client.execute({ sql: "INSERT INTO lancamentos(clinica_id, data, tipo, descricao, valor, classificacao, categoria, status) VALUES(?,?,?,?,?,?,?,?)", args: [clinica_id, cpgData, 'Saída', 'Comissão - ' + (cpgTotal.rows[0].profissional_nome || ''), cpgTotal.rows[0].total, 'Custo Variável', 'Comissão Profissionais', 'realizado'] })
@@ -3176,17 +3181,7 @@ module.exports = async function handler(req, res) {
                 sql: "UPDATE contas_pagar SET status='paga', pagamento=? WHERE id=? AND clinica_id=?",
                 args: [cpbData, cpb.id, clinica_id]
             })
-            // Create lancamento
-            var cpbRow = await client.execute({ sql: "SELECT * FROM contas_pagar WHERE id=? AND clinica_id=?", args: [cpb.id, clinica_id] })
-            if (cpbRow.rows.length) {
-                var cpbConta = cpbRow.rows[0]
-                try {
-                    await client.execute({
-                        sql: "INSERT INTO lancamentos(clinica_id, data, tipo, descricao, valor, classificacao, categoria, conta_pagar_id, status) VALUES(?,?,?,?,?,?,?,?,?)",
-                        args: [clinica_id, cpbData, 'Saída', cpbConta.descricao, cpbConta.valor, cpbConta.classificacao || '', cpbConta.categoria || '', cpb.id, 'realizado']
-                    })
-                } catch(e) { console.error('[conta-pagar-baixa] lancamento error:', e.message) }
-            }
+            // A conta paga já é o movimento (lib/rotas/financeiro.js); não duplica em lancamentos
             return res.status(200).json({ success: true, msg: 'Conta paga' })
         }
 
@@ -3374,25 +3369,14 @@ module.exports = async function handler(req, res) {
             // Get parcela info
             var pbRow = await client.execute({ sql: "SELECT * FROM parcelas_orcamento WHERE id=? AND clinica_id=?", args: [pb.id, clinica_id] })
             if (!pbRow.rows.length) return res.status(404).json({ success: false, error: 'Parcela não encontrada' })
-            var pbParc = pbRow.rows[0]
+            if (pbRow.rows[0].status === 'pago') return res.status(400).json({ success: false, error: 'Parcela já está paga' })
 
-            // Update parcela
+            // A parcela paga já é o movimento financeiro (lib/rotas/financeiro.js lê
+            // parcelas_orcamento); não duplica em lancamentos. Guarda forma e conta.
             await client.execute({
-                sql: "UPDATE parcelas_orcamento SET status='pago', data_pagamento=?, updated_at=datetime('now') WHERE id=? AND clinica_id=?",
-                args: [pbData, pb.id, clinica_id]
+                sql: "UPDATE parcelas_orcamento SET status='pago', data_pagamento=?, forma_pagamento=COALESCE(?,forma_pagamento), conta_id=COALESCE(?,conta_id), updated_at=datetime('now') WHERE id=? AND clinica_id=?",
+                args: [pbData, pb.forma_pagamento || null, parseInt(pb.conta_id) || null, pb.id, clinica_id]
             })
-
-            // Create lancamento entry
-            var pbPacNome = ''
-            var pbPacRow = await client.execute({ sql: "SELECT nome FROM pacientes WHERE id=? AND clinica_id=?", args: [pbParc.paciente_id, clinica_id] })
-            if (pbPacRow.rows.length) pbPacNome = pbPacRow.rows[0].nome
-
-            try {
-                await client.execute({
-                    sql: "INSERT INTO lancamentos(clinica_id, data, tipo, forma_pagamento, descricao, paciente_id, paciente_nome, valor, classificacao, categoria, status) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                    args: [clinica_id, pbData, 'Vendas', pbParc.forma_pagamento || '', 'Parcela ' + pbParc.numero_parcela + '/' + pbParc.total_parcelas + ' - Orçamento #' + pbParc.orcamento_id, pbParc.paciente_id, pbPacNome, pbParc.valor, 'Receita', 'Tratamento', 'realizado']
-                })
-            } catch(e) { console.error('[parcela-baixa] lancamento error:', e.message) }
 
             return res.status(200).json({ success: true, msg: 'Baixa realizada' })
         }
