@@ -8,6 +8,7 @@ var { TIPOS: LIXEIRA_TIPOS, moverParaLixeira, restaurar: restaurarDaLixeira } = 
 var { RECURSOS: PERM_RECURSOS, PERFIS: PERM_PERFIS, mapaPerfil, pode } = require('../lib/permissoes')
 var rotasAgenda = require('../lib/rotas/agenda')
 var rotasPacientes = require('../lib/rotas/pacientes')
+var rotasOrcamentos = require('../lib/rotas/orcamentos')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
 // método; { GET, POST } quando leitura e escrita exigem recursos diferentes.
@@ -52,7 +53,10 @@ var ROTA_PERMISSAO = {
     'pacientes-lista': 'pacientes.acessar', 'paciente-resumo': 'pacientes.acessar', 'paciente-notas': 'pacientes.acessar',
     'paciente-salvar': 'pacientes.editar_cadastro', 'paciente-status': 'pacientes.editar_cadastro', 'excluir-paciente': 'pacientes.excluir',
     'paciente-evolucoes': { GET: 'pacientes.prontuario', POST: 'pacientes.ficha_clinica' }, 'paciente-indicacoes': 'pacientes.indicacoes',
-    'documento-modelos': { GET: 'pacientes.documentos', POST: 'configuracoes.editar' }, 'documento-preparar': 'pacientes.documentos', 'documentos-emitidos': 'pacientes.documentos',
+    'documento-modelos': { GET: 'pacientes.documentos', POST: 'configuracoes.editar' },
+    // Orçamentos e tabelas de preço (lib/rotas/orcamentos.js)
+    'precos-tabelas': { GET: 'pacientes.orcamentos', POST: 'configuracoes.editar' }, 'precos-itens': { GET: 'pacientes.orcamentos', POST: 'configuracoes.editar' },
+    'orcamento-duplicar': 'pacientes.orcamentos', 'orcamento-documento': 'pacientes.orcamentos', 'documento-preparar': 'pacientes.documentos', 'documentos-emitidos': 'pacientes.documentos',
     // Metas, dashboard, relatórios
     'metas': 'metas.acessar', 'metas-visualizar': 'metas.acessar', 'metas-config': { GET: 'metas.acessar', POST: 'metas.editar' },
     'dashboard-analitico': 'dashboard.acessar', 'analytics': 'dashboard.acessar',
@@ -125,6 +129,7 @@ module.exports = async function handler(req, res) {
         var ctxRota = { req: req, res: res, q: q, client: client, auth: auth, clinica_id: clinica_id }
         if (auth && await rotasAgenda.handle(route, ctxRota)) return
         if (auth && await rotasPacientes.handle(route, ctxRota)) return
+        if (auth && await rotasOrcamentos.handle(route, ctxRota)) return
 
         // ── LIXEIRA (Administração de Dados) ─────────────────────
         if (route === 'lixeira-listar') {
