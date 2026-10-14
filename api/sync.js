@@ -189,15 +189,22 @@ function _cnt(obj,k){ k = (k===undefined||k===null||k==='') ? '(vazio)' : String
 async function resumo() {
     var hoje = _d(0)
     var semanas = [0,7,14,21].map(function(o){ return { from:_d(o+7), to:_d(o) } })
-    var calls = [fetchPage('appointment/list', { from:_d(365), to:hoje }, 9000)]
+    // Agendamentos em 6 janelas de ~2 meses (uma chamada de 365 dias estoura o tempo)
+    var bim = [0,61,122,183,244,305].map(function(o){ return { from:_d(o+60), to:_d(o) } })
+    var calls = bim.map(function(w){ return fetchPage('appointment/list', w, 9000) })
         .concat(semanas.map(function(w){ return fetchPage('estimates/list', w, 9000) }))
     var rs = await Promise.allSettled(calls)
     var val = function(i){ return rs[i].status==='fulfilled' ? rs[i].value : { _err:'rejected' } }
     var out = { tipo:'resumo' }
 
-    var ag = val(0)
-    if (ag._error||ag._timeout||ag._err) out.agendamentos = { erro: ag._error||(ag._timeout?'timeout':ag._err) }
-    else {
+    var agItens = [], agErros = [], vistos = {}
+    for (var j = 0; j < bim.length; j++) {
+        var rj = val(j)
+        if (rj._error||rj._timeout||rj._err) { agErros.push(bim[j].from + ':' + (rj._error||(rj._timeout?'timeout':rj._err))); continue }
+        rj.items.forEach(function(a){ if (a.id && vistos[a.id]) return; if (a.id) vistos[a.id] = 1; agItens.push(a) })
+    }
+    var ag = { items: agItens }
+    {
         var itens = ag.items.filter(function(a){ return !a.Deleted })
         var pac = {}, cat = {}, st = {}, prof = {}
         itens.forEach(function(a){
@@ -215,12 +222,17 @@ async function resumo() {
             if (u >= _d(90)) faixas.ate_3m++; else if (u >= _d(180)) faixas['3a6m']++; else faixas['6a12m']++
         })
         out.agendamentos = { total: itens.length, excluidos: ag.items.length - itens.length,
-            pacientes_unicos: ids.length, pacientes_com_email: comEmail, pacientes_com_celular: comCel,
+            janelas_com_erro: agErros, pacientes_unicos: ids.length, pacientes_com_email: comEmail, pacientes_com_celular: comCel,
             ultima_visita_no_periodo: faixas, por_categoria: cat, por_status: st, dentistas_distintos: Object.keys(prof).length }
     }
 
     var orc = [], erros = []
-    for (var i = 1; i < calls.length; i++) { var r = val(i); if (r._error||r._timeout||r._err) erros.push(r._error||(r._timeout?'timeout':r._err)); else orc = orc.concat(r.items) }
+    var orcVistos = {}
+    for (var i = bim.length; i < calls.length; i++) {
+        var r = val(i)
+        if (r._error||r._timeout||r._err) { erros.push(r._error||(r._timeout?'timeout':r._err)); continue }
+        r.items.forEach(function(o){ var k = o.id || o.TreatmentId; if (k && orcVistos[k]) return; if (k) orcVistos[k] = 1; orc.push(o) })
+    }
     var porStatus = {}, valorStatus = {}, aprovados = 0, procs = {}, chavesProc = null
     orc.forEach(function(o){
         _cnt(porStatus, o.Status)
@@ -228,7 +240,7 @@ async function resumo() {
         if (o.ApprovedDate) aprovados++
         ;(Array.isArray(o.ProcedureList) ? o.ProcedureList : []).forEach(function(pr){
             if (!chavesProc && pr && typeof pr==='object') chavesProc = Object.keys(pr)
-            _cnt(procs, pr && (pr.ProcedureDescription||pr.Description||pr.Name||pr.description))
+            _cnt(procs, pr && (pr.OperationDescription||pr.ProcedureDescription||pr.Description||pr.Name))
         })
     })
     var topProcs = Object.entries(procs).sort(function(a,b){ return b[1]-a[1] }).slice(0,15)
