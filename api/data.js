@@ -5,6 +5,56 @@ var { getClient } = require('../lib/db')
 var { authenticateRequest, verificarPermissao, setCorsHeaders, checkRateLimit } = require('../lib/middleware')
 var { runMigrations } = require('../lib/migrations')
 var { TIPOS: LIXEIRA_TIPOS, moverParaLixeira, restaurar: restaurarDaLixeira } = require('../lib/lixeira')
+var { RECURSOS: PERM_RECURSOS, PERFIS: PERM_PERFIS, mapaPerfil, pode } = require('../lib/permissoes')
+
+// Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
+// método; { GET, POST } quando leitura e escrita exigem recursos diferentes.
+// Rotas fora do mapa seguem liberadas para qualquer usuário logado da clínica.
+var ROTA_PERMISSAO = {
+    // Financeiro da clínica
+    'financeiro': 'financeiro.acessar', 'extrato': 'financeiro.acessar', 'dashboard-financeiro': 'financeiro.acessar',
+    'categorias-financeiras': 'financeiro.acessar', 'saldo-clinica': 'financeiro.acessar', 'saques-clinica': 'financeiro.acessar',
+    'cobrancas-clinica': 'financeiro.acessar', 'pagamentos': 'financeiro.acessar',
+    'solicitar-saque': 'gerenciar_contas.editar',
+    'conta-corrente': 'financeiro.conta_corrente', 'salvar-lancamento': 'financeiro.conta_corrente',
+    'fluxo-caixa': 'financeiro.fluxo_caixa', 'fluxo-caixa-real': 'financeiro.fluxo_caixa',
+    'contas-receber-real': 'financeiro.contas', 'contas-pagar-crud': 'financeiro.contas',
+    'verificar-vencimentos': 'financeiro.contas', 'gerar-recorrentes': 'financeiro.contas',
+    'conta-pagar-baixa': 'financeiro.dar_baixa', 'conta-pagar-cancelar': 'financeiro.editar_contas',
+    'boletos-dashboard': 'financeiro.controle_boletos', 'planos-convenio': 'financeiro.controle_planos',
+    'dre': 'financeiro.dre',
+    'conciliacoes-listar': 'financeiro.conciliacoes', 'conciliacao-importar': 'financeiro.conciliacoes',
+    'conciliacao-itens': 'financeiro.conciliacoes', 'conciliacao-conciliar': 'financeiro.conciliacoes',
+    'receitas-saude': { GET: 'pacientes.recibos', POST: 'financeiro.receita_saude' }, 'receita-saude-emitir': 'financeiro.receita_saude',
+    'comissoes-relatorio': 'financeiro.comissoes', 'comissoes-pagar': 'financeiro.comissoes', 'comissoes-profissional': 'financeiro.comissoes',
+    'comissoes-config': { GET: 'profissionais.acessar', POST: 'profissionais.editar', DELETE: 'profissionais.editar' },
+    // Paciente
+    'parcelas-paciente': 'pacientes.financeiro', 'parcelas-orcamento': 'pacientes.financeiro', 'cobrancas-paciente': 'pacientes.financeiro',
+    'gerar-cobranca': 'pacientes.financeiro', 'parcela-baixa': 'pacientes.financeiro', 'parcela-cancelar': 'pacientes.financeiro',
+    'parcela-vincular-cobranca': 'pacientes.financeiro', 'gerar-parcelas': 'pacientes.financeiro', 'sincronizar-cobrancas': 'pacientes.financeiro',
+    'recibos-paciente': 'pacientes.recibos',
+    'salvar-odontograma': 'pacientes.odontograma', 'salvar-anamnese': 'pacientes.anamnese',
+    'marcar-executado': 'pacientes.ficha_clinica', 'editar-execucao': 'pacientes.ficha_clinica', 'desfazer-execucao': 'pacientes.ficha_clinica',
+    'salvar-orcamento': 'pacientes.orcamentos',
+    'aprovar-orcamento': 'pacientes.editar_orcamento', 'reprovar-orcamento': 'pacientes.editar_orcamento',
+    'desaprovar-orcamento': 'pacientes.editar_orcamento', 'renegociar-orcamento': 'pacientes.editar_orcamento',
+    'excluir-orcamento': 'pacientes.editar_orcamento',
+    'documentos-paciente': 'pacientes.documentos', 'salvar-documento': 'pacientes.documentos', 'excluir-documento': 'pacientes.documentos',
+    'salvar-paciente': 'pacientes.editar_cadastro', 'salvar-paciente-edit': 'pacientes.editar_cadastro', 'salvar-foto-paciente': 'pacientes.editar_cadastro',
+    // Agenda
+    'salvar-agendamento': 'agenda.agendar_atendimento', 'excluir-agendamento': 'agenda.agendar_atendimento',
+    // Metas, dashboard, relatórios
+    'metas': 'metas.acessar', 'metas-visualizar': 'metas.acessar', 'metas-config': { GET: 'metas.acessar', POST: 'metas.editar' },
+    'dashboard-analitico': 'dashboard.acessar', 'analytics': 'dashboard.acessar',
+    'relatorios': 'relatorios.acessar', 'relatorio-profissionais': 'relatorios.acessar',
+    // Marketing
+    'marketing': 'marketing.acessar', 'campanhas': 'marketing.acessar', 'templates': 'marketing.acessar',
+    'envios-historico': 'marketing.acessar', 'campanha-preview': 'marketing.acessar', 'marketing-config': 'marketing.acessar',
+    'salvar-campanha': 'marketing.editar', 'campanha-enviar': 'marketing.editar', 'salvar-template': 'marketing.editar', 'excluir-template': 'marketing.editar',
+    // Profissionais e usuários
+    'criar-profissional': 'profissionais.editar', 'salvar-profissional': 'profissionais.editar',
+    'permissoes-perfil': 'usuarios.acessar'
+}
 
 module.exports = async function handler(req, res) {
     setCorsHeaders(req, res)
@@ -51,6 +101,15 @@ module.exports = async function handler(req, res) {
     try {
         var client = getClient()
         await runMigrations(client)
+
+        // Permissões por perfil aplicadas no servidor (antes só escondiam o menu)
+        var rotaPerm = ROTA_PERMISSAO[route]
+        if (rotaPerm && auth) {
+            var recursoPerm = typeof rotaPerm === 'string' ? rotaPerm : (rotaPerm[req.method] || rotaPerm.POST || rotaPerm.GET)
+            if (!await pode(client, auth, recursoPerm)) {
+                return res.status(403).json({ success: false, error: 'Seu perfil não tem permissão para esta ação', recurso: recursoPerm })
+            }
+        }
 
         // ── LIXEIRA (Administração de Dados) ─────────────────────
         if (route === 'lixeira-listar') {
@@ -2404,147 +2463,8 @@ module.exports = async function handler(req, res) {
 
             // Clear and reseed all permissions
             await client.execute("DELETE FROM permissoes WHERE clinica_id IS NULL")
-            var pmRecursos = [
-                // [recurso, admin, dentista, recepcionista, asb, administrativo]
-                // ── AGENDA ──
-                ['agenda.agendar_atendimento', 1, 1, 1, 0, 0],
-                ['agenda.editar_horarios', 1, 1, 1, 0, 0],
-                ['agenda.visualizar_classificacao', 1, 1, 1, 1, 1],
-                // ── CLINICA ──
-                ['clinica.ver', 1, 1, 1, 1, 1],
-                // ── CONFIGURACOES ──
-                ['configuracoes.acessar', 1, 0, 0, 0, 0],
-                ['configuracoes.editar', 1, 0, 0, 0, 0],
-                // ── CONTROLE DE CHEQUE ──
-                ['cheque.acessar', 1, 0, 0, 0, 1],
-                ['cheque.excluir', 1, 0, 0, 0, 0],
-                ['cheque.editar_parcelas', 1, 0, 0, 0, 1],
-                // ── CONTROLE DE INDICACAO ──
-                ['indicacao.acessar', 1, 1, 1, 0, 1],
-                ['indicacao.excluir', 1, 0, 0, 0, 0],
-                // ── CONTROLE PROTETICO ──
-                ['protetico.acessar', 1, 1, 1, 1, 1],
-                ['protetico.excluir', 1, 0, 0, 0, 0],
-                // ── CRC ──
-                ['crc.acessar', 1, 1, 1, 0, 1],
-                ['crc.excluir', 1, 0, 0, 0, 0],
-                ['crc.agendamento_pacificacao', 1, 1, 1, 0, 0],
-                ['crc.enviar_mensagem', 1, 1, 1, 0, 1],
-                ['crc.exportar_planilha', 1, 0, 0, 0, 1],
-                ['crc.abrir_nova_funcao', 1, 0, 0, 0, 0],
-                ['crc.editar', 1, 0, 0, 0, 0],
-                ['crc.rejeitar_paciente', 1, 0, 0, 0, 0],
-                ['crc.encaminhamento', 1, 1, 1, 0, 0],
-                ['crc.exportar_agendamento', 1, 0, 0, 0, 1],
-                // ── CRM ──
-                ['crm.acessar', 1, 1, 1, 0, 1],
-                ['crm.excluir', 1, 0, 0, 0, 0],
-                ['crm.acessar_campanha', 1, 0, 0, 0, 1],
-                // ── DASHBOARD ANALITICO ──
-                ['dashboard.acessar', 1, 1, 0, 0, 1],
-                ['dashboard.editar_metas', 1, 0, 0, 0, 0],
-                // ── FINANCEIRO ──
-                ['financeiro.acessar', 1, 0, 0, 0, 1],
-                ['financeiro.excluir', 1, 0, 0, 0, 0],
-                ['financeiro.contas', 1, 0, 0, 0, 1],
-                ['financeiro.editar_contas', 1, 0, 0, 0, 0],
-                ['financeiro.planos', 1, 0, 0, 0, 1],
-                ['financeiro.processar_recibo', 1, 0, 0, 0, 1],
-                ['financeiro.conta_corrente', 1, 0, 0, 0, 1],
-                ['financeiro.controle_cheques', 1, 0, 0, 0, 1],
-                ['financeiro.editar_cheques', 1, 0, 0, 0, 0],
-                ['financeiro.controle_cartoes', 1, 0, 0, 0, 1],
-                ['financeiro.editar_cartoes', 1, 0, 0, 0, 0],
-                ['financeiro.editar_parcelas', 1, 0, 0, 0, 0],
-                ['financeiro.controle_boletos', 1, 0, 0, 0, 1],
-                ['financeiro.controle_planos', 1, 0, 0, 0, 1],
-                ['financeiro.fluxo_caixa', 1, 0, 0, 0, 1],
-                ['financeiro.parcela_avulsa', 1, 0, 0, 0, 0],
-                ['financeiro.dre', 1, 0, 0, 0, 0],
-                ['financeiro.comissoes', 1, 0, 0, 0, 1],
-                ['financeiro.dar_baixa', 1, 0, 0, 0, 1],
-                ['financeiro.conciliacoes', 1, 0, 0, 0, 0],
-                ['financeiro.receita_saude', 1, 1, 0, 0, 1],
-                // ── GERENCIAR CONTAS ──
-                ['gerenciar_contas.acessar', 1, 0, 0, 0, 1],
-                ['gerenciar_contas.editar', 1, 0, 0, 0, 0],
-                ['gerenciar_contas.importacao', 1, 0, 0, 0, 0],
-                ['gerenciar_contas.excluir_relatorio', 1, 0, 0, 0, 0],
-                // ── MARKETPLACE ──
-                ['marketplace.acessar', 1, 0, 0, 0, 0],
-                ['marketplace.exclusao_grupos', 1, 0, 0, 0, 0],
-                // ── METAS ──
-                ['metas.acessar', 1, 1, 0, 0, 1],
-                ['metas.editar', 1, 0, 0, 0, 0],
-                // ── PACIENTES ──
-                ['pacientes.acessar', 1, 1, 1, 1, 1],
-                ['pacientes.agendamentos', 1, 1, 1, 0, 1],
-                ['pacientes.prontuario', 1, 1, 1, 1, 0],
-                ['pacientes.orcamentos', 1, 1, 1, 0, 0],
-                ['pacientes.editar_orcamento', 1, 1, 0, 0, 0],
-                ['pacientes.financeiro', 1, 0, 0, 0, 1],
-                ['pacientes.fotos', 1, 1, 1, 1, 0],
-                ['pacientes.emissao_relatorio', 1, 0, 0, 0, 1],
-                ['pacientes.atendimento_recepcao', 1, 0, 1, 0, 0],
-                ['pacientes.exportar', 1, 0, 0, 0, 1],
-                ['pacientes.prescricoes', 1, 1, 0, 0, 0],
-                ['pacientes.recibos', 1, 1, 0, 0, 1],
-                ['pacientes.documentos', 1, 1, 1, 1, 1],
-                ['pacientes.anamnese', 1, 1, 1, 0, 0],
-                ['pacientes.odontograma', 1, 1, 0, 0, 0],
-                ['pacientes.ficha_clinica', 1, 1, 0, 0, 0],
-                ['pacientes.exames', 1, 1, 1, 1, 0],
-                ['pacientes.indicacoes', 1, 1, 1, 0, 1],
-                ['pacientes.editar_cadastro', 1, 1, 1, 0, 1],
-                ['pacientes.excluir', 1, 0, 0, 0, 0],
-                ['pacientes.gerar_procedimentos', 1, 1, 0, 0, 0],
-                // ── PLANO DE RECORRENCIA ──
-                ['recorrencia.acessar', 1, 0, 0, 0, 1],
-                ['recorrencia.editar', 1, 0, 0, 0, 0],
-                ['recorrencia.editar_config', 1, 0, 0, 0, 0],
-                // ── PORTAL DO ASSINANTE ──
-                ['portal.acessar', 1, 0, 0, 0, 0],
-                ['portal.editar', 1, 0, 0, 0, 0],
-                // ── PROFISSIONAIS ──
-                ['profissionais.acessar', 1, 1, 1, 0, 1],
-                ['profissionais.editar', 1, 0, 0, 0, 0],
-                // ── RELATORIOS ──
-                ['relatorios.acessar', 1, 1, 0, 0, 1],
-                ['relatorios.editar', 1, 0, 0, 0, 0],
-                ['relatorios.agendamentos_retornos', 1, 1, 0, 0, 1],
-                ['relatorios.agendamentos_cadastros', 1, 1, 0, 0, 1],
-                ['relatorios.agendamentos_desc', 1, 1, 0, 0, 1],
-                ['relatorios.agendamentos_atendidos', 1, 1, 0, 0, 1],
-                ['relatorios.agendamentos_faltas', 1, 1, 0, 0, 1],
-                ['relatorios.agendamentos_geral', 1, 1, 0, 0, 1],
-                ['relatorios.agendamentos_movimentacao', 1, 1, 0, 0, 1],
-                ['relatorios.agendamentos_marcacoes', 1, 1, 0, 0, 1],
-                ['relatorios.agendamentos_confirmacoes', 1, 1, 0, 0, 1],
-                ['relatorios.procedimentos_agendados', 1, 1, 0, 0, 1],
-                ['relatorios.procedimentos_evolucao', 1, 1, 0, 0, 1],
-                ['relatorios.procedimentos_credito_debito', 1, 0, 0, 0, 1],
-                ['relatorios.procedimentos_falta_cancel', 1, 1, 0, 0, 1],
-                ['relatorios.financeiro_cpf', 1, 0, 0, 0, 1],
-                ['relatorios.financeiro_liquidez', 1, 0, 0, 0, 0],
-                ['relatorios.financeiro_pagamentos', 1, 0, 0, 0, 1],
-                ['relatorios.procedimentos_retornos', 1, 1, 0, 0, 1],
-                ['relatorios.procedimentos_modalidade', 1, 1, 0, 0, 1],
-                ['relatorios.orcamentos', 1, 1, 0, 0, 1],
-                ['relatorios.orcamentos_aprovados', 1, 1, 0, 0, 1],
-                ['relatorios.comissoes', 1, 0, 0, 0, 1],
-                ['relatorios.producao', 1, 1, 0, 0, 1],
-                // ── ESTOQUE ──
-                ['estoque.acessar', 1, 0, 1, 1, 1],
-                ['estoque.editar', 1, 0, 0, 0, 1],
-                // ── MARKETING ──
-                ['marketing.acessar', 1, 0, 1, 0, 1],
-                ['marketing.editar', 1, 0, 0, 0, 0],
-                // ── USUARIOS E PERMISSOES ──
-                ['usuarios.acessar', 1, 0, 0, 0, 0],
-                ['usuarios.modificar_senhas', 1, 0, 0, 0, 0],
-                ['usuarios.trocar_perfil', 1, 0, 0, 0, 0],
-            ]
-            var pmPerfis = ['admin', 'dentista', 'recepcionista', 'asb', 'administrativo']
+            var pmRecursos = PERM_RECURSOS
+            var pmPerfis = PERM_PERFIS
             for (var pri = 0; pri < pmRecursos.length; pri++) {
                 var pmR = pmRecursos[pri]
                 for (var ppi = 0; ppi < pmPerfis.length; ppi++) {
@@ -2558,13 +2478,8 @@ module.exports = async function handler(req, res) {
         // ── PERMISSOES-PERFIL (GET permissões de um perfil) ──────────
         if (route === 'permissoes-perfil') {
             var ppPerfil = q.perfil || 'recepcionista'
-            var ppRows = await client.execute({
-                sql: "SELECT recurso, permitido FROM permissoes WHERE (clinica_id IS NULL OR clinica_id=?) AND perfil=? ORDER BY recurso",
-                args: [clinica_id, ppPerfil]
-            })
-            // Clinic-specific overrides global
-            var ppMap = {}
-            ppRows.rows.forEach(function(r) { ppMap[r.recurso] = r.permitido })
+            // Mapa efetivo (padrão + global + override da clínica) — o mesmo que o servidor aplica
+            var ppMap = await mapaPerfil(client, clinica_id, ppPerfil)
             return res.status(200).json({ success: true, perfil: ppPerfil, permissoes: ppMap })
         }
 
@@ -2587,12 +2502,7 @@ module.exports = async function handler(req, res) {
 
         // ── PERMISSOES-USUARIO (GET permissões do usuário logado) ────
         if (route === 'permissoes-usuario') {
-            var puRows = await client.execute({
-                sql: "SELECT recurso, permitido FROM permissoes WHERE (clinica_id IS NULL OR clinica_id=?) AND perfil=? ORDER BY recurso",
-                args: [clinica_id, auth.perfil]
-            })
-            var puMap = {}
-            puRows.rows.forEach(function(r) { puMap[r.recurso] = r.permitido })
+            var puMap = await mapaPerfil(client, clinica_id, auth.perfil)
             return res.status(200).json({ success: true, perfil: auth.perfil, permissoes: puMap })
         }
 
