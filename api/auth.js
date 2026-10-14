@@ -53,6 +53,7 @@ async function enviarEmail(para, assunto, html) {
 }
 
 var { setCorsHeaders, checkRateLimit } = require('../lib/middleware')
+var { runMigrations } = require('../lib/migrations')
 
 module.exports = async function handler(req, res) {
     setCorsHeaders(req, res)
@@ -62,6 +63,7 @@ module.exports = async function handler(req, res) {
     var q = req.query || {}
     var action = q.action || ''
     var client = getClient()
+    await runMigrations(client)
 
     // Garante que tabelas existem
     try {
@@ -102,8 +104,6 @@ module.exports = async function handler(req, res) {
         // O reset_token prova que quem chama redefinir-senha acabou de acertar a
         // senha atual — sem ele, qualquer um trocaria a senha de qualquer usuario_id.
         if (user.deve_redefinir) {
-            try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_redefinir TEXT") } catch(e) {}
-            try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_redefinir_expira TEXT") } catch(e) {}
             var resetToken = gerarToken()
             var expiraReset = new Date(); expiraReset.setMinutes(expiraReset.getMinutes() + 15)
             await client.execute({ sql: "UPDATE usuarios SET token_redefinir=?, token_redefinir_expira=? WHERE id=?", args: [resetToken, expiraReset.toISOString(), user.id] })
@@ -125,8 +125,6 @@ module.exports = async function handler(req, res) {
         var br = req.body || {}
         if (!br.usuario_id || !br.nova_senha || !br.reset_token) return res.status(400).json({ success: false, error: 'usuario_id, reset_token e nova_senha obrigatórios' })
 
-        try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_redefinir TEXT") } catch(e) {}
-        try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_redefinir_expira TEXT") } catch(e) {}
         var rr = await client.execute({ sql: "SELECT token_redefinir_expira FROM usuarios WHERE id=? AND token_redefinir=? AND deve_redefinir=1 AND ativo=1", args: [br.usuario_id, String(br.reset_token)] })
         if (!rr.rows.length || !rr.rows[0].token_redefinir_expira || new Date(rr.rows[0].token_redefinir_expira) < new Date()) {
             return res.status(401).json({ success: false, error: 'Sessão de redefinição expirada. Faça login novamente.' })

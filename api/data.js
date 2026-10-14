@@ -3,6 +3,8 @@
 
 var { getClient } = require('../lib/db')
 var { authenticateRequest, verificarPermissao, setCorsHeaders, checkRateLimit } = require('../lib/middleware')
+var { runMigrations } = require('../lib/migrations')
+var { TIPOS: LIXEIRA_TIPOS, moverParaLixeira, restaurar: restaurarDaLixeira } = require('../lib/lixeira')
 
 module.exports = async function handler(req, res) {
     setCorsHeaders(req, res)
@@ -39,7 +41,8 @@ module.exports = async function handler(req, res) {
         'financeiro-migrate', 'financeiro-migrate-v2', 'financeiro-migrate-v3',
         'importar-clinicorp', 'importar-pacientes-lote', 'importar-orcamentos-lote', 'importar-tabela-precos',
         'atualizar-rg-lote', 'enriquecer-pacientes', 'exportar-dados', 'salvar-dados-clinica',
-        'diagnostico-integracoes', 'testar-integracoes', 'testar-envio-wa'
+        'diagnostico-integracoes', 'testar-integracoes', 'testar-envio-wa',
+        'lixeira-listar', 'lixeira-restaurar'
     ]
     if (adminRoutes.indexOf(route) !== -1 && (!auth || auth.perfil !== 'admin')) {
         return res.status(403).json({ success: false, error: 'Apenas admin' })
@@ -47,6 +50,24 @@ module.exports = async function handler(req, res) {
 
     try {
         var client = getClient()
+        await runMigrations(client)
+
+        // ── LIXEIRA (Administração de Dados) ─────────────────────
+        if (route === 'lixeira-listar') {
+            var lxW = ["clinica_id=?", "restaurado_em IS NULL"], lxA = [clinica_id]
+            if (q.tipo && LIXEIRA_TIPOS[q.tipo]) { lxW.push("tipo=?"); lxA.push(q.tipo) }
+            var lxR = await client.execute({ sql: "SELECT id,tipo,registro_id,descricao,excluido_por_nome,excluido_em FROM lixeira WHERE " + lxW.join(' AND ') + " ORDER BY excluido_em DESC LIMIT 200", args: lxA })
+            var lxTipos = Object.keys(LIXEIRA_TIPOS).map(function(k) { return { tipo: k, rotulo: LIXEIRA_TIPOS[k].rotulo } })
+            return res.status(200).json({ success: true, data: lxR.rows, tipos: lxTipos })
+        }
+        if (route === 'lixeira-restaurar') {
+            if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+            var lxId = parseInt((req.body || {}).id) || 0
+            if (!lxId) return res.status(400).json({ success: false, error: 'id obrigatório' })
+            var lxRes = await restaurarDaLixeira(client, auth, lxId)
+            if (!lxRes.ok) return res.status(lxRes.status).json({ success: false, error: lxRes.error })
+            return res.status(200).json({ success: true, msg: 'Registro restaurado' })
+        }
 
         // Ensure foto_url column exists (once per cold start)
         if (!global._fotoColChecked) {
@@ -563,7 +584,7 @@ module.exports = async function handler(req, res) {
             if (req.method === 'POST') {
                 var mc = req.body || {}
                 if (mc.action === 'delete') {
-                    await client.execute({ sql: "DELETE FROM metas_config WHERE id=? AND clinica_id=?", args: [mc.id, clinica_id] })
+                    await moverParaLixeira(client, auth, 'meta', mc.id)
                     return res.status(200).json({ success: true, msg: 'Meta excluída' })
                 }
                 if (!mc.tipo || !mc.valor || !mc.data_inicio || !mc.data_fim) return res.status(400).json({ success: false, error: 'tipo, valor, data_inicio e data_fim obrigatórios' })
@@ -1214,7 +1235,7 @@ module.exports = async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var ea = req.body || {}
             if (!ea.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
-            await client.execute({ sql: "DELETE FROM agendamentos WHERE id=? AND clinica_id=?", args: [ea.id, clinica_id] })
+            if (!await moverParaLixeira(client, auth, 'agendamento', ea.id)) return res.status(404).json({ success: false, error: 'Agendamento não encontrado' })
             return res.status(200).json({ success: true, msg: 'Agendamento excluído' })
         }
 
@@ -1838,7 +1859,7 @@ module.exports = async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var ed = req.body || {}
             if (!ed.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
-            await client.execute({ sql: "DELETE FROM documentos WHERE id=? AND clinica_id=?", args: [ed.id, clinica_id] })
+            if (!await moverParaLixeira(client, auth, 'documento', ed.id)) return res.status(404).json({ success: false, error: 'Documento não encontrado' })
             return res.status(200).json({ success: true, msg: 'Documento excluído' })
         }
 
@@ -1901,11 +1922,8 @@ module.exports = async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var eo = req.body || {}
             if (!eo.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
-            // Verify ownership before deleting items (prevents cross-tenant deletion)
-            var eoOrc = await client.execute({ sql: "SELECT id FROM orcamentos WHERE id=? AND clinica_id=?", args: [eo.id, clinica_id] })
-            if (!eoOrc.rows.length) return res.status(404).json({ success: false, error: 'Orçamento não encontrado' })
-            await client.execute({ sql: "DELETE FROM orcamento_itens WHERE orcamento_id=? AND clinica_id=?", args: [eo.id, clinica_id] })
-            await client.execute({ sql: "DELETE FROM orcamentos WHERE id=? AND clinica_id=?", args: [eo.id, clinica_id] })
+            // moverParaLixeira confere a clínica e leva os itens junto
+            if (!await moverParaLixeira(client, auth, 'orcamento', eo.id)) return res.status(404).json({ success: false, error: 'Orçamento não encontrado' })
             return res.status(200).json({ success: true, msg: 'Orçamento excluído' })
         }
 
@@ -2612,7 +2630,7 @@ module.exports = async function handler(req, res) {
             if (req.method === 'DELETE' || (req.method === 'POST' && (req.body || {}).action === 'delete')) {
                 var ccd = req.body || {}; var ccdId = ccd.id || parseInt(q.id) || 0
                 if (!ccdId) return res.status(400).json({ success: false, error: 'id obrigatório' })
-                await client.execute({ sql: "DELETE FROM comissoes_config WHERE id=? AND clinica_id=?", args: [ccdId, clinica_id] })
+                await moverParaLixeira(client, auth, 'comissao_config', ccdId)
                 return res.status(200).json({ success: true, msg: 'Regra excluída' })
             }
             // GET

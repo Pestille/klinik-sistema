@@ -1,4 +1,35 @@
-<!DOCTYPE html>
+<!
+// ── LIXEIRA (Administração de Dados) ─────────────────────────────
+async function loadLixeira(){
+  var el=document.getElementById('lx-lista');if(!el)return
+  var sel=document.getElementById('lx-tipo')
+  el.innerHTML='Carregando...'
+  try{
+    var d=await apiData('lixeira-listar',sel&&sel.value?{tipo:sel.value}:{})
+    if(!d.success){el.innerHTML='<span style="color:var(--red)">'+escHtml(d.error||'Erro')+'</span>';return}
+    var rot={};(d.tipos||[]).forEach(function(t){rot[t.tipo]=t.rotulo})
+    if(sel&&sel.options.length<=1)(d.tipos||[]).forEach(function(t){var o=document.createElement('option');o.value=t.tipo;o.textContent=t.rotulo;sel.appendChild(o)})
+    var rows=d.data||[]
+    if(!rows.length){el.innerHTML='Nenhum registro excluído.';return}
+    el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:14px"><thead><tr>'+
+      ['Tipo','Registro','Excluído por','Excluído em',''].map(function(h){return '<th style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);padding:10px 16px;border-bottom:2px solid var(--border);text-align:left">'+h+'</th>'}).join('')+
+      '</tr></thead><tbody>'+rows.map(function(r){
+        var td='padding:12px 16px;border-bottom:1px solid var(--border2);color:var(--text2)'
+        return '<tr><td style="'+td+'">'+escHtml(rot[r.tipo]||r.tipo)+'</td><td style="'+td+'">'+escHtml(r.descricao||('#'+r.registro_id))+'</td><td style="'+td+'">'+escHtml(r.excluido_por_nome||'—')+'</td><td style="'+td+'">'+escHtml(fmtDateTimeLixeira(r.excluido_em))+'</td>'+
+          '<td style="'+td+';text-align:right"><button class="btn btn-sm" onclick="restaurarLixeira('+Number(r.id)+')">Restaurar</button></td></tr>'
+      }).join('')+'</tbody></table>'
+  }catch(e){el.innerHTML='<span style="color:var(--red)">Erro: '+escHtml(e.message)+'</span>'}
+}
+function fmtDateTimeLixeira(s){if(!s)return '—';var p=String(s).replace('T',' ').slice(0,16).split(' ');var d=p[0].split('-');return d[2]+'/'+d[1]+'/'+d[0]+(p[1]?' '+p[1]:'')}
+async function restaurarLixeira(id){
+  if(!confirm('Restaurar este registro?'))return
+  try{
+    var d=await apiPost('lixeira-restaurar',{id:id})
+    if(!d.success){alert(d.error||'Erro ao restaurar');return}
+    loadLixeira()
+  }catch(e){alert('Erro: '+e.message)}
+}
+DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -5490,7 +5521,7 @@ async function loadRelAgendamentos(){
 // ── CONFIGURAÇÕES ──────────────────────────────────────────────
 function renderConfiguracoes() {
   var cfgEl=document.getElementById('cfg-list');if(!cfgEl)return
-  var itens=['Dados da Clínica / Cobrança','Exportar Dados','Listas/Tabelas de Preço','Especialidades','Orçamento','Personalização do Sistema','Segurança']
+  var itens=['Dados da Clínica / Cobrança','Exportar Dados','Administração de Dados','Listas/Tabelas de Preço','Especialidades','Orçamento','Personalização do Sistema','Segurança']
   var conteudos={
     'Dados da Clínica / Cobrança':'<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Configure os dados da clínica para emissão de cobranças (PIX e Boleto).</div>'+
       '<div id="cfg-clinica-form">'+
@@ -5581,6 +5612,13 @@ function renderConfiguracoes() {
       }).join('')+
       '</div>'
   }
+  conteudos['Administração de Dados']='<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Registros excluídos ficam aqui e podem ser restaurados. Apenas administradores.</div>'+
+    '<div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:16px">'+
+      '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Tipo</label>'+
+        '<select id="lx-tipo" style="border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:var(--white);outline:none;min-width:220px"><option value="">Todos</option></select></div>'+
+      '<button class="btn btn-primary" onclick="loadLixeira()">Listar</button>'+
+    '</div>'+
+    '<div id="lx-lista" style="color:var(--text3);font-size:13px">Escolha o tipo e clique em Listar.</div>'
   cfgEl.innerHTML=itens.map(function(item){
     return '<div class="accord-item">'+
       '<div class="accord-head" onclick="toggleAccord(this)">'+item+'<span class="accord-arrow">›</span></div>'+
