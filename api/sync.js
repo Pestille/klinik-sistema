@@ -154,6 +154,30 @@ async function explorar() {
     return { tipo: 'explorar', encontrados: found.length, nao_encontrados: notFound.length, endpoints: found, erros: notFound }
 }
 
+// ── SONDAR ENDPOINTS (admin) ──────────────────────────────────────────────────
+// Testa nomes de endpoint informados em ?eps=a/b,c/d e devolve só a estrutura
+// (status, quantidade, nomes de campos) — nunca o conteúdo dos registros.
+async function sondar(params) {
+    var eps = String(params.eps || '').split(',').map(function(s){ return s.trim() })
+        .filter(function(s){ return /^[a-z_]+(\/[a-z_]+){0,2}$/.test(s) }).slice(0, 40)
+    if (!eps.length) return { tipo: 'sondar', erro: 'Informe eps=endpoint1,endpoint2 (letras minúsculas, _ e /)' }
+    var dt = hoje365()
+    var base = { from: dt.from, to: dt.to, initial_date: dt.from, final_date: dt.to, limit: 2, page: 1 }
+    var results = await Promise.allSettled(eps.map(function(ep){ return fetchPage(ep, base) }))
+    return {
+        tipo: 'sondar',
+        resultados: eps.map(function(ep, i) {
+            var r = results[i].status === 'fulfilled' ? results[i].value : { _err: 'rejected' }
+            if (r._timeout) return { endpoint: ep, resultado: 'timeout' }
+            if (r._err) return { endpoint: ep, resultado: r._err }
+            if (r._error) return { endpoint: ep, resultado: 'HTTP ' + r._error, detalhe: String(r.raw_start || '').slice(0, 160) }
+            var n = r.items ? r.items.length : 0
+            return { endpoint: ep, resultado: 'OK', quantidade: n, chaves_resposta: r.keys,
+                     campos: n > 0 && r.items[0] && typeof r.items[0] === 'object' ? Object.keys(r.items[0]) : null }
+        })
+    }
+}
+
 // ── SYNC PROFISSIONAIS ────────────────────────────────────────────────────────
 async function syncProfissionais(client) {
     // Garante colunas extras
@@ -547,6 +571,10 @@ module.exports = async function handler(req, res) {
     try {
         var resultado
 
+        if (tipo === 'sondar') {
+            resultado = await sondar(params)
+            return res.json({ success: true, duracao_ms: Date.now() - t0, ...resultado })
+        }
         if (tipo === 'explorar') {
             resultado = await explorar()
             return res.json({ success: true, duracao_ms: Date.now() - t0, ...resultado })
