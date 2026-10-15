@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Assinatura — Klinov</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/publico.css">
+<style>
+.as-doc{border:1px solid var(--border);border-radius:6px;padding:16px;max-height:50vh;overflow-y:auto;font-size:14px;line-height:1.6;color:var(--text)}
+.as-doc h2{font-size:16px;font-weight:500}
+.as-quadro{position:relative;border:1.5px dashed var(--border);border-radius:6px;background:#FAFAFA;touch-action:none}
+.as-quadro canvas{display:block;width:100%;height:180px;cursor:crosshair}
+.as-quadro span{position:absolute;left:12px;bottom:8px;font-size:12px;color:var(--text3);pointer-events:none}
+.as-limpar{background:none;border:none;color:var(--green3);font-size:13px;cursor:pointer;padding:8px 0}
+.as-hash{font-size:11px;color:var(--text3);word-break:break-all;margin-top:8px}
+</style>
+</head>
+<body>
+<header class="pb-top"><span id="clinica">Klinov</span></header>
+<main class="pb-main" id="app"><div class="pb-card"><div class="pb-sk"></div><div class="pb-sk" style="width:60%"></div></div></main>
+<footer class="pb-rodape">Assinatura eletrônica com registro de data, hora, IP e aparelho, nos termos da MP 2.200-2/2001 e da Lei 14.063/2020.</footer>
+<script>
+;(function () {
+  'use strict'
+  var t = new URLSearchParams(location.search).get('t') || ''
+  var app = document.getElementById('app'), S = { conferir: 'nenhum', ident: {}, hash: '' }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') }
+  function aviso(titulo, texto) { app.innerHTML = '<div class="pb-card pb-centro"><h1>' + esc(titulo) + '</h1><p>' + esc(texto) + '</p></div>' }
+  async function api(method, body) {
+    var r = await fetch('/api/data?r=publico&acao=assinar' + (method === 'GET' ? '&t=' + encodeURIComponent(t) : ''), { method: method, headers: { 'Content-Type': 'application/json' }, body: method === 'GET' ? undefined : JSON.stringify(Object.assign({ t: t }, body || {})) })
+    var j = {}; try { j = await r.json() } catch (e) {}
+    return j
+  }
+  function erro(id, m) { var e = document.getElementById(id); e.textContent = m; e.hidden = !m }
+
+  // 1. confirmar identidade
+  function identidade(d) {
+    if (d.conferir === 'nenhum') return ver()
+    app.innerHTML = '<div class="pb-card"><h1>Olá, ' + esc(d.paciente) + '!</h1><p>A ' + esc(d.clinica) + ' pediu sua assinatura em <b>' + esc(d.titulo) + '</b>. Para sua segurança, confirme seus dados antes de abrir o documento.</p>' +
+      '<form id="f" novalidate>' + (d.conferir === 'nascimento' ? '<label class="pb-lbl" for="v">Data de nascimento</label><input id="v" type="date">' : '<label class="pb-lbl" for="v">3 primeiros números do CPF</label><input id="v" inputmode="numeric" maxlength="3" autocomplete="off">') +
+      '<div id="err1" class="pb-err" hidden></div><button class="pb-btn" type="submit">Abrir documento</button></form></div>'
+    document.getElementById('f').onsubmit = function (e) {
+      e.preventDefault(); var v = document.getElementById('v').value
+      if (!v) return erro('err1', 'Preencha o campo.')
+      S.ident = d.conferir === 'nascimento' ? { nascimento: v } : { cpf_inicio: v }
+      ver()
+    }
+  }
+  // 2. ler e assinar
+  async function ver() {
+    var r = await api('POST', Object.assign({ etapa: 'ver' }, S.ident)).catch(function () { return {} })
+    if (!r.success) {
+      if (r.restantes != null && document.getElementById('err1')) return erro('err1', r.error + ' Tentativas restantes: ' + r.restantes + '.')
+      return aviso('Não foi possível abrir', r.error || 'Verifique sua conexão e tente de novo.')
+    }
+    S.hash = r.hash
+    app.innerHTML = '<div class="pb-card"><h1>' + esc(r.titulo) + '</h1><p>Leia com atenção. Ao final, digite seu nome completo e assine no quadro.</p><div class="as-doc">' + r.conteudo + '</div></div>' +
+      '<div class="pb-card"><form id="f2" novalidate><label class="pb-lbl" for="nome">Nome completo</label><input id="nome" autocomplete="name" maxlength="120">' +
+      '<label class="pb-lbl">Assinatura</label><div class="as-quadro"><canvas id="cv"></canvas><span id="cv-dica">Assine aqui com o dedo ou o mouse</span></div><button type="button" class="as-limpar" id="limpar">Limpar assinatura</button>' +
+      '<label class="pb-chk" style="margin-top:12px"><input type="checkbox" id="aceite"> Li o documento acima e concordo com o seu conteúdo.</label>' +
+      '<div id="err2" class="pb-err" hidden></div><button class="pb-btn" id="env" type="submit">Assinar documento</button>' +
+      '<div class="as-hash">Código de integridade do documento (SHA-256): ' + esc(r.hash) + '</div></form></div>'
+    var cv = document.getElementById('cv'), ctx = cv.getContext('2d'), riscou = false, desenhando = false
+    function ajustar() { var w = cv.clientWidth, h = cv.clientHeight, r2 = window.devicePixelRatio || 1; cv.width = w * r2; cv.height = h * r2; ctx.scale(r2, r2); ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1A1A1A' }
+    ajustar()
+    function pos(e) { var b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top] }
+    cv.addEventListener('pointerdown', function (e) { desenhando = true; cv.setPointerCapture(e.pointerId); var p = pos(e); ctx.beginPath(); ctx.moveTo(p[0], p[1]); document.getElementById('cv-dica').hidden = true })
+    cv.addEventListener('pointermove', function (e) { if (!desenhando) return; var p = pos(e); ctx.lineTo(p[0], p[1]); ctx.stroke(); riscou = true })
+    cv.addEventListener('pointerup', function () { desenhando = false })
+    document.getElementById('limpar').onclick = function () { ctx.clearRect(0, 0, cv.width, cv.height); riscou = false; document.getElementById('cv-dica').hidden = false }
+    document.getElementById('f2').onsubmit = async function (e) {
+      e.preventDefault(); erro('err2', '')
+      var nome = document.getElementById('nome').value.trim()
+      if (nome.split(/\s+/).length < 2) return erro('err2', 'Digite seu nome completo.')
+      if (!riscou) return erro('err2', 'Faça sua assinatura no quadro.')
+      if (!document.getElementById('aceite').checked) return erro('err2', 'Marque que leu e concorda com o documento.')
+      // imagem enxuta: reduz para no máximo 600px de largura
+      var w = Math.min(600, cv.width), h = Math.round(cv.height * w / cv.width), tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h
+      tmp.getContext('2d').drawImage(cv, 0, 0, w, h)
+      var btn = document.getElementById('env'); btn.disabled = true; btn.textContent = 'Assinando…'
+      var r2 = await api('POST', Object.assign({ etapa: 'assinar', nome: nome, imagem: tmp.toDataURL('image/png'), aceite: true, hash: S.hash }, S.ident)).catch(function () { return {} })
+      if (!r2.success) { btn.disabled = false; btn.textContent = 'Assinar documento'; return erro('err2', r2.error || 'Não foi possível assinar. Tente de novo.') }
+      window.scrollTo(0, 0)
+      app.innerHTML = '<div class="pb-card pb-centro"><h1>Documento assinado</h1><p>Obrigado, ' + esc(r2.paciente) + '. Sua assinatura foi registrada em ' + esc(String(r2.assinado_em).slice(0, 10).split('-').reverse().join('/')) + ' às ' + esc(String(r2.assinado_em).slice(11, 16)) + '.</p><p style="font-size:12px;color:var(--text3)">Código de verificação ' + esc(r2.verificacao) + '</p></div>'
+    }
+  }
+  ;(async function () {
+    if (!t) return aviso('Link inválido', 'Abra o link exatamente como a clínica enviou.')
+    var d = await api('GET').catch(function () { return {} })
+    if (!d.success) return aviso('Não foi possível abrir', d.error || 'Verifique sua conexão e tente de novo.')
+    document.getElementById('clinica').textContent = d.clinica; document.title = 'Assinatura — ' + d.clinica
+    S.conferir = d.conferir
+    identidade(d)
+  })()
+})()
+</script>
+</body>
+</html>

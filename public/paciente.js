@@ -348,9 +348,10 @@
       try { var d = await apiData('paciente-evolucoes', { paciente_id: p.id }); lista = d.data || [] } catch (e) { el('pce-ev-lista').innerHTML = '<div class="ag-err">' + esc(e.message) + '</div>'; return }
       el('pce-ev-lista').innerHTML = lista.length ? lista.map(function (e) {
         return '<div class="pc-ev"><div class="pc-ev-h"><span><b style="color:var(--text)">' + br(e.data) + '</b>' + (e.profissional_nome ? ' · ' + esc(e.profissional_nome) : '') + (e.dente ? ' · Dente/região ' + esc(e.dente) : '') + '</span>' +
-          '<span>' + esc(e.autor_nome || '') + (e.editado_em ? ' (editado)' : '') + ' <a href="#" data-ed="' + e.id + '" style="color:var(--blue)">Editar</a> · <a href="#" data-del="' + e.id + '" style="color:var(--red)">Excluir</a></span></div>' +
+          '<span>' + esc(e.autor_nome || '') + (e.editado_em ? ' (editado)' : '') + ' <a href="#" data-ass="' + e.id + '" style="color:var(--green3)">Assinatura</a> · <a href="#" data-ed="' + e.id + '" style="color:var(--blue)">Editar</a> · <a href="#" data-del="' + e.id + '" style="color:var(--red)">Excluir</a></span></div>' +
           '<div class="pc-ev-t">' + esc(e.texto) + '</div>' + (e.proxima_consulta ? '<div class="ag-hint" style="margin-top:6px"><b>Próxima consulta:</b> ' + esc(e.proxima_consulta) + '</div>' : '') + '</div>'
       }).join('') : '<div class="pc-vazio">Nenhuma evolução registrada.</div>'
+      if (window.ligarAssinaturas) ligarAssinaturas(el('pce-ev-lista'), 'evolucao', p.id)
       el('pce-ev-lista').querySelectorAll('[data-ed]').forEach(function (a) {
         a.onclick = function (ev) {
           ev.preventDefault(); var e = lista.filter(function (x) { return x.id === +a.getAttribute('data-ed') })[0]; if (!e) return
@@ -386,9 +387,10 @@
       el('pcd-lista').innerHTML = docs.length ? '<table class="pc-tbl"><thead><tr><th>Data</th><th>Documento</th><th class="hide-sm">Tipo</th><th class="hide-sm">Profissional</th><th></th></tr></thead><tbody>' +
         docs.map(function (x) {
           return '<tr><td>' + br(x.criado_em) + '</td><td>' + esc(x.titulo) + '</td><td class="hide-sm">' + esc(TIPOS_DOC[x.tipo] || x.tipo || '') + '</td><td class="hide-sm">' + esc(x.profissional_nome || '—') + '</td>' +
-            '<td style="text-align:right;white-space:nowrap"><button class="btn btn-sm" data-imp="' + x.id + '">Imprimir</button> <button class="btn btn-sm" data-exc="' + x.id + '" style="color:var(--red)">Excluir</button></td></tr>'
+            '<td style="text-align:right;white-space:nowrap"><button class="btn btn-sm" data-ass="' + x.id + '">Assinatura</button> <button class="btn btn-sm" data-imp="' + x.id + '">Imprimir</button> <button class="btn btn-sm" data-exc="' + x.id + '" style="color:var(--red)">Excluir</button></td></tr>'
         }).join('') + '</tbody></table>' : '<div class="pc-vazio">Nenhum documento emitido. Use "+ Emitir documento" para gerar atestados, receitas, termos e contratos a partir dos modelos.</div>'
-      el('pcd-lista').querySelectorAll('[data-imp]').forEach(function (b) { b.onclick = function () { var x = docs.filter(function (k) { return k.id === +b.getAttribute('data-imp') })[0]; imprimirDocumento(x.titulo, x.conteudo, x.profissional_nome, x.codigo_validacao) } })
+      el('pcd-lista').querySelectorAll('[data-imp]').forEach(function (b) { b.onclick = function () { var x = docs.filter(function (k) { return k.id === +b.getAttribute('data-imp') })[0]; imprimirDocumento(x.titulo, x.conteudo, x.profissional_nome, x.codigo_validacao, x.id) } })
+      if (window.ligarAssinaturas) ligarAssinaturas(el('pcd-lista'), 'documento', p.id)
       el('pcd-lista').querySelectorAll('[data-exc]').forEach(function (b) {
         b.onclick = async function () { if (!confirm('Excluir este documento? Ele vai para a lixeira.')) return; var r = await apiPost('documentos-emitidos', { action: 'delete', id: +b.getAttribute('data-exc') }); if (!r.success) return alert(r.error || 'Erro'); TABS.documentos(box, p) }
       })
@@ -440,7 +442,8 @@
     el('pcd-imp').onclick = function () { salvar(true) }
   }
 
-  async function imprimirDocumento(titulo, conteudo, profissional, codigo) {
+  async function imprimirDocumento(titulo, conteudo, profissional, codigo, docId) {
+    var ass = docId && window.assinaturaDoDocumento ? await assinaturaDoDocumento(docId) : null
     var cli = {}
     try { var d = await apiData('dados-clinica', {}); cli = d.data || d.clinica || d || {} } catch (e) {}
     var w = window.open('', '_blank'); if (!w) return alert('Permita pop-ups para imprimir.')
@@ -450,7 +453,9 @@
       '<div class="cab"><b>' + esc(cli.nome || '') + '</b><small>' + esc([cli.endereco, cli.cidade, cli.estado].filter(Boolean).join(' · ')) + '</small></div>' +
       conteudo +
       '<p style="margin-top:32px">' + esc(cli.cidade || '') + (cli.cidade ? ', ' : '') + hoje.getDate() + ' de ' + meses[hoje.getMonth()] + ' de ' + hoje.getFullYear() + '.</p>' +
-      '<div class="ass"><div>' + esc(profissional || 'Assinatura') + '</div></div>' +
+      (ass ? '<div style="margin-top:40px;display:flex;gap:32px;justify-content:center;flex-wrap:wrap"><div class="ass" style="margin-top:0"><div>' + esc(profissional || 'Profissional') + '</div></div><div style="text-align:center;min-width:240px"><img src="' + ass.assinatura_img + '" style="height:64px;max-width:240px"><div style="border-top:1px solid #212121;padding-top:4px">' + esc(ass.assinatura_nome) + '</div></div></div>' +
+        '<p style="margin-top:16px;font-size:11px;color:#757575;text-align:center">Assinado eletronicamente pelo paciente em ' + String(ass.assinado_em).slice(0, 10).split('-').reverse().join('/') + ' às ' + String(ass.assinado_em).slice(11, 16) + ' · IP ' + esc(ass.ip || '') + ' · verificação ' + esc(ass.verificacao || '') + '<br>Integridade SHA-256: ' + esc(ass.hash || '') + '</p>'
+        : '<div class="ass"><div>' + esc(profissional || 'Assinatura') + '</div></div>') +
       (codigo ? '<p style="margin-top:48px;font-size:11px;color:#757575;text-align:center">Código de validação <b style="letter-spacing:.06em;color:#424242">' + esc(codigo) + '</b> · confira a autenticidade em ' + esc(location.host) + '/validador</p>' : '') + '</body></html>')
     w.document.close(); w.focus(); setTimeout(function () { w.print() }, 200)
   }

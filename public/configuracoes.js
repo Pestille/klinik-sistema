@@ -32,7 +32,7 @@
   // ════════════════════════════════════════════════════════════════
   var GRUPOS = [
     ['Clínica', [['clinica-dados', 'Dados da clínica', 'Nome, CNPJ, contato, endereço, responsável técnico e logo', true], ['clinica-cobranca', 'Cobrança e Asaas', 'PIX, conta para recebimento e chave da API do Asaas', true], ['clinica-tema', 'Personalização', 'Cor da barra superior e título do sistema', true]]],
-    ['Agenda', [['agenda-horarios', 'Horários e categorias', 'Horário de funcionamento, agenda dos profissionais e categorias'], ['agenda-mensagens', 'Confirmações e lembretes', 'Envio automático e textos das mensagens', true], ['agenda-checkin', 'Check-in por QR Code', 'Cartaz para a recepção e chegadas do dia'], ['agenda-bloqueios', 'Bloqueios', 'O que fazer ao agendar paciente com parcelas vencidas', true]]],
+    ['Agenda', [['agenda-geral', 'Geral', 'Atendimentos no mesmo horário e encaixes', true], ['agenda-horarios', 'Horários e categorias', 'Horário de funcionamento, agenda dos profissionais e categorias'], ['agenda-mensagens', 'Confirmações e lembretes', 'Envio automático e textos das mensagens', true], ['agenda-checkin', 'Check-in por QR Code', 'Cartaz para a recepção e chegadas do dia'], ['agenda-bloqueios', 'Bloqueios', 'O que fazer ao agendar paciente com parcelas vencidas', true]]],
     ['Prontuário', [['pront-documentos', 'Modelos de documento', 'Atestados, receituários, contratos e termos'], ['pront-anamnese', 'Questionário de anamnese', 'Perguntas, ordem e alertas; o paciente também responde por link', true], ['pront-medicamentos', 'Medicamentos', 'Lista usada no receituário, com posologia']]],
     ['Orçamentos', [['orc-tabelas', 'Tabelas de preço', 'Particular, convênios e planos próprios'], ['orc-especialidades', 'Especialidades', 'Lista usada no cadastro de profissionais e procedimentos'], ['orc-regras', 'Regras de orçamento', 'Desconto máximo por perfil', true]]],
     ['Financeiro', [['fin-contas', 'Contas bancárias', 'Caixa e contas usadas nos lançamentos e conciliação'], ['fin-taxas', 'Taxas e encargos', 'Taxas da maquininha, multa, juros e desconto'], ['fin-regua', 'Régua de cobrança', 'Lembretes automáticos de pagamento'], ['fin-recibos', 'Recibos', 'Numeração sequencial dos recibos', true]]],
@@ -139,6 +139,17 @@
       m.data.map(function (t) { return '<div class="cf-modelo"><b>' + esc(t.nome) + '</b>' + campo('mm-a-' + t.tipo, 'Assunto do e-mail', t.assunto) + '<div class="ag-f"><label>Mensagem</label><textarea class="ag-in" id="mm-c-' + t.tipo + '" rows="3" maxlength="2000">' + esc(t.corpo) + '</textarea></div><div style="text-align:right"><button class="btn btn-sm" data-mm="' + t.tipo + '">Salvar texto</button></div></div>' }).join('') + '</div>'
     el('am-ok').onclick = function () { salvar('comunicacao', { cfg_confirmacao_wa: v('am-cwa'), cfg_confirmacao_email: v('am-cem'), cfg_aniversario: v('am-aniv'), cfg_lembrete_retorno: v('am-ret'), confirmacao_padrao: v('am-quando'), canal_padrao: v('am-canal') }) }
     box.querySelectorAll('[data-mm]').forEach(function (b) { b.onclick = async function () { var t = this.getAttribute('data-mm'); var r = await apiPost('mensagens-modelos', { tipo: t, assunto: v('mm-a-' + t), corpo: v('mm-c-' + t) }); msg(r.success ? 'Texto salvo.' : r.error, r.success) } })
+  }
+  SECOES['agenda-geral'] = async function (box) {
+    var d; try { d = await dados() } catch (e) { return falha(box, e) }
+    var ag = d.cfg.agenda || {}
+    var ops = [['todos', 'Qualquer usuário que agenda', 'Mostra "Agendar mesmo assim" quando o horário está ocupado.'], ['admin', 'Só administradores', 'A equipe vê o aviso, mas só um administrador consegue encaixar.'], ['nao', 'Ninguém', 'Horário ocupado não aceita encaixe.']]
+    box.innerHTML = '<div class="pc-box"><div class="pc-box-h">Atendimentos no mesmo horário</div><div class="ag-row c2"><div class="ag-f"><label>Quantos pacientes cada profissional pode atender ao mesmo tempo</label><input class="ag-in" type="number" min="1" max="10" id="ag-lim" value="' + (ag.limite_simultaneos || 1) + '"></div><div></div></div>' +
+      '<p class="ag-hint">Use mais de 1 para quem atende em mais de uma cadeira ao mesmo tempo (ex.: ortodontia).</p>' +
+      '<div class="pc-box-h" style="margin-top:20px">Quem pode encaixar em horário ocupado</div>' + ops.map(function (o) { return '<label class="cf-op' + ((ag.forcar_encaixe || 'todos') === o[0] ? ' on' : '') + '"><input type="radio" name="agf" value="' + o[0] + '"' + ((ag.forcar_encaixe || 'todos') === o[0] ? ' checked' : '') + '> <span><b>' + o[1] + '</b><small>' + o[2] + '</small></span></label>' }).join('') +
+      '<div style="text-align:right;margin-top:16px"><button class="ag-btn-novo" id="agg-ok">Salvar</button></div></div>'
+    box.querySelectorAll('input[name=agf]').forEach(function (r) { r.onchange = function () { box.querySelectorAll('.cf-op').forEach(function (l) { l.classList.toggle('on', l.contains(r)) }) } })
+    el('agg-ok').onclick = function () { var c = box.querySelector('input[name=agf]:checked'); salvar('agenda_geral', { limite_simultaneos: v('ag-lim'), forcar_encaixe: c ? c.value : 'todos' }) }
   }
   SECOES['agenda-bloqueios'] = async function (box) {
     var d; try { d = await dados() } catch (e) { return falha(box, e) }

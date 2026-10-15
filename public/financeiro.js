@@ -320,6 +320,7 @@
       b.onclick = async function () {
         var c = d.contas.filter(function (x) { return x.id === +b.getAttribute('data-id') })[0], ac = b.getAttribute('data-ac')
         if (ac === 'pagar') return pagarConta(c)
+        if (ac === 'anexos') return window.abrirAnexos ? abrirAnexos('conta_pagar', c.id, c.descricao, renderCPagar) : null
         if (ac === 'editar') return abrirConta(c)
         if (ac === 'estornar') { if (!confirm('Estornar o pagamento? A conta volta para "a pagar".')) return; var r = await apiPost('fin-pagar-estornar', { id: c.id }); if (!r.success) return alert(r.error); return renderCPagar() }
         if (ac === 'excluir') { if (!confirm('Excluir esta conta? Ela vai para a Administração de Dados e pode ser restaurada.')) return; var x = await apiPost('fin-pagar', { action: 'excluir', id: c.id }); if (!x.success) return alert(x.error); return renderCPagar() }
@@ -338,7 +339,7 @@
           return '<tr><td><span class="pc-badge ' + s[1] + '">' + s[0] + '</span>' + (c.situacao === 'paga' ? '<div class="ag-hint" style="margin:2px 0 0">em ' + br(c.pagamento) + '</div>' : '') + '</td>' +
             '<td>' + esc(c.descricao) + (c.recorrente ? ' <span class="ag-hint" style="display:inline">· recorrente</span>' : '') + '</td><td class="hide-sm">' + esc(c.classificacao || '—') + (c.categoria ? '<div class="ag-hint" style="margin:0">' + esc(c.categoria) + '</div>' : '') + '</td>' +
             '<td class="hide-sm">' + esc(c.fornecedor || '—') + '</td><td class="fn-num">' + moeda(c.valor) + '</td><td style="text-align:right;white-space:nowrap">' +
-            (c.situacao !== 'paga' ? (pode('financeiro.dar_baixa') ? '<button class="btn btn-sm btn-primary" data-ac="pagar" data-id="' + c.id + '">Pagar</button> ' : '') + '<button class="btn btn-sm" data-ac="editar" data-id="' + c.id + '">Editar</button> <button class="btn btn-sm" data-ac="excluir" data-id="' + c.id + '" style="color:var(--red)">Excluir</button>'
+            '<button class="btn btn-sm" data-ac="anexos" data-id="' + c.id + '">' + (c.comprovante_url ? 'Comprovante' : 'Anexos') + '</button> ' + (c.situacao !== 'paga' ? (pode('financeiro.dar_baixa') ? '<button class="btn btn-sm btn-primary" data-ac="pagar" data-id="' + c.id + '">Pagar</button> ' : '') + '<button class="btn btn-sm" data-ac="editar" data-id="' + c.id + '">Editar</button> <button class="btn btn-sm" data-ac="excluir" data-id="' + c.id + '" style="color:var(--red)">Excluir</button>'
               : (pode('financeiro.editar_contas') ? '<button class="btn btn-sm" data-ac="estornar" data-id="' + c.id + '">Estornar</button>' : '')) + '</td></tr>'
         }).join('') + '</tbody></table></div></div></div>'
     }).join('')
@@ -444,10 +445,10 @@
           var s = SIT_R[i.situacao]
           return '<tr><td><span class="pc-badge ' + s[1] + '">' + s[0] + '</span>' + (i.pagamento ? '<div class="ag-hint" style="margin:2px 0 0">em ' + br(i.pagamento) + '</div>' : '') + '</td><td>' + br(i.vencimento) + '</td><td>' + linkPac(i.paciente_id, i.paciente_nome) + '</td>' +
             '<td class="hide-sm">' + esc(i.descricao) + '</td><td class="hide-sm">' + esc(i.forma) + '</td><td class="fn-num">' + moeda(i.valor) + '</td><td style="text-align:right;white-space:nowrap">' +
-            (i.situacao !== 'pago' ? (i.origem === 'parcela' && pode('financeiro.dar_baixa') ? '<button class="btn btn-sm btn-primary" data-rec="' + i.id + '">Receber</button>' : i.origem === 'cobranca' ? '<span class="ag-hint" style="margin:0">via Asaas</span>' : '') : '') + '</td></tr>'
+            (i.situacao !== 'pago' ? ((i.origem === 'parcela' || i.origem === 'avulso') && pode('financeiro.dar_baixa') ? '<button class="btn btn-sm btn-primary" data-rec="' + i.id + '" data-org="' + i.origem + '">Receber</button>' : i.origem === 'cobranca' ? '<span class="ag-hint" style="margin:0">via Asaas</span>' : '') : '') + '</td></tr>'
         }).join('') + '</tbody><tfoot><tr><td colspan="5"><b>Total</b></td><td class="fn-num"><b>' + moeda(total) + '</b></td><td></td></tr></tfoot></table></div></div>' : vazio('Nada a receber no período.'))
     ligarPacientes(res)
-    res.querySelectorAll('[data-rec]').forEach(function (b) { b.onclick = function () { receberParcela(d.itens.filter(function (i) { return i.origem === 'parcela' && i.id === +b.getAttribute('data-rec') })[0]) } })
+    res.querySelectorAll('[data-rec]').forEach(function (b) { b.onclick = function () { receberParcela(d.itens.filter(function (i) { return i.origem === b.getAttribute('data-org') && i.id === +b.getAttribute('data-rec') })[0]) } })
   }
   async function receberParcela(i) {
     var cs = await contas()
@@ -460,7 +461,7 @@
     el('rc-forma').onchange = function () { el('rc-det').innerHTML = camposRecebivel(this.value, i.paciente_nome) }
     el('rc-c').onclick = fechar
     el('rc-ok').onclick = async function () {
-      var r = await apiPost('fin-receber-baixa', { id: i.id, data: el('rc-data').value, forma_pagamento: el('rc-forma').value, conta_id: el('rc-conta').value, detalhe: lerRecebivel(el('rc-forma').value) })
+      var r = await apiPost('fin-receber-baixa', { id: i.id, origem: i.origem, data: el('rc-data').value, forma_pagamento: el('rc-forma').value, conta_id: el('rc-conta').value, detalhe: lerRecebivel(el('rc-forma').value) })
       if (!r.success) return erro(r.error || 'Erro')
       fechar(); renderCReceber()
     }

@@ -16,7 +16,8 @@
     { "source": "/app", "destination": "/app.html" },
     { "source": "/anamnese", "destination": "/anamnese.html" },
     { "source": "/checkin", "destination": "/checkin.html" },
-    { "source": "/validador", "destination": "/validador.html" }
+    { "source": "/validador", "destination": "/validador.html" },
+    { "source": "/assinar", "destination": "/assinar.html" }
   ],
   "crons": [
     {
