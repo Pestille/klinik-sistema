@@ -454,14 +454,35 @@
     modal('Receber parcela', '<div id="fn-err"></div><div class="ag-hint" style="margin:0 0 12px">' + esc(i.paciente_nome || '') + ' · ' + esc(i.descricao) + ' · ' + moeda(i.valor) + '</div>' +
       '<div class="ag-row c3"><div class="ag-f"><label>Data</label><input class="ag-in" type="date" id="rc-data" value="' + hoje() + '"></div><div class="ag-f"><label>Forma</label><select class="ag-in" id="rc-forma">' + opcoesTexto(FORMAS, 'PIX') + '</select></div>' +
       '<div class="ag-f"><label>Conta</label><select class="ag-in" id="rc-conta">' + opcoes(cs, FN.cache.caixa) + '</select></div></div>' +
+      '<div id="rc-det"></div>' +
       (i.cobranca_id ? '<p class="ag-hint">Esta parcela tem cobrança no Asaas. Se o paciente pagou por fora, lembre de cancelar a cobrança no Asaas.</p>' : ''),
-      '<button class="btn" id="rc-c">Cancelar</button><button class="ag-btn-novo" id="rc-ok">Confirmar recebimento</button>', 600)
+      '<button class="btn" id="rc-c">Cancelar</button><button class="ag-btn-novo" id="rc-ok">Confirmar recebimento</button>', 640)
+    el('rc-forma').onchange = function () { el('rc-det').innerHTML = camposRecebivel(this.value, i.paciente_nome) }
     el('rc-c').onclick = fechar
     el('rc-ok').onclick = async function () {
-      var r = await apiPost('parcela-baixa', { id: i.id, data_pagamento: el('rc-data').value, forma_pagamento: el('rc-forma').value, conta_id: el('rc-conta').value })
+      var r = await apiPost('fin-receber-baixa', { id: i.id, data: el('rc-data').value, forma_pagamento: el('rc-forma').value, conta_id: el('rc-conta').value, detalhe: lerRecebivel(el('rc-forma').value) })
       if (!r.success) return erro(r.error || 'Erro')
       fechar(); renderCReceber()
     }
+  }
+
+  // Campos extras quando o pagamento é em cheque ou cartão (geram o controle de recebíveis)
+  function camposRecebivel(forma, titular) {
+    if (forma === 'Cheque') return '<div class="pc-box-h" style="margin-top:8px">Dados do cheque</div><div class="ag-row c3"><div class="ag-f"><label>Número</label><input class="ag-in" id="rv-num" maxlength="30"></div><div class="ag-f"><label>Banco</label><input class="ag-in" id="rv-banco" maxlength="60"></div><div class="ag-f"><label>Agência</label><input class="ag-in" id="rv-ag" maxlength="20"></div></div>' +
+      '<div class="ag-row c3"><div class="ag-f"><label>Emitente</label><input class="ag-in" id="rv-tit" maxlength="120" value="' + esc(titular || '') + '"></div><div class="ag-f"><label>CPF/CNPJ</label><input class="ag-in" id="rv-cpf" maxlength="20"></div><div class="ag-f"><label>Bom para</label><input class="ag-in" type="date" id="rv-bom" value="' + hoje() + '"></div></div>'
+    if (forma === 'Cartão de crédito' || forma === 'Cartão de débito') {
+      var cred = forma === 'Cartão de crédito'
+      return '<div class="pc-box-h" style="margin-top:8px">Dados do cartão</div><div class="ag-row c' + (cred ? 4 : 3) + '"><div class="ag-f"><label>Bandeira</label><select class="ag-in" id="rv-band">' + opcoesTexto(['Visa', 'Mastercard', 'Elo', 'Hipercard', 'American Express', 'Outra'], 'Visa') + '</select></div>' +
+        '<div class="ag-f"><label>4 últimos dígitos</label><input class="ag-in" id="rv-4" maxlength="4" inputmode="numeric"></div><div class="ag-f"><label>Autorização</label><input class="ag-in" id="rv-aut" maxlength="30"></div>' +
+        (cred ? '<div class="ag-f"><label>Parcelas</label><input class="ag-in" type="number" min="1" max="24" id="rv-parc" value="1"></div>' : '') + '</div><p class="ag-hint">A taxa e a previsão de recebimento seguem o que está em Configurações › Taxas e encargos.</p>'
+    }
+    return ''
+  }
+  function lerRecebivel(forma) {
+    function v(id) { var e = el(id); return e ? e.value : '' }
+    if (forma === 'Cheque') return { tipo: 'cheque', numero: v('rv-num'), banco: v('rv-banco'), agencia: v('rv-ag'), titular: v('rv-tit'), cpf: v('rv-cpf'), bom_para: v('rv-bom') }
+    if (forma === 'Cartão de crédito' || forma === 'Cartão de débito') return { tipo: 'cartao', cartao_tipo: forma === 'Cartão de débito' ? 'debito' : 'credito', bandeira: v('rv-band'), ultimos4: v('rv-4'), autorizacao: v('rv-aut'), parcelas: v('rv-parc') || 1 }
+    return null
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -497,6 +518,10 @@
     ligarPacientes(res)
   }
 
+  // Utilitários compartilhados com public/financeiro-controles.js
+  window.KFIN = { modal: modal, fechar: fechar, erro: erro, esc: esc, moeda: moeda, br: br, hoje: hoje, inicioMes: inicioMes, fimMes: fimMes, diaSemana: diaSemana, contas: contas, categorias: categorias,
+    opcoes: opcoes, opcoesTexto: opcoesTexto, sub: sub, linkPac: linkPac, ligarPacientes: ligarPacientes, csv: csv, kpi: kpi, vazio: vazio, carregando: carregando, pode: pode, isAdmin: isAdmin,
+    camposRecebivel: camposRecebivel, lerRecebivel: lerRecebivel, FORMAS: FORMAS, cache: FN.cache }
   window.renderCC = renderCC
   window.renderFDC = renderFDC
   window.renderCPagar = renderCPagar

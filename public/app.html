@@ -4856,7 +4856,7 @@ async function loadRelAgendamentos(){
 // ── CONFIGURAÇÕES ──────────────────────────────────────────────
 function renderConfiguracoes() {
   var cfgEl=document.getElementById('cfg-list');if(!cfgEl)return
-  var itens=['Dados da Clínica / Cobrança','Agenda','Modelos de Documento','Exportar Dados','Administração de Dados','Listas/Tabelas de Preço','Especialidades','Orçamento','Personalização do Sistema','Segurança']
+  var itens=['Dados da Clínica / Cobrança','Agenda','Modelos de Documento','Exportar Dados','Administração de Dados','Listas/Tabelas de Preço','Taxas e Encargos','Régua de Cobrança','Especialidades','Orçamento','Personalização do Sistema','Segurança']
   var conteudos={
     'Dados da Clínica / Cobrança':'<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Configure os dados da clínica para emissão de cobranças (PIX e Boleto).</div>'+
       '<div id="cfg-clinica-form">'+
@@ -4947,6 +4947,8 @@ function renderConfiguracoes() {
       }).join('')+
       '</div>'
   }
+  conteudos['Taxas e Encargos']='<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Taxa da maquininha por forma de pagamento e número de parcelas, prazo de recebimento, e multa, juros e desconto por pagamento antecipado nas cobranças do Asaas.</div><button class="btn btn-primary" onclick="abrirTaxasFinanceiro()">Configurar taxas e encargos</button>'
+  conteudos['Régua de Cobrança']='<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Lembretes automáticos de pagamento por e-mail ou WhatsApp, de 10 dias antes a 30 dias depois do vencimento de cada parcela.</div><button class="btn btn-primary" onclick="abrirReguaCobranca()">Configurar régua de cobrança</button>'
   conteudos['Listas/Tabelas de Preço']='<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Tabelas particulares, de convênio e planos próprios usadas nos orçamentos: procedimentos, códigos TUSS, valores, importação por planilha e reajuste anual (duplicar com %).</div><button class="btn btn-primary" onclick="abrirTabelasPreco()">Gerenciar tabelas de preço</button>'
   conteudos['Modelos de Documento']='<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Atestados, receituários, declarações, termos e contratos emitidos na aba Documentos do paciente. Os campos {{paciente.nome}}, {{profissional.nome}} etc. são preenchidos automaticamente.</div><button class="btn btn-primary" onclick="abrirModelosDocumento()">Editar modelos</button>'
   conteudos['Agenda']='<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Horário de funcionamento da clínica, agenda de trabalho de cada profissional e categorias de agendamento.</div>'+
@@ -9359,6 +9361,7 @@ document.querySelectorAll('.module-card').forEach(card=>{
 <script src="/orcamento.js"></script>
 <script src="/crc.js"></script>
 <script src="/financeiro.js"></script>
+<script src="/financeiro-controles.js"></script>
 <script src="/paciente.js"></script>
 <script src="/klinik-turso.js"></script>
 </body>

@@ -91,3 +91,11 @@
   .fn-pg{padding:16px}
   .fn-kpi-v{font-size:20px}
 }
+
+/* Régua de cobrança: linha do tempo de -10 a +10 dias */
+.rg-linha{display:grid;grid-template-columns:repeat(21,minmax(28px,1fr));gap:4px;overflow-x:auto;padding:4px 0}
+.rg-dia{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--text3);transition:border-color .12s ease,background .12s ease}
+.rg-dia:hover{border-color:var(--green3);background:#E8F5E9}
+.rg-dia.venc{border-color:var(--orange);color:var(--orange);font-weight:500}
+.rg-dia.tem{background:#E8F5E9;color:var(--green)}
+.rg-dia b{font-size:11px;background:var(--green);color:#fff;border-radius:4px;padding:0 6px}
