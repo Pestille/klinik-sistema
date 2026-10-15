@@ -12,6 +12,7 @@ var rotasOrcamentos = require('../lib/rotas/orcamentos')
 var rotasCrc = require('../lib/rotas/crc')
 var rotasFinanceiro = require('../lib/rotas/financeiro')
 var rotasFinControles = require('../lib/rotas/financeiro-controles')
+var rotasRelatorios = require('../lib/rotas/relatorios')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
 // método; { GET, POST } quando leitura e escrita exigem recursos diferentes.
@@ -69,7 +70,7 @@ var ROTA_PERMISSAO = {
     // Metas, dashboard, relatórios
     'metas': 'metas.acessar', 'metas-visualizar': 'metas.acessar', 'metas-config': { GET: 'metas.acessar', POST: 'metas.editar' },
     'dashboard-analitico': 'dashboard.acessar', 'analytics': 'dashboard.acessar',
-    'relatorios': 'relatorios.acessar', 'relatorio-profissionais': 'relatorios.acessar',
+    'relatorios': 'relatorios.acessar', 'relatorio-profissionais': 'relatorios.acessar', 'relatorios-catalogo': 'relatorios.acessar', 'relatorio': 'relatorios.acessar', 'analitico': 'dashboard.acessar',
     // Marketing
     'marketing': 'marketing.acessar', 'campanhas': 'marketing.acessar', 'templates': 'marketing.acessar',
     'envios-historico': 'marketing.acessar', 'campanha-preview': 'marketing.acessar', 'marketing-config': 'marketing.acessar',
@@ -142,6 +143,7 @@ module.exports = async function handler(req, res) {
         if (auth && await rotasCrc.handle(route, ctxRota)) return
         if (auth && await rotasFinanceiro.handle(route, ctxRota)) return
         if (auth && await rotasFinControles.handle(route, ctxRota)) return
+        if (auth && await rotasRelatorios.handle(route, ctxRota)) return
 
         // ── LIXEIRA (Administração de Dados) ─────────────────────
         if (route === 'lixeira-listar') {
