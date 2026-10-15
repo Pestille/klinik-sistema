@@ -1,0 +1,32 @@
+/* publico.css — páginas abertas ao paciente (anamnese por link, check-in por QR) */
+:root{--green:#034030;--green2:#1B5E3B;--green3:#2E7D52;--green-light:#E8F5E9;--orange:#E65100;--orange2:#FF6D00;--bg:#F5F5F5;--surface:#FFFFFF;--text:#1A1A1A;--text2:#424242;--text3:#757575;--border:#E0E0E0;--border2:#F0F0F0;--red:#C62828}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Roboto,Arial,sans-serif;font-size:14px;line-height:1.5;color:var(--text2)}
+button,a,input,select,textarea{transition-duration:.12s;transition-timing-function:ease;font-family:inherit}
+.pb-top{background:var(--green);color:#fff;padding:16px;display:flex;align-items:center;gap:12px;font-size:16px;font-weight:500}
+.pb-top img{height:32px;width:auto;border-radius:4px;background:#fff}
+.pb-main{max-width:640px;margin:0 auto;padding:16px}
+.pb-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:20px 16px;margin-bottom:12px}
+.pb-card h1{font-size:20px;font-weight:500;color:var(--text);line-height:1.2;margin:0 0 8px}
+.pb-card p{margin:0 0 12px}
+.pb-centro{text-align:center;padding:32px 16px}
+.pb-q-t{display:block;font-weight:500;color:var(--text);margin-bottom:12px}
+.pb-sn{display:flex;gap:24px}
+.pb-sn label,.pb-chk{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:15px}
+.pb-sn input,.pb-chk input{width:20px;height:20px;accent-color:var(--green);margin:0}
+input:not([type=radio]):not([type=checkbox]),textarea{width:100%;border:1.5px solid var(--border);border-radius:6px;padding:12px;font-size:16px;color:var(--text);background:var(--surface);outline:none;transition-property:border-color,box-shadow}
+input:focus,textarea:focus{border-color:var(--green3);box-shadow:0 0 0 3px rgba(46,125,82,.12)}
+textarea{resize:vertical}
+.pb-det{margin-top:12px}
+.pb-lbl{display:block;font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin:12px 0 4px}
+.pb-btn{display:block;width:100%;margin-top:16px;background:var(--orange);color:#fff;border:none;border-radius:6px;padding:14px 20px;font-size:15px;font-weight:500;cursor:pointer;transition-property:background,transform}
+.pb-btn:hover{background:var(--orange2)}
+.pb-btn:active{transform:scale(.98)}
+.pb-btn:disabled{opacity:.6;cursor:default}
+.pb-btn.pb-sec{background:transparent;color:var(--green);border:1.5px solid var(--green3)}
+.pb-btn.pb-sec:hover{background:var(--green-light)}
+.pb-link{display:inline-block;margin-top:12px;color:var(--green3);font-size:14px}
+.pb-err{margin-top:12px;background:#FFEBEE;color:var(--red);border-radius:6px;padding:12px;font-size:14px}
+.pb-rodape{text-align:center;font-size:12px;color:var(--text3);padding:8px 16px 32px}
+.pb-sk{height:16px;border-radius:4px;margin:8px 0;background:linear-gradient(90deg,#EEE 25%,#F5F5F5 50%,#EEE 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}

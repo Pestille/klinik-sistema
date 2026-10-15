@@ -32,8 +32,8 @@
   // ════════════════════════════════════════════════════════════════
   var GRUPOS = [
     ['Clínica', [['clinica-dados', 'Dados da clínica', 'Nome, CNPJ, contato, endereço, responsável técnico e logo', true], ['clinica-cobranca', 'Cobrança e Asaas', 'PIX, conta para recebimento e chave da API do Asaas', true], ['clinica-tema', 'Personalização', 'Cor da barra superior e título do sistema', true]]],
-    ['Agenda', [['agenda-horarios', 'Horários e categorias', 'Horário de funcionamento, agenda dos profissionais e categorias'], ['agenda-mensagens', 'Confirmações e lembretes', 'Envio automático e textos das mensagens', true], ['agenda-bloqueios', 'Bloqueios', 'O que fazer ao agendar paciente com parcelas vencidas', true]]],
-    ['Prontuário', [['pront-documentos', 'Modelos de documento', 'Atestados, receituários, contratos e termos']]],
+    ['Agenda', [['agenda-horarios', 'Horários e categorias', 'Horário de funcionamento, agenda dos profissionais e categorias'], ['agenda-mensagens', 'Confirmações e lembretes', 'Envio automático e textos das mensagens', true], ['agenda-checkin', 'Check-in por QR Code', 'Cartaz para a recepção e chegadas do dia'], ['agenda-bloqueios', 'Bloqueios', 'O que fazer ao agendar paciente com parcelas vencidas', true]]],
+    ['Prontuário', [['pront-documentos', 'Modelos de documento', 'Atestados, receituários, contratos e termos'], ['pront-anamnese', 'Questionário de anamnese', 'Perguntas, ordem e alertas; o paciente também responde por link', true], ['pront-medicamentos', 'Medicamentos', 'Lista usada no receituário, com posologia']]],
     ['Orçamentos', [['orc-tabelas', 'Tabelas de preço', 'Particular, convênios e planos próprios'], ['orc-especialidades', 'Especialidades', 'Lista usada no cadastro de profissionais e procedimentos'], ['orc-regras', 'Regras de orçamento', 'Desconto máximo por perfil', true]]],
     ['Financeiro', [['fin-contas', 'Contas bancárias', 'Caixa e contas usadas nos lançamentos e conciliação'], ['fin-taxas', 'Taxas e encargos', 'Taxas da maquininha, multa, juros e desconto'], ['fin-regua', 'Régua de cobrança', 'Lembretes automáticos de pagamento'], ['fin-recibos', 'Recibos', 'Numeração sequencial dos recibos', true]]],
     ['Equipe', [['eq-usuarios', 'Usuários e permissões', 'Acessos, perfis e exceções por usuário'], ['eq-profissionais', 'Profissionais', 'Cadastro, agenda de trabalho e comissões']]],
@@ -151,6 +151,9 @@
     el('bq-ok').onclick = function () { var c = box.querySelector('input[name=bq]:checked'); salvar('bloqueios', { inadimplencia: c ? c.value : 'nao', dias_tolerancia: v('bq-tol') }) }
   }
   SECOES['pront-documentos'] = function (box) { box.innerHTML = '<div class="pc-box"><p class="ag-hint" style="margin-top:0">Os campos {{paciente.nome}}, {{profissional.nome}}, {{clinica.nome}}, {{clinica.telefone}} etc. são preenchidos ao emitir o documento na ficha do paciente.</p><button class="ag-btn-novo" onclick="abrirModelosDocumento()">Editar modelos</button></div>' }
+  SECOES['pront-anamnese'] = function (box) { window.cfgAnamnese(box) }
+  SECOES['pront-medicamentos'] = function (box) { window.cfgMedicamentos(box) }
+  SECOES['agenda-checkin'] = function (box) { window.cfgCheckin(box) }
   SECOES['orc-tabelas'] = function (box) { box.innerHTML = '<div class="pc-box"><p class="ag-hint" style="margin-top:0">Procedimentos, códigos TUSS, valores, importação por planilha e reajuste anual.</p><button class="ag-btn-novo" onclick="abrirTabelasPreco()">Gerenciar tabelas de preço</button></div>' }
   SECOES['orc-especialidades'] = async function (box) {
     var d; try { d = await apiData('especialidades', {}) } catch (e) { return falha(box, e) }

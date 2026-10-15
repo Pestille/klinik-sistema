@@ -405,7 +405,7 @@
       '<div class="ag-f"><label>Profissional responsável</label><select class="ag-in" id="pcd-prof"><option value="">—</option>' + profs.map(function (x) { return '<option value="' + x.id + '">' + esc(x.nome) + '</option>' }).join('') + '</select></div></div>' +
       '<div class="ag-f"><label>Título</label><input class="ag-in" id="pcd-tit" maxlength="160"></div>' +
       '<div class="ag-f"><label>Conteúdo <span style="text-transform:none;letter-spacing:0">(edite livremente; os campos ________ ficam para preencher)</span></label><div class="pc-doc-ed" id="pcd-ed" contenteditable="true"><span style="color:var(--text3)">Escolha um modelo.</span></div></div>',
-      '<button class="btn" id="pcd-cancel">Cancelar</button><button class="btn" id="pcd-salvar">Salvar</button><button class="ag-btn-novo" id="pcd-imp">Salvar e imprimir</button>', 860)
+      '<button class="btn" id="pcd-med" style="margin-right:auto">+ Medicamentos</button><button class="btn" id="pcd-cancel">Cancelar</button><button class="btn" id="pcd-salvar">Salvar</button><button class="ag-btn-novo" id="pcd-imp">Salvar e imprimir</button>', 860)
     var tipo = 'outro', modId = null
     async function preparar() {
       modId = el('pcd-mod').value; if (!modId) return
@@ -416,6 +416,16 @@
     el('pcd-mod').onchange = preparar
     el('pcd-prof').onchange = function () { if (modId && confirm('Recarregar o modelo com este profissional? As edições feitas serão perdidas.')) preparar() }
     el('pcd-cancel').onclick = fecharModal
+    // Receituário: a lista de medicamentos substitui as linhas em branco do modelo
+    el('pcd-med').onclick = function () {
+      if (!modId) return erro('pcd-err', 'Escolha o modelo (ex.: Receituário simples) antes de inserir medicamentos.')
+      window.escolherMedicamentos(function (html) {
+        var ed = el('pcd-ed'), vazia = Array.prototype.filter.call(ed.querySelectorAll('ol'), function (o) { return !o.textContent.replace(/[\s\u00a0]/g, '') })[0]
+        Array.prototype.forEach.call(ed.querySelectorAll('p'), function (p) { if (/^Uso:[\s\u00a0]*_+$/.test(p.textContent.trim())) p.remove() })
+        var tmp = document.createElement('div'); tmp.innerHTML = html
+        if (vazia) { while (tmp.firstChild) vazia.parentNode.insertBefore(tmp.firstChild, vazia); vazia.remove() } else { while (tmp.firstChild) ed.appendChild(tmp.firstChild) }
+      })
+    }
     async function salvar(imprimir) {
       var tit = el('pcd-tit').value.trim(), cont = el('pcd-ed').innerHTML
       if (!modId || !tit) return erro('pcd-err', 'Escolha o modelo e informe o título.')

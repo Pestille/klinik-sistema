@@ -13,7 +13,9 @@
     ]}
   ],
   "rewrites": [
-    { "source": "/app", "destination": "/app.html" }
+    { "source": "/app", "destination": "/app.html" },
+    { "source": "/anamnese", "destination": "/anamnese.html" },
+    { "source": "/checkin", "destination": "/checkin.html" }
   ],
   "crons": [
     {

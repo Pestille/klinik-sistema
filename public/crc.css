@@ -63,3 +63,20 @@
 .ex-pac-lista:empty{display:none}
 .ex-pac-lista a{display:block;padding:8px 12px;font-size:14px;color:var(--text2);cursor:pointer}
 .ex-pac-lista a:hover{background:#F5F5F5;color:var(--text)}
+
+/* Medicamentos (receituário), perguntas da anamnese e check-in por QR */
+.ex-med-lista{max-height:50vh;overflow-y:auto;border:1px solid var(--border);border-radius:6px}
+.ex-med{padding:12px 16px;border-bottom:1px solid var(--border2)}
+.ex-med:last-child{border-bottom:none}
+.ex-med.on{background:var(--surface2,#FAFAFA)}
+.ex-perg{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border2)}
+.ex-perg .ag-in{margin:0}
+.ex-perg input.ag-in{flex:1;min-width:0}
+.ex-perg select.ag-in{width:140px;flex:none}
+.ex-perg-n{width:24px;flex:none;text-align:right;font-size:12px;color:var(--text3)}
+.ex-perg-ac{display:flex;gap:4px;flex:none}
+.ex-perg-ac .ag-ico:disabled{opacity:.3;cursor:default}
+.ex-ck{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.ex-ck-qr{width:300px;max-width:100%;text-align:center}
+.ex-ck-svg svg{width:100%;height:auto;display:block}
+@media(max-width:700px){.ex-perg{flex-wrap:wrap}.ex-perg input.ag-in{flex:1 1 calc(100% - 32px)}.ex-perg select.ag-in{margin-left:32px}}

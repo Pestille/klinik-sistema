@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Anamnese — Klinov</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/publico.css">
+</head>
+<body>
+<header class="pb-top"><img id="logo" alt="" hidden><span id="clinica">Klinov</span></header>
+<main class="pb-main" id="app"><div class="pb-card"><div class="pb-sk"></div><div class="pb-sk" style="width:60%"></div></div></main>
+<footer class="pb-rodape">Suas respostas vão direto para o prontuário da clínica e ficam protegidas.</footer>
+<script>
+;(function () {
+  'use strict'
+  var t = new URLSearchParams(location.search).get('t') || ''
+  var app = document.getElementById('app')
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') }
+  function aviso(titulo, texto) { app.innerHTML = '<div class="pb-card pb-centro"><h1>' + esc(titulo) + '</h1><p>' + esc(texto) + '</p></div>' }
+  function cabecalho(d) {
+    document.getElementById('clinica').textContent = d.clinica || 'Klinov'
+    document.title = 'Anamnese — ' + (d.clinica || 'Klinov')
+    if (d.logo) { var l = document.getElementById('logo'); l.src = d.logo; l.hidden = false }
+  }
+  async function api(method, body) {
+    var url = '/api/data?r=publico&acao=anamnese' + (method === 'GET' ? '&t=' + encodeURIComponent(t) : '')
+    var r = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: method === 'GET' ? undefined : JSON.stringify(body) })
+    var j = {}; try { j = await r.json() } catch (e) {}
+    return j
+  }
+  async function iniciar() {
+    if (!t) return aviso('Link inválido', 'Abra o link exatamente como a clínica enviou.')
+    var d = await api('GET').catch(function () { return {} })
+    if (!d.success) return aviso('Não foi possível abrir', d.error || 'Verifique sua conexão e tente de novo.')
+    cabecalho(d)
+    app.innerHTML = '<div class="pb-card"><h1>Olá, ' + esc(d.paciente) + '!</h1><p>Antes da consulta, responda algumas perguntas sobre sua saúde. Leva cerca de 3 minutos. Se não souber alguma resposta, pode deixar em branco.</p></div>' +
+      '<form id="f" novalidate>' + d.perguntas.map(function (p, i) {
+        if (p.tipo === 'DESC') return '<div class="pb-card pb-q" data-id="' + p.id + '" data-tipo="DESC"><label class="pb-q-t" for="d' + p.id + '">' + (i + 1) + '. ' + esc(p.pergunta) + '</label><textarea id="d' + p.id + '" rows="2" maxlength="1000"></textarea></div>'
+        return '<div class="pb-card pb-q" data-id="' + p.id + '" data-tipo="YES_NO"><div class="pb-q-t">' + (i + 1) + '. ' + esc(p.pergunta) + '</div><div class="pb-sn">' +
+          '<label><input type="radio" name="q' + p.id + '" value="Sim"> Sim</label><label><input type="radio" name="q' + p.id + '" value="Não"> Não</label></div>' +
+          '<input class="pb-det" placeholder="Detalhes (opcional)" maxlength="1000" hidden></div>'
+      }).join('') +
+      '<div class="pb-card"><label class="pb-chk"><input type="checkbox" id="conf"> Declaro que as informações acima são verdadeiras.</label><div id="err" class="pb-err" hidden></div><button class="pb-btn" id="env" type="submit">Enviar respostas</button></div></form>'
+    app.querySelectorAll('.pb-sn input').forEach(function (r) {
+      r.onchange = function () { var det = this.closest('.pb-q').querySelector('.pb-det'); det.hidden = this.value !== 'Sim'; if (this.value === 'Sim') det.focus() }
+    })
+    document.getElementById('f').onsubmit = enviar
+  }
+  async function enviar(ev) {
+    ev.preventDefault()
+    var err = document.getElementById('err'), btn = document.getElementById('env')
+    err.hidden = true
+    if (!document.getElementById('conf').checked) { err.textContent = 'Marque a confirmação para enviar.'; err.hidden = false; return }
+    var respostas = []
+    app.querySelectorAll('.pb-q').forEach(function (q) {
+      var id = +q.getAttribute('data-id')
+      if (q.getAttribute('data-tipo') === 'DESC') { var v = q.querySelector('textarea').value.trim(); if (v) respostas.push({ pergunta_id: id, descricao: v }) }
+      else { var s = q.querySelector('input[type=radio]:checked'), det = q.querySelector('.pb-det').value.trim(); if (s || det) respostas.push({ pergunta_id: id, resposta: s ? s.value : '', descricao: s && s.value === 'Sim' ? det : '' }) }
+    })
+    btn.disabled = true; btn.textContent = 'Enviando…'
+    var r = await api('POST', { t: t, confirmo: true, respostas: respostas }).catch(function () { return {} })
+    if (!r.success) { btn.disabled = false; btn.textContent = 'Enviar respostas'; err.textContent = r.error || 'Não foi possível enviar. Verifique sua conexão e tente de novo.'; err.hidden = false; return }
+    window.scrollTo(0, 0)
+    aviso('Obrigado, ' + r.paciente + '!', 'Suas respostas foram enviadas para a ' + r.clinica + '. Pode fechar esta página.')
+  }
+  iniciar()
+})()
+</script>
+</body>
+</html>

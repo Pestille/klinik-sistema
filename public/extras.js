@@ -1,4 +1,5 @@
-// public/extras.js — Estoque, controle protético e controle de indicação (Fase 9)
+// public/extras.js — Estoque, controle protético, controle de indicação, anamnese por link,
+// medicamentos do receituário e check-in por QR (Fase 9)
 // Klinov — Campo Grande, MS
 //
 // Substitui as telas "em breve" do app.html (#p-estoque, #p-protético,
@@ -254,6 +255,167 @@
     board.querySelectorAll('[data-desf]').forEach(function (b) { b.onclick = async function () { await apiPost('indicacoes', { paciente_id: +this.getAttribute('data-desf'), action: 'desfazer_recompensa' }); quadroInd() } })
     board.querySelectorAll('[data-arq]').forEach(function (b) { b.onclick = async function () { await apiPost('indicacoes', { paciente_id: +this.getAttribute('data-arq'), action: IN.arquivados ? 'desarquivar' : 'arquivar' }); quadroInd() } })
   }
+
+  // ════════════════════════════════════════════════════════════════
+  // ANAMNESE POR LINK (aba Anamnese do prontuário)
+  // ════════════════════════════════════════════════════════════════
+  async function enviarLinkAnamnese(p) {
+    var r = await apiPost('anamnese-link', { paciente_id: p.id })
+    if (!r.success) return alert(r.error || 'Erro ao gerar o link')
+    var url = location.origin + r.caminho, wa = foneWa(r.telefone)
+    var texto = 'Olá, ' + String(r.paciente || '').split(' ')[0].charAt(0) + String(r.paciente || '').split(' ')[0].slice(1).toLowerCase() + '! Para agilizar seu atendimento, responda nosso questionário de saúde antes da consulta: ' + url
+    var hist = await apiData('anamnese-link', { paciente_id: p.id }).catch(function () { return { data: [] } })
+    modal('Anamnese por link', '<p class="ag-hint" style="margin:0 0 12px">O paciente responde pelo celular e as respostas entram nesta aba. O link vale até ' + br(r.expira_em) + ' e só pode ser respondido uma vez; gerar outro cancela o anterior.</p>' +
+      '<div class="ag-f"><label>Link</label><input class="ag-in" id="al-url" readonly value="' + esc(url) + '"></div>' +
+      ((hist.data || []).length > 1 ? '<div class="pc-box-h" style="margin-top:16px">Envios anteriores</div>' + hist.data.slice(1).map(function (x) { return '<div class="ag-hint" style="margin:4px 0">' + br(x.criado_em) + (x.criado_por_nome ? ' por ' + esc(x.criado_por_nome) : '') + ' — ' + (x.usado_em ? '<b style="color:var(--green)">respondido em ' + br(x.usado_em) + '</b>' : 'não respondido') + '</div>' }).join('') : ''),
+      '<button class="btn" id="al-copiar">Copiar link</button>' + (wa ? '<a class="ag-btn-novo" id="al-wa" target="_blank" rel="noopener" href="https://wa.me/' + wa + '?text=' + encodeURIComponent(texto) + '">Enviar no WhatsApp</a>' : '<span class="ag-hint" style="margin:0">Paciente sem telefone cadastrado</span>'), 600)
+    el('al-copiar').onclick = function () { var i = el('al-url'); i.select(); try { navigator.clipboard.writeText(i.value) } catch (e) { document.execCommand('copy') } this.textContent = 'Copiado' }
+  }
+  if (typeof window.renderAnamneseTab === 'function') {
+    var renderAnamOrig = window.renderAnamneseTab
+    window.renderAnamneseTab = async function (box, p) {
+      await renderAnamOrig(box, p)
+      if (_anamneseEditMode) return
+      var bt = Array.prototype.filter.call(box.querySelectorAll('button'), function (b) { return b.textContent === 'Editar' })[0]
+      if (!bt) return
+      var wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;gap:8px'
+      bt.parentNode.insertBefore(wrap, bt); wrap.appendChild(bt)
+      var link = document.createElement('button'); link.className = 'ag-btn-novo'; link.textContent = 'Enviar por link'
+      link.onclick = function () { enviarLinkAnamnese(p) }
+      wrap.insertBefore(link, bt)
+      // Destaque das respostas que pedem atenção (perguntas marcadas como alerta)
+      var resp = (_prontData && _prontData.anamnese) || [], pergs = _anamnesePerguntas || [], porId = {}
+      resp.forEach(function (r) { porId[r.pergunta_id] = r })
+      var alertas = pergs.filter(function (q) { return q.alerta && porId[q.id] && porId[q.id].resposta === 'Sim' })
+      var doPaciente = resp.some(function (r) { return r.preenchido_por === 'Paciente (link)' })
+      if (alertas.length || doPaciente) {
+        var aviso = document.createElement('div'); aviso.className = 'pc-box'; aviso.style.marginBottom = '16px'
+        aviso.innerHTML = (alertas.length ? '<div class="pc-box-h" style="color:var(--red)">Atenção antes do atendimento</div>' + alertas.map(function (q) { var r = porId[q.id]; return '<div class="pc-item"><b>' + esc(q.pergunta) + '</b> Sim' + (r.descricao ? ' — ' + esc(r.descricao) : '') + '</div>' }).join('') : '') +
+          (doPaciente ? '<div class="ag-hint" style="margin:' + (alertas.length ? '8px' : '0') + ' 0 0">Respondida pelo próprio paciente, pelo link.</div>' : '')
+        wrap.parentNode.parentNode.insertBefore(aviso, wrap.parentNode.nextSibling)
+      }
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // MEDICAMENTOS NO RECEITUÁRIO
+  // ════════════════════════════════════════════════════════════════
+  function htmlReceita(itens) {
+    var grupos = [['interno', 'Uso interno'], ['externo', 'Uso externo']]
+    return grupos.map(function (g) {
+      var xs = itens.filter(function (m) { return m.uso === g[0] })
+      if (!xs.length) return ''
+      return '<p><b>' + g[1] + '</b></p><ol>' + xs.map(function (m) { return '<li><b>' + esc(m.nome) + '</b>' + (m.quantidade ? ' — ' + esc(m.quantidade) : '') + (m.posologia ? '<br>' + esc(m.posologia) : '') + '</li>' }).join('') + '</ol>'
+    }).join('')
+  }
+  // Abre a lista; ao confirmar, devolve o HTML pronto para o editor do documento
+  async function escolherMedicamentos(aoInserir) {
+    var d = await apiData('medicamentos', {}).catch(function (e) { return { success: false, error: e.message } })
+    if (!d.success) return alert(d.error || 'Erro ao carregar medicamentos')
+    var lista = d.data, sel = {}
+    modal('Medicamentos', '<div class="ag-f"><input class="ag-in" id="md-q" placeholder="Buscar medicamento"></div><div id="md-l" class="ex-med-lista"></div>' +
+      '<p class="ag-hint">Ajuste quantidade e posologia só para esta receita. Para mudar a lista da clínica, use Configurações › Prontuário › Medicamentos.</p>',
+      '<span class="ag-hint" id="md-n" style="margin:0 auto 0 0">Nenhum selecionado</span><button class="btn" id="md-c">Cancelar</button><button class="ag-btn-novo" id="md-ok">Inserir na receita</button>', 720)
+    function desenhar() {
+      var t = v('md-q').toLowerCase()
+      el('md-l').innerHTML = lista.filter(function (m) { return !t || m.nome.toLowerCase().indexOf(t) >= 0 }).map(function (m) {
+        var s = sel[m.id]
+        return '<div class="ex-med' + (s ? ' on' : '') + '"><label class="ag-chk" style="margin:0"><input type="checkbox" data-id="' + m.id + '"' + (s ? ' checked' : '') + '> <span><b style="color:var(--text);font-weight:500">' + esc(m.nome) + '</b> <span class="ag-hint" style="margin:0">' + esc([m.apresentacao, m.uso === 'externo' ? 'uso externo' : ''].filter(Boolean).join(' · ')) + '</span></span></label>' +
+          (s ? '<div class="ag-row c2" style="margin-top:8px"><div class="ag-f"><label>Quantidade</label><input class="ag-in" data-q="' + m.id + '" value="' + esc(s.quantidade) + '"></div><div class="ag-f"><label>Posologia</label><input class="ag-in" data-p="' + m.id + '" value="' + esc(s.posologia) + '"></div></div>' : '') + '</div>'
+      }).join('') || '<div class="pc-vazio">Nenhum medicamento encontrado.</div>'
+      el('md-l').querySelectorAll('[data-id]').forEach(function (c) { c.onchange = function () { var id = +this.getAttribute('data-id'), m = lista.filter(function (x) { return x.id === id })[0]; if (this.checked) sel[id] = Object.assign({}, m); else delete sel[id]; desenhar() } })
+      el('md-l').querySelectorAll('[data-q]').forEach(function (i) { i.oninput = function () { sel[+this.getAttribute('data-q')].quantidade = this.value } })
+      el('md-l').querySelectorAll('[data-p]').forEach(function (i) { i.oninput = function () { sel[+this.getAttribute('data-p')].posologia = this.value } })
+      var n = Object.keys(sel).length
+      el('md-n').textContent = n ? n + ' selecionado(s)' : 'Nenhum selecionado'
+    }
+    el('md-q').oninput = desenhar
+    el('md-c').onclick = fechar
+    el('md-ok').onclick = function () {
+      var itens = lista.filter(function (m) { return sel[m.id] }).map(function (m) { return sel[m.id] })
+      if (!itens.length) return erro('Marque ao menos um medicamento.')
+      fechar(); aoInserir(htmlReceita(itens))
+    }
+    desenhar()
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // CONFIGURAÇÕES › Prontuário (anamnese, medicamentos) e Agenda (check-in)
+  // ════════════════════════════════════════════════════════════════
+  async function cfgAnamnese(box) {
+    var d = await apiData('anamnese-modelo', {}).catch(function (e) { return { success: false, error: e.message } })
+    if (!d.success) { box.innerHTML = '<div class="ag-err">' + esc(d.error || 'Erro') + '</div>'; return }
+    var ps = d.data
+    box.innerHTML = '<div class="pc-box"><p class="ag-hint" style="margin-top:0">Vale para o preenchimento na clínica e pelo link enviado ao paciente. Marque "Alerta" nas perguntas em que um "Sim" precisa ser visto antes do atendimento.</p>' +
+      (ps.length ? ps.map(function (p, i) {
+        return '<div class="ex-perg"><span class="ex-perg-n">' + (i + 1) + '</span><input class="ag-in" data-txt="' + p.id + '" value="' + esc(p.pergunta) + '" maxlength="300">' +
+          '<select class="ag-in" data-tipo="' + p.id + '"><option value="YES_NO"' + (p.tipo === 'YES_NO' ? ' selected' : '') + '>Sim / Não</option><option value="DESC"' + (p.tipo === 'DESC' ? ' selected' : '') + '>Texto livre</option></select>' +
+          '<label class="ag-chk" style="margin:0"><input type="checkbox" data-al="' + p.id + '"' + (p.alerta ? ' checked' : '') + '> Alerta</label>' +
+          '<span class="ex-perg-ac"><button class="ag-ico" data-sobe="' + i + '" title="Subir"' + (i ? '' : ' disabled') + '>↑</button><button class="ag-ico" data-desce="' + i + '" title="Descer"' + (i < ps.length - 1 ? '' : ' disabled') + '>↓</button><button class="ag-ico" data-rm="' + p.id + '" title="Remover" style="color:var(--red)">✕</button></span></div>'
+      }).join('') : '<div class="pc-vazio">Nenhuma pergunta.</div>') +
+      '<div class="ex-perg" style="margin-top:16px"><span class="ex-perg-n">+</span><input class="ag-in" id="ap-nova" placeholder="Nova pergunta" maxlength="300"><select class="ag-in" id="ap-tipo"><option value="YES_NO">Sim / Não</option><option value="DESC">Texto livre</option></select><label class="ag-chk" style="margin:0"><input type="checkbox" id="ap-al"> Alerta</label><span class="ex-perg-ac"><button class="ag-btn-novo" id="ap-add">Adicionar</button></span></div></div>'
+    function recarregar() { cfgAnamnese(box) }
+    async function salvarP(id) { var r = await apiPost('anamnese-modelo', { id: id, pergunta: box.querySelector('[data-txt="' + id + '"]').value, tipo: box.querySelector('[data-tipo="' + id + '"]').value, alerta: box.querySelector('[data-al="' + id + '"]').checked }); if (!r.success) alert(r.error) }
+    box.querySelectorAll('[data-txt]').forEach(function (i) { i.onchange = function () { salvarP(+this.getAttribute('data-txt')) } })
+    box.querySelectorAll('[data-tipo],[data-al]').forEach(function (i) { i.onchange = function () { salvarP(+(this.getAttribute('data-tipo') || this.getAttribute('data-al'))) } })
+    function mover(i, j) { var ids = ps.map(function (p) { return p.id }), t = ids[i]; ids[i] = ids[j]; ids[j] = t; apiPost('anamnese-modelo', { action: 'ordenar', ids: ids }).then(recarregar) }
+    box.querySelectorAll('[data-sobe]').forEach(function (b) { b.onclick = function () { var i = +this.getAttribute('data-sobe'); mover(i, i - 1) } })
+    box.querySelectorAll('[data-desce]').forEach(function (b) { b.onclick = function () { var i = +this.getAttribute('data-desce'); mover(i, i + 1) } })
+    box.querySelectorAll('[data-rm]').forEach(function (b) { b.onclick = async function () { if (!confirm('Remover esta pergunta? As respostas já dadas continuam no prontuário.')) return; await apiPost('anamnese-modelo', { action: 'excluir', id: +this.getAttribute('data-rm') }); recarregar() } })
+    el('ap-add').onclick = async function () { var r = await apiPost('anamnese-modelo', { pergunta: v('ap-nova'), tipo: v('ap-tipo'), alerta: el('ap-al').checked }); if (!r.success) return alert(r.error); _anamnesePerguntas = null; recarregar() }
+    _anamnesePerguntas = null // a aba do prontuário recarrega o questionário atualizado
+  }
+
+  async function cfgMedicamentos(box) {
+    var d = await apiData('medicamentos', {}).catch(function (e) { return { success: false, error: e.message } })
+    if (!d.success) { box.innerHTML = '<div class="ag-err">' + esc(d.error || 'Erro') + '</div>'; return }
+    var edita = pode('pacientes.prescricoes')
+    box.innerHTML = '<div class="pc-box" style="padding:0"><div style="padding:16px 16px 0;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap"><p class="ag-hint" style="margin:0;flex:1">Lista usada ao emitir receituários. A lista inicial traz sugestões para adultos; revise as posologias conforme a sua prática.</p>' + (edita ? '<button class="ag-btn-novo" id="md-novo">+ Medicamento</button>' : '') + '</div>' +
+      '<div class="oc-scroll"><table class="pc-tbl"><thead><tr><th>Medicamento</th><th class="hide-sm">Quantidade</th><th class="hide-sm">Posologia</th><th>Uso</th><th></th></tr></thead><tbody>' +
+      d.data.map(function (m) { return '<tr><td>' + esc(m.nome) + (m.apresentacao ? '<div class="ag-hint" style="margin:0">' + esc(m.apresentacao) + '</div>' : '') + '</td><td class="hide-sm">' + esc(m.quantidade || '—') + '</td><td class="hide-sm">' + esc(m.posologia || '—') + '</td><td>' + (m.uso === 'externo' ? 'Externo' : 'Interno') + '</td><td style="text-align:right;white-space:nowrap">' + (edita ? '<button class="btn btn-sm" data-ed="' + m.id + '">Editar</button>' : '') + '</td></tr>' }).join('') +
+      '</tbody></table></div></div>'
+    function editar(m) {
+      m = m || { uso: 'interno' }
+      modal(m.id ? 'Editar medicamento' : 'Novo medicamento', '<div class="ag-f"><label>Nome e concentração</label><input class="ag-in" id="me-nome" maxlength="160" placeholder="Ex.: Amoxicilina 500 mg" value="' + esc(m.nome || '') + '"></div>' +
+        '<div class="ag-row c3"><div class="ag-f"><label>Apresentação</label><input class="ag-in" id="me-apr" maxlength="80" placeholder="Comprimido" value="' + esc(m.apresentacao || '') + '"></div><div class="ag-f"><label>Quantidade</label><input class="ag-in" id="me-qtd" maxlength="80" placeholder="21 cápsulas" value="' + esc(m.quantidade || '') + '"></div><div class="ag-f"><label>Uso</label><select class="ag-in" id="me-uso"><option value="interno">Interno</option><option value="externo"' + (m.uso === 'externo' ? ' selected' : '') + '>Externo</option></select></div></div>' +
+        '<div class="ag-f"><label>Posologia</label><textarea class="ag-in" id="me-pos" rows="2" maxlength="500">' + esc(m.posologia || '') + '</textarea></div>',
+        (m.id ? '<button class="btn" id="me-del" style="color:var(--red);margin-right:auto">Remover</button>' : '') + '<button class="btn" id="me-c">Cancelar</button><button class="ag-btn-novo" id="me-ok">Salvar</button>', 620)
+      el('me-c').onclick = fechar
+      if (el('me-del')) el('me-del').onclick = async function () { if (!confirm('Remover ' + m.nome + ' da lista?')) return; await apiPost('medicamentos', { action: 'excluir', id: m.id }); fechar(); cfgMedicamentos(box) }
+      el('me-ok').onclick = async function () { var r = await apiPost('medicamentos', { id: m.id, nome: v('me-nome'), apresentacao: v('me-apr'), quantidade: v('me-qtd'), uso: v('me-uso'), posologia: v('me-pos') }); if (!r.success) return erro(r.error); fechar(); cfgMedicamentos(box) }
+    }
+    if (el('md-novo')) el('md-novo').onclick = function () { editar(null) }
+    box.querySelectorAll('[data-ed]').forEach(function (b) { b.onclick = function () { var id = +this.getAttribute('data-ed'); editar(d.data.filter(function (m) { return m.id === id })[0]) } })
+  }
+
+  function svgQr(url, cel) {
+    if (typeof qrcode !== 'function') return '<div class="ag-err">Não foi possível gerar o QR Code (biblioteca não carregou).</div>'
+    var qr = qrcode(0, 'M'); qr.addData(url); qr.make()
+    return qr.createSvgTag({ cellSize: cel || 6, margin: 2, scalable: true })
+  }
+  async function cfgCheckin(box) {
+    var d = await apiData('checkin-config', {}).catch(function (e) { return { success: false, error: e.message } })
+    if (!d.success) { box.innerHTML = '<div class="ag-err">' + esc(d.error || 'Erro') + '</div>'; return }
+    var url = location.origin + d.caminho
+    box.innerHTML = '<div class="ex-ck"><div class="pc-box ex-ck-qr"><div class="ex-ck-svg">' + svgQr(url) + '</div><div class="fn-acoes" style="justify-content:center;margin-top:12px"><button class="ag-btn-novo" id="ck-imp">Imprimir cartaz</button><button class="btn" id="ck-cop">Copiar link</button></div></div>' +
+      '<div class="pc-box" style="flex:1;min-width:0"><div class="pc-box-h">Como funciona</div><p class="ag-hint" style="margin-top:0">Deixe o cartaz na recepção. O paciente aponta a câmera do celular, informa o CPF (ou a data de nascimento e o final do telefone) e a consulta de hoje passa para <b>Em espera</b> na agenda, com a hora de chegada.</p>' +
+      '<div class="pc-box-h" style="margin-top:20px">Chegadas de hoje</div>' + (d.chegadas.length ? d.chegadas.map(function (x) { return '<div class="pc-item"><b>' + esc(x.paciente_nome) + '</b> chegou às ' + esc(x.chegada) + ' · consulta ' + esc(x.hora) + (x.profissional ? ' com ' + esc(x.profissional) : '') + '</div>' }).join('') : '<div class="pc-vazio" style="padding:8px 0;text-align:left">Ninguém fez check-in hoje.</div>') +
+      (isAdmin() ? '<p class="ag-hint" style="margin-top:20px">Se o cartaz vazar para fora da clínica, gere um novo: o QR antigo para de funcionar. <a href="#" id="ck-ren" style="color:var(--red)">Gerar novo QR Code</a></p>' : '') + '</div></div>'
+    el('ck-cop').onclick = function () { try { navigator.clipboard.writeText(url) } catch (e) {} this.textContent = 'Copiado' }
+    if (el('ck-ren')) el('ck-ren').onclick = async function (e) { e.preventDefault(); if (!confirm('Gerar um novo QR Code? O cartaz atual deixa de funcionar.')) return; var r = await apiPost('checkin-config', { action: 'renovar' }); if (!r.success) return alert(r.error); cfgCheckin(box) }
+    el('ck-imp').onclick = function () {
+      var w = window.open('', '_blank'); if (!w) return alert('Permita pop-ups para imprimir.')
+      w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Check-in</title><style>body{font-family:Roboto,Arial,sans-serif;text-align:center;color:#1A1A1A;padding:48px 24px}h1{font-size:40px;font-weight:500;margin:0 0 8px;color:#034030}p{font-size:20px;color:#424242;margin:0 0 32px}.q{width:420px;max-width:90%;margin:0 auto}.q svg{width:100%;height:auto}small{display:block;margin-top:32px;font-size:16px;color:#757575}</style></head><body>' +
+        '<h1>Faça seu check-in</h1><p>Aponte a câmera do celular para o código e avise que chegou.</p><div class="q">' + svgQr(url, 10) + '</div><small>' + esc(d.clinica) + '</small><script>window.onload=function(){window.print()}<\/script></body></html>')
+      w.document.close()
+    }
+  }
+
+  window.enviarLinkAnamnese = enviarLinkAnamnese
+  window.escolherMedicamentos = escolherMedicamentos
+  window.cfgAnamnese = cfgAnamnese
+  window.cfgMedicamentos = cfgMedicamentos
+  window.cfgCheckin = cfgCheckin
 
   window.loadEstoque = loadEstoque
   window.loadProtetico = loadProtetico
