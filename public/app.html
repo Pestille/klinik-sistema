@@ -565,6 +565,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 <link rel="stylesheet" href="/agenda.css">
 <link rel="stylesheet" href="/orcamento.css">
 <link rel="stylesheet" href="/crc.css">
+<link rel="stylesheet" href="/equipe.css">
 <link rel="stylesheet" href="/financeiro.css">
 <link rel="stylesheet" href="/relatorios.css">
 <link rel="stylesheet" href="/configuracoes.css">
@@ -682,15 +683,12 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
   <div class="sidebar-search">
     <div class="sidebar-search-inner">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="color:var(--gray5)"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-      <input type="text" placeholder="Pesquisar">
+      <input type="text" placeholder="Pesquisar módulo" id="sb-busca" autocomplete="off">
     </div>
   </div>
   <div style="flex:1;overflow-y:auto">
-    <div class="sidebar-section-label">Mais acessados</div>
-    <div class="sidebar-item" onclick="nav('financeiro');toggleSidebar()">Financeiro</div>
-    <div class="sidebar-item" onclick="nav('metas');toggleSidebar()">Metas</div>
-    <div class="sidebar-item" onclick="nav('crm');toggleSidebar()">CRM</div>
-    <div class="sidebar-item" onclick="nav('crc');toggleSidebar()">CRC</div>
+    <div id="sb-mais-bloco"><div class="sidebar-section-label">Mais acessados</div><div id="sb-mais"></div><div class="sidebar-section-label">Módulos</div></div>
+    <div id="sb-modulos">
     <div class="sidebar-item" onclick="nav('agenda');toggleSidebar()">Agenda</div>
     <div class="sidebar-item" onclick="nav('crc');toggleSidebar()">CRC</div>
     <div class="sidebar-item" onclick="nav('crm');toggleSidebar()">CRM</div>
@@ -709,6 +707,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
     <div class="sidebar-item" onclick="nav('tutoriais');toggleSidebar()">Tutoriais do Sistema</div>
     <div class="sidebar-item" data-page="usuarios" onclick="nav('usuarios');toggleSidebar()">Usuários e Permissões</div>
     <div class="sidebar-item" data-page="configuracoes" onclick="nav('configuracoes');toggleSidebar()">⚙ Configuração</div>
+    </div>
   </div>
   <div class="sidebar-footer">
     <div>KLINOV</div>
@@ -9375,6 +9374,7 @@ document.querySelectorAll('.module-card').forEach(card=>{
 <script src="/relatorios.js"></script>
 <script src="/configuracoes.js"></script>
 <script src="/extras.js"></script>
+<script src="/equipe.js"></script>
 <script src="/paciente.js"></script>
 <script src="/klinik-turso.js"></script>
 </body>

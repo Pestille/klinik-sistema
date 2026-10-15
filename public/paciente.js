@@ -388,7 +388,7 @@
           return '<tr><td>' + br(x.criado_em) + '</td><td>' + esc(x.titulo) + '</td><td class="hide-sm">' + esc(TIPOS_DOC[x.tipo] || x.tipo || '') + '</td><td class="hide-sm">' + esc(x.profissional_nome || '—') + '</td>' +
             '<td style="text-align:right;white-space:nowrap"><button class="btn btn-sm" data-imp="' + x.id + '">Imprimir</button> <button class="btn btn-sm" data-exc="' + x.id + '" style="color:var(--red)">Excluir</button></td></tr>'
         }).join('') + '</tbody></table>' : '<div class="pc-vazio">Nenhum documento emitido. Use "+ Emitir documento" para gerar atestados, receitas, termos e contratos a partir dos modelos.</div>'
-      el('pcd-lista').querySelectorAll('[data-imp]').forEach(function (b) { b.onclick = function () { var x = docs.filter(function (k) { return k.id === +b.getAttribute('data-imp') })[0]; imprimirDocumento(x.titulo, x.conteudo, x.profissional_nome) } })
+      el('pcd-lista').querySelectorAll('[data-imp]').forEach(function (b) { b.onclick = function () { var x = docs.filter(function (k) { return k.id === +b.getAttribute('data-imp') })[0]; imprimirDocumento(x.titulo, x.conteudo, x.profissional_nome, x.codigo_validacao) } })
       el('pcd-lista').querySelectorAll('[data-exc]').forEach(function (b) {
         b.onclick = async function () { if (!confirm('Excluir este documento? Ele vai para a lixeira.')) return; var r = await apiPost('documentos-emitidos', { action: 'delete', id: +b.getAttribute('data-exc') }); if (!r.success) return alert(r.error || 'Erro'); TABS.documentos(box, p) }
       })
@@ -433,14 +433,14 @@
       if (!r.success) return erro('pcd-err', r.error || 'Erro ao salvar')
       var profNome = el('pcd-prof').selectedOptions[0] && el('pcd-prof').value ? el('pcd-prof').selectedOptions[0].textContent : ''
       fecharModal()
-      if (imprimir) imprimirDocumento(tit, cont, profNome)
+      if (imprimir) imprimirDocumento(tit, cont, profNome, r.codigo_validacao)
       if (depois) depois()
     }
     el('pcd-salvar').onclick = function () { salvar(false) }
     el('pcd-imp').onclick = function () { salvar(true) }
   }
 
-  async function imprimirDocumento(titulo, conteudo, profissional) {
+  async function imprimirDocumento(titulo, conteudo, profissional, codigo) {
     var cli = {}
     try { var d = await apiData('dados-clinica', {}); cli = d.data || d.clinica || d || {} } catch (e) {}
     var w = window.open('', '_blank'); if (!w) return alert('Permita pop-ups para imprimir.')
@@ -450,7 +450,8 @@
       '<div class="cab"><b>' + esc(cli.nome || '') + '</b><small>' + esc([cli.endereco, cli.cidade, cli.estado].filter(Boolean).join(' · ')) + '</small></div>' +
       conteudo +
       '<p style="margin-top:32px">' + esc(cli.cidade || '') + (cli.cidade ? ', ' : '') + hoje.getDate() + ' de ' + meses[hoje.getMonth()] + ' de ' + hoje.getFullYear() + '.</p>' +
-      '<div class="ass"><div>' + esc(profissional || 'Assinatura') + '</div></div></body></html>')
+      '<div class="ass"><div>' + esc(profissional || 'Assinatura') + '</div></div>' +
+      (codigo ? '<p style="margin-top:48px;font-size:11px;color:#757575;text-align:center">Código de validação <b style="letter-spacing:.06em;color:#424242">' + esc(codigo) + '</b> · confira a autenticidade em ' + esc(location.host) + '/validador</p>' : '') + '</body></html>')
     w.document.close(); w.focus(); setTimeout(function () { w.print() }, 200)
   }
 
@@ -468,10 +469,25 @@
     var cab = '<thead><tr><th>Data</th><th>Horário</th><th>Profissional</th><th class="hide-sm">Categoria / procedimento</th><th class="hide-sm">Observação</th><th>Status</th></tr></thead>'
     var faltas = passados.filter(function (a) { return a.status === 'faltou' }).length
     box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px"><div class="ag-hint" style="margin:0">' + ag.length + ' agendamento(s) · ' + faltas + ' falta(s)</div>' +
-      '<button class="ag-btn-novo" id="pca-novo">+ Agendar</button></div>' +
+      '<div class="fn-acoes">' + (ag.length ? '<button class="btn" id="pca-csv">Exportar</button><button class="btn" id="pca-imp">Imprimir</button>' : '') + '<button class="ag-btn-novo" id="pca-novo">+ Agendar</button></div></div>' +
       (futuros.length ? '<div class="pc-box-h">Próximos</div><table class="pc-tbl" style="margin-bottom:16px">' + cab + '<tbody>' + futuros.map(linha).join('') + '</tbody></table>' : '') +
       '<div class="pc-box-h">Histórico</div>' + (passados.length ? '<table class="pc-tbl">' + cab + '<tbody>' + passados.map(linha).join('') + '</tbody></table>' : '<div class="pc-vazio">Sem histórico.</div>')
     el('pca-novo').onclick = function () { novoAgendamentoPaciente({ id: p.id, nome: p.nome, telefone: p.telefone }) }
+    if (!ag.length) return
+    function campos(a) { return [br(a.data_hora), String(a.data_hora || '').slice(11, 16) + (a.hora_fim ? '–' + String(a.hora_fim).slice(0, 5) : ''), a.prof_nome || a.profissional_nome || '', [a.tipo, a.procedimento].filter(Boolean).join(' · '), a.observacoes || '', (STATUS_AG[a.status] || STATUS_AG.agendado)[0]] }
+    var TIT = ['Data', 'Horário', 'Profissional', 'Categoria / procedimento', 'Observação', 'Status']
+    el('pca-csv').onclick = function () {
+      var csv = [TIT].concat(ag.map(campos)).map(function (l) { return l.map(function (v) { v = String(v == null ? '' : v); return /[";\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v }).join(';') }).join('\r\n')
+      var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }))
+      a.download = 'agendamentos-' + String(p.nome || 'paciente').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.csv'; document.body.appendChild(a); a.click(); a.remove()
+    }
+    el('pca-imp').onclick = function () {
+      var w = window.open('', '_blank'); if (!w) return alert('Permita pop-ups para imprimir.')
+      w.document.write('<html><head><title>Agendamentos — ' + esc(p.nome) + '</title><style>body{font-family:Roboto,Arial,sans-serif;color:#212121;font-size:13px;margin:24px}h1{font-size:18px;font-weight:500;margin:0 0 4px}p{color:#757575;margin:0 0 16px}table{width:100%;border-collapse:collapse}th{text-align:left;font-size:11px;text-transform:uppercase;color:#757575;border-bottom:2px solid #E0E0E0;padding:6px 8px}td{border-bottom:1px solid #F0F0F0;padding:6px 8px}</style></head><body>' +
+        '<h1>Agendamentos — ' + esc(p.nome) + '</h1><p>' + ag.length + ' agendamento(s) · ' + faltas + ' falta(s) · emitido em ' + new Date().toLocaleDateString('pt-BR') + '</p><table><thead><tr>' + TIT.map(function (t) { return '<th>' + t + '</th>' }).join('') + '</tr></thead><tbody>' +
+        ag.map(function (a) { return '<tr>' + campos(a).map(function (v) { return '<td>' + esc(v) + '</td>' }).join('') + '</tr>' }).join('') + '</tbody></table></body></html>')
+      w.document.close(); w.focus(); setTimeout(function () { w.print() }, 200)
+    }
   }
 
   // ── Indicações ───────────────────────────────────────────────────

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Validador de documentos — Klinov</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/publico.css">
+</head>
+<body>
+<header class="pb-top"><span>Klinov</span></header>
+<main class="pb-main">
+  <div class="pb-card">
+    <h1>Validador de documentos</h1>
+    <p>Confira se um atestado, receita ou outro documento foi mesmo emitido por uma clínica que usa o Klinov. O código fica no rodapé do documento impresso.</p>
+    <form id="f" novalidate>
+      <label class="pb-lbl" for="cod">Código de validação</label>
+      <input id="cod" autocomplete="off" autocapitalize="characters" placeholder="ABCD-EFGH-JKLM" maxlength="16">
+      <div id="err" class="pb-err" hidden></div>
+      <button class="pb-btn" id="env" type="submit">Validar documento</button>
+    </form>
+  </div>
+  <div id="res"></div>
+</main>
+<footer class="pb-rodape">A validação confirma que o documento foi emitido pela clínica no sistema. O conteúdo não é exibido aqui.</footer>
+<script>
+;(function () {
+  'use strict'
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') }
+  function br(d) { if (!d) return ''; var p = String(d).slice(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d }
+  var inp = document.getElementById('cod'), err = document.getElementById('err'), res = document.getElementById('res'), btn = document.getElementById('env')
+  inp.oninput = function () {
+    var v = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12)
+    this.value = v.replace(/(.{4})(?=.)/g, '$1-')
+  }
+  var pre = new URLSearchParams(location.search).get('c')
+  if (pre) { inp.value = pre; inp.oninput.call(inp) }
+  document.getElementById('f').onsubmit = async function (e) {
+    e.preventDefault(); err.hidden = true; res.innerHTML = ''
+    if (inp.value.replace(/-/g, '').length !== 12) { err.textContent = 'O código tem 12 letras e números.'; err.hidden = false; return }
+    btn.disabled = true; btn.textContent = 'Validando…'
+    var j = {}
+    try { var r = await fetch('/api/data?r=publico&acao=validar&codigo=' + encodeURIComponent(inp.value)); j = await r.json() } catch (x) {}
+    btn.disabled = false; btn.textContent = 'Validar documento'
+    if (!j.success) { err.textContent = j.error || 'Não foi possível validar agora. Tente de novo.'; err.hidden = false; return }
+    res.innerHTML = '<div class="pb-card"><h1 style="color:var(--green)">Documento autêntico</h1>' +
+      '<p><b>' + esc(j.documento) + '</b><br>Emitido em ' + br(j.emitido_em) + ' por ' + esc(j.clinica) + (j.cidade ? ' (' + esc(j.cidade) + ')' : '') + '.</p>' +
+      (j.profissional ? '<p>Profissional responsável: ' + esc(j.profissional) + (j.cro ? ' — CRO ' + esc(j.cro) : '') + '</p>' : '') +
+      '<p>Paciente: ' + esc(j.paciente || '—') + ' (iniciais)</p><p style="color:var(--text3);font-size:12px;margin:0">Código ' + esc(j.codigo) + '</p></div>'
+  }
+})()
+</script>
+</body>
+</html>

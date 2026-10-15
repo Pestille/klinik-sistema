@@ -1,0 +1,38 @@
+/* equipe.css — CliniChat, notificações, filtros de listas */
+.tb-badge{position:absolute;top:2px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--orange);color:#fff;font-size:10px;font-weight:500;line-height:16px;text-align:center}
+
+.kc-painel,.kc-drop{position:fixed;z-index:10005;background:var(--surface,#fff);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.12);display:none;flex-direction:column;overflow:hidden;opacity:0;transform:translateY(8px);transition:opacity .15s ease,transform .15s ease}
+.kc-painel.open,.kc-drop.open{display:flex;opacity:1;transform:none}
+.kc-painel{right:24px;bottom:24px;width:360px;height:480px;max-height:calc(100vh - 96px)}
+.kc-drop{right:24px;top:60px;width:360px;max-height:70vh}
+.kc-h{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.kc-h b{flex:1;font-size:14px;font-weight:500;color:var(--text)}
+.kc-b{flex:1;overflow-y:auto}
+.kc-contato{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border2,#F0F0F0);cursor:pointer}
+.kc-contato:hover{background:var(--surface2,#FAFAFA)}
+.kc-av{width:32px;height:32px;flex:none;border-radius:50%;background:var(--green-light,#E8F5E9);color:var(--green);font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center}
+.kc-ct{flex:1;min-width:0;display:flex;flex-direction:column}
+.kc-ct b{font-size:14px;font-weight:500;color:var(--text)}
+.kc-ct small{font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kc-n{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--orange);color:#fff;font-size:11px;font-weight:500;line-height:20px;text-align:center}
+.kc-q{font-size:11px;color:var(--text3)}
+.kc-msgs{padding:12px 16px;display:flex;flex-direction:column;gap:8px;background:var(--bg,#F5F5F5)}
+.kc-m{max-width:80%;align-self:flex-start;background:var(--surface,#fff);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:14px;color:var(--text2);word-wrap:break-word}
+.kc-m.minha{align-self:flex-end;background:var(--green-light,#E8F5E9);border-color:transparent}
+.kc-m small{display:block;margin-top:4px;font-size:11px;color:var(--text3);text-align:right}
+.kc-f{display:flex;gap:8px;padding:12px;border-top:1px solid var(--border);align-items:flex-end}
+.kc-f textarea{flex:1;resize:none;max-height:96px;margin:0}
+.kc-nt{display:flex;flex-direction:column;gap:2px;padding:12px 16px;border-bottom:1px solid var(--border2,#F0F0F0);cursor:pointer}
+.kc-nt:hover{background:var(--surface2,#FAFAFA)}
+.kc-nt b{font-size:13px;font-weight:500;color:var(--text)}
+.kc-nt span{font-size:13px;color:var(--text2)}
+.kc-nt small{font-size:11px;color:var(--text3)}
+.kc-nt.nova{border-left:3px solid var(--orange);padding-left:13px}
+
+.kc-filtro{display:flex;gap:16px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.kc-filtro .ag-in{flex:1;min-width:200px;max-width:420px;margin:0}
+
+@media(max-width:600px){
+  .kc-painel{right:8px;left:8px;bottom:8px;width:auto;height:calc(100vh - 80px)}
+  .kc-drop{right:8px;left:8px;width:auto}
+}

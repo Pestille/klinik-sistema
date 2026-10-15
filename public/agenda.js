@@ -457,7 +457,7 @@
         '<div class="ag-pop-tel">' + (a.MobilePhone ? esc(a.MobilePhone) : 'Sem telefone') + '</div></div>' +
         '<button class="ag-ico" data-pop="fechar" title="Fechar">✕</button></div>' +
       '<div class="ag-pop-acts">' +
-        (a.paciente_id ? '<button class="btn btn-sm" data-pop="prontuario">Prontuário</button>' : '') +
+        (a.paciente_id ? '<button class="btn btn-sm" data-pop="prontuario">Prontuário</button><button class="btn btn-sm" data-pop="anamnese">Anamnese</button><button class="btn btn-sm" data-pop="financeiro">Financeiro</button>' : '') +
         (tel ? '<button class="btn btn-sm" data-pop="whatsapp">WhatsApp</button>' : '') +
         '<button class="btn btn-sm" data-pop="editar">Editar</button>' +
         (!desmarcado(a) ? '<button class="btn btn-sm" data-pop="desmarcar">Desmarcar</button>' : '') +
@@ -468,6 +468,7 @@
       (cat || a.CategoryDescription || a.procedureName ? '<div class="ag-pop-row"><div class="lbl">Categoria</div>' +
         (cat ? '<span class="ag-badge" style="background:' + cat.cor + ';color:#fff">' + esc(cat.nome) + '</span>' : esc(a.CategoryDescription)) +
         (a.procedureName ? '<div style="margin-top:4px">' + esc(a.procedureName) + '</div>' : '') + '</div>' : '') +
+      '<div class="ag-pop-row" id="ag-pop-marc"><div class="lbl">Marcadores</div><span style="color:var(--text3)">…</span></div>' +
       (a.observations ? '<div class="ag-pop-row"><div class="lbl">Observações</div>' + esc(a.observations) + '</div>' : '') +
       '<div class="ag-pop-foot"><span>' + (a.criado_por_nome ? 'Agendado por ' + esc(a.criado_por_nome) + (a.criado_em ? ' em ' + br(a.criado_em) + ' ' + String(a.criado_em).slice(11, 16) : '') : 'Agendamento #' + a.id) + (a.serie_id ? ' · série' : '') + '</span>' +
         '<select class="ag-sel" id="ag-pop-status" style="border-color:' + st.cor + '">' +
@@ -478,6 +479,7 @@
     ov.onclick = function (e) { if (e.target === ov) closeApptPanel() }
     ov.querySelectorAll('[data-pop]').forEach(function (b) { b.onclick = function () { acaoPop(this.getAttribute('data-pop'), a) } })
     el('ag-pop-status').onchange = function () { mudarStatus(a.id, this.value) }
+    marcadoresPop(a)
     if (a.paciente_id) {
       apiData('agenda-situacao-paciente', { paciente_id: a.paciente_id }).then(function (s) {
         var f = el('ag-pop-fin'); if (!f || AG.popId !== a.id) return
@@ -485,6 +487,46 @@
         else { f.className = 'ag-fin ok'; f.textContent = 'Financeiro OK' }
       }).catch(function () { var f = el('ag-pop-fin'); if (f) f.remove() })
     } else { var f0 = el('ag-pop-fin'); if (f0) f0.remove() }
+  }
+
+  // Marcadores (etiquetas) do agendamento: mostra os escolhidos; "Editar" abre todos para marcar
+  async function marcadoresPop(a) {
+    var box = el('ag-pop-marc'); if (!box) return
+    try {
+      if (!AG.marcadores) AG.marcadores = (await apiData('marcadores', {})).data || []
+      var sel = (await apiData('agendamento-marcadores', { agendamento_id: a.id })).ids || []
+    } catch (e) { box.remove(); return }
+    function chip(m, on) { return '<span class="ag-chip' + (on ? ' on' : '') + '" data-m="' + m.id + '" style="' + (on ? 'background:' + m.cor + ';border-color:' + m.cor + ';color:#fff' : '') + '">' + esc(m.nome) + '</span>' }
+    function ver() {
+      if (!el('ag-pop-marc') || AG.popId !== a.id) return
+      var escolhidos = AG.marcadores.filter(function (m) { return sel.indexOf(m.id) >= 0 })
+      box.innerHTML = '<div class="lbl">Marcadores</div>' + (escolhidos.length ? '<div class="ag-chips">' + escolhidos.map(function (m) { return chip(m, true) }).join('') + '</div>' : '<span style="color:var(--text3)">Nenhum</span>') +
+        ' <a href="#" id="ag-marc-ed" style="color:var(--green3);font-size:13px">' + (AG.marcadores.length ? 'Editar' : 'Criar marcador') + '</a>'
+      el('ag-marc-ed').onclick = function (e) { e.preventDefault(); editar() }
+    }
+    function editar() {
+      box.innerHTML = '<div class="lbl">Marcadores</div><div class="ag-chips">' + AG.marcadores.map(function (m) { return chip(m, sel.indexOf(m.id) >= 0) }).join('') + '</div>' +
+        '<div style="display:flex;gap:8px;margin-top:8px"><input class="ag-in" id="ag-marc-novo" maxlength="40" placeholder="Novo marcador" style="margin:0"><button class="btn btn-sm" id="ag-marc-add">Criar</button><button class="btn btn-sm btn-primary" id="ag-marc-ok">Pronto</button></div>'
+      box.querySelectorAll('[data-m]').forEach(function (c) {
+        c.onclick = async function () {
+          var id = +this.getAttribute('data-m'), i = sel.indexOf(id)
+          if (i >= 0) sel.splice(i, 1); else sel.push(id)
+          var r = await apiPost('agendamento-marcadores', { agendamento_id: a.id, ids: sel })
+          if (!r.success) return alert(r.error || 'Erro')
+          sel = r.ids; editar()
+        }
+      })
+      el('ag-marc-add').onclick = async function () {
+        var nome = el('ag-marc-novo').value.trim(); if (!nome) return
+        var cores = ['#2E7D52', '#E65100', '#1565C0', '#C62828', '#00695C', '#034030', '#757575']
+        var r = await apiPost('marcadores', { nome: nome, cor: cores[AG.marcadores.length % cores.length] })
+        if (!r.success) return alert(r.error || 'Erro')
+        AG.marcadores = (await apiData('marcadores', {})).data || []
+        sel.push(r.id); await apiPost('agendamento-marcadores', { agendamento_id: a.id, ids: sel }); editar()
+      }
+      el('ag-marc-ok').onclick = ver
+    }
+    ver()
   }
 
   function posicionarPop(ancora) {
@@ -504,6 +546,12 @@
   async function acaoPop(acao, a) {
     if (acao === 'fechar') return closeApptPanel()
     if (acao === 'prontuario') { closeApptPanel(); return abrirProntuario(a.PatientName, a.paciente_id) }
+    if (acao === 'anamnese' || acao === 'financeiro') {
+      closeApptPanel(); await abrirProntuario(a.PatientName, a.paciente_id)
+      var aba = Array.prototype.filter.call(document.querySelectorAll('#pront-tabs .pdt-tab'), function (t) { return (t.getAttribute('onclick') || '').indexOf("'" + (acao === 'anamnese' ? 'anamnese' : 'financeiro-pac') + "'") >= 0 })[0]
+      if (aba) aba.click()
+      return
+    }
     if (acao === 'whatsapp') return window.open('https://wa.me/55' + (a.MobilePhone || '').replace(/\D/g, '').replace(/^55/, ''), '_blank')
     if (acao === 'editar') { closeApptPanel(); return editarAgendamento(a.id) }
     if (acao === 'desmarcar') return mudarStatus(a.id, 'desmarcado')
