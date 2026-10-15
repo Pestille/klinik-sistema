@@ -197,7 +197,7 @@ module.exports = async function handler(req, res) {
                 try {
                     var exCfg = (await client.execute({ sql: "SELECT nome, cfg_aniversario, cfg_lembrete_retorno FROM clinicas WHERE id=?", args: [exCid] })).rows[0] || {}
                     if (exCfg.cfg_aniversario) {
-                        var anivs = await client.execute({ sql: "SELECT id, nome, email FROM pacientes WHERE clinica_id=? AND COALESCE(ativo,1)=1 AND COALESCE(email,'')<>'' AND (substr(data_nascimento,6,5)=? OR (data_nascimento LIKE '__/__/____' AND substr(data_nascimento,4,2)||'-'||substr(data_nascimento,1,2)=?)) LIMIT 300", args: [exCid, hojeCG.slice(5), hojeCG.slice(5)] })
+                        var anivs = await client.execute({ sql: "SELECT id, nome, email FROM pacientes WHERE clinica_id=? AND COALESCE(ativo,1)=1 AND COALESCE(email,'')<>'' AND COALESCE(aceita_marketing,1)=1 AND (substr(data_nascimento,6,5)=? OR (data_nascimento LIKE '__/__/____' AND substr(data_nascimento,4,2)||'-'||substr(data_nascimento,1,2)=?)) LIMIT 300", args: [exCid, hojeCG.slice(5), hojeCG.slice(5)] })
                         for (var ai = 0; ai < anivs.rows.length; ai++) extraTotal.aniversario += await emailPaciente(exCid, anivs.rows[ai], 'aniversario', '[aniv-' + hojeCG.slice(0, 4) + ']', { nome: String(anivs.rows[ai].nome || '').split(' ')[0], clinica: exCfg.nome || '' })
                     }
                     if (exCfg.cfg_lembrete_retorno) {

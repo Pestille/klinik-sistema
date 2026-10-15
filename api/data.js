@@ -20,6 +20,7 @@ var rotasEquipe = require('../lib/rotas/equipe')
 var rotasAssinaturas = require('../lib/rotas/assinaturas')
 var rotasPacienteFin = require('../lib/rotas/paciente-fin')
 var rotasCrm = require('../lib/rotas/crm')
+var rotasOperacao = require('../lib/rotas/operacao')
 var cfgLib = require('../lib/config')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
@@ -59,6 +60,7 @@ var ROTA_PERMISSAO = {
     'paciente-credito': 'pacientes.financeiro', 'paciente-avulso': 'pacientes.financeiro', 'anexos': 'financeiro.contas',
     'fotos-pastas': 'pacientes.fotos', 'foto-pasta': 'pacientes.fotos',
     'leads': 'crm.acessar', 'lead-interacoes': 'crm.acessar', 'orcamento-contrato': 'pacientes.documentos',
+    'caixa': 'caixa.operar', 'parcela-encargos': 'pacientes.financeiro', 'agendamento-procedimentos': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' },
     'marcadores': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' }, 'agendamento-marcadores': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' }, 'medicamentos': { GET: 'pacientes.documentos', POST: 'pacientes.prescricoes' },
     'marcar-executado': 'pacientes.ficha_clinica', 'editar-execucao': 'pacientes.ficha_clinica', 'desfazer-execucao': 'pacientes.ficha_clinica',
     'salvar-orcamento': 'pacientes.orcamentos',
@@ -167,6 +169,7 @@ module.exports = async function handler(req, res) {
         if (auth && await rotasAssinaturas.handle(route, ctxRota)) return
         if (auth && await rotasPacienteFin.handle(route, ctxRota)) return
         if (auth && await rotasCrm.handle(route, ctxRota)) return
+        if (auth && await rotasOperacao.handle(route, ctxRota)) return
         // Anamnese por link e check-in por QR: sem login, só por token
         if (route === 'publico') { await rotasPublico.handlePublico(ctxRota); return }
 
@@ -1492,6 +1495,10 @@ module.exports = async function handler(req, res) {
             if (!campR.rows.length) return res.status(404).json({ success: false, error: 'Campanha não encontrada' })
             var camp = campR.rows[0]
             var pacsCamp = await resolveSegmento(client, camp.segmento, camp.filtro_json)
+            // LGPD: quem pediu para não receber marketing fica de fora
+            var semMkt = {}
+            try { (await client.execute({ sql: "SELECT id FROM pacientes WHERE clinica_id=? AND COALESCE(aceita_marketing,1)=0", args: [clinica_id] })).rows.forEach(function(r) { semMkt[r.id] = true }) } catch (e) {}
+            pacsCamp = pacsCamp.filter(function(p) { return !semMkt[p.id] })
             var totalEnv = 0, totalErr = 0
             var resendKey = process.env.RESEND_API_KEY || ''
             var resendFrom = process.env.RESEND_FROM_EMAIL || 'noreply@klinov.com.br'
@@ -2646,6 +2653,9 @@ module.exports = async function handler(req, res) {
             var me = req.body || {}
             if (!me.orcamento_item_id) return res.status(400).json({ success: false, error: 'orcamento_item_id obrigatório' })
             var meData = me.data_execucao || new Date().toISOString().slice(0, 10)
+            var meJa = await client.execute({ sql: "SELECT COALESCE(executado,0) ex FROM orcamento_itens WHERE id=? AND clinica_id=?", args: [me.orcamento_item_id, clinica_id] })
+            if (!meJa.rows.length) return res.status(404).json({ success: false, error: 'Procedimento não encontrado' })
+            if (Number(meJa.rows[0].ex)) return res.status(200).json({ success: true, msg: 'Procedimento já estava executado', ja_executado: true })
 
             // Update item (including professional if provided)
             if (me.profissional_id) {
@@ -3431,9 +3441,11 @@ module.exports = async function handler(req, res) {
 
             // A parcela paga já é o movimento financeiro (lib/rotas/financeiro.js lê
             // parcelas_orcamento); não duplica em lancamentos. Guarda forma e conta.
+            var pbVal = require('../lib/rotas/operacao').valoresBaixa(pbRow.rows[0], pb)
+            if (pbVal.erro) return res.status(400).json({ success: false, error: pbVal.erro })
             await client.execute({
-                sql: "UPDATE parcelas_orcamento SET status='pago', data_pagamento=?, forma_pagamento=COALESCE(?,forma_pagamento), conta_id=COALESCE(?,conta_id), updated_at=datetime('now') WHERE id=? AND clinica_id=?",
-                args: [pbData, pb.forma_pagamento || null, parseInt(pb.conta_id) || null, pb.id, clinica_id]
+                sql: "UPDATE parcelas_orcamento SET status='pago', data_pagamento=?, forma_pagamento=COALESCE(?,forma_pagamento), conta_id=COALESCE(?,conta_id), valor_pago=?, acrescimo=?, desconto_baixa=?, updated_at=datetime('now') WHERE id=? AND clinica_id=?",
+                args: [pbData, pb.forma_pagamento || null, parseInt(pb.conta_id) || null, pbVal.valor_pago, pbVal.acrescimo, pbVal.desconto, pb.id, clinica_id]
             })
 
             return res.status(200).json({ success: true, msg: 'Baixa realizada' })
