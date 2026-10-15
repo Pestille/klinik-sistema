@@ -111,6 +111,7 @@
             '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"><button class="btn btn-sm" data-ac="editar" data-id="' + o.id + '">' + (o.status === 'aprovado' ? 'Abrir' : 'Editar') + '</button>' +
               '<button class="btn btn-sm" data-ac="imprimir" data-id="' + o.id + '">Imprimir</button><button class="btn btn-sm" data-ac="whatsapp" data-id="' + o.id + '">Enviar por WhatsApp</button>' +
               '<button class="btn btn-sm" data-ac="duplicar" data-id="' + o.id + '">Duplicar</button>' +
+              (itens.length ? '<button class="btn btn-sm" data-ac="contrato" data-id="' + o.id + '">Gerar contrato</button>' : '') +
               (o.status !== 'aprovado' ? '<button class="btn btn-sm" data-ac="excluir" data-id="' + o.id + '" style="color:var(--red)">Excluir</button>' : '') + '</div></div>' : '') +
           '</div>'
       }).join('') : '<div class="pc-vazio">Nenhum orçamento. Use "+ Novo orçamento".</div>')
@@ -124,6 +125,7 @@
         if (ac === 'imprimir') return imprimirOrcamento(id)
         if (ac === 'whatsapp') return enviarOrcamentoWhatsApp(id)
         if (ac === 'duplicar') return duplicarOrcamento(id)
+        if (ac === 'contrato') return window.gerarContratoOrcamento && gerarContratoOrcamento(id)
         if (ac === 'excluir') return excluirOrcamento(id)
       }
     })

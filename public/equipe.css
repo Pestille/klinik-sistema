@@ -54,3 +54,8 @@
 .l2-ft-a{display:flex;gap:8px;align-items:center;margin-top:8px}
 .l2-ft-a select{flex:1;margin:0;padding:4px 8px;font-size:12px}
 @media(max-width:700px){.l2-fin-g{grid-template-columns:1fr}}
+
+/* Lote 3: odontograma em tela cheia e dentição mista */
+.odont-wrap.l3-cheia{position:fixed;inset:0;z-index:10008;background:var(--surface,#fff);padding:24px;overflow:auto}
+.odont-row.l3-dec{transform:scale(.85);transform-origin:center}
+#crm-abas{margin:0}
