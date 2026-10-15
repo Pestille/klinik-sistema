@@ -15,6 +15,7 @@ var rotasFinControles = require('../lib/rotas/financeiro-controles')
 var rotasRelatorios = require('../lib/rotas/relatorios')
 var rotasConfig = require('../lib/rotas/configuracoes')
 var rotasExtras = require('../lib/rotas/extras')
+var rotasPublico = require('../lib/rotas/publico')
 var cfgLib = require('../lib/config')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
@@ -48,7 +49,8 @@ var ROTA_PERMISSAO = {
     'gerar-cobranca': 'pacientes.financeiro', 'parcela-baixa': 'pacientes.financeiro', 'parcela-cancelar': 'pacientes.financeiro',
     'parcela-vincular-cobranca': 'pacientes.financeiro', 'gerar-parcelas': 'pacientes.financeiro', 'sincronizar-cobrancas': 'pacientes.financeiro',
     'recibos-paciente': 'pacientes.recibos',
-    'salvar-odontograma': 'pacientes.odontograma', 'salvar-anamnese': 'pacientes.anamnese',
+    'salvar-odontograma': 'pacientes.odontograma', 'salvar-anamnese': 'pacientes.anamnese', 'anamnese-modelo': 'pacientes.anamnese', 'anamnese-link': 'pacientes.anamnese',
+    'checkin-config': 'agenda.visualizar_classificacao', 'medicamentos': { GET: 'pacientes.documentos', POST: 'pacientes.prescricoes' },
     'marcar-executado': 'pacientes.ficha_clinica', 'editar-execucao': 'pacientes.ficha_clinica', 'desfazer-execucao': 'pacientes.ficha_clinica',
     'salvar-orcamento': 'pacientes.orcamentos',
     'aprovar-orcamento': 'pacientes.editar_orcamento', 'reprovar-orcamento': 'pacientes.editar_orcamento',
@@ -103,7 +105,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Auth check — public routes skip authentication
-    var publicRoutes = ['db-status']
+    var publicRoutes = ['db-status', 'publico']
     var auth = null, clinica_id = null
     if (publicRoutes.indexOf(route) === -1) {
         auth = await authenticateRequest(req)
@@ -151,6 +153,9 @@ module.exports = async function handler(req, res) {
         if (auth && await rotasRelatorios.handle(route, ctxRota)) return
         if (auth && await rotasConfig.handle(route, ctxRota)) return
         if (auth && await rotasExtras.handle(route, ctxRota)) return
+        if (auth && await rotasPublico.handle(route, ctxRota)) return
+        // Anamnese por link e check-in por QR: sem login, só por token
+        if (route === 'publico') { await rotasPublico.handlePublico(ctxRota); return }
 
         // ── LIXEIRA (Administração de Dados) ─────────────────────
         if (route === 'lixeira-listar') {
