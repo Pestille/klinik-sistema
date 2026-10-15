@@ -17,6 +17,8 @@ var rotasConfig = require('../lib/rotas/configuracoes')
 var rotasExtras = require('../lib/rotas/extras')
 var rotasPublico = require('../lib/rotas/publico')
 var rotasEquipe = require('../lib/rotas/equipe')
+var rotasAssinaturas = require('../lib/rotas/assinaturas')
+var rotasPacienteFin = require('../lib/rotas/paciente-fin')
 var cfgLib = require('../lib/config')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
@@ -52,6 +54,9 @@ var ROTA_PERMISSAO = {
     'recibos-paciente': 'pacientes.recibos',
     'salvar-odontograma': 'pacientes.odontograma', 'salvar-anamnese': 'pacientes.anamnese', 'anamnese-modelo': 'pacientes.anamnese', 'anamnese-link': 'pacientes.anamnese',
     'checkin-config': 'agenda.visualizar_classificacao', 'receita-saude': 'financeiro.receita_saude',
+    'assinaturas': 'pacientes.acessar', 'assinatura-solicitar': 'pacientes.acessar', 'assinatura-cancelar': 'pacientes.acessar',
+    'paciente-credito': 'pacientes.financeiro', 'paciente-avulso': 'pacientes.financeiro', 'anexos': 'financeiro.contas',
+    'fotos-pastas': 'pacientes.fotos', 'foto-pasta': 'pacientes.fotos',
     'marcadores': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' }, 'agendamento-marcadores': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' }, 'medicamentos': { GET: 'pacientes.documentos', POST: 'pacientes.prescricoes' },
     'marcar-executado': 'pacientes.ficha_clinica', 'editar-execucao': 'pacientes.ficha_clinica', 'desfazer-execucao': 'pacientes.ficha_clinica',
     'salvar-orcamento': 'pacientes.orcamentos',
@@ -157,6 +162,8 @@ module.exports = async function handler(req, res) {
         if (auth && await rotasExtras.handle(route, ctxRota)) return
         if (auth && await rotasPublico.handle(route, ctxRota)) return
         if (auth && await rotasEquipe.handle(route, ctxRota)) return
+        if (auth && await rotasAssinaturas.handle(route, ctxRota)) return
+        if (auth && await rotasPacienteFin.handle(route, ctxRota)) return
         // Anamnese por link e check-in por QR: sem login, só por token
         if (route === 'publico') { await rotasPublico.handlePublico(ctxRota); return }
 
@@ -1929,7 +1936,7 @@ module.exports = async function handler(req, res) {
             await client.execute("CREATE TABLE IF NOT EXISTS documentos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, tipo TEXT, nome TEXT, descricao TEXT, url TEXT, created_at TEXT DEFAULT (datetime('now')))")
             try { await client.execute("ALTER TABLE documentos ADD COLUMN descricao TEXT") } catch(e) {}
             if (sd.url.length > 2000000) return res.status(400).json({ success: false, error: 'Arquivo muito grande. Maximo 1.5MB.' })
-            var sdIns = await client.execute({ sql: "INSERT INTO documentos(clinica_id, paciente_id, tipo, nome, descricao, url) VALUES(?,?,?,?,?,?)", args: [clinica_id, sd.paciente_id, sd.tipo || 'foto', sd.nome || '', sd.descricao || '', sd.url] })
+            var sdIns = await client.execute({ sql: "INSERT INTO documentos(clinica_id, paciente_id, tipo, nome, descricao, url, pasta) VALUES(?,?,?,?,?,?,?)", args: [clinica_id, sd.paciente_id, sd.tipo || 'foto', sd.nome || '', sd.descricao || '', sd.url, String(sd.pasta || '').trim().slice(0, 60) || null] })
             return res.status(200).json({ success: true, id: Number(sdIns.lastInsertRowid) })
         }
 

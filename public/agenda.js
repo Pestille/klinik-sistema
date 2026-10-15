@@ -757,7 +757,7 @@
       // Configurações › Bloqueios: paciente com parcelas vencidas pede confirmação
       if (!r.success && r.aviso_inadimplencia) { btn.disabled = false; if (confirm(r.error)) return salvarConsulta(forcar, true); return }
       if (!r.success) {
-        err.innerHTML = '<div class="ag-err">' + esc(r.error || 'Erro ao salvar') + (r.conflito ? ' <a href="#" id="agc-forcar" style="color:var(--red);font-weight:500;margin-left:8px">Agendar mesmo assim</a>' : '') + '</div>'
+        err.innerHTML = '<div class="ag-err">' + esc(r.error || 'Erro ao salvar') + (r.conflito && r.pode_forcar !== false ? ' <a href="#" id="agc-forcar" style="color:var(--red);font-weight:500;margin-left:8px">Agendar mesmo assim</a>' : '') + '</div>'
         if (el('agc-forcar')) el('agc-forcar').onclick = function (e) { e.preventDefault(); salvarConsulta(true) }
         return
       }
