@@ -14,6 +14,7 @@ var rotasFinanceiro = require('../lib/rotas/financeiro')
 var rotasFinControles = require('../lib/rotas/financeiro-controles')
 var rotasRelatorios = require('../lib/rotas/relatorios')
 var rotasConfig = require('../lib/rotas/configuracoes')
+var rotasExtras = require('../lib/rotas/extras')
 var cfgLib = require('../lib/config')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
@@ -73,7 +74,8 @@ var ROTA_PERMISSAO = {
     'metas': 'metas.acessar', 'metas-visualizar': 'metas.acessar', 'metas-config': { GET: 'metas.acessar', POST: 'metas.editar' },
     'dashboard-analitico': 'dashboard.acessar', 'analytics': 'dashboard.acessar',
     'relatorios': 'relatorios.acessar', 'relatorio-profissionais': 'relatorios.acessar', 'relatorios-catalogo': 'relatorios.acessar',
-    'especialidades': { GET: 'profissionais.acessar', POST: 'configuracoes.editar' }, 'mensagens-modelos': 'configuracoes.editar', 'profissional-status': 'profissionais.editar', 'excluir-profissional': 'profissionais.editar', 'relatorio': 'relatorios.acessar', 'analitico': 'dashboard.acessar',
+    'especialidades': { GET: 'profissionais.acessar', POST: 'configuracoes.editar' },
+    'estoque-produtos': { GET: 'estoque.acessar', POST: 'estoque.editar' }, 'estoque-movimentar': 'estoque.acessar', 'estoque-movimentos': 'estoque.acessar', 'protetico': 'protetico.acessar', 'indicacoes': 'indicacao.acessar', 'mensagens-modelos': 'configuracoes.editar', 'profissional-status': 'profissionais.editar', 'excluir-profissional': 'profissionais.editar', 'relatorio': 'relatorios.acessar', 'analitico': 'dashboard.acessar',
     // Marketing
     'marketing': 'marketing.acessar', 'campanhas': 'marketing.acessar', 'templates': 'marketing.acessar',
     'envios-historico': 'marketing.acessar', 'campanha-preview': 'marketing.acessar', 'marketing-config': 'marketing.acessar',
@@ -148,6 +150,7 @@ module.exports = async function handler(req, res) {
         if (auth && await rotasFinControles.handle(route, ctxRota)) return
         if (auth && await rotasRelatorios.handle(route, ctxRota)) return
         if (auth && await rotasConfig.handle(route, ctxRota)) return
+        if (auth && await rotasExtras.handle(route, ctxRota)) return
 
         // ── LIXEIRA (Administração de Dados) ─────────────────────
         if (route === 'lixeira-listar') {
