@@ -468,6 +468,7 @@
       (cat || a.CategoryDescription || a.procedureName ? '<div class="ag-pop-row"><div class="lbl">Categoria</div>' +
         (cat ? '<span class="ag-badge" style="background:' + cat.cor + ';color:#fff">' + esc(cat.nome) + '</span>' : esc(a.CategoryDescription)) +
         (a.procedureName ? '<div style="margin-top:4px">' + esc(a.procedureName) + '</div>' : '') + '</div>' : '') +
+      '<div class="ag-pop-row" id="ag-pop-procs"></div>' +
       '<div class="ag-pop-row" id="ag-pop-marc"><div class="lbl">Marcadores</div><span style="color:var(--text3)">…</span></div>' +
       (a.observations ? '<div class="ag-pop-row"><div class="lbl">Observações</div>' + esc(a.observations) + '</div>' : '') +
       '<div class="ag-pop-foot"><span>' + (a.criado_por_nome ? 'Agendado por ' + esc(a.criado_por_nome) + (a.criado_em ? ' em ' + br(a.criado_em) + ' ' + String(a.criado_em).slice(11, 16) : '') : 'Agendamento #' + a.id) + (a.serie_id ? ' · série' : '') + '</span>' +
@@ -478,8 +479,9 @@
     posicionarPop(ancora)
     ov.onclick = function (e) { if (e.target === ov) closeApptPanel() }
     ov.querySelectorAll('[data-pop]').forEach(function (b) { b.onclick = function () { acaoPop(this.getAttribute('data-pop'), a) } })
-    el('ag-pop-status').onchange = function () { mudarStatus(a.id, this.value) }
+    el('ag-pop-status').onchange = function () { var st = this.value; mudarStatus(a.id, st).then(function () { if (window.aposStatusAgenda) aposStatusAgenda(a, st) }) }
     marcadoresPop(a)
+    if (window.procedimentosPop) procedimentosPop(a)
     if (a.paciente_id) {
       apiData('agenda-situacao-paciente', { paciente_id: a.paciente_id }).then(function (s) {
         var f = el('ag-pop-fin'); if (!f || AG.popId !== a.id) return

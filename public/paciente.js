@@ -109,6 +109,8 @@
         '<div class="ag-row c3">' + sel('sexo', 'Gênero', p.sexo, [['M', 'Masculino'], ['F', 'Feminino'], ['O', 'Outro']], '—') +
           sel('estado_civil', 'Estado civil', p.estado_civil, ['Solteiro(a)', 'Casado(a)', 'União estável', 'Divorciado(a)', 'Viúvo(a)'], '—') +
           sel('como_conheceu', 'Como conheceu', p.como_conheceu, COMO_CONHECEU, 'Selecione') + '</div>' +
+        '<div class="ag-row c2"><div class="ag-f"><label>Canal preferido</label><select class="ag-in" id="' + pre + 'canal_preferido"><option value="">Sem preferência</option>' + [['whatsapp', 'WhatsApp'], ['ligacao', 'Ligação'], ['email', 'E-mail']].map(function (o) { return '<option value="' + o[0] + '"' + (p.canal_preferido === o[0] ? ' selected' : '') + '>' + o[1] + '</option>' }).join('') + '</select></div>' +
+        '<div class="ag-f"><label>Campanhas e novidades</label><select class="ag-in" id="' + pre + 'aceita_marketing"><option value="1">Aceita receber</option><option value="0"' + (Number(p.aceita_marketing) === 0 ? ' selected' : '') + '>Não quer receber</option></select></div></div>' +
         '<div class="ag-f" id="' + pre + 'ind-box"' + (p.como_conheceu === 'Indicado por' ? '' : ' style="display:none"') + '><label>Indicado por</label><div id="' + pre + 'ind"></div></div>' +
         '<div class="ag-row c2">' + inp('convenio', 'Plano / convênio', p.convenio) + inp('numero_convenio', 'Nº da carteirinha', p.numero_convenio) + '</div>' +
         '<div class="ag-f"><label>Alerta médico</label><input class="ag-in" id="' + pre + 'alerta_medico" value="' + esc(p.alerta_medico || '') + '" placeholder="Alergias, medicamentos, condições importantes"></div>' +
@@ -176,6 +178,7 @@
     var o = {}
     campos.forEach(function (c) { var i = el(pre + c); if (i) o[c] = i.value.trim() })
     o.sem_email = el(pre + 'sem_email').checked
+    if (el(pre + 'aceita_marketing')) { o.aceita_marketing = Number(el(pre + 'aceita_marketing').value); o.canal_preferido = el(pre + 'canal_preferido').value }
     var ind = o.como_conheceu === 'Indicado por' ? getInd() : null
     o.indicado_por_id = ind ? ind.id : null
     o.indicado_por_nome = ind ? ind.nome : ''

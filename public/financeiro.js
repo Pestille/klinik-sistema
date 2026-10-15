@@ -455,13 +455,14 @@
     modal('Receber parcela', '<div id="fn-err"></div><div class="ag-hint" style="margin:0 0 12px">' + esc(i.paciente_nome || '') + ' · ' + esc(i.descricao) + ' · ' + moeda(i.valor) + '</div>' +
       '<div class="ag-row c3"><div class="ag-f"><label>Data</label><input class="ag-in" type="date" id="rc-data" value="' + hoje() + '"></div><div class="ag-f"><label>Forma</label><select class="ag-in" id="rc-forma">' + opcoesTexto(FORMAS, 'PIX') + '</select></div>' +
       '<div class="ag-f"><label>Conta</label><select class="ag-in" id="rc-conta">' + opcoes(cs, FN.cache.caixa) + '</select></div></div>' +
-      '<div id="rc-det"></div>' +
+      (i.origem === 'parcela' ? '<div id="rc-enc"></div>' : '') + '<div id="rc-det"></div>' +
       (i.cobranca_id ? '<p class="ag-hint">Esta parcela tem cobrança no Asaas. Se o paciente pagou por fora, lembre de cancelar a cobrança no Asaas.</p>' : ''),
       '<button class="btn" id="rc-c">Cancelar</button><button class="ag-btn-novo" id="rc-ok">Confirmar recebimento</button>', 640)
     el('rc-forma').onchange = function () { el('rc-det').innerHTML = camposRecebivel(this.value, i.paciente_nome) }
+    if (i.origem === 'parcela' && window.encargosBaixa) { encargosBaixa(i.id, 'rc-data', 'rc-enc'); el('rc-data').onchange = function () { encargosBaixa(i.id, 'rc-data', 'rc-enc') } }
     el('rc-c').onclick = fechar
     el('rc-ok').onclick = async function () {
-      var r = await apiPost('fin-receber-baixa', { id: i.id, origem: i.origem, data: el('rc-data').value, forma_pagamento: el('rc-forma').value, conta_id: el('rc-conta').value, detalhe: lerRecebivel(el('rc-forma').value) })
+      var r = await apiPost('fin-receber-baixa', { id: i.id, origem: i.origem, acrescimo: el('enc-acr') ? el('enc-acr').value : 0, desconto: el('enc-desc') ? el('enc-desc').value : 0, data: el('rc-data').value, forma_pagamento: el('rc-forma').value, conta_id: el('rc-conta').value, detalhe: lerRecebivel(el('rc-forma').value) })
       if (!r.success) return erro(r.error || 'Erro')
       fechar(); renderCReceber()
     }

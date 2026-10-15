@@ -59,3 +59,14 @@
 .odont-wrap.l3-cheia{position:fixed;inset:0;z-index:10008;background:var(--surface,#fff);padding:24px;overflow:auto}
 .odont-row.l3-dec{transform:scale(.85);transform-origin:center}
 #crm-abas{margin:0}
+
+/* Lote 4: caixa, tarefas, comparação de fotos */
+.l4-cx{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.l4-tf{margin-bottom:12px;padding:16px}
+.l4-tf.atrasada{border-left:3px solid var(--red)}
+.l4-tf-h{display:flex;align-items:center;gap:8px}
+.l4-cmp{position:relative;margin-top:12px;background:#212121;border-radius:6px;overflow:hidden;height:420px}
+.l4-cmp img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.l4-cmp-dep{position:absolute;inset:0}
+.l4-cmp-linha{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 4px rgba(0,0,0,.5);pointer-events:none}
+@media(max-width:700px){.l4-cx{grid-template-columns:1fr}.l4-cmp{height:280px}}
