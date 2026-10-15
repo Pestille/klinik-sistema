@@ -5,7 +5,7 @@ var { getClient } = require('../lib/db')
 var { authenticateRequest, verificarPermissao, setCorsHeaders, checkRateLimit } = require('../lib/middleware')
 var { runMigrations } = require('../lib/migrations')
 var { TIPOS: LIXEIRA_TIPOS, moverParaLixeira, restaurar: restaurarDaLixeira } = require('../lib/lixeira')
-var { RECURSOS: PERM_RECURSOS, PERFIS: PERM_PERFIS, mapaPerfil, pode } = require('../lib/permissoes')
+var { RECURSOS: PERM_RECURSOS, PERFIS: PERM_PERFIS, mapaPerfil, mapaUsuario, pode } = require('../lib/permissoes')
 var rotasAgenda = require('../lib/rotas/agenda')
 var rotasPacientes = require('../lib/rotas/pacientes')
 var rotasOrcamentos = require('../lib/rotas/orcamentos')
@@ -13,6 +13,8 @@ var rotasCrc = require('../lib/rotas/crc')
 var rotasFinanceiro = require('../lib/rotas/financeiro')
 var rotasFinControles = require('../lib/rotas/financeiro-controles')
 var rotasRelatorios = require('../lib/rotas/relatorios')
+var rotasConfig = require('../lib/rotas/configuracoes')
+var cfgLib = require('../lib/config')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
 // método; { GET, POST } quando leitura e escrita exigem recursos diferentes.
@@ -70,7 +72,8 @@ var ROTA_PERMISSAO = {
     // Metas, dashboard, relatórios
     'metas': 'metas.acessar', 'metas-visualizar': 'metas.acessar', 'metas-config': { GET: 'metas.acessar', POST: 'metas.editar' },
     'dashboard-analitico': 'dashboard.acessar', 'analytics': 'dashboard.acessar',
-    'relatorios': 'relatorios.acessar', 'relatorio-profissionais': 'relatorios.acessar', 'relatorios-catalogo': 'relatorios.acessar', 'relatorio': 'relatorios.acessar', 'analitico': 'dashboard.acessar',
+    'relatorios': 'relatorios.acessar', 'relatorio-profissionais': 'relatorios.acessar', 'relatorios-catalogo': 'relatorios.acessar',
+    'especialidades': { GET: 'profissionais.acessar', POST: 'configuracoes.editar' }, 'mensagens-modelos': 'configuracoes.editar', 'profissional-status': 'profissionais.editar', 'excluir-profissional': 'profissionais.editar', 'relatorio': 'relatorios.acessar', 'analitico': 'dashboard.acessar',
     // Marketing
     'marketing': 'marketing.acessar', 'campanhas': 'marketing.acessar', 'templates': 'marketing.acessar',
     'envios-historico': 'marketing.acessar', 'campanha-preview': 'marketing.acessar', 'marketing-config': 'marketing.acessar',
@@ -144,6 +147,7 @@ module.exports = async function handler(req, res) {
         if (auth && await rotasFinanceiro.handle(route, ctxRota)) return
         if (auth && await rotasFinControles.handle(route, ctxRota)) return
         if (auth && await rotasRelatorios.handle(route, ctxRota)) return
+        if (auth && await rotasConfig.handle(route, ctxRota)) return
 
         // ── LIXEIRA (Administração de Dados) ─────────────────────
         if (route === 'lixeira-listar') {
@@ -349,7 +353,7 @@ module.exports = async function handler(req, res) {
             // Ensure extra columns exist
             var prCols2 = ['rg TEXT','sexo TEXT','estado_civil TEXT','data_nascimento TEXT','endereco TEXT','numero TEXT','bairro TEXT','cidade TEXT','uf TEXT','cep TEXT','complemento TEXT','cro_uf TEXT']
             for(var pci=0;pci<prCols2.length;pci++){try{await client.execute("ALTER TABLE profissionais ADD COLUMN "+prCols2[pci])}catch(e){}}
-            var rpr = await client.execute({ sql: "SELECT pr.*,COUNT(a.id) as total_agendamentos FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id WHERE (pr.clinica_id=? OR pr.clinica_id IS NULL) GROUP BY pr.id ORDER BY pr.nome", args: [clinica_id] })
+            var rpr = await client.execute({ sql: "SELECT pr.*,COUNT(a.id) as total_agendamentos FROM profissionais pr LEFT JOIN agendamentos a ON pr.id=a.profissional_id AND a.clinica_id=pr.clinica_id WHERE pr.clinica_id=? GROUP BY pr.id ORDER BY pr.nome", args: [clinica_id] })
             return res.status(200).json({ success: true, data: rpr.rows, total: rpr.rows.length })
         }
 
@@ -1288,9 +1292,17 @@ module.exports = async function handler(req, res) {
             var spCols = ['rg TEXT','sexo TEXT','estado_civil TEXT','data_nascimento TEXT','endereco TEXT','numero TEXT','bairro TEXT','cidade TEXT','uf TEXT','cep TEXT','complemento TEXT','cro_uf TEXT']
             for (var sci=0;sci<spCols.length;sci++){try{await client.execute("ALTER TABLE profissionais ADD COLUMN "+spCols[sci])}catch(e){}}
             var spResult = await client.execute({
-                sql: "UPDATE profissionais SET nome=?,especialidade=?,cpf=?,email=?,telefone=?,cro=?,rg=?,sexo=?,estado_civil=?,data_nascimento=?,endereco=?,numero=?,bairro=?,cidade=?,uf=?,cep=?,complemento=?,cro_uf=?,clinica_id=COALESCE(clinica_id,?),atualizado_em=datetime('now') WHERE id=? AND (clinica_id=? OR clinica_id IS NULL)",
+                sql: "UPDATE profissionais SET nome=?,especialidade=?,cpf=?,email=?,telefone=?,cro=?,rg=?,sexo=?,estado_civil=?,data_nascimento=?,endereco=?,numero=?,bairro=?,cidade=?,uf=?,cep=?,complemento=?,cro_uf=?,clinica_id=COALESCE(clinica_id,?),atualizado_em=datetime('now') WHERE id=? AND clinica_id=?",
                 args: [sp.nome||'',sp.especialidade||'',sp.cpf||'',sp.email||'',sp.telefone||'',sp.cro||'',sp.rg||'',sp.sexo||'',sp.estado_civil||'',sp.data_nascimento||'',sp.endereco||'',sp.numero||'',sp.bairro||'',sp.cidade||'',sp.uf||'',sp.cep||'',sp.complemento||'',sp.cro_uf||'',clinica_id,sp.id,clinica_id]
             })
+            if (spResult.rowsAffected) {
+                if (/^#[0-9A-Fa-f]{6}$/.test(sp.cor_agenda || '')) await client.execute({ sql: "UPDATE profissionais SET cor_agenda=? WHERE id=? AND clinica_id=?", args: [sp.cor_agenda, sp.id, clinica_id] })
+                if (sp.whatsapp !== undefined) await client.execute({ sql: "UPDATE profissionais SET whatsapp=? WHERE id=? AND clinica_id=?", args: [String(sp.whatsapp || '').slice(0, 20), sp.id, clinica_id] })
+                if (sp.usuario_id !== undefined) {
+                    await client.execute({ sql: "UPDATE usuarios SET profissional_id=NULL WHERE profissional_id=? AND clinica_id=?", args: [sp.id, clinica_id] })
+                    if (sp.usuario_id) await client.execute({ sql: "UPDATE usuarios SET profissional_id=? WHERE id=? AND clinica_id=?", args: [sp.id, sp.usuario_id, clinica_id] })
+                }
+            }
             return res.status(200).json({ success: true, msg: 'Profissional atualizado', rows: spResult.rowsAffected || 0 })
         }
 
@@ -1541,7 +1553,7 @@ module.exports = async function handler(req, res) {
 
         // ── EXPORTAR DADOS ─────────────────────────────────────────
         if (route === 'exportar-dados') {
-            var tipo = q.tipo || ''
+            var tipo = q.tipo || (req.body || {}).tipo || ''
             var sqlMap = {
                 pacientes: "SELECT id,nome,cpf,rg,data_nascimento,sexo,estado_civil,telefone,whatsapp,email,endereco,bairro,cidade,cep,convenio,numero_convenio,como_conheceu,observacoes,alerta_medico,ativo,criado_em FROM pacientes WHERE clinica_id=? ORDER BY nome",
                 agendamentos: "SELECT a.id,a.data_hora,a.hora_fim,a.tipo,a.status,a.procedimento,a.valor,a.observacoes,COALESCE(p.nome,a.paciente_nome) as paciente_nome,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE a.clinica_id=? ORDER BY a.data_hora DESC",
@@ -1552,7 +1564,14 @@ module.exports = async function handler(req, res) {
                 procedimentos: "SELECT * FROM procedimentos WHERE clinica_id=? ORDER BY nome"
             }
             if (!sqlMap[tipo]) return res.status(400).json({ success: false, error: 'Tipo inválido: ' + tipo })
+            var expCfg = await cfgLib.lerCfg(client, clinica_id)
+            if (expCfg.seguranca.senha_exportar) {
+                var expSenha = (req.body || {}).senha || ''
+                var expU = (await client.execute({ sql: "SELECT senha_hash FROM usuarios WHERE id=? AND clinica_id=?", args: [auth.usuario_id, clinica_id] })).rows[0]
+                if (req.method !== 'POST' || !expSenha || !expU || !require('bcryptjs').compareSync(String(expSenha), expU.senha_hash || '')) return res.status(401).json({ success: false, error: 'Confirme sua senha para exportar', precisa_senha: true })
+            }
             var expR = await client.execute({ sql: sqlMap[tipo], args: [clinica_id] })
+            await cfgLib.registrar(client, auth, 'dados.exportar', tipo + ' (' + expR.rows.length + ' registros)', req)
             return res.status(200).json({ success: true, data: expR.rows, total: expR.rows.length })
         }
 
@@ -2493,7 +2512,7 @@ module.exports = async function handler(req, res) {
 
         // ── PERMISSOES-USUARIO (GET permissões do usuário logado) ────
         if (route === 'permissoes-usuario') {
-            var puMap = await mapaPerfil(client, clinica_id, auth.perfil)
+            var puMap = await mapaUsuario(client, auth)
             return res.status(200).json({ success: true, perfil: auth.perfil, permissoes: puMap })
         }
 
@@ -2518,6 +2537,12 @@ module.exports = async function handler(req, res) {
             await client.execute("CREATE TABLE IF NOT EXISTS comissoes_config (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, profissional_id INTEGER, tabela_preco TEXT DEFAULT 'PARTICULAR', momento TEXT, tipo TEXT, valor REAL DEFAULT 0, valido_desde TEXT, valido_ate TEXT, editado_por TEXT, created_at TEXT DEFAULT (datetime('now')))")
             } catch(tableErr) { console.error('[comissoes-config] table create error:', tableErr.message) }
             try {
+            if (req.method === 'POST' && (req.body || {}).action === 'delete') {
+                var ccx = parseInt((req.body || {}).id) || 0
+                if (!ccx) return res.status(400).json({ success: false, error: 'id obrigatório' })
+                var ccok = await moverParaLixeira(client, auth, 'comissao_config', ccx)
+                return ccok ? res.status(200).json({ success: true, msg: 'Regra excluída' }) : res.status(404).json({ success: false, error: 'Regra não encontrada' })
+            }
             if (req.method === 'POST') {
                 var cc = req.body || {}
                 if (!cc.profissional_id || !cc.momento || !cc.tipo || cc.valor === undefined) return res.status(400).json({ success: false, error: 'profissional_id, momento, tipo e valor obrigatórios' })
@@ -2871,12 +2896,17 @@ module.exports = async function handler(req, res) {
                     })
                     return res.status(200).json({ success: true, msg: 'Recibo atualizado' })
                 }
-                // Create
+                // Create — sem número informado, usa a numeração sequencial da clínica
+                if (!rs.numero_recibo) {
+                    var rsCfg = await cfgLib.lerCfg(client, clinica_id)
+                    rs.numero_recibo = String(rsCfg.recibos.proximo || 1)
+                    await cfgLib.salvarSecao(client, clinica_id, "recibos", { proximo: (Number(rsCfg.recibos.proximo) || 1) + 1 })
+                }
                 var rsIns = await client.execute({
                     sql: "INSERT INTO receitas_saude(clinica_id, paciente_id, profissional_id, orcamento_id, valor, data_emissao, numero_recibo, cpf_paciente, nome_paciente, cpf_profissional, nome_profissional, cro_profissional, descricao_servico, tipo, status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     args: [clinica_id, rs.paciente_id || null, rs.profissional_id || null, rs.orcamento_id || null, parseFloat(rs.valor) || 0, rs.data_emissao || new Date().toISOString().slice(0, 10), rs.numero_recibo || '', rs.cpf_paciente || '', rs.nome_paciente || '', rs.cpf_profissional || '', rs.nome_profissional || '', rs.cro_profissional || '', rs.descricao_servico || '', rs.tipo || 'recibo', 'rascunho']
                 })
-                return res.status(200).json({ success: true, id: Number(rsIns.lastInsertRowid), msg: 'Recibo criado' })
+                return res.status(200).json({ success: true, id: Number(rsIns.lastInsertRowid), numero_recibo: rs.numero_recibo, msg: 'Recibo criado' })
             }
             // GET
             var rsRows = await client.execute({ sql: "SELECT * FROM receitas_saude WHERE clinica_id=? ORDER BY created_at DESC LIMIT 200", args: [clinica_id] })

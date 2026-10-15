@@ -88,12 +88,12 @@ module.exports = async function handler(req, res) {
             for (var i = 0; i < agR.rows.length; i++) {
                 var ag = agR.rows[i]
                 var hora = (ag.data_hora || '').slice(11, 16) || '—'
-                var dataFmt = dataAmanha.split('-').reverse().join('/')
+                var dataFmt = String(ag.data_hora || dataAmanha).slice(0, 10).split('-').reverse().join('/')
 
                 // Check if already sent for this appointment
                 var alreadySent = await client.execute({
                     sql: "SELECT id FROM envios WHERE paciente_id=? AND canal IN ('email','whatsapp') AND mensagem_final LIKE ? AND DATE(enviado_em)>=DATE('now','-1 day') AND clinica_id=?",
-                    args: [ag.paciente_id || 0, '%' + dataAmanha + '%', clinica_id]
+                    args: [ag.paciente_id || 0, '%' + dataFmt + '%', clinica_id]
                 })
                 if (alreadySent.rows.length) continue
 
@@ -174,6 +174,40 @@ module.exports = async function handler(req, res) {
             totalGlobalErr += totalErr
             clinicasProcessadas.push({ clinica_id: clinica_id, agendamentos: agR.rows.length, enviados: totalEnv, erros: totalErr })
         }
+
+        // ── ANIVERSÁRIO E LEMBRETE DE RETORNO (por e-mail, se a clínica ativou) ──
+        var extraTotal = { aniversario: 0, retorno: 0 }
+        var rkExtra = process.env.RESEND_API_KEY || ''
+        var hojeCG = new Date(Date.now() - 4 * 3600 * 1000).toISOString().slice(0, 10)
+        var em7 = new Date(Date.now() - 4 * 3600 * 1000 + 7 * 86400000).toISOString().slice(0, 10)
+        async function emailPaciente(cid, pac, tipo, marca, vars) {
+            var ja = await client.execute({ sql: "SELECT id FROM envios WHERE paciente_id=? AND canal='email' AND mensagem_final LIKE ? AND clinica_id=? LIMIT 1", args: [pac.id, '%' + marca + '%', cid] })
+            if (ja.rows.length) return 0
+            var tp = (await client.execute({ sql: "SELECT assunto, corpo FROM templates_mensagem WHERE tipo=? AND ativo=1 AND clinica_id=? ORDER BY id LIMIT 1", args: [tipo, cid] })).rows[0]
+            if (!tp) return 0
+            var corpo = String(tp.corpo || '').replace(/\{\{(\w+)\}\}/g, function (_, k) { return vars[k] || '' })
+            var er = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'Authorization': 'Bearer ' + rkExtra, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ from: process.env.RESEND_FROM_EMAIL || 'noreply@klinov.com.br', to: [pac.email], subject: tp.assunto || 'Klinov', html: corpo.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>') + '<span style="display:none">' + marca + '</span>' }) })
+            await client.execute({ sql: "INSERT INTO envios(paciente_id,canal,destinatario,mensagem_final,status,erro_msg,enviado_em,clinica_id) VALUES(?,?,?,?,?,?,datetime('now'),?)", args: [pac.id, 'email', pac.email, corpo + ' ' + marca, er.ok ? 'enviado' : 'erro', er.ok ? '' : (await er.text()).slice(0, 300), cid] })
+            return er.ok ? 1 : 0
+        }
+        if (rkExtra) {
+            for (var exi = 0; exi < clinicasR.rows.length; exi++) {
+                var exCid = clinicasR.rows[exi].id
+                try {
+                    var exCfg = (await client.execute({ sql: "SELECT nome, cfg_aniversario, cfg_lembrete_retorno FROM clinicas WHERE id=?", args: [exCid] })).rows[0] || {}
+                    if (exCfg.cfg_aniversario) {
+                        var anivs = await client.execute({ sql: "SELECT id, nome, email FROM pacientes WHERE clinica_id=? AND COALESCE(ativo,1)=1 AND COALESCE(email,'')<>'' AND (substr(data_nascimento,6,5)=? OR (data_nascimento LIKE '__/__/____' AND substr(data_nascimento,4,2)||'-'||substr(data_nascimento,1,2)=?)) LIMIT 300", args: [exCid, hojeCG.slice(5), hojeCG.slice(5)] })
+                        for (var ai = 0; ai < anivs.rows.length; ai++) extraTotal.aniversario += await emailPaciente(exCid, anivs.rows[ai], 'aniversario', '[aniv-' + hojeCG.slice(0, 4) + ']', { nome: String(anivs.rows[ai].nome || '').split(' ')[0], clinica: exCfg.nome || '' })
+                    }
+                    if (exCfg.cfg_lembrete_retorno) {
+                        var rets = await client.execute({ sql: "SELECT ar.id rid, p.id, p.nome, p.email FROM alertas_retorno ar JOIN pacientes p ON p.id=ar.paciente_id AND p.clinica_id=ar.clinica_id WHERE ar.clinica_id=? AND COALESCE(ar.status,'pendente')='pendente' AND ar.data_retorno=? AND COALESCE(p.email,'')<>'' LIMIT 300", args: [exCid, em7] })
+                        for (var ri = 0; ri < rets.rows.length; ri++) extraTotal.retorno += await emailPaciente(exCid, rets.rows[ri], 'retorno', '[retorno-' + rets.rows[ri].rid + ']', { nome: String(rets.rows[ri].nome || '').split(' ')[0], clinica: exCfg.nome || '' })
+                    }
+                } catch (e) { console.error('[cron] aniversário/retorno clinica ' + exCid + ':', e.message) }
+            }
+        }
+        console.log('[cron] Aniversário/retorno:', JSON.stringify(extraTotal))
 
         // ── RÉGUA DE COBRANÇA (lembretes antes/depois do vencimento) ──
         var reguaTotal = { enviados: 0, erros: 0, ignorados: 0 }

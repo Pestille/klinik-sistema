@@ -54,6 +54,20 @@ async function enviarEmail(para, assunto, html) {
 
 var { setCorsHeaders, checkRateLimit } = require('../lib/middleware')
 var { runMigrations } = require('../lib/migrations')
+var cfgLib = require('../lib/config')
+
+// Cria a sessão com a duração configurada pela clínica e registra o acesso
+async function criarSessao(client, user, req, acao) {
+    var cfg = await cfgLib.lerCfg(client, user.clinica_id)
+    var token = gerarToken()
+    var expira = new Date(); expira.setHours(expira.getHours() + (Number(cfg.seguranca.sessao_horas) || 8))
+    await client.execute({ sql: "INSERT INTO sessoes(usuario_id,token,expira_em) VALUES(?,?,?)", args: [user.id, token, expira.toISOString()] })
+    await client.execute({ sql: "UPDATE usuarios SET ultimo_login=datetime('now') WHERE id=?", args: [user.id] })
+    await cfgLib.registrar(client, { clinica_id: user.clinica_id, usuario_id: user.id, nome: user.nome }, acao || 'login', null, req)
+    return token
+}
+function hashCodigo(desafio, codigo) { return crypto.createHash('sha256').update(String(desafio) + ':' + String(codigo)).digest('hex') }
+function mascararEmail(e) { var p = String(e || '').split('@'); return p.length === 2 ? p[0].slice(0, 2) + '***@' + p[1] : '' }
 
 module.exports = async function handler(req, res) {
     setCorsHeaders(req, res)
@@ -84,7 +98,7 @@ module.exports = async function handler(req, res) {
         }
 
         // Busca usuário pelo email (sem comparar hash ainda — precisamos detectar formato)
-        var r = await client.execute({ sql: "SELECT id,nome,email,perfil,ativo,deve_redefinir,senha_hash,clinica_id FROM usuarios WHERE email=?", args: [b.email.toLowerCase().trim()] })
+        var r = await client.execute({ sql: "SELECT * FROM usuarios WHERE email=?", args: [b.email.toLowerCase().trim()] })
         if (!r.rows.length) return res.status(401).json({ success: false, error: 'Email ou senha inválidos' })
 
         var user = r.rows[0]
@@ -97,7 +111,10 @@ module.exports = async function handler(req, res) {
             senhaValida = bcrypt.compareSync(b.senha, user.senha_hash)
         }
 
-        if (!senhaValida) return res.status(401).json({ success: false, error: 'Email ou senha inválidos' })
+        if (!senhaValida) {
+            await cfgLib.registrar(client, { clinica_id: user.clinica_id, usuario_id: user.id, nome: user.nome }, 'login.falha', 'Senha incorreta', req)
+            return res.status(401).json({ success: false, error: 'Email ou senha inválidos' })
+        }
         if (!user.ativo) return res.status(403).json({ success: false, error: 'Usuário desativado' })
 
         // Se deve redefinir, retorna flag (frontend mostrará tela de redefinição).
@@ -110,11 +127,18 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: true, deve_redefinir: true, usuario_id: user.id, nome: user.nome, reset_token: resetToken })
         }
 
-        // Cria sessão (expira em 7 dias)
-        var token = gerarToken()
-        var expira = new Date(); expira.setHours(expira.getHours() + 8)
-        await client.execute({ sql: "INSERT INTO sessoes(usuario_id,token,expira_em) VALUES(?,?,?)", args: [user.id, token, expira.toISOString()] })
-        await client.execute({ sql: "UPDATE usuarios SET ultimo_login=datetime('now') WHERE id=?", args: [user.id] })
+        // Login em duas etapas (Configurações › Segurança): código de 6 dígitos no e-mail pessoal
+        var cfgLogin = await cfgLib.lerCfg(client, user.clinica_id)
+        if (cfgLogin.seguranca.dois_fatores && user.email_pessoal) {
+            var desafio = gerarToken(), codigo = String(crypto.randomInt(0, 1000000)).padStart(6, '0')
+            var expCod = new Date(); expCod.setMinutes(expCod.getMinutes() + 10)
+            await client.execute({ sql: "UPDATE usuarios SET desafio_2fa=?, codigo_2fa=?, codigo_2fa_expira=?, codigo_2fa_tentativas=0 WHERE id=?", args: [desafio, hashCodigo(desafio, codigo), expCod.toISOString(), user.id] })
+            var enviou = await enviarEmail(user.email_pessoal, 'Seu código de acesso — Klinov', '<div style="font-family:Arial,sans-serif;max-width:420px;margin:auto"><p>Olá, ' + String(user.nome || '').split(' ')[0] + '.</p><p>Seu código para entrar no Klinov é:</p><p style="font-size:28px;font-weight:bold;letter-spacing:6px;color:#034030">' + codigo + '</p><p style="color:#757575;font-size:12px">Vale por 10 minutos. Se não foi você, troque sua senha.</p></div>')
+            if (!enviou) return res.status(503).json({ success: false, error: 'Não foi possível enviar o código de acesso. Tente de novo em instantes.' })
+            return res.status(200).json({ success: true, precisa_codigo: true, desafio: desafio, email: mascararEmail(user.email_pessoal) })
+        }
+
+        var token = await criarSessao(client, user, req, 'login')
 
         return res.status(200).json({ success: true, token: token, usuario: { id: user.id, nome: user.nome, email: user.email, perfil: user.perfil, clinica_id: user.clinica_id } })
     }
@@ -168,10 +192,36 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ success: true, usuario: { id: sess.usuario_id, nome: sess.nome, email: sess.email, email_pessoal: sess.email_pessoal || '', perfil: sess.perfil, clinica_id: sess.clinica_id } })
     }
 
+    // ── VERIFICAR CÓDIGO (segunda etapa do login) ─────────────
+    if (action === 'verificar-codigo') {
+        if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+        var bv = req.body || {}
+        if (!bv.desafio || !bv.codigo) return res.status(400).json({ success: false, error: 'Informe o código' })
+        if (!checkRateLimit('2fa:' + String(bv.desafio).slice(0, 64), 10, 900000)) return res.status(429).json({ success: false, error: 'Muitas tentativas. Faça login de novo.' })
+        var uv = (await client.execute({ sql: "SELECT * FROM usuarios WHERE desafio_2fa=? AND ativo=1", args: [String(bv.desafio)] })).rows[0]
+        if (!uv || !uv.codigo_2fa_expira || new Date(uv.codigo_2fa_expira) < new Date()) return res.status(401).json({ success: false, error: 'Código expirado. Faça login de novo.', expirado: true })
+        if (Number(uv.codigo_2fa_tentativas) >= 5) {
+            await client.execute({ sql: "UPDATE usuarios SET desafio_2fa=NULL, codigo_2fa=NULL WHERE id=?", args: [uv.id] })
+            return res.status(401).json({ success: false, error: 'Muitas tentativas erradas. Faça login de novo.', expirado: true })
+        }
+        if (hashCodigo(bv.desafio, String(bv.codigo).replace(/\D/g, '')) !== uv.codigo_2fa) {
+            await client.execute({ sql: "UPDATE usuarios SET codigo_2fa_tentativas=COALESCE(codigo_2fa_tentativas,0)+1 WHERE id=?", args: [uv.id] })
+            await cfgLib.registrar(client, { clinica_id: uv.clinica_id, usuario_id: uv.id, nome: uv.nome }, 'login.codigo_errado', null, req)
+            return res.status(401).json({ success: false, error: 'Código incorreto' })
+        }
+        await client.execute({ sql: "UPDATE usuarios SET desafio_2fa=NULL, codigo_2fa=NULL, codigo_2fa_expira=NULL, codigo_2fa_tentativas=0 WHERE id=?", args: [uv.id] })
+        var tokenV = await criarSessao(client, uv, req, 'login.2fa')
+        return res.status(200).json({ success: true, token: tokenV, usuario: { id: uv.id, nome: uv.nome, email: uv.email, perfil: uv.perfil, clinica_id: uv.clinica_id } })
+    }
+
     // ── LOGOUT ─────────────────────────────────────────────────
     if (action === 'logout') {
         var tk = (req.headers.authorization || '').replace('Bearer ', '') || q.token || ''
-        if (tk) await client.execute({ sql: "DELETE FROM sessoes WHERE token=?", args: [tk] })
+        if (tk) {
+            var sl = (await client.execute({ sql: "SELECT u.id, u.nome, u.clinica_id FROM sessoes s JOIN usuarios u ON u.id=s.usuario_id WHERE s.token=?", args: [tk] })).rows[0]
+            if (sl) await cfgLib.registrar(client, { clinica_id: sl.clinica_id, usuario_id: sl.id, nome: sl.nome }, 'logout', null, req)
+            await client.execute({ sql: "DELETE FROM sessoes WHERE token=?", args: [tk] })
+        }
         return res.status(200).json({ success: true })
     }
 
@@ -233,6 +283,7 @@ module.exports = async function handler(req, res) {
         var emailDestino = b2.email_pessoal.toLowerCase().trim()
         var emailEnviado = await enviarEmail(emailDestino, 'Ative sua conta — Klinov', emailHtml)
 
+        await cfgLib.registrar(client, authCr, 'usuario.criar', b2.nome + ' (' + perfil + ')', req)
         return res.status(200).json({ success: true, msg: 'Convite enviado por email', email_enviado: emailEnviado })
     }
 
@@ -449,7 +500,7 @@ module.exports = async function handler(req, res) {
         var authLU = await authenticateRequest(req)
         if (!authLU) return res.status(401).json({ success: false, error: 'Não autenticado' })
         if (authLU.perfil !== 'admin') return res.status(403).json({ success: false, error: 'Apenas admin pode listar usuários' })
-        var us = await client.execute({ sql: "SELECT id,nome,email,perfil,ativo,deve_redefinir,profissional_id,criado_em,ultimo_login FROM usuarios WHERE clinica_id=? ORDER BY nome", args: [authLU.clinica_id] })
+        var us = await client.execute({ sql: "SELECT id,nome,email,email_pessoal,telefone,perfil,ativo,deve_redefinir,profissional_id,criado_em,ultimo_login FROM usuarios WHERE clinica_id=? ORDER BY nome", args: [authLU.clinica_id] })
         return res.status(200).json({ success: true, data: us.rows, total: us.rows.length })
     }
 
@@ -474,6 +525,7 @@ module.exports = async function handler(req, res) {
         var hash3 = bcrypt.hashSync(b3.nova_senha, 10)
         await client.execute({ sql: "UPDATE usuarios SET senha_hash=?, deve_redefinir=0 WHERE id=? AND clinica_id=?", args: [hash3, b3.usuario_id, authAl.clinica_id] })
         await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=?", args: [b3.usuario_id] })
+        await cfgLib.registrar(client, authAl, 'usuario.senha', Number(b3.usuario_id) === Number(authAl.usuario_id) ? 'Própria senha' : 'Senha do usuário #' + b3.usuario_id, req)
         return res.status(200).json({ success: true, msg: 'Senha alterada' })
     }
 
@@ -495,6 +547,7 @@ module.exports = async function handler(req, res) {
         if (check.rows.length && !check.rows[0].ativo) {
             await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=?", args: [b4.usuario_id] })
         }
+        await cfgLib.registrar(client, authTg, check.rows.length && !check.rows[0].ativo ? 'usuario.inativar' : 'usuario.reativar', 'Usuário #' + b4.usuario_id, req)
         return res.status(200).json({ success: true })
     }
 
@@ -513,7 +566,33 @@ module.exports = async function handler(req, res) {
         if (!owEx.rows.length) return res.status(404).json({ success: false, error: 'Usuário não encontrado' })
         await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=?", args: [b5.usuario_id] })
         await client.execute({ sql: "DELETE FROM usuarios WHERE id=? AND clinica_id=?", args: [b5.usuario_id, authEx.clinica_id] })
+        await client.execute({ sql: "DELETE FROM permissoes_usuario WHERE usuario_id=? AND clinica_id=?", args: [b5.usuario_id, authEx.clinica_id] }).catch(function () {})
+        await cfgLib.registrar(client, authEx, 'usuario.excluir', 'Usuário #' + b5.usuario_id, req)
         return res.status(200).json({ success: true, msg: 'Usuário excluído' })
+    }
+
+    // ── EDITAR USUÁRIO (admin) ───────────────────────────────
+    if (action === 'editar-usuario') {
+        if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
+        var { authenticateRequest: authED } = require('../lib/middleware')
+        var authEd = await authED(req)
+        if (!authEd) return res.status(401).json({ success: false, error: 'Não autenticado' })
+        if (authEd.perfil !== 'admin') return res.status(403).json({ success: false, error: 'Apenas admin' })
+        var be = req.body || {}
+        var ue = (await client.execute({ sql: "SELECT id, perfil FROM usuarios WHERE id=? AND clinica_id=?", args: [be.usuario_id, authEd.clinica_id] })).rows[0]
+        if (!ue) return res.status(404).json({ success: false, error: 'Usuário não encontrado' })
+        var nomeE = String(be.nome || '').trim().slice(0, 120)
+        if (!nomeE) return res.status(400).json({ success: false, error: 'Informe o nome' })
+        var perfilE = ['admin', 'dentista', 'recepcionista', 'asb', 'administrativo'].indexOf(be.perfil) >= 0 ? be.perfil : ue.perfil
+        if (Number(ue.id) === Number(authEd.usuario_id) && perfilE !== 'admin') return res.status(400).json({ success: false, error: 'Você não pode tirar o seu próprio perfil de administrador' })
+        var emailP = String(be.email_pessoal || '').trim().toLowerCase().slice(0, 150)
+        if (emailP && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailP)) return res.status(400).json({ success: false, error: 'E-mail pessoal inválido' })
+        var profE = parseInt(be.profissional_id, 10) || null
+        if (profE && !(await client.execute({ sql: "SELECT id FROM profissionais WHERE id=? AND clinica_id=?", args: [profE, authEd.clinica_id] })).rows.length) return res.status(400).json({ success: false, error: 'Profissional inválido' })
+        await client.execute({ sql: "UPDATE usuarios SET nome=?, perfil=?, email_pessoal=?, telefone=?, profissional_id=? WHERE id=? AND clinica_id=?", args: [nomeE, perfilE, emailP || null, String(be.telefone || '').slice(0, 20) || null, profE, ue.id, authEd.clinica_id] })
+        if (perfilE !== ue.perfil) await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=?", args: [ue.id] })
+        await cfgLib.registrar(client, authEd, 'usuario.editar', nomeE + (perfilE !== ue.perfil ? ' (perfil ' + ue.perfil + ' → ' + perfilE + ')' : ''), req)
+        return res.status(200).json({ success: true })
     }
 
     // ── ATUALIZAR PERFIL (self-service) ──────────────────────
