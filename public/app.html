@@ -2067,6 +2067,9 @@ function nav(id) {
   if (id==='metas') loadMetas()
   if (id==='crc' && window.loadCrc) loadCrc()
   if (id==='confirmacoes') loadConfirmacoes()
+  if (id==='estoque' && window.loadEstoque) loadEstoque()
+  if (id==='protético' && window.loadProtetico) loadProtetico()
+  if (id==='indicacao' && window.loadIndicacao) loadIndicacao()
   if (id==='dashboard') loadAnalytics()
   if (id==='marketing') loadMarketing()
   if (id==='perfil') loadPerfil()
@@ -9371,6 +9374,7 @@ document.querySelectorAll('.module-card').forEach(card=>{
 <script src="/financeiro-controles.js"></script>
 <script src="/relatorios.js"></script>
 <script src="/configuracoes.js"></script>
+<script src="/extras.js"></script>
 <script src="/paciente.js"></script>
 <script src="/klinik-turso.js"></script>
 </body>

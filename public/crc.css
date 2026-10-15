@@ -56,3 +56,10 @@
   #p-crc .gpage-header .flex{flex-wrap:wrap}
   .crc-col{flex-basis:85vw;max-height:none}
 }
+
+/* Busca de paciente nos formulários dos extras (estoque, protético) */
+.ex-pac{position:relative}
+.ex-pac-lista{position:absolute;left:0;right:0;top:100%;z-index:5;background:#fff;border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.12);max-height:220px;overflow-y:auto}
+.ex-pac-lista:empty{display:none}
+.ex-pac-lista a{display:block;padding:8px 12px;font-size:14px;color:var(--text2);cursor:pointer}
+.ex-pac-lista a:hover{background:#F5F5F5;color:var(--text)}
