@@ -567,6 +567,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
 <link rel="stylesheet" href="/crc.css">
 <link rel="stylesheet" href="/financeiro.css">
 <link rel="stylesheet" href="/relatorios.css">
+<link rel="stylesheet" href="/configuracoes.css">
 <link rel="stylesheet" href="/paciente.css">
 </head>
 <body>
@@ -1480,7 +1481,7 @@ body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);heig
         <div class="modal-body">
           <input type="hidden" id="usr-s-id">
           <div class="form-group"><label class="form-label">Usuário</label><div id="usr-s-nome" style="font-weight:500;padding:8px 0"></div></div>
-          <div class="form-group"><label class="form-label">Nova Senha *</label><input class="form-input" id="usr-s-senha" type="password" placeholder="Mínimo 4 caracteres"></div>
+          <div class="form-group"><label class="form-label">Nova Senha *</label><input class="form-input" id="usr-s-senha" type="password" placeholder="8+ caracteres, 1 número e 1 símbolo"></div>
         </div>
         <div class="modal-foot"><button class="btn btn-primary" onclick="alterarSenhaUsuario()">Alterar Senha</button><button class="btn" onclick="closeModal('alterar-senha')">Cancelar</button></div>
       </div>
@@ -1750,7 +1751,7 @@ var _lastActivity=Date.now()
 document.addEventListener('click',function(){_lastActivity=Date.now()})
 document.addEventListener('keydown',function(){_lastActivity=Date.now()})
 setInterval(function(){
-  if(Date.now()-_lastActivity>1800000&&localStorage.getItem('klinov_token')){
+  if(Date.now()-_lastActivity>(window.KLINOV_INATIVIDADE_MS||1800000)&&localStorage.getItem('klinov_token')){
     localStorage.removeItem('klinov_token');location.reload()
   }
 },60000)
@@ -1805,7 +1806,11 @@ async function doLogin() {
   try {
     var r = await fetch('/api/auth?action=login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, senha: senha }) })
     var d = await r.json()
-    if (d.success && d.deve_redefinir) {
+    if (d.success && d.precisa_codigo) {
+      btn.disabled = false; btn.textContent = 'Entrar'
+      if (window.pedirCodigoLogin) return pedirCodigoLogin(d)
+      errEl.textContent = 'Código de acesso necessário'; return
+    } else if (d.success && d.deve_redefinir) {
       _redefineUserId = d.usuario_id
       _redefineToken = d.reset_token
       document.getElementById('redefine-nome').textContent = 'Olá, ' + d.nome
@@ -3822,14 +3827,14 @@ async function loadProfissionais() {
     var d=await apiData('profissionais')
     var data=d.data||[]
     // Converte para formato compatível
-    ST.profissionais=data.map(function(p){return {id:p.id,nome:p.nome,name:p.nome,Name:p.nome,specialty:p.especialidade,especialidade:p.especialidade,cpf:p.cpf||'',email:p.email||'',telefone:p.telefone||'',cro:p.cro||'',cro_uf:p.cro_uf||'',rg:p.rg||'',sexo:p.sexo||'',estado_civil:p.estado_civil||'',data_nascimento:p.data_nascimento||'',endereco:p.endereco||'',numero:p.numero||'',bairro:p.bairro||'',cidade:p.cidade||'',uf:p.uf||'',cep:p.cep||'',complemento:p.complemento||'',total_agendamentos:p.total_agendamentos||0}})
+    ST.profissionais=data.map(function(p){return {id:p.id,nome:p.nome,name:p.nome,Name:p.nome,specialty:p.especialidade,especialidade:p.especialidade,cpf:p.cpf||'',email:p.email||'',telefone:p.telefone||'',cro:p.cro||'',cro_uf:p.cro_uf||'',rg:p.rg||'',sexo:p.sexo||'',estado_civil:p.estado_civil||'',data_nascimento:p.data_nascimento||'',endereco:p.endereco||'',numero:p.numero||'',bairro:p.bairro||'',cidade:p.cidade||'',uf:p.uf||'',cep:p.cep||'',complemento:p.complemento||'',total_agendamentos:p.total_agendamentos||0,cor_agenda:p.cor_agenda||'',whatsapp:p.whatsapp||'',ativo:p.ativo===0?0:1}})
     document.getElementById('prof-sub').textContent=data.length+' profissionais cadastrados'
     document.getElementById('prof-grid').innerHTML=data.map(function(p,i){
       var nome=p.nome||'Profissional'
       var esp=p.especialidade||''
       var ini=nome.split(' ').slice(0,2).map(function(x){return x[0]}).join('')
-      var cor=PROF_CORES[i%PROF_CORES.length]
-      return '<div class="prof-card" style="cursor:pointer" onclick="verProfissional('+i+')"><div class="prof-av" style="background:'+cor+'22;color:'+cor+'">'+escHtml(ini)+'</div><div class="prof-name">'+escHtml(nome.split(' ').slice(0,3).join(' '))+'</div><div class="prof-esp">'+escHtml(esp||'Clínico Geral')+'</div><div style="font-size:11px;color:var(--text3);margin-top:4px">'+(p.total_agendamentos||0)+' agendamentos</div><span class="badge badge-green" style="margin-top:6px">Ativo</span></div>'
+      var cor=p.cor_agenda||PROF_CORES[i%PROF_CORES.length]
+      return '<div class="prof-card" style="cursor:pointer;border-top:3px solid '+cor+(p.ativo===0?';opacity:.6':'')+'" onclick="verProfissional('+i+')"><div class="prof-av" style="background:'+cor+'22;color:'+cor+'">'+escHtml(ini)+'</div><div class="prof-name">'+escHtml(nome.split(' ').slice(0,3).join(' '))+'</div><div class="prof-esp">'+escHtml(esp||'Clínico Geral')+'</div><div style="font-size:11px;color:var(--text3);margin-top:4px">'+(p.total_agendamentos||0)+' agendamentos</div>'+(p.ativo===0?'<span class="badge badge-orange" style="margin-top:6px">Inativo</span>':'<span class="badge badge-green" style="margin-top:6px">Ativo</span>')+'</div>'
     }).join('')
     renderProfsList()
     if(loadEl)loadEl.classList.add('hidden')
@@ -3868,8 +3873,8 @@ function verProfissional(idx){
         '</div>'+
       '</div>'+
       '<div style="display:flex;align-items:center;gap:8px">'+
-        '<button class="pdt-icon-btn" title="Desativar">🚫</button>'+
-        '<button class="pdt-icon-btn" title="Excluir">🗑</button>'+
+        '<button class="pdt-icon-btn" title="'+(p.ativo===0?'Reativar':'Inativar')+'" onclick="profAlternarAtivo()">'+(p.ativo===0?'✅':'🚫')+'</button>'+
+        '<button class="pdt-icon-btn" title="Excluir" onclick="profExcluir()">🗑</button>'+
         '<button class="pdt-btn-outline" onclick="nav(\'profissionais\')">← Voltar</button>'+
         '<button class="pdt-btn-outline" onclick="abrirNovoProfissional()">+ Novo Profissional</button>'+
       '</div>'+
@@ -4122,7 +4127,8 @@ async function salvarProfissional(){
       cidade:gv('prof-c-cidade')||p.cidade||'',
       uf:gv('prof-c-uf')||p.uf||'',
       cep:gv('prof-c-cep')||p.cep||'',
-      complemento:gv('prof-c-complemento')||p.complemento||''
+      complemento:gv('prof-c-complemento')||p.complemento||'',
+      cor_agenda:_profCorSelecionada||p.cor_agenda||undefined
     }
     var d=await apiPost('salvar-profissional',body)
     console.log('[salvarProfissional] resposta:', JSON.stringify(d))
@@ -9364,6 +9370,7 @@ document.querySelectorAll('.module-card').forEach(card=>{
 <script src="/financeiro.js"></script>
 <script src="/financeiro-controles.js"></script>
 <script src="/relatorios.js"></script>
+<script src="/configuracoes.js"></script>
 <script src="/paciente.js"></script>
 <script src="/klinik-turso.js"></script>
 </body>

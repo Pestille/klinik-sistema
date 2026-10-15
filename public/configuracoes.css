@@ -1,0 +1,43 @@
+/* public/configuracoes.css — Configurações (Fase 8) */
+
+.cf-wrap{display:flex;min-height:100%;align-items:stretch}
+.cf-menu{width:260px;flex-shrink:0;background:var(--surface,#fff);border-right:1px solid var(--border);padding:16px 0;overflow-y:auto}
+.cf-menu .ag-in{margin:0 16px 8px;width:calc(100% - 32px);box-sizing:border-box}
+.cf-grupo{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:12px 16px 4px}
+.cf-item{display:block;padding:8px 16px;font-size:14px;color:var(--text2);cursor:pointer;border-left:3px solid transparent;transition:background .12s ease}
+.cf-item:hover{background:#FAFAFA;color:var(--text)}
+.cf-item.on{background:#E8F5E9;color:var(--green);border-left-color:var(--green);font-weight:500}
+.cf-main{flex:1;min-width:0;padding:24px;max-width:960px}
+.cf-bread{font-size:12px;color:var(--text3);margin-bottom:4px}
+.cf-ok{background:#E8F5E9;color:var(--green);border-radius:6px;padding:8px 12px;font-size:13px;margin-bottom:12px}
+.cf-chk{display:flex;align-items:flex-start;gap:8px;padding:8px 0;font-size:14px;color:var(--text)}
+.cf-chk small{display:block;color:var(--text3);font-size:12px;margin-top:2px}
+.cf-logo{display:flex;align-items:center;min-height:80px;margin-bottom:12px}
+.cf-logo img{max-height:80px;max-width:240px;object-fit:contain;border:1px solid var(--border);border-radius:6px;padding:8px;background:#fff}
+.cf-temas{display:flex;gap:12px;flex-wrap:wrap}
+.cf-tema{display:flex;align-items:center;gap:8px;padding:10px 14px;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;font-size:14px;color:var(--text2);transition:border-color .12s ease}
+.cf-tema input{display:none}
+.cf-tema i{width:20px;height:20px;border-radius:4px;display:inline-block}
+.cf-tema.on{border-color:var(--green3);color:var(--text)}
+.cf-op{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1.5px solid var(--border);border-radius:6px;margin-bottom:8px;cursor:pointer;transition:border-color .12s ease}
+.cf-op.on{border-color:var(--green3);background:#F1F8F3}
+.cf-op b{display:block;font-weight:500;color:var(--text);font-size:14px}
+.cf-op small{display:block;color:var(--text3);font-size:12px;margin-top:2px}
+.cf-modelo{border-top:1px solid var(--border2);padding-top:12px;margin-top:12px}
+.cf-modelo b{font-weight:500;color:var(--text)}
+.cf-chips{display:flex;gap:8px;flex-wrap:wrap}
+.cf-chip{display:inline-flex;align-items:center;gap:6px;background:#F5F5F5;border:1px solid var(--border);border-radius:4px;padding:6px 10px;font-size:13px;color:var(--text2)}
+.cf-chip a{color:var(--text3);cursor:pointer}
+.cf-chip a:hover{color:var(--red)}
+.cf-ptbl{table-layout:fixed;width:100%}
+.cf-ptbl td{padding:6px 8px}
+.cf-ptbl td:nth-child(1){width:44%}
+.cf-ptbl td:nth-child(2){width:26%}
+.cf-ptbl td:nth-child(3){width:30%}
+.cf-ptbl .ag-in{padding:6px 8px;font-size:13px}
+
+@media (max-width:760px){
+  .cf-wrap{flex-direction:column}
+  .cf-menu{width:auto;border-right:none;border-bottom:1px solid var(--border);max-height:280px}
+  .cf-main{padding:16px}
+}

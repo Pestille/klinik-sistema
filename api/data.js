@@ -1568,7 +1568,7 @@ module.exports = async function handler(req, res) {
             if (expCfg.seguranca.senha_exportar) {
                 var expSenha = (req.body || {}).senha || ''
                 var expU = (await client.execute({ sql: "SELECT senha_hash FROM usuarios WHERE id=? AND clinica_id=?", args: [auth.usuario_id, clinica_id] })).rows[0]
-                if (req.method !== 'POST' || !expSenha || !expU || !require('bcryptjs').compareSync(String(expSenha), expU.senha_hash || '')) return res.status(401).json({ success: false, error: 'Confirme sua senha para exportar', precisa_senha: true })
+                if (req.method !== 'POST' || !expSenha || !expU || !require('bcryptjs').compareSync(String(expSenha), expU.senha_hash || '')) return res.status(403).json({ success: false, error: 'Confirme sua senha para exportar', precisa_senha: true })
             }
             var expR = await client.execute({ sql: sqlMap[tipo], args: [clinica_id] })
             await cfgLib.registrar(client, auth, 'dados.exportar', tipo + ' (' + expR.rows.length + ' registros)', req)

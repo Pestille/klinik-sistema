@@ -521,7 +521,7 @@
   // Utilitários compartilhados com public/financeiro-controles.js
   window.KFIN = { modal: modal, fechar: fechar, erro: erro, esc: esc, moeda: moeda, br: br, hoje: hoje, inicioMes: inicioMes, fimMes: fimMes, diaSemana: diaSemana, contas: contas, categorias: categorias,
     opcoes: opcoes, opcoesTexto: opcoesTexto, sub: sub, linkPac: linkPac, ligarPacientes: ligarPacientes, csv: csv, kpi: kpi, vazio: vazio, carregando: carregando, pode: pode, isAdmin: isAdmin,
-    camposRecebivel: camposRecebivel, lerRecebivel: lerRecebivel, FORMAS: FORMAS, cache: FN.cache }
+    camposRecebivel: camposRecebivel, lerRecebivel: lerRecebivel, gerenciarContas: gerenciarContas, FORMAS: FORMAS, cache: FN.cache }
   window.renderCC = renderCC
   window.renderFDC = renderFDC
   window.renderCPagar = renderCPagar

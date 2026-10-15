@@ -637,7 +637,7 @@
       '<div class="ag-row c2 ag-f"><div><label>Procedimento</label><input class="ag-in" id="agc-proc" maxlength="200" value="' + esc(o.procedimento || '') + '"></div>' +
         '<div><label>Observações</label><input class="ag-in" id="agc-obs" maxlength="1000" value="' + esc(o.observacoes || '') + '"></div></div>' +
       '<div class="ag-row c2 ag-f"><div><label>Confirmação</label><select class="ag-in" id="agc-conf">' +
-        [['1_dia', '1 dia antes (7h)'], ['mesmo_dia', 'No mesmo dia (7h)'], ['2_dias', '2 dias antes (7h)'], ['nao', 'Não enviar']].map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === (o.confirmacao_envio || '1_dia') ? ' selected' : '') + '>' + x[1] + '</option>' }).join('') + '</select></div>' +
+        [['1_dia', '1 dia antes (7h)'], ['mesmo_dia', 'No mesmo dia (7h)'], ['2_dias', '2 dias antes (7h)'], ['nao', 'Não enviar']].map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === (o.confirmacao_envio || (window.KLINOV_AGENDA_PADRAO && KLINOV_AGENDA_PADRAO.confirmacao_padrao) || '1_dia') ? ' selected' : '') + '>' + x[1] + '</option>' }).join('') + '</select></div>' +
         '<div><label>Enviar por</label><select class="ag-in" id="agc-canal">' +
         [['', 'Padrão da clínica'], ['whatsapp', 'WhatsApp'], ['email', 'E-mail'], ['ambos', 'WhatsApp e e-mail']].map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === (o.canal_envio || '') ? ' selected' : '') + '>' + x[1] + '</option>' }).join('') + '</select></div></div>'
     modal(ed.id ? 'Editar agendamento' : 'Novo agendamento', corpo,
@@ -689,7 +689,7 @@
     el('agc-hora-sel').textContent = ed.hora ? '— ' + ed.hora + ' às ' + hm(min(ed.hora) + dur) : ''
   }
 
-  async function salvarConsulta(forcar) {
+  async function salvarConsulta(forcar, confirmarInad) {
     var c = coletarConsulta(), err = el('ag-c-err')
     err.innerHTML = ''
     if (!c.paciente || !c.paciente.nome) { err.innerHTML = '<div class="ag-err">Selecione o paciente.</div>'; return }
@@ -698,7 +698,7 @@
       id: c.id || undefined, paciente_id: c.paciente.id || null, paciente_nome: c.paciente.nome, data: c.data, hora: c.hora,
       hora_fim: hm(min(c.hora) + c.duracao), profissional_id: c.profissional_id, categoria_id: c.categoria_id || null,
       observacoes: c.observacoes, procedimento: c.procedimento, primeira_consulta: c.primeira_consulta,
-      confirmacao_envio: c.confirmacao_envio, canal_envio: c.canal_envio || null, permitir_conflito: !!forcar,
+      confirmacao_envio: c.confirmacao_envio, canal_envio: c.canal_envio || null, permitir_conflito: !!forcar, confirmar_inadimplencia: !!confirmarInad,
       alerta_retorno_id: c.alerta_retorno_id, lista_espera_id: c.lista_espera_id
     }
     if (c.id) { var antigo = achar(c.id); body.status = antigo ? antigo.status : 'agendado' }
@@ -706,6 +706,8 @@
     var btn = el('agc-ok'); btn.disabled = true
     try {
       var r = await apiPost('salvar-agendamento', body)
+      // Configurações › Bloqueios: paciente com parcelas vencidas pede confirmação
+      if (!r.success && r.aviso_inadimplencia) { btn.disabled = false; if (confirm(r.error)) return salvarConsulta(forcar, true); return }
       if (!r.success) {
         err.innerHTML = '<div class="ag-err">' + esc(r.error || 'Erro ao salvar') + (r.conflito ? ' <a href="#" id="agc-forcar" style="color:var(--red);font-weight:500;margin-left:8px">Agendar mesmo assim</a>' : '') + '</div>'
         if (el('agc-forcar')) el('agc-forcar').onclick = function (e) { e.preventDefault(); salvarConsulta(true) }
