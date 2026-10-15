@@ -243,7 +243,7 @@ module.exports = async function handler(req, res) {
         // Gera token de ativação (sem senha temporária)
         var tokenAtivacao = crypto.randomBytes(32).toString('hex')
         var perfil = b2.perfil || 'recepcionista'
-        var validos = ['admin', 'dentista', 'recepcionista', 'asb', 'administrativo']
+        var validos = require('../lib/permissoes').PERFIS
         if (validos.indexOf(perfil) === -1) perfil = 'recepcionista'
 
         // Ensure columns exist
@@ -583,7 +583,7 @@ module.exports = async function handler(req, res) {
         if (!ue) return res.status(404).json({ success: false, error: 'Usuário não encontrado' })
         var nomeE = String(be.nome || '').trim().slice(0, 120)
         if (!nomeE) return res.status(400).json({ success: false, error: 'Informe o nome' })
-        var perfilE = ['admin', 'dentista', 'recepcionista', 'asb', 'administrativo'].indexOf(be.perfil) >= 0 ? be.perfil : ue.perfil
+        var perfilE = require('../lib/permissoes').PERFIS.indexOf(be.perfil) >= 0 ? be.perfil : ue.perfil
         if (Number(ue.id) === Number(authEd.usuario_id) && perfilE !== 'admin') return res.status(400).json({ success: false, error: 'Você não pode tirar o seu próprio perfil de administrador' })
         var emailP = String(be.email_pessoal || '').trim().toLowerCase().slice(0, 150)
         if (emailP && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailP)) return res.status(400).json({ success: false, error: 'E-mail pessoal inválido' })

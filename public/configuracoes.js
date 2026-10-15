@@ -9,7 +9,7 @@
   'use strict'
 
   var TEMAS = { verde: ['Verde Klinov', '#034030'], azul: ['Azul', '#1565C0'], petroleo: ['Petróleo', '#00695C'], grafite: ['Grafite', '#424242'] }
-  var PERFIL_NOME = { admin: 'Administrador', dentista: 'Dentista', recepcionista: 'Recepcionista', asb: 'ASB', administrativo: 'Administrativo' }
+  var PERFIL_NOME = { admin: 'Administrador', dentista: 'Dentista', recepcionista: 'Recepcionista', asb: 'ASB', administrativo: 'Administrativo', financeiro: 'Financeiro', gestor: 'Gestor de relacionamento' }
   var CF = { secao: 'clinica-dados', busca: '', dados: null }
 
   function el(id) { return document.getElementById(id) }
@@ -178,9 +178,9 @@
     var d; try { d = await dados() } catch (e) { return falha(box, e) }
     var lim = d.cfg.orcamento.desconto_max
     box.innerHTML = '<div class="pc-box"><div class="pc-box-h">Desconto máximo por perfil</div><p class="ag-hint" style="margin-top:0">Percentual sobre o valor particular do orçamento. Em branco = sem limite. O administrador nunca tem limite.</p>' +
-      '<div class="ag-row c4">' + ['dentista', 'recepcionista', 'administrativo', 'asb'].map(function (p) { return '<div class="ag-f"><label>' + PERFIL_NOME[p] + ' (%)</label><input class="ag-in" id="or-' + p + '" inputmode="decimal" value="' + (lim[p] != null ? String(lim[p]).replace('.', ',') : '') + '"></div>' }).join('') + '</div>' +
+      '<div class="ag-row c3">' + ['dentista', 'recepcionista', 'administrativo', 'asb', 'financeiro', 'gestor'].map(function (p) { return '<div class="ag-f"><label>' + PERFIL_NOME[p] + ' (%)</label><input class="ag-in" id="or-' + p + '" inputmode="decimal" value="' + (lim[p] != null ? String(lim[p]).replace('.', ',') : '') + '"></div>' }).join('') + '</div>' +
       '<div style="text-align:right"><button class="ag-btn-novo" id="or-ok">Salvar</button></div></div>'
-    el('or-ok').onclick = function () { var dm = {}; ['dentista', 'recepcionista', 'administrativo', 'asb'].forEach(function (p) { var x = String(v('or-' + p) || '').trim(); if (x !== '') dm[p] = x.replace(',', '.') }); salvar('orcamento', { desconto_max: dm }) }
+    el('or-ok').onclick = function () { var dm = {}; ['dentista', 'recepcionista', 'administrativo', 'asb', 'financeiro', 'gestor'].forEach(function (p) { var x = String(v('or-' + p) || '').trim(); if (x !== '') dm[p] = x.replace(',', '.') }); salvar('orcamento', { desconto_max: dm }) }
   }
   SECOES['fin-contas'] = function (box) { box.innerHTML = '<div class="pc-box"><button class="ag-btn-novo" id="fc-b">Gerenciar contas bancárias</button></div>'; el('fc-b').onclick = function () { window.KFIN && KFIN.gerenciarContas() } }
   SECOES['fin-taxas'] = function (box) { box.innerHTML = '<div class="pc-box"><button class="ag-btn-novo" onclick="abrirTaxasFinanceiro()">Configurar taxas e encargos</button></div>' }

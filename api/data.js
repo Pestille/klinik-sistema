@@ -19,6 +19,7 @@ var rotasPublico = require('../lib/rotas/publico')
 var rotasEquipe = require('../lib/rotas/equipe')
 var rotasAssinaturas = require('../lib/rotas/assinaturas')
 var rotasPacienteFin = require('../lib/rotas/paciente-fin')
+var rotasCrm = require('../lib/rotas/crm')
 var cfgLib = require('../lib/config')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
@@ -57,6 +58,7 @@ var ROTA_PERMISSAO = {
     'assinaturas': 'pacientes.acessar', 'assinatura-solicitar': 'pacientes.acessar', 'assinatura-cancelar': 'pacientes.acessar',
     'paciente-credito': 'pacientes.financeiro', 'paciente-avulso': 'pacientes.financeiro', 'anexos': 'financeiro.contas',
     'fotos-pastas': 'pacientes.fotos', 'foto-pasta': 'pacientes.fotos',
+    'leads': 'crm.acessar', 'lead-interacoes': 'crm.acessar', 'orcamento-contrato': 'pacientes.documentos',
     'marcadores': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' }, 'agendamento-marcadores': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' }, 'medicamentos': { GET: 'pacientes.documentos', POST: 'pacientes.prescricoes' },
     'marcar-executado': 'pacientes.ficha_clinica', 'editar-execucao': 'pacientes.ficha_clinica', 'desfazer-execucao': 'pacientes.ficha_clinica',
     'salvar-orcamento': 'pacientes.orcamentos',
@@ -164,6 +166,7 @@ module.exports = async function handler(req, res) {
         if (auth && await rotasEquipe.handle(route, ctxRota)) return
         if (auth && await rotasAssinaturas.handle(route, ctxRota)) return
         if (auth && await rotasPacienteFin.handle(route, ctxRota)) return
+        if (auth && await rotasCrm.handle(route, ctxRota)) return
         // Anamnese por link e check-in por QR: sem login, só por token
         if (route === 'publico') { await rotasPublico.handlePublico(ctxRota); return }
 
@@ -2496,7 +2499,7 @@ module.exports = async function handler(req, res) {
             for (var pri = 0; pri < pmRecursos.length; pri++) {
                 var pmR = pmRecursos[pri]
                 for (var ppi = 0; ppi < pmPerfis.length; ppi++) {
-                    await client.execute({ sql: "INSERT OR IGNORE INTO permissoes(clinica_id, perfil, recurso, permitido) VALUES(NULL,?,?,?)", args: [pmPerfis[ppi], pmR[0], pmR[1 + ppi]] })
+                    await client.execute({ sql: "INSERT OR IGNORE INTO permissoes(clinica_id, perfil, recurso, permitido) VALUES(NULL,?,?,?)", args: [pmPerfis[ppi], pmR[0], require('../lib/permissoes').padrao(pmPerfis[ppi], pmR[0])] })
                     pmSummary.seeds++
                 }
             }
