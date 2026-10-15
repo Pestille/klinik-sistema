@@ -11,6 +11,7 @@ var rotasPacientes = require('../lib/rotas/pacientes')
 var rotasOrcamentos = require('../lib/rotas/orcamentos')
 var rotasCrc = require('../lib/rotas/crc')
 var rotasFinanceiro = require('../lib/rotas/financeiro')
+var rotasFinControles = require('../lib/rotas/financeiro-controles')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
 // método; { GET, POST } quando leitura e escrita exigem recursos diferentes.
@@ -31,6 +32,8 @@ var ROTA_PERMISSAO = {
     'fin-contas': { GET: 'financeiro.acessar', POST: 'financeiro.editar_contas' }, 'fin-categorias': { GET: 'financeiro.acessar', POST: 'financeiro.editar_contas' },
     'fin-fornecedores': 'financeiro.contas', 'fin-movimentos': 'financeiro.conta_corrente', 'fin-lancamento': 'financeiro.conta_corrente', 'fin-fluxo': 'financeiro.fluxo_caixa',
     'fin-pagar': 'financeiro.contas', 'fin-pagar-baixa': 'financeiro.dar_baixa', 'fin-pagar-estornar': 'financeiro.editar_contas', 'fin-receber': 'financeiro.contas',
+    'fin-receber-baixa': 'financeiro.dar_baixa', 'fin-recebiveis': { GET: 'financeiro.acessar', POST: 'financeiro.dar_baixa' }, 'fin-convenios': { GET: 'financeiro.controle_planos', POST: 'financeiro.dar_baixa' },
+    'fin-boletos': 'financeiro.controle_boletos', 'fin-conciliacao': 'financeiro.conciliacoes', 'fin-taxas': { GET: 'financeiro.acessar', POST: 'configuracoes.editar' }, 'fin-regua': { GET: 'financeiro.acessar', POST: 'configuracoes.editar' },
     'conciliacoes-listar': 'financeiro.conciliacoes', 'conciliacao-importar': 'financeiro.conciliacoes',
     'conciliacao-itens': 'financeiro.conciliacoes', 'conciliacao-conciliar': 'financeiro.conciliacoes',
     'receitas-saude': { GET: 'pacientes.recibos', POST: 'financeiro.receita_saude' }, 'receita-saude-emitir': 'financeiro.receita_saude',
@@ -138,6 +141,7 @@ module.exports = async function handler(req, res) {
         if (auth && await rotasOrcamentos.handle(route, ctxRota)) return
         if (auth && await rotasCrc.handle(route, ctxRota)) return
         if (auth && await rotasFinanceiro.handle(route, ctxRota)) return
+        if (auth && await rotasFinControles.handle(route, ctxRota)) return
 
         // ── LIXEIRA (Administração de Dados) ─────────────────────
         if (route === 'lixeira-listar') {
@@ -2224,6 +2228,7 @@ module.exports = async function handler(req, res) {
                     dueDate: gcDueDate,
                     description: gc.descricao || 'Cobranca Klinov'
                 }
+                if (gcBillingType !== 'CREDIT_CARD') Object.assign(gcPayBody, await rotasFinControles.encargosAsaas(client, clinica_id))
                 // Credit card: add installment count
                 if (gc.tipo === 'credito' && gc.parcelas && parseInt(gc.parcelas) > 1) {
                     gcPayBody.installmentCount = parseInt(gc.parcelas)
@@ -3479,6 +3484,7 @@ module.exports = async function handler(req, res) {
                     if (!custId) return null
 
                     var payBody = { customer: custId, billingType: billingType, value: valor, dueDate: vencimento, description: descricao }
+                    if (billingType !== 'CREDIT_CARD') Object.assign(payBody, await rotasFinControles.encargosAsaas(client, clinica_id))
                     var payRes = await fetch('https://api.asaas.com/v3/payments', {
                         method: 'POST',
                         headers: { 'access_token': gpAsaasKey, 'Content-Type': 'application/json' },

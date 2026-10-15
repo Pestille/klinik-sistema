@@ -175,6 +175,34 @@ module.exports = async function handler(req, res) {
             clinicasProcessadas.push({ clinica_id: clinica_id, agendamentos: agR.rows.length, enviados: totalEnv, erros: totalErr })
         }
 
+        // ── RÉGUA DE COBRANÇA (lembretes antes/depois do vencimento) ──
+        var reguaTotal = { enviados: 0, erros: 0, ignorados: 0 }
+        var { executarRegua } = require('../lib/rotas/financeiro-controles')
+        var rgHoje = new Date(Date.now() - 4 * 3600 * 1000).toISOString().slice(0, 10)
+        async function enviarCobranca(canal, destino, texto, v) {
+            if (canal === 'email') {
+                var rk = process.env.RESEND_API_KEY || ''
+                if (!rk) return { ok: false, status: 'sem_canal', erro: 'E-mail não configurado' }
+                var er = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'Authorization': 'Bearer ' + rk, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ from: process.env.RESEND_FROM_EMAIL || 'noreply@klinov.com.br', to: [destino], subject: 'Lembrete de pagamento' + (v.clinica ? ' — ' + v.clinica : ''), html: texto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>') }) })
+                return er.ok ? { ok: true } : { ok: false, erro: (await er.text()).slice(0, 300) }
+            }
+            // WhatsApp só sai por template aprovado na Meta (mensagem iniciada pela clínica)
+            var tplNome = process.env.WHATSAPP_TEMPLATE_COBRANCA || ''
+            if (!tplNome || !process.env.WHATSAPP_TOKEN || !process.env.WHATSAPP_PHONE_ID) return { ok: false, status: 'sem_template', erro: 'Template de cobrança do WhatsApp não configurado' }
+            var fone = destino.length <= 11 ? '55' + destino : destino
+            var wr = await fetch('https://graph.facebook.com/v23.0/' + process.env.WHATSAPP_PHONE_ID + '/messages', { method: 'POST', headers: { 'Authorization': 'Bearer ' + process.env.WHATSAPP_TOKEN, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messaging_product: 'whatsapp', to: fone, type: 'template', template: { name: tplNome, language: { code: 'pt_BR' }, components: [{ type: 'body', parameters: [{ type: 'text', text: v.nome || 'paciente' }, { type: 'text', text: v.valor }, { type: 'text', text: v.vencimento }] }] } }) })
+            return wr.ok ? { ok: true } : { ok: false, erro: (await wr.text()).slice(0, 300) }
+        }
+        for (var rgi = 0; rgi < clinicasR.rows.length; rgi++) {
+            try {
+                var rgR = await executarRegua(client, clinicasR.rows[rgi].id, rgHoje, enviarCobranca)
+                reguaTotal.enviados += rgR.enviados; reguaTotal.erros += rgR.erros; reguaTotal.ignorados += rgR.ignorados
+            } catch(e) { console.error('[cron] régua clinica ' + clinicasR.rows[rgi].id + ':', e.message) }
+        }
+        console.log('[cron] Régua de cobrança:', JSON.stringify(reguaTotal))
+
         // ── GERAÇÃO DE CONTAS RECORRENTES ──
         var grTotal = 0
         for (var gri = 0; gri < clinicasR.rows.length; gri++) {
