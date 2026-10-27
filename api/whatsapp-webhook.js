@@ -60,7 +60,11 @@ module.exports = async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' })
     }
 
-    var segredo = process.env.WHATSAPP_APP_SECRET || ''
+    // WHATSAPP_SIGNATURE_MODE=enforce recusa assinatura inválida; padrão (log)
+    // só registra no log e processa normalmente — evita perder respostas de
+    // pacientes se a chave configurada não for a do app certo.
+    var segredo = String(process.env.WHATSAPP_APP_SECRET || '').trim()
+    var exigir = String(process.env.WHATSAPP_SIGNATURE_MODE || '').trim() === 'enforce'
     var corpoLido = null
     if (segredo) {
         var bruto = await corpoBruto(req)
@@ -68,10 +72,14 @@ module.exports = async function handler(req, res) {
         if (!corpoLido) corpoLido = typeof req.body === 'object' && req.body ? req.body : {}
         var okBruto = !!bruto && assinaturaOk(segredo, req.headers['x-hub-signature-256'], [bruto])
         if (!okBruto && !assinaturaOk(segredo, req.headers['x-hub-signature-256'], candidatos(corpoLido))) {
-            console.error('[wa-webhook] Assinatura invalida: requisicao ignorada (corpo bruto ' + (bruto ? 'lido' : 'indisponivel') + ')')
-            return res.status(401).json({ error: 'Assinatura invalida' })
+            if (exigir) {
+                console.error('[wa-webhook] Assinatura invalida: requisicao ignorada (corpo bruto ' + (bruto ? 'lido' : 'indisponivel') + ')')
+                return res.status(401).json({ error: 'Assinatura invalida' })
+            }
+            console.warn('[wa-webhook] Assinatura invalida (modo log: processando mesmo assim; confira se WHATSAPP_APP_SECRET e a chave do app que envia o webhook)')
+        } else {
+            console.log('[wa-webhook] Assinatura OK (' + (okBruto ? 'corpo bruto' : 'corpo reconstruido') + ')')
         }
-        console.log('[wa-webhook] Assinatura OK (' + (okBruto ? 'corpo bruto' : 'corpo reconstruido') + ')')
     }
 
     try {
