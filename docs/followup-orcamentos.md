@@ -134,9 +134,8 @@ variável e me avise.
 
 ### 3. Testar e ligar
 1. Configuração › ligue **Follow-up ligado** + **Modo teste** e informe o seu celular como telefone de teste.
-   Preencha parcelas sem juros e desconto no Pix (sem isso, as mensagens falam só "parcelamento no
-   cartão" e "pagamento à vista via Pix", sem números). Clube e prova social vêm
-   **desligados**: ligue e preencha só o que for verdade para a clínica.
+   Preencha as condições de pagamento (parcelas, clube, Pix, entrada + boleto) e o WhatsApp da secretária:
+   a assistente só usa esses dados quando o paciente pergunta. Clube e prova social vêm desligados.
 2. Clique **Rodar régua agora**: até 3 orçamentos reais geram mensagens, mas todas chegam no seu celular.
    Responda como se fosse o paciente (dúvidas, "achei caro", "quero agendar") e veja a conversa no painel.
 3. Ajuste o que quiser e desligue o **Modo teste**: os registros de teste são apagados e, a partir da
