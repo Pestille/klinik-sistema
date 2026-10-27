@@ -7,6 +7,18 @@ assim que ele quer agendar ou negociar.
 
 Painel: **CRC › Follow-up automático de orçamentos** (abas Conversas, Mensagens e Configuração).
 
+## De onde vêm os orçamentos
+
+Enquanto a clínica opera no **Clinicorp**, a régua lê de lá (`lib/followup/clinicorp.js`). Todo dia,
+antes de enviar, o sistema busca no Clinicorp os orçamentos dos últimos 90 dias (`estimates/list`, em
+janelas de 31 dias), os pacientes (nome e celular) e as consultas dos próximos 60 dias:
+- orçamento **aprovado** no Clinicorp → o follow-up marca "Fechou" e para;
+- **reprovado** ou **excluído** → para;
+- paciente com **consulta marcada** → não recebe mensagem de venda;
+- Clinicorp fora do ar → a régua não roda naquele dia.
+
+Para conferir a sincronização sem enviar nada: abra `/api/cron-followup?sync=1` (mostra só contagens).
+
 ## A régua
 
 | Mensagem | Dia | Papel | O que faz |
