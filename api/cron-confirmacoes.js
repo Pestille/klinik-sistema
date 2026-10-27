@@ -21,6 +21,27 @@ module.exports = async function handler(req, res) {
         // rewrite /api/cron-followup → ?tarefa=followup). Roda só ele.
         var tarefa = (req.query || {}).tarefa || (/cron-followup/.test(req.url || '') ? 'followup' : '')
 
+        // Diagnóstico do Asaas (somente leitura, não expõe a chave): de onde vem
+        // a chave usada pelo follow-up e se ela vale em produção ou no sandbox
+        if (tarefa === 'asaas-diag') {
+            var fontes = []
+            try {
+                var rk = (await client.execute({ sql: "SELECT asaas_api_key FROM clinicas WHERE id=?", args: [1] })).rows[0]
+                if (rk && rk.asaas_api_key) fontes.push({ fonte: 'clinica', k: String(rk.asaas_api_key) })
+            } catch (e) {}
+            if (process.env.ASAAS_API_KEY) fontes.push({ fonte: 'env', k: String(process.env.ASAAS_API_KEY) })
+            var out = []
+            for (var fi = 0; fi < fontes.length; fi++) {
+                var k = fontes[fi].k, info = { fonte: fontes[fi].fonte, usada_pelo_followup: fi === 0, prefixo: k.slice(0, 10), tamanho: k.length, espacos_nas_pontas: k !== k.trim(), comeca_com_cifrao: k.charAt(0) === '$' }
+                for (var base of ['https://api.asaas.com/v3', 'https://api-sandbox.asaas.com/v3']) {
+                    try { var ra = await fetch(base + '/myAccount/commercialInfo', { headers: { access_token: k.trim(), 'User-Agent': 'klinik-sistema' } }); info[base.indexOf('sandbox') > 0 ? 'sandbox' : 'producao'] = ra.status }
+                    catch (e) { info[base.indexOf('sandbox') > 0 ? 'sandbox' : 'producao'] = e.message }
+                }
+                out.push(info)
+            }
+            return res.status(200).json({ chaves: out })
+        }
+
         // Diagnóstico do WhatsApp (somente leitura): o número está registrado e
         // a conta (WABA) está inscrita no app para receber webhooks?
         if (tarefa === 'wa-diag') {
