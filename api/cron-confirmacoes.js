@@ -20,6 +20,21 @@ module.exports = async function handler(req, res) {
         // Follow-up de orçamentos (cron próprio às ~9h de Campo Grande, via
         // rewrite /api/cron-followup → ?tarefa=followup). Roda só ele.
         var tarefa = (req.query || {}).tarefa || (/cron-followup/.test(req.url || '') ? 'followup' : '')
+
+        // Diagnóstico do WhatsApp (somente leitura): o número está registrado e
+        // a conta (WABA) está inscrita no app para receber webhooks?
+        if (tarefa === 'wa-diag') {
+            var tk = process.env.WHATSAPP_TOKEN || '', pid = process.env.WHATSAPP_PHONE_ID || ''
+            var waba = String((req.query || {}).waba || process.env.WHATSAPP_WABA_ID || '').replace(/\D/g, '')
+            async function g(path) {
+                try { var r = await fetch('https://graph.facebook.com/v23.0/' + path, { headers: { Authorization: 'Bearer ' + tk } }); return await r.json() }
+                catch (e) { return { erro: e.message } }
+            }
+            var numero = await g(pid + '?fields=display_phone_number,verified_name,status,platform_type,code_verification_status,quality_rating')
+            var apps = waba ? await g(waba + '/subscribed_apps') : { erro: 'informe ?waba=' }
+            var appsResumo = apps && apps.data ? apps.data.map(function (a) { var d = a.whatsapp_business_api_data || a; return { id: d.id, nome: d.name } }) : apps
+            return res.status(200).json({ phone_id: pid, numero: numero, waba: waba, apps_inscritos: appsResumo })
+        }
         if (tarefa === 'followup') {
             var fuRes = await require('../lib/followup/motor').executarTodas(client, { sincronizar: (req.query || {}).sync === '1' })
             console.log('[cron] Follow-up de orçamentos:', JSON.stringify(fuRes))
