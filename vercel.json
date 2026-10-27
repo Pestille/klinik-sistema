@@ -17,12 +17,17 @@
     { "source": "/anamnese", "destination": "/anamnese.html" },
     { "source": "/checkin", "destination": "/checkin.html" },
     { "source": "/validador", "destination": "/validador.html" },
-    { "source": "/assinar", "destination": "/assinar.html" }
+    { "source": "/assinar", "destination": "/assinar.html" },
+    { "source": "/api/cron-followup", "destination": "/api/cron-confirmacoes?tarefa=followup" }
   ],
   "crons": [
     {
       "path": "/api/cron-confirmacoes",
       "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/cron-followup",
+      "schedule": "10 13 * * *"
     }
   ]
 }

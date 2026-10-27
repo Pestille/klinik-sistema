@@ -1,5 +1,6 @@
 // api/whatsapp-webhook.js — Webhook do WhatsApp para receber respostas dos pacientes
 var { getClient } = require('../lib/db')
+var followupAgente = require('../lib/followup/agente')
 
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*')
@@ -32,6 +33,19 @@ module.exports = async function handler(req, res) {
             for (var ci = 0; ci < changes.length; ci++) {
                 var value = changes[ci].value || {}
                 var messages = value.messages || []
+
+                // Status de entrega das mensagens do follow-up (enviado → entregue → lido)
+                var statuses = value.statuses || []
+                for (var si = 0; si < statuses.length; si++) {
+                    var stx = statuses[si]
+                    if (!stx.id || ['delivered', 'read', 'failed'].indexOf(stx.status) < 0) continue
+                    try {
+                        var stNome = stx.status === 'delivered' ? 'entregue' : stx.status === 'read' ? 'lido' : 'erro'
+                        var stErro = stx.status === 'failed' && stx.errors && stx.errors[0] ? String(stx.errors[0].title || stx.errors[0].message || '').slice(0, 300) : null
+                        // nunca rebaixa: lido não volta para entregue
+                        await client.execute({ sql: "UPDATE followup_mensagens SET status=?, erro=COALESCE(?,erro) WHERE wa_message_id=? AND direcao='saida' AND NOT (status='lido' AND ?='entregue')", args: [stNome, stErro, stx.id, stNome] })
+                    } catch(e) {}
+                }
                 var waPhoneIdRecv = (value.metadata && value.metadata.phone_number_id) || ''
 
                 // Identify clinic by WhatsApp phone_id
@@ -68,6 +82,18 @@ module.exports = async function handler(req, res) {
 
                     if (!resposta) continue
                     var respostaLower = resposta.toLowerCase().trim()
+
+                    // Follow-up de orçamentos (lib/followup/agente.js). "Sim"/"não" soltos
+                    // continuam sendo da confirmação de consulta, a menos que respondam
+                    // diretamente a uma mensagem do follow-up.
+                    try {
+                        var ehConfirmacao = /^(sim|yes|confirmo|quick reply|não|nao|no)$/.test(respostaLower)
+                        var tratouFu = await followupAgente.processarEntrada(client, {
+                            from: from, msgId: msg.id || null, contextId: (msg.context && msg.context.id) || null,
+                            tipo: msgType, texto: resposta, clinicaId: clinicaWa ? clinicaWa.id : null, somenteContexto: ehConfirmacao
+                        })
+                        if (tratouFu) continue
+                    } catch(e) { console.error('[wa-webhook] follow-up:', e.message) }
 
                     console.log('[wa-webhook] De: ' + from + ' Resposta: ' + resposta + ' Tipo: ' + msgType)
 

@@ -1,0 +1,97 @@
+/* public/followup.css — Follow-up automático de orçamentos (CRC) */
+
+.fu-banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-radius:8px;border:1px solid var(--border);background:#fff;margin-bottom:16px;font-size:14px;color:var(--text2)}
+.fu-banner.on{border-color:var(--green3);background:#E8F5E9;color:var(--green)}
+.fu-banner.teste{border-color:var(--orange);background:#FFF3E0;color:var(--orange)}
+.fu-banner b{font-weight:500}
+.fu-banner .fu-pend{margin-left:auto;font-size:12px;color:var(--red)}
+
+.fu-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px}
+.fu-tab{padding:10px 16px;font-size:13px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .12s ease,border-color .12s ease}
+.fu-tab:hover{color:var(--text)}
+.fu-tab.on{color:var(--green);border-bottom-color:var(--green)}
+
+.fu-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.fu-kpi{background:#fff;border:1px solid var(--border);border-radius:8px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.fu-kpi-n{font-size:28px;font-weight:300;letter-spacing:-.02em;color:var(--text);line-height:1.2;font-variant-numeric:tabular-nums}
+.fu-kpi-l{font-size:12px;color:var(--text3);margin-top:4px}
+.fu-kpi.alerta .fu-kpi-n{color:var(--orange)}
+.fu-kpi.bom .fu-kpi-n{color:var(--green)}
+
+.fu-obj{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px;font-size:12px;color:var(--text3)}
+.fu-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:4px;background:#F5F5F5;color:var(--text2);font-size:12px}
+.fu-chip b{font-weight:500;color:var(--text)}
+
+.fu-filtros{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.fu-filtros .ag-in{max-width:260px;margin:0}
+.fu-fil{padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:#fff;font-size:12px;color:var(--text2);cursor:pointer;transition:background .12s ease,border-color .12s ease}
+.fu-fil:hover{background:#FAFAFA}
+.fu-fil.on{border-color:var(--green3);background:#E8F5E9;color:var(--green)}
+
+.fu-tab-wrap{background:#fff;border:1px solid var(--border);border-radius:8px;overflow-x:auto;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.fu-table{width:100%;border-collapse:collapse;font-size:14px}
+.fu-table th{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);padding:10px 16px;border-bottom:2px solid var(--border);text-align:left;white-space:nowrap}
+.fu-table td{padding:12px 16px;border-bottom:1px solid var(--border2);color:var(--text2);vertical-align:top}
+.fu-table tr{cursor:pointer}
+.fu-table tr:hover td{background:#FAFAFA}
+.fu-table .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fu-nome{font-weight:500;color:var(--text)}
+.fu-prev{font-size:12px;color:var(--text3);margin-top:4px;max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fu-prev.in{color:var(--blue)}
+.fu-etapas{display:inline-flex;gap:4px;vertical-align:middle}
+.fu-etapas i{width:10px;height:10px;border-radius:2px;background:var(--border)}
+.fu-etapas i.on{background:var(--green3)}
+.fu-vazio{padding:32px 16px;text-align:center;color:var(--text3);font-size:14px}
+
+.fu-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.fu-badge.ok{background:#E8F5E9;color:var(--green)}
+.fu-badge.pend{background:#FFF3E0;color:var(--orange)}
+.fu-badge.off{background:var(--border);color:var(--text3)}
+.fu-badge.err{background:#FFEBEE;color:var(--red)}
+.fu-badge.info{background:#F5F5F5;color:var(--blue)}
+
+/* Conversa */
+.fu-conv-top{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--text2);margin-bottom:12px}
+.fu-conv-top b{font-weight:500;color:var(--text)}
+.fu-resumo{font-size:13px;color:var(--text2);background:#FFF3E0;border-radius:6px;padding:8px 12px;margin-bottom:12px}
+.fu-chat{background:#F5F5F5;border-radius:8px;padding:12px;max-height:46vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.fu-msg{max-width:82%;padding:8px 12px;border-radius:8px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.fu-msg.entrada{align-self:flex-start;background:#fff;color:var(--text)}
+.fu-msg.saida{align-self:flex-end;background:#E8F5E9;color:var(--text)}
+.fu-msg.nota{align-self:center;background:transparent;box-shadow:none;color:var(--text3);font-size:12px;padding:4px}
+.fu-msg-meta{display:block;font-size:11px;color:var(--text3);margin-top:4px;white-space:normal}
+.fu-msg-meta.err{color:var(--red)}
+.fu-resp{display:flex;gap:8px;margin-top:12px;align-items:flex-end}
+.fu-resp textarea{flex:1;min-height:64px;resize:vertical;margin:0}
+.fu-aviso{font-size:12px;color:var(--text3);margin-top:8px}
+
+/* Prévia das mensagens */
+.fu-previas{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.fu-previa{background:#fff;border:1px solid var(--border);border-radius:8px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.fu-previa-h{font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px;display:flex;justify-content:space-between;gap:8px}
+.fu-bolha{background:#E8F5E9;border-radius:8px;padding:12px;font-size:14px;line-height:1.5;color:var(--text);white-space:pre-wrap}
+.fu-botoes{display:flex;flex-direction:column;gap:4px;margin-top:4px}
+.fu-botoes span{display:block;text-align:center;background:#fff;border:1px solid var(--border);border-radius:6px;padding:8px;font-size:13px;color:var(--blue)}
+.fu-tpl{font-size:12px;color:var(--text3);margin-top:12px}
+.fu-tpl code{font-size:12px;background:#F5F5F5;padding:2px 4px;border-radius:4px;color:var(--text2)}
+
+/* Configuração */
+.fu-cfg{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.fu-cfg .pc-box{padding:20px 24px}
+.fu-cfg-h{font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px}
+.fu-linha{display:flex;gap:12px}
+.fu-linha .ag-f{flex:1;min-width:0}
+.fu-sw{display:flex;align-items:flex-start;gap:8px;font-size:14px;color:var(--text2);margin-bottom:12px;cursor:pointer}
+.fu-sw input{margin-top:3px}
+.fu-sw small{display:block;font-size:12px;color:var(--text3)}
+.fu-salvar{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.fu-btn-cta{background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;transition:background .12s ease,transform .1s ease}
+.fu-btn-cta:hover{background:var(--orange2)}
+.fu-btn-cta:active{transform:scale(.98)}
+.fu-btn-cta:disabled{opacity:.6;cursor:default}
+
+@media (max-width:700px){
+  .fu-kpis{grid-template-columns:repeat(2,1fr)}
+  .fu-linha{flex-direction:column;gap:0}
+  .fu-msg{max-width:92%}
+}

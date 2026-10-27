@@ -21,12 +21,16 @@ var rotasAssinaturas = require('../lib/rotas/assinaturas')
 var rotasPacienteFin = require('../lib/rotas/paciente-fin')
 var rotasCrm = require('../lib/rotas/crm')
 var rotasOperacao = require('../lib/rotas/operacao')
+var rotasFollowup = require('../lib/rotas/followup')
 var cfgLib = require('../lib/config')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
 // método; { GET, POST } quando leitura e escrita exigem recursos diferentes.
 // Rotas fora do mapa seguem liberadas para qualquer usuário logado da clínica.
 var ROTA_PERMISSAO = {
+    // Follow-up automático de orçamentos (lib/rotas/followup.js)
+    'followup-painel': 'crc.acessar', 'followup-conversa': 'crc.acessar', 'followup-config': 'crc.acessar', 'followup-acao': 'crc.acessar',
+    'followup-responder': 'crc.enviar_mensagem', 'followup-previa': 'crc.acessar', 'followup-executar': 'crc.acessar',
     // Financeiro da clínica
     'financeiro': 'financeiro.acessar', 'extrato': 'financeiro.acessar', 'dashboard-financeiro': 'financeiro.acessar',
     'categorias-financeiras': 'financeiro.acessar', 'saldo-clinica': 'financeiro.acessar', 'saques-clinica': 'financeiro.acessar',
@@ -170,6 +174,7 @@ module.exports = async function handler(req, res) {
         if (auth && await rotasPacienteFin.handle(route, ctxRota)) return
         if (auth && await rotasCrm.handle(route, ctxRota)) return
         if (auth && await rotasOperacao.handle(route, ctxRota)) return
+        if (auth && await rotasFollowup.handle(route, ctxRota)) return
         // Anamnese por link e check-in por QR: sem login, só por token
         if (route === 'publico') { await rotasPublico.handlePublico(ctxRota); return }
 
