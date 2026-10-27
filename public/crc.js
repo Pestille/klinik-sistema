@@ -66,6 +66,7 @@
           : '<div class="ag-hint">Fila desativada</div>' + (isAdmin() ? '<button class="btn btn-sm" data-ativar="' + f.id + '" style="margin-top:8px">Ativar</button>' : '')) +
         '</div>'
     }).join('') +
+      '<div class="pc-box crc-card" data-followup="1"><div class="crc-card-t">Follow-up automático de orçamentos</div><div class="ag-hint" style="margin:4px 0 12px">Régua de WhatsApp com assistente virtual para quem recebeu orçamento e ainda não fechou.</div><div class="crc-card-n">Abrir painel</div></div>' +
       '<div class="pc-box crc-card" data-inativos="1"><div class="crc-card-t">Pacientes inativos</div><div class="ag-hint" style="margin:4px 0 12px">Sem consulta há mais de 6 meses: reativação por WhatsApp.</div><div class="crc-card-n">Abrir lista</div></div>'
     el('crc-home').querySelectorAll('[data-fila]').forEach(function (c) {
       c.onclick = function (e) { if (e.target.closest('[data-ativar]') || c.classList.contains('off')) return; abrirFila(c.getAttribute('data-fila')) }
@@ -74,6 +75,7 @@
       b.onclick = async function () { var r = await apiPost('crc-filas', { fila: this.getAttribute('data-ativar'), ativo: 1 }); if (!r.success) return alert(r.error || 'Erro'); abrirHome() }
     })
     el('crc-home').querySelector('[data-inativos]').onclick = function () { nav('crm') }
+    el('crc-home').querySelector('[data-followup]').onclick = function () { if (window.abrirFollowup) abrirFollowup() }
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -286,6 +288,7 @@
   // Entrada pelo menu (nav('crc')) e pelo endereço #/crc/<fila>
   function loadCrc() {
     var p = (location.hash || '').replace(/^#\/?/, '').split('/')
+    if (p[0] === 'crc' && p[1] === 'followup' && window.abrirFollowup) return abrirFollowup()
     if (p[0] === 'crc' && p[1]) return abrirFila(p[1])
     abrirHome()
   }

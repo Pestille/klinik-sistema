@@ -17,6 +17,15 @@ module.exports = async function handler(req, res) {
         var client = getClient()
         await runMigrations(client)
 
+        // Follow-up de orçamentos (cron próprio às ~9h de Campo Grande, via
+        // rewrite /api/cron-followup → ?tarefa=followup). Roda só ele.
+        var tarefa = (req.query || {}).tarefa || (/cron-followup/.test(req.url || '') ? 'followup' : '')
+        if (tarefa === 'followup') {
+            var fuRes = await require('../lib/followup/motor').executarTodas(client)
+            console.log('[cron] Follow-up de orçamentos:', JSON.stringify(fuRes))
+            return res.status(200).json({ success: true, tarefa: 'followup', clinicas: fuRes })
+        }
+
         // Ensure tables exist
         try { await client.execute("CREATE TABLE IF NOT EXISTS campanhas (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, tipo TEXT NOT NULL, segmento TEXT NOT NULL, filtro_json TEXT, assunto TEXT, template TEXT NOT NULL, status TEXT DEFAULT 'rascunho', agendada_para TEXT, total_destinatarios INTEGER DEFAULT 0, total_enviados INTEGER DEFAULT 0, total_erros INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')), clinica_id INTEGER)") } catch(e) {}
         try { await client.execute("CREATE TABLE IF NOT EXISTS envios (id INTEGER PRIMARY KEY AUTOINCREMENT, campanha_id INTEGER, paciente_id INTEGER, canal TEXT NOT NULL, destinatario TEXT, mensagem_final TEXT, status TEXT DEFAULT 'pendente', erro_msg TEXT, enviado_em TEXT, created_at TEXT DEFAULT (datetime('now')), clinica_id INTEGER)") } catch(e) {}
