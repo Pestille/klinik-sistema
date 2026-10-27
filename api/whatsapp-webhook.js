@@ -1,6 +1,7 @@
 // api/whatsapp-webhook.js — Webhook do WhatsApp para receber respostas dos pacientes
 var { getClient } = require('../lib/db')
 var followupAgente = require('../lib/followup/agente')
+var { runMigrations } = require('../lib/migrations')
 var crypto = require('crypto')
 
 // Assinatura da Meta (X-Hub-Signature-256 = HMAC-SHA256 do corpo com o App
@@ -84,6 +85,7 @@ module.exports = async function handler(req, res) {
 
     try {
         var client = getClient()
+        await runMigrations(client) // garante as tabelas do follow-up mesmo antes de alguém abrir o sistema
         var body = corpoLido || (typeof req.body === 'string' ? (function () { try { return JSON.parse(req.body) } catch (e) { return {} } })() : (req.body || {}))
 
         // Meta envia dentro de entry[].changes[].value
