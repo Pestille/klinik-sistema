@@ -174,3 +174,17 @@ variável e me avise.
 - **Custo:** cada mensagem de marketing iniciada pela clínica é cobrada pela Meta por mensagem
   entregue; as respostas dentro das 24h abertas pelo paciente não são cobradas como marketing. A IA
   custa centavos por conversa.
+
+## Pagamento consultivo e link do Asaas (27/10)
+
+Quando o paciente pergunta o valor, a assistente não lista todas as condições. Ela conduz uma etapa por vez:
+
+1. Informa o valor cheio e pergunta a forma: cartão de crédito, Pix ou dinheiro.
+2. **Cartão** → "Excelente! Em quantas vezes fica bom?"
+   - Até 12x: gera o link do Asaas com aquele número de parcelas (sem juros).
+   - De 13x a 21x: é exclusivo do Klinik Club. Se o paciente já é assinante, gera o link; a secretária confere a assinatura. Se não é, envia `link_clube` e indica a secretária.
+3. **Pix** → link pelo valor cheio. Os 10% de desconto só entram se o paciente perguntar por desconto.
+4. **Dinheiro** → pago na clínica; a conversa passa para a secretária agendar.
+5. **Boleto** (30% de entrada + boleto, sujeito a aprovação) só se o paciente perguntar; passa para a secretária.
+
+A IA só escolhe forma e parcelas. Valor, limite de parcelas e desconto são calculados em `lib/followup/pagamento.js` (`/v3/paymentLinks`, sem precisar de CPF). Depois do link, o paciente recebe a orientação de falar com a secretária para agendar, e a equipe recebe o alerta com o link. No modo teste, o nome do link começa com `[TESTE]`. Para desligar, use `links_pagamento: false` em `config-clinicas.js`.
