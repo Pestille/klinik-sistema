@@ -137,11 +137,11 @@
         d.janela_aberta ? '<div class="fu-resp"><textarea class="ag-in" id="fu-txt" placeholder="Escreva como equipe… (ao responder, você assume a conversa)"></textarea><button class="fu-btn-cta" id="fu-enviar">Enviar</button></div>'
           : '<div class="fu-aviso">Para escrever livremente, o paciente precisa ter respondido nas últimas 24h (regra do WhatsApp). Fora disso, ligue para ele ou use o WhatsApp da clínica.</div>')
     var ac = []
-    if (f.status === 'ativo' || f.status === 'conversando') ac.push(['pausar', 'Pausar régua'])
-    if (f.status === 'pausado') ac.push(['retomar', 'Retomar régua'])
-    if (f.status !== 'transferido' && ['convertido', 'encerrado', 'optout'].indexOf(f.status) < 0) ac.push(['assumir', 'Assumir conversa'])
+    if (['ativo', 'conversando', 'concluido'].indexOf(f.status) >= 0) ac.push(['pausar', 'Pausar'])
+    if (f.status === 'pausado') ac.push(['retomar', 'Retomar'])
+    if (['ativo', 'conversando', 'concluido', 'pausado', 'perdido'].indexOf(f.status) >= 0) ac.push(['assumir', 'Assumir conversa'])
     if (f.status === 'transferido') ac.push(['devolver_ia', 'Devolver para a assistente'])
-    if (['convertido', 'encerrado'].indexOf(f.status) < 0) ac.push(['encerrar', 'Encerrar'])
+    if (['convertido', 'encerrado', 'optout'].indexOf(f.status) < 0) ac.push(['encerrar', 'Encerrar'])
     var botoes = ac.map(function (a) { return '<button class="btn" data-ac="' + a[0] + '">' + a[1] + '</button>' }).join('') +
       '<button class="btn" id="fu-abrir-pac">Abrir paciente</button>'
     modal(f.paciente_nome || 'Conversa', corpo, botoes, 720)
@@ -224,7 +224,7 @@
         '<div class="fu-linha">' + c.dias.map(function (d, i) { return f('dia' + i, 'Mensagem ' + (i + 1), d, 'number', ' min="1" max="120"') }).join('') + '</div>' +
         '<div class="fu-linha">' + f('janela_dias', 'Incluir orçamentos de até (dias)', c.janela_dias, 'number') + f('valor_minimo', 'Valor mínimo (R$)', c.valor_minimo, 'number') + '</div>' +
         '<div class="fu-linha">' + f('limite_novos_dia', 'Novos orçamentos por dia', c.limite_novos_dia, 'number') + f('limite_envios_dia', 'Máximo de envios por dia', c.limite_envios_dia, 'number') + '</div>' +
-        f('pausa_apos_resposta_dias', 'Pausa após o paciente responder (dias)', c.pausa_apos_resposta_dias, 'number') +
+        '<div class="fu-linha">' + f('pausa_apos_resposta_dias', 'Pausa após o paciente responder (dias)', c.pausa_apos_resposta_dias, 'number') + f('carencia_dias', 'Carência entre follow-ups do mesmo paciente (dias)', c.carencia_dias, 'number') + '</div>' +
         sw('pular_domingo', 'Não enviar aos domingos', c.pular_domingo) +
       '</div>' +
       '<div class="pc-box"><div class="fu-cfg-h">Pagamento e argumentos</div>' +
@@ -233,7 +233,7 @@
         f('nome_clube', 'Nome do clube', c.nome_clube) +
         sw('sulamerica', 'Mencionar cobertura SulAmérica Odonto', c.sulamerica) +
         '<div class="ag-f"><label>Texto de pagamento personalizado (opcional, substitui o automático)</label><textarea class="ag-in" id="fc-texto_pagamento" rows="2"' + dis + '>' + esc(c.texto_pagamento) + '</textarea></div>' +
-        f('prova_social', 'Prova social (mensagem 3)', c.prova_social) +
+        f('prova_social', 'Prova social (mensagem 3)', c.prova_social, 'text', ' placeholder="ex.: mais de 2.500 pacientes já confiaram o sorriso deles a nós"') +
       '</div>' +
       '<div class="pc-box"><div class="fu-cfg-h">Templates aprovados na Meta</div>' +
         '<div class="ag-hint" style="margin-bottom:12px">Nome exato de cada template no WhatsApp Manager. O texto para cadastrar está na aba Mensagens.</div>' +
@@ -247,7 +247,7 @@
       var body = {
         ativo: ck('ativo'), modo_teste: ck('modo_teste'), telefone_teste: v('telefone_teste'), ia_ativa: ck('ia_ativa'), email_alerta: v('email_alerta'), nome_equipe: v('nome_equipe'),
         dias: [0, 1, 2, 3].map(function (i) { return v('dia' + i) }), janela_dias: v('janela_dias'), valor_minimo: v('valor_minimo'),
-        limite_novos_dia: v('limite_novos_dia'), limite_envios_dia: v('limite_envios_dia'), pausa_apos_resposta_dias: v('pausa_apos_resposta_dias'), pular_domingo: ck('pular_domingo'),
+        limite_novos_dia: v('limite_novos_dia'), limite_envios_dia: v('limite_envios_dia'), pausa_apos_resposta_dias: v('pausa_apos_resposta_dias'), carencia_dias: v('carencia_dias'), pular_domingo: ck('pular_domingo'),
         parcelas_cartao: v('parcelas_cartao'), desconto_pix: v('desconto_pix'), klinik_club: ck('klinik_club'), nome_clube: v('nome_clube'), sulamerica: ck('sulamerica'),
         texto_pagamento: v('texto_pagamento'), prova_social: v('prova_social'),
         templates: { m1: v('tpl_m1'), m2: v('tpl_m2'), m3: v('tpl_m3'), m4: v('tpl_m4') }

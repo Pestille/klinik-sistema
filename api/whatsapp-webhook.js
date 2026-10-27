@@ -1,6 +1,30 @@
 // api/whatsapp-webhook.js — Webhook do WhatsApp para receber respostas dos pacientes
 var { getClient } = require('../lib/db')
 var followupAgente = require('../lib/followup/agente')
+var crypto = require('crypto')
+
+// Assinatura da Meta (X-Hub-Signature-256 = HMAC-SHA256 do corpo com o App
+// Secret). Só é exigida quando WHATSAPP_APP_SECRET está configurado. Lê o corpo
+// bruto quando ainda disponível; senão reconstrói o JSON nos formatos que a Meta
+// usa (unicode escapado, com/sem barra escapada).
+async function corpoBruto(req) {
+    if (typeof req.body === 'string') return req.body
+    if (Buffer.isBuffer(req.body)) return req.body.toString('utf8')
+    return null
+}
+function candidatos(body) {
+    var j = JSON.stringify(body)
+    var u = j.replace(/[\u007f-\uffff]/g, function (c) { return '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4) })
+    return [j, u, u.replace(/\//g, '\\/')]
+}
+function assinaturaOk(segredo, assinatura, textos) {
+    var esperado = String(assinatura || '').replace(/^sha256=/, '')
+    if (!/^[0-9a-f]{64}$/i.test(esperado)) return false
+    return textos.some(function (t) {
+        var h = crypto.createHmac('sha256', segredo).update(t, 'utf8').digest('hex')
+        return crypto.timingSafeEqual(Buffer.from(h, 'hex'), Buffer.from(esperado.toLowerCase(), 'hex'))
+    })
+}
 
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*')
@@ -22,9 +46,19 @@ module.exports = async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' })
     }
 
+    var segredo = process.env.WHATSAPP_APP_SECRET || ''
+    if (segredo) {
+        var bruto = await corpoBruto(req)
+        var corpoObj = typeof req.body === 'object' && req.body ? req.body : (function () { try { return JSON.parse(bruto || '{}') } catch (e) { return {} } })()
+        if (!assinaturaOk(segredo, req.headers['x-hub-signature-256'], bruto ? [bruto].concat(candidatos(corpoObj)) : candidatos(corpoObj))) {
+            console.error('[wa-webhook] Assinatura invalida: requisicao ignorada')
+            return res.status(401).json({ error: 'Assinatura invalida' })
+        }
+    }
+
     try {
         var client = getClient()
-        var body = req.body || {}
+        var body = typeof req.body === 'string' ? (function () { try { return JSON.parse(req.body) } catch (e) { return {} } })() : (req.body || {})
 
         // Meta envia dentro de entry[].changes[].value
         var entries = body.entry || []
@@ -83,18 +117,6 @@ module.exports = async function handler(req, res) {
                     if (!resposta) continue
                     var respostaLower = resposta.toLowerCase().trim()
 
-                    // Follow-up de orçamentos (lib/followup/agente.js). "Sim"/"não" soltos
-                    // continuam sendo da confirmação de consulta, a menos que respondam
-                    // diretamente a uma mensagem do follow-up.
-                    try {
-                        var ehConfirmacao = /^(sim|yes|confirmo|quick reply|não|nao|no)$/.test(respostaLower)
-                        var tratouFu = await followupAgente.processarEntrada(client, {
-                            from: from, msgId: msg.id || null, contextId: (msg.context && msg.context.id) || null,
-                            tipo: msgType, texto: resposta, clinicaId: clinicaWa ? clinicaWa.id : null, somenteContexto: ehConfirmacao
-                        })
-                        if (tratouFu) continue
-                    } catch(e) { console.error('[wa-webhook] follow-up:', e.message) }
-
                     console.log('[wa-webhook] De: ' + from + ' Resposta: ' + resposta + ' Tipo: ' + msgType)
 
                     // Normaliza telefone para busca (remove 55 se necessário)
@@ -119,6 +141,18 @@ module.exports = async function handler(req, res) {
                         var agR = await client.execute({ sql: agSql, args: agArgs })
                         if (agR.rows.length) { agFound = agR.rows[0]; break }
                     }
+
+                    // Follow-up de orçamentos (lib/followup/agente.js). "Sim"/"não" soltos
+                    // ficam com a confirmação de consulta SÓ quando há consulta pendente
+                    // e o paciente não respondeu diretamente a uma mensagem do follow-up.
+                    try {
+                        var ehConfirmacao = /^(sim|yes|confirmo|quick reply|não|nao|no)$/.test(respostaLower)
+                        var tratouFu = await followupAgente.processarEntrada(client, {
+                            from: from, msgId: msg.id || null, contextId: (msg.context && msg.context.id) || null,
+                            tipo: msgType, texto: resposta, clinicaId: clinicaWa ? clinicaWa.id : null, somenteContexto: ehConfirmacao && !!agFound
+                        })
+                        if (tratouFu) continue
+                    } catch(e) { console.error('[wa-webhook] follow-up:', e.message) }
 
                     if (!agFound) {
                         console.log('[wa-webhook] Agendamento nao encontrado para tel=' + from)

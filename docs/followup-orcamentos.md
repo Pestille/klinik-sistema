@@ -27,6 +27,9 @@ Painel: **CRC › Follow-up automático de orçamentos** (abas Conversas, Mensag
 - Paciente que já aprovou outro orçamento depois deste, ou que já tem outro orçamento na régua.
 - Paciente com consulta marcada de hoje em diante (a régua espera a consulta passar).
 - Até 3 dias depois de o paciente responder (configurável), para não atropelar a conversa.
+- Um follow-up por paciente **e por telefone** (mãe e filho no mesmo celular não recebem duas réguas).
+- Quem respondeu "Não tenho interesse" ou "PARAR" não entra de novo; quem terminou a régua só volta a
+  entrar com outro orçamento depois da carência (60 dias, configurável).
 - Orçamento **aprovado** → status *Fechou* (conta como valor recuperado). Reprovado/excluído → encerrado.
 - Domingo (configurável).
 
@@ -43,7 +46,10 @@ A assistente **transfere para a equipe** quando o paciente quer agendar, pede pa
 quer negociar algo fora do configurado, traz dúvida clínica, urgência ou reclamação. Ela nunca inventa
 preço, desconto, parcela, prazo ou horário, não faz diagnóstico e se apresenta como assistente virtual
 se perguntarem. Depois de transferida, ela para de responder aquela conversa. Também transfere se a IA
-estiver fora do ar ou se a conversa passar de 15 respostas no dia.
+estiver fora do ar, se a conversa passar de 15 respostas no dia ou se a resposta citar valor,
+percentual, parcelamento ou promoção que não existe no orçamento/configuração (um filtro segura a
+mensagem antes de sair). Mensagem do paciente que ficar sem resposta automática por 30 minutos vai
+para a equipe na execução diária.
 
 A equipe pode responder pelo próprio painel (enquanto a janela de 24h do WhatsApp estiver aberta),
 pausar a régua, assumir a conversa, devolvê-la para a assistente ou encerrar. Tudo fica registrado no
@@ -123,14 +129,20 @@ Amostras: {{1}} Maria · {{2}} implante dentário · {{3}} até 30/11 · {{4}} K
 | `ANTHROPIC_MODEL` | Opcional; padrão `claude-sonnet-5-5` | opcional |
 | `RESEND_API_KEY` | E-mail "precisa da equipe" | já existe |
 | `CRON_SECRET` | Protege o cron | já existe |
+| `WHATSAPP_APP_SECRET` | Recusa chamadas falsas no webhook (assinatura da Meta) | **recomendada** — Meta for Developers › App › Configurações › Básico › Chave secreta do app |
 
 O webhook já está assinado no campo `messages` (é o mesmo da confirmação de consultas): ele passa a
 receber também os status de entrega/leitura, que alimentam o painel.
 
+Depois de configurar `WHATSAPP_APP_SECRET`, responda a uma confirmação de consulta de teste e veja se
+ela é registrada. Se aparecer "Assinatura invalida" nos logs da Vercel para mensagens reais, remova a
+variável e me avise.
+
 ### 3. Testar e ligar
 1. Configuração › ligue **Follow-up ligado** + **Modo teste** e informe o seu celular como telefone de teste.
    Preencha parcelas sem juros e desconto no Pix (sem isso, as mensagens falam só "parcelamento no
-   cartão" e "pagamento à vista via Pix", sem números).
+   cartão" e "pagamento à vista via Pix", sem números). Clube, SulAmérica e prova social vêm
+   **desligados**: ligue e preencha só o que for verdade para a clínica.
 2. Clique **Rodar régua agora**: até 3 orçamentos reais geram mensagens, mas todas chegam no seu celular.
    Responda como se fosse o paciente (dúvidas, "achei caro", "quero agendar") e veja a conversa no painel.
 3. Ajuste o que quiser e desligue o **Modo teste**: os registros de teste são apagados e, a partir da

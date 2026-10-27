@@ -12,6 +12,9 @@
       { "key": "Permissions-Policy", "value": "camera=(), microphone=(self), geolocation=()" }
     ]}
   ],
+  "functions": {
+    "api/whatsapp-webhook.js": { "maxDuration": 60 }
+  },
   "rewrites": [
     { "source": "/app", "destination": "/app.html" },
     { "source": "/anamnese", "destination": "/anamnese.html" },
