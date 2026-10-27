@@ -32,8 +32,18 @@ module.exports = async function handler(req, res) {
             }
             var numero = await g(pid + '?fields=display_phone_number,verified_name,status,platform_type,code_verification_status,quality_rating')
             var apps = waba ? await g(waba + '/subscribed_apps') : { erro: 'informe ?waba=' }
+            // De qual app é o token (sem expor o token)
+            var dbg = await g('debug_token?input_token=' + encodeURIComponent(tk))
+            var tokenInfo = dbg && dbg.data ? { app_id: dbg.data.app_id, app: dbg.data.application, tipo: dbg.data.type, valido: dbg.data.is_valid, expira: dbg.data.expires_at } : dbg
+            // Inscreve o app do token na WABA (idempotente) — só com ?acao=inscrever
+            var inscricao = null
+            if ((req.query || {}).acao === 'inscrever' && waba) {
+                try { var ri = await fetch('https://graph.facebook.com/v23.0/' + waba + '/subscribed_apps', { method: 'POST', headers: { Authorization: 'Bearer ' + tk } }); inscricao = await ri.json() }
+                catch (e) { inscricao = { erro: e.message } }
+                apps = await g(waba + '/subscribed_apps')
+            }
             var appsResumo = apps && apps.data ? apps.data.map(function (a) { var d = a.whatsapp_business_api_data || a; return { id: d.id, nome: d.name } }) : apps
-            return res.status(200).json({ phone_id: pid, numero: numero, waba: waba, apps_inscritos: appsResumo })
+            return res.status(200).json({ phone_id: pid, numero: numero, waba: waba, token: tokenInfo, inscricao: inscricao, apps_inscritos: appsResumo })
         }
         if (tarefa === 'followup') {
             var fuRes = await require('../lib/followup/motor').executarTodas(client, { sincronizar: (req.query || {}).sync === '1' })
