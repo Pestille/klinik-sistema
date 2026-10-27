@@ -17,6 +17,9 @@ Painel: **CRC › Follow-up automático de orçamentos** (abas Conversas, Mensag
 | 4 | D+20 | Porta aberta | Última mensagem, respeitosa, reforçando a importância de cuidar logo |
 
 - **Nenhuma mensagem fala de valores ou pagamento.** A assistente só fala disso se o paciente perguntar.
+  Condições da Klinik (Configuração): até 12x no cartão, até 21x para assinantes do Klinik Club, 10% de
+  desconto no Pix, ou 30% de entrada + restante no boleto (sujeito a aprovação: a assistente passa para a
+  secretária fazer a análise, sem prometer aprovação nem número de boletos).
 - O texto muda conforme o tratamento do orçamento: implante, ortodontia, estética, harmonização, prótese,
   canal, gengiva, cirurgia, restauração, prevenção (o item de maior valor define a categoria).
 - Todas têm 3 botões: **Quero agendar** · **Tenho uma dúvida** · **Não tenho interesse**.

@@ -230,6 +230,7 @@
       '</div>' +
       '<div class="pc-box"><div class="fu-cfg-h">Pagamento e argumentos</div>' +
         '<div class="fu-linha">' + f('parcelas_cartao', 'Parcelas no cartão', c.parcelas_cartao, 'number', ' placeholder="ex.: 12"') + f('desconto_pix', 'Desconto no Pix (%)', c.desconto_pix, 'number', ' placeholder="ex.: 15"') + '</div>' +
+        f('entrada_boleto_pct', 'Entrada (%) + restante no boleto, sujeito a aprovação (vazio = não oferecer)', c.entrada_boleto_pct, 'number', ' placeholder="ex.: 30"') +
         sw('sem_juros', 'Parcelamento sem juros', c.sem_juros, 'Ligado: as mensagens mostram o valor de cada parcela. Desligado: só "em até Nx".') +
         sw('klinik_club', 'Mencionar o parcelamento maior para assinantes do clube', c.klinik_club) +
         '<div class="fu-linha">' + f('nome_clube', 'Nome do clube', c.nome_clube) + f('parcelas_clube', 'Parcelas para assinantes', c.parcelas_clube, 'number', ' placeholder="ex.: 21"') + '</div>' +
@@ -249,7 +250,7 @@
         ativo: ck('ativo'), modo_teste: ck('modo_teste'), telefone_teste: v('telefone_teste'), ia_ativa: ck('ia_ativa'), email_alerta: v('email_alerta'), nome_equipe: v('nome_equipe'),
         dias: [0, 1, 2, 3].map(function (i) { return v('dia' + i) }), janela_dias: v('janela_dias'), valor_minimo: v('valor_minimo'),
         limite_novos_dia: v('limite_novos_dia'), limite_envios_dia: v('limite_envios_dia'), pausa_apos_resposta_dias: v('pausa_apos_resposta_dias'), carencia_dias: v('carencia_dias'), pular_domingo: ck('pular_domingo'),
-        parcelas_cartao: v('parcelas_cartao'), desconto_pix: v('desconto_pix'), klinik_club: ck('klinik_club'), nome_clube: v('nome_clube'), sem_juros: ck('sem_juros'), parcelas_clube: v('parcelas_clube'), telefone_atendimento: v('telefone_atendimento'),
+        parcelas_cartao: v('parcelas_cartao'), desconto_pix: v('desconto_pix'), klinik_club: ck('klinik_club'), nome_clube: v('nome_clube'), sem_juros: ck('sem_juros'), entrada_boleto_pct: v('entrada_boleto_pct'), parcelas_clube: v('parcelas_clube'), telefone_atendimento: v('telefone_atendimento'),
         texto_pagamento: v('texto_pagamento'), prova_social: v('prova_social'),
         templates: { m1: v('tpl_m1'), m2: v('tpl_m2'), m3: v('tpl_m3'), m4: v('tpl_m4') }
       }
