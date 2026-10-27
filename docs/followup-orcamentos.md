@@ -11,11 +11,12 @@ Painel: **CRC › Follow-up automático de orçamentos** (abas Conversas, Mensag
 
 | Mensagem | Dia | Papel | O que faz |
 |---|---|---|---|
-| 1 | D+2 | Valor | Retoma o plano do dentista, explica por que o tratamento importa, apresenta as formas de pagamento |
-| 2 | D+5 | Dúvidas | Responde a objeção mais comum daquele tratamento (dor, tempo, aparência…) e reforça o pagamento |
-| 3 | D+10 | Custo de adiar | Mostra, com honestidade clínica, o que acontece se esperar + prova social; convida a reservar horário |
-| 4 | D+20 | Porta aberta | Última mensagem, sem pressão, com saída elegante ("Não tenho interesse") |
+| 1 | D+2 | Cuidado | Pergunta como o paciente está, retoma o plano do dentista e explica por que o tratamento importa |
+| 2 | D+5 | Dúvidas | Acolhe a dúvida mais comum daquele tratamento (dor, tempo, aparência…) e oferece conversar de novo com o dentista |
+| 3 | D+10 | Saúde | Mostra, com honestidade clínica, o que acontece se esperar e recomenda não adiar |
+| 4 | D+20 | Porta aberta | Última mensagem, respeitosa, reforçando a importância de cuidar logo |
 
+- **Nenhuma mensagem fala de valores ou pagamento.** A assistente só fala disso se o paciente perguntar.
 - O texto muda conforme o tratamento do orçamento: implante, ortodontia, estética, harmonização, prótese,
   canal, gengiva, cirurgia, restauração, prevenção (o item de maior valor define a categoria).
 - Todas têm 3 botões: **Quero agendar** · **Tenho uma dúvida** · **Não tenho interesse**.
@@ -62,59 +63,49 @@ WhatsApp Manager › Gerenciar modelos › Criar modelo. Para cada um: categoria
 idioma **Português (BR)**, os 3 botões de **resposta rápida** acima, e os valores de exemplo abaixo
 (a Meta pede amostra de cada variável). O nome tem de ser exatamente este (ou ajuste em Configuração).
 
-**1. `klinik_orcamento_valor`**
+**1. `klinik_tratamento_cuidado`** — Cuidado com o paciente
 ```
 Olá, {{1}}! Aqui é da {{2}}. 😊
 
-Passando para retomar o plano de tratamento que {{3}} preparou para você: *{{4}}*.
+Passando para saber como você está e retomar o plano de tratamento que {{3}} preparou com tanto cuidado para você: *{{4}}*.
 
 {{5}}
 
-Para caber no seu planejamento, você pode contar com {{6}}.
-
-Ficou alguma dúvida? É só responder esta mensagem que a gente te ajuda por aqui mesmo.
+Por isso, queremos te ajudar a começar o quanto antes. Ficou alguma dúvida? É só responder esta mensagem que a gente te ajuda por aqui mesmo.
 ```
-Amostras: {{1}} Maria · {{2}} Klinik Odontologia · {{3}} a Dra. Maisa Keffler · {{4}} implante dentário ·
-{{5}} Repor o dente com implante devolve a firmeza para mastigar e a segurança para sorrir, e ajuda a preservar o osso da região, que tende a diminuir quando o espaço fica vazio. ·
-{{6}} parcelamento em até 12x no cartão (ou em até 21x para assinantes do Klinik Club) ou 15% de desconto no pagamento à vista via Pix, que deixa o tratamento em R$ 15.300,00
+Amostras: {{1}} Maria · {{2}} Klinik Odontologia · {{3}} a Dra. Maisa Keffler · {{4}} implante dentário · {{5}} Repor o dente com implante devolve a firmeza para mastigar e a segurança para sorrir, e ajuda a preservar o osso da região, que tende a diminuir quando o espaço fica vazio.
 
-**2. `klinik_orcamento_duvidas`**
+**2. `klinik_tratamento_duvidas`** — Acolhimento das dúvidas
 ```
 Oi, {{1}}, tudo bem?
 
-Antes de começar o seu tratamento de {{2}}, é muito comum surgirem algumas dúvidas, e é exatamente para isso que estamos aqui.
+Sabemos que começar o seu tratamento de {{2}} pode trazer algumas dúvidas, e queremos que você tenha toda a tranquilidade para decidir.
 
 {{3}}
 
-Sobre o investimento, lembrando que você pode escolher entre {{4}}.
-
-Se quiser, respondo suas dúvidas por aqui ou reservo um horário para você conversar de novo com {{5}}.
+Se quiser, respondo suas dúvidas por aqui ou reservo um horário para você conversar de novo com {{4}}.
 ```
-Amostras: {{1}} Maria · {{2}} implante dentário ·
-{{3}} A pergunta que mais ouvimos é se dói. O implante é feito com anestesia local, e a maioria dos pacientes relata um pós-operatório tranquilo, com orientações claras e acompanhamento de perto da nossa equipe em cada etapa. ·
-{{4}} parcelamento em até 12x no cartão (ou em até 21x para assinantes do Klinik Club) ou 15% de desconto no pagamento à vista via Pix, que deixa o tratamento em R$ 15.300,00 · {{5}} a Dra. Maisa Keffler
+Amostras: {{1}} Maria · {{2}} implante dentário · {{3}} A pergunta que mais ouvimos é se dói. O implante é feito com anestesia local, e a maioria dos pacientes relata um pós-operatório tranquilo, com orientações claras e acompanhamento de perto da nossa equipe em cada etapa. · {{4}} a Dra. Maisa Keffler
 
-**3. `klinik_orcamento_adiar`**
+**3. `klinik_tratamento_saude`** — Saúde e urgência
 ```
-Oi, {{1}}! Um lembrete importante sobre o seu tratamento de {{2}}.
+Oi, {{1}}! A nossa equipe segue atenta à sua saúde e ao seu tratamento de {{2}}.
 
 {{3}}
 
-Aqui na {{4}}, {{5}}. O seu plano está pronto para começar quando você quiser.
+Aqui na {{4}}, {{5}}. O seu plano está pronto, e a nossa recomendação é não adiar.
 
 Posso reservar um horário para você esta semana?
 ```
-Amostras: {{1}} Maria · {{2}} implante dentário ·
-{{3}} Quando o espaço do dente fica vazio por muito tempo, o osso da região vai diminuindo e os dentes vizinhos podem se mover, o que costuma deixar o tratamento mais complexo lá na frente. ·
-{{4}} Klinik Odontologia · {{5}} já realizamos mais de 10 mil procedimentos em mais de 2.500 pacientes
+Amostras: {{1}} Maria · {{2}} implante dentário · {{3}} Quando o espaço do dente fica vazio por muito tempo, o osso da região vai diminuindo e os dentes vizinhos podem se mover, o que costuma deixar o tratamento mais complexo lá na frente. · {{4}} Klinik Odontologia · {{5}} já realizamos mais de 10 mil procedimentos em mais de 2.500 pacientes
 
-**4. `klinik_orcamento_ultima`**
+**4. `klinik_tratamento_ultima`** — Porta aberta
 ```
-Olá, {{1}}! Esta é a nossa última mensagem sobre o orçamento do seu tratamento de {{2}}.
+Olá, {{1}}! Esta é a nossa última mensagem sobre o seu tratamento de {{2}}.
 
-Sabemos que cada pessoa tem o seu momento, e respeitamos o seu. O seu plano fica reservado {{3}}.
+Respeitamos o seu momento, mas não queremos deixar de reforçar: cuidar disso o quanto antes faz diferença para você. O seu plano fica reservado {{3}}.
 
-Quando decidir, é só responder aqui que a {{4}} cuida de tudo para você. Se preferir não receber mais mensagens sobre este orçamento, toque em "Não tenho interesse".
+Quando decidir, é só responder aqui que a {{4}} cuida de tudo para você. Se preferir não receber mais mensagens sobre este tratamento, toque em "Não tenho interesse".
 ```
 Amostras: {{1}} Maria · {{2}} implante dentário · {{3}} até 30/11 · {{4}} Klinik Odontologia
 
