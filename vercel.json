@@ -13,7 +13,8 @@
     ]}
   ],
   "functions": {
-    "api/whatsapp-webhook.js": { "maxDuration": 60 }
+    "api/whatsapp-webhook.js": { "maxDuration": 60 },
+    "api/cron-confirmacoes.js": { "maxDuration": 60 }
   },
   "rewrites": [
     { "source": "/app", "destination": "/app.html" },

@@ -21,7 +21,7 @@ module.exports = async function handler(req, res) {
         // rewrite /api/cron-followup → ?tarefa=followup). Roda só ele.
         var tarefa = (req.query || {}).tarefa || (/cron-followup/.test(req.url || '') ? 'followup' : '')
         if (tarefa === 'followup') {
-            var fuRes = await require('../lib/followup/motor').executarTodas(client)
+            var fuRes = await require('../lib/followup/motor').executarTodas(client, { sincronizar: (req.query || {}).sync === '1' })
             console.log('[cron] Follow-up de orçamentos:', JSON.stringify(fuRes))
             return res.status(200).json({ success: true, tarefa: 'followup', clinicas: fuRes })
         }
