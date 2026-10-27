@@ -7,7 +7,21 @@ var crypto = require('crypto')
 // Secret). Só é exigida quando WHATSAPP_APP_SECRET está configurado. Lê o corpo
 // bruto quando ainda disponível; senão reconstrói o JSON nos formatos que a Meta
 // usa (unicode escapado, com/sem barra escapada).
+// Corpo exatamente como a Meta enviou: lê o stream se ainda não foi consumido
+// (com limite de tempo), senão usa string/Buffer já disponível.
+function lerStream(req) {
+    return new Promise(function (resolve) {
+        if (!req || typeof req.on !== 'function' || !req.readable || req.readableEnded) return resolve(null)
+        var partes = [], fim = false
+        var t = setTimeout(function () { if (!fim) { fim = true; resolve(null) } }, 1500)
+        req.on('data', function (c) { partes.push(Buffer.isBuffer(c) ? c : Buffer.from(c)) })
+        req.on('end', function () { if (!fim) { fim = true; clearTimeout(t); resolve(partes.length ? Buffer.concat(partes).toString('utf8') : null) } })
+        req.on('error', function () { if (!fim) { fim = true; clearTimeout(t); resolve(null) } })
+    })
+}
 async function corpoBruto(req) {
+    var s = await lerStream(req)
+    if (s) return s
     if (typeof req.body === 'string') return req.body
     if (Buffer.isBuffer(req.body)) return req.body.toString('utf8')
     return null
@@ -47,18 +61,22 @@ module.exports = async function handler(req, res) {
     }
 
     var segredo = process.env.WHATSAPP_APP_SECRET || ''
+    var corpoLido = null
     if (segredo) {
         var bruto = await corpoBruto(req)
-        var corpoObj = typeof req.body === 'object' && req.body ? req.body : (function () { try { return JSON.parse(bruto || '{}') } catch (e) { return {} } })()
-        if (!assinaturaOk(segredo, req.headers['x-hub-signature-256'], bruto ? [bruto].concat(candidatos(corpoObj)) : candidatos(corpoObj))) {
-            console.error('[wa-webhook] Assinatura invalida: requisicao ignorada')
+        if (bruto) { try { corpoLido = JSON.parse(bruto) } catch (e) {} }
+        if (!corpoLido) corpoLido = typeof req.body === 'object' && req.body ? req.body : {}
+        var okBruto = !!bruto && assinaturaOk(segredo, req.headers['x-hub-signature-256'], [bruto])
+        if (!okBruto && !assinaturaOk(segredo, req.headers['x-hub-signature-256'], candidatos(corpoLido))) {
+            console.error('[wa-webhook] Assinatura invalida: requisicao ignorada (corpo bruto ' + (bruto ? 'lido' : 'indisponivel') + ')')
             return res.status(401).json({ error: 'Assinatura invalida' })
         }
+        console.log('[wa-webhook] Assinatura OK (' + (okBruto ? 'corpo bruto' : 'corpo reconstruido') + ')')
     }
 
     try {
         var client = getClient()
-        var body = typeof req.body === 'string' ? (function () { try { return JSON.parse(req.body) } catch (e) { return {} } })() : (req.body || {})
+        var body = corpoLido || (typeof req.body === 'string' ? (function () { try { return JSON.parse(req.body) } catch (e) { return {} } })() : (req.body || {}))
 
         // Meta envia dentro de entry[].changes[].value
         var entries = body.entry || []
