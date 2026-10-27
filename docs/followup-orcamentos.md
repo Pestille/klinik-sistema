@@ -132,6 +132,9 @@ Depois de configurar `WHATSAPP_APP_SECRET`, responda a uma confirmação de cons
 ela é registrada. Se aparecer "Assinatura invalida" nos logs da Vercel para mensagens reais, remova a
 variável e me avise.
 
+> Situação em 27/10/2026: `ANTHROPIC_API_KEY` e `WHATSAPP_APP_SECRET` configuradas na Vercel; app
+> "Klinik CRM" (webhook do sistema) publicado na Meta; 4 modelos `klinik_tratamento_*` cadastrados.
+
 ### 3. Testar e ligar
 1. Configuração › ligue **Follow-up ligado** + **Modo teste** e informe o seu celular como telefone de teste.
    Preencha as condições de pagamento (parcelas, clube, Pix, entrada + boleto) e o WhatsApp da secretária:
