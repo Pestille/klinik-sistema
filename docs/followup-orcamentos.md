@@ -74,9 +74,9 @@ Para caber no seu planejamento, você pode contar com {{6}}.
 
 Ficou alguma dúvida? É só responder esta mensagem que a gente te ajuda por aqui mesmo.
 ```
-Amostras: {{1}} Maria · {{2}} Klinik Odontologia · {{3}} Dra. Maisa Keffler · {{4}} implante dentário ·
+Amostras: {{1}} Maria · {{2}} Klinik Odontologia · {{3}} a Dra. Maisa Keffler · {{4}} implante dentário ·
 {{5}} Repor o dente com implante devolve a firmeza para mastigar e a segurança para sorrir, e ajuda a preservar o osso da região, que tende a diminuir quando o espaço fica vazio. ·
-{{6}} parcelamento em até 12x de R$ 1.500,00 sem juros no cartão ou 5% de desconto no pagamento à vista via Pix
+{{6}} parcelamento em até 12x no cartão (ou em até 21x para assinantes do Klinik Club) ou 15% de desconto no pagamento à vista via Pix, que deixa o tratamento em R$ 15.300,00
 
 **2. `klinik_orcamento_duvidas`**
 ```
@@ -92,7 +92,7 @@ Se quiser, respondo suas dúvidas por aqui ou reservo um horário para você con
 ```
 Amostras: {{1}} Maria · {{2}} implante dentário ·
 {{3}} A pergunta que mais ouvimos é se dói. O implante é feito com anestesia local, e a maioria dos pacientes relata um pós-operatório tranquilo, com orientações claras e acompanhamento de perto da nossa equipe em cada etapa. ·
-{{4}} parcelamento em até 12x de R$ 1.500,00 sem juros no cartão ou 5% de desconto no pagamento à vista via Pix · {{5}} Dra. Maisa Keffler
+{{4}} parcelamento em até 12x no cartão (ou em até 21x para assinantes do Klinik Club) ou 15% de desconto no pagamento à vista via Pix, que deixa o tratamento em R$ 15.300,00 · {{5}} a Dra. Maisa Keffler
 
 **3. `klinik_orcamento_adiar`**
 ```
@@ -100,13 +100,13 @@ Oi, {{1}}! Um lembrete importante sobre o seu tratamento de {{2}}.
 
 {{3}}
 
-Aqui na {{4}}, {{5}}, e o seu plano já está pronto para começar quando você quiser.
+Aqui na {{4}}, {{5}}. O seu plano está pronto para começar quando você quiser.
 
 Posso reservar um horário para você esta semana?
 ```
 Amostras: {{1}} Maria · {{2}} implante dentário ·
 {{3}} Quando o espaço do dente fica vazio por muito tempo, o osso da região vai diminuindo e os dentes vizinhos podem se mover, o que costuma deixar o tratamento mais complexo lá na frente. ·
-{{4}} Klinik Odontologia · {{5}} mais de 2.500 pacientes já confiaram o sorriso deles a nós
+{{4}} Klinik Odontologia · {{5}} já realizamos mais de 10 mil procedimentos em mais de 2.500 pacientes
 
 **4. `klinik_orcamento_ultima`**
 ```
@@ -141,7 +141,7 @@ variável e me avise.
 ### 3. Testar e ligar
 1. Configuração › ligue **Follow-up ligado** + **Modo teste** e informe o seu celular como telefone de teste.
    Preencha parcelas sem juros e desconto no Pix (sem isso, as mensagens falam só "parcelamento no
-   cartão" e "pagamento à vista via Pix", sem números). Clube, SulAmérica e prova social vêm
+   cartão" e "pagamento à vista via Pix", sem números). Clube e prova social vêm
    **desligados**: ligue e preencha só o que for verdade para a clínica.
 2. Clique **Rodar régua agora**: até 3 orçamentos reais geram mensagens, mas todas chegam no seu celular.
    Responda como se fosse o paciente (dúvidas, "achei caro", "quero agendar") e veja a conversa no painel.

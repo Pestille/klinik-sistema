@@ -217,7 +217,8 @@
         f('telefone_teste', 'Telefone de teste (com DDD)', c.telefone_teste, 'tel') +
         sw('ia_ativa', 'Assistente virtual responde as dúvidas', c.ia_ativa, 'Desligado: toda resposta do paciente vai direto para a equipe.') +
         f('email_alerta', 'E-mail para avisos de "precisa da equipe"', c.email_alerta, 'email', ' placeholder="padrão: e-mail da clínica"') +
-        f('nome_equipe', 'Como a assistente chama a equipe', c.nome_equipe) +
+        f('nome_equipe', 'Como a assistente chama quem atende', c.nome_equipe, 'text', ' placeholder="ex.: nossa secretária"') +
+        f('telefone_atendimento', 'WhatsApp de quem atende (aparece para o paciente ao transferir)', c.telefone_atendimento, 'tel', ' placeholder="ex.: 67999915131"') +
       '</div>' +
       '<div class="pc-box"><div class="fu-cfg-h">Régua</div>' +
         '<div class="ag-hint" style="margin-bottom:12px">Dias depois do orçamento em que cada mensagem sai.</div>' +
@@ -228,10 +229,10 @@
         sw('pular_domingo', 'Não enviar aos domingos', c.pular_domingo) +
       '</div>' +
       '<div class="pc-box"><div class="fu-cfg-h">Pagamento e argumentos</div>' +
-        '<div class="fu-linha">' + f('parcelas_cartao', 'Parcelas sem juros no cartão', c.parcelas_cartao, 'number', ' placeholder="ex.: 12"') + f('desconto_pix', 'Desconto no Pix (%)', c.desconto_pix, 'number', ' placeholder="ex.: 5"') + '</div>' +
-        sw('klinik_club', 'Mencionar condições para assinantes do clube', c.klinik_club) +
-        f('nome_clube', 'Nome do clube', c.nome_clube) +
-        sw('sulamerica', 'Mencionar cobertura SulAmérica Odonto', c.sulamerica) +
+        '<div class="fu-linha">' + f('parcelas_cartao', 'Parcelas no cartão', c.parcelas_cartao, 'number', ' placeholder="ex.: 12"') + f('desconto_pix', 'Desconto no Pix (%)', c.desconto_pix, 'number', ' placeholder="ex.: 15"') + '</div>' +
+        sw('sem_juros', 'Parcelamento sem juros', c.sem_juros, 'Ligado: as mensagens mostram o valor de cada parcela. Desligado: só "em até Nx".') +
+        sw('klinik_club', 'Mencionar o parcelamento maior para assinantes do clube', c.klinik_club) +
+        '<div class="fu-linha">' + f('nome_clube', 'Nome do clube', c.nome_clube) + f('parcelas_clube', 'Parcelas para assinantes', c.parcelas_clube, 'number', ' placeholder="ex.: 21"') + '</div>' +
         '<div class="ag-f"><label>Texto de pagamento personalizado (opcional, substitui o automático)</label><textarea class="ag-in" id="fc-texto_pagamento" rows="2"' + dis + '>' + esc(c.texto_pagamento) + '</textarea></div>' +
         f('prova_social', 'Prova social (mensagem 3)', c.prova_social, 'text', ' placeholder="ex.: mais de 2.500 pacientes já confiaram o sorriso deles a nós"') +
       '</div>' +
@@ -248,7 +249,7 @@
         ativo: ck('ativo'), modo_teste: ck('modo_teste'), telefone_teste: v('telefone_teste'), ia_ativa: ck('ia_ativa'), email_alerta: v('email_alerta'), nome_equipe: v('nome_equipe'),
         dias: [0, 1, 2, 3].map(function (i) { return v('dia' + i) }), janela_dias: v('janela_dias'), valor_minimo: v('valor_minimo'),
         limite_novos_dia: v('limite_novos_dia'), limite_envios_dia: v('limite_envios_dia'), pausa_apos_resposta_dias: v('pausa_apos_resposta_dias'), carencia_dias: v('carencia_dias'), pular_domingo: ck('pular_domingo'),
-        parcelas_cartao: v('parcelas_cartao'), desconto_pix: v('desconto_pix'), klinik_club: ck('klinik_club'), nome_clube: v('nome_clube'), sulamerica: ck('sulamerica'),
+        parcelas_cartao: v('parcelas_cartao'), desconto_pix: v('desconto_pix'), klinik_club: ck('klinik_club'), nome_clube: v('nome_clube'), sem_juros: ck('sem_juros'), parcelas_clube: v('parcelas_clube'), telefone_atendimento: v('telefone_atendimento'),
         texto_pagamento: v('texto_pagamento'), prova_social: v('prova_social'),
         templates: { m1: v('tpl_m1'), m2: v('tpl_m2'), m3: v('tpl_m3'), m4: v('tpl_m4') }
       }
