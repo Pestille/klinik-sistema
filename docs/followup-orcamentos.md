@@ -134,6 +134,8 @@ variável e me avise.
 
 > Situação em 27/10/2026: `ANTHROPIC_API_KEY` e `WHATSAPP_APP_SECRET` configuradas na Vercel; app
 > "Klinik CRM" (webhook do sistema) publicado na Meta; 4 modelos `klinik_tratamento_*` cadastrados.
+> A assinatura do webhook fica em modo aviso até `WHATSAPP_SIGNATURE_MODE=enforce` ser configurada
+> (use a chave secreta do app "Klinik CRM", que é o que envia os webhooks).
 
 ### 3. Testar e ligar
 1. Configuração › ligue **Follow-up ligado** + **Modo teste** e informe o seu celular como telefone de teste.
