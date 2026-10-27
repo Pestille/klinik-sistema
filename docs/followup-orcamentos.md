@@ -86,7 +86,7 @@ Sabemos que começar o seu tratamento de {{2}} pode trazer algumas dúvidas, e q
 
 {{3}}
 
-Se quiser, respondo suas dúvidas por aqui ou reservo um horário para você conversar de novo com {{4}}.
+Se quiser, respondo suas dúvidas por aqui ou reservo um horário para você conversar de novo com {{4}}. Estamos à sua disposição.
 ```
 Amostras: {{1}} Maria · {{2}} implante dentário · {{3}} A pergunta que mais ouvimos é se dói. O implante é feito com anestesia local, e a maioria dos pacientes relata um pós-operatório tranquilo, com orientações claras e acompanhamento de perto da nossa equipe em cada etapa. · {{4}} a Dra. Maisa Keffler
 
