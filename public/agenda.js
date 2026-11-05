@@ -62,7 +62,7 @@
       paciente_id: a.paciente_id, PatientName: a.paciente_nome || '', patientName: a.paciente_nome || '',
       MobilePhone: a.paciente_telefone || '', paciente_foto: a.paciente_foto || '',
       ProfessionalId: a.profissional_id, professionalId: a.profissional_id, ProfessionalName: a.profissional_nome || '',
-      CategoryDescription: a.tipo || '', categoria_id: a.categoria_id, status: a.status || 'agendado',
+      CategoryDescription: a.tipo || '', categoria_id: a.categoria_id, cadeira_id: a.cadeira_id || null, status: a.status || 'agendado',
       procedureName: a.procedimento || '', observations: a.observacoes || '', primeira_consulta: a.primeira_consulta,
       serie_id: a.serie_id, criado_por_nome: a.criado_por_nome, criado_em: a.criado_em,
       confirmacao_envio: a.confirmacao_envio, canal_envio: a.canal_envio
@@ -388,7 +388,7 @@
         var passado = AG.prefs.apagarPassados && (a.date < hojeS || (a.date === hojeS && it.f < agoraMin))
         h += '<div class="ag-ev' + (passado ? ' past' : '') + (desmarcado(a) ? ' desm' : '') + '" data-ev="' + a.id + '" style="top:' + top + 'px;height:' + alt + 'px;left:calc(' + esq + '% + 2px);width:calc(' + larg + '% - 4px);background:' + corEvento(a) + '">' +
           '<b><span class="st" style="background:' + st.cor + '"></span>' + esc(a.PatientName || 'Paciente') + '</b>' +
-          (alt > 30 ? '<span>' + a.fromTime + (a.toTime ? '–' + a.toTime : '') + (AG.view === 'semana' && a.ProfessionalName ? ' · ' + esc(a.ProfessionalName.split(' ')[0]) : '') + '</span>' : '') +
+          (alt > 30 ? '<span>' + a.fromTime + (a.toTime ? '–' + a.toTime : '') + (AG.view === 'semana' && a.ProfessionalName ? ' · ' + esc(a.ProfessionalName.split(' ')[0]) : '') + (nomeCadeira(a.cadeira_id) ? ' · ' + esc(nomeCadeira(a.cadeira_id)) : '') + '</span>' : '') +
           (alt > 46 && a.CategoryDescription ? '<br><span style="opacity:.85">' + esc(a.CategoryDescription) + '</span>' : '') + '</div>'
       })
       if (ds === hojeS && agoraMin >= jan[0] && agoraMin < jan[1]) h += '<div class="ag-now" style="top:' + ((agoraMin - jan[0]) * PX_MIN) + 'px"></div>'
@@ -465,6 +465,7 @@
       '</div>' +
       '<div class="ag-fin" id="ag-pop-fin" style="background:var(--gray2);color:var(--text3)">Verificando financeiro…</div>' +
       '<div class="ag-pop-row"><div class="lbl">Quando</div>' + DIAS_L[d.getDay()] + ', ' + br(a.date) + ' · ' + a.fromTime + (a.toTime ? '–' + a.toTime : '') + '<br><span style="color:var(--text3)">' + esc(a.ProfessionalName || 'Sem profissional') + '</span></div>' +
+      (nomeCadeira(a.cadeira_id) ? '<div class="ag-pop-row"><div class="lbl">Cadeira</div>' + esc(nomeCadeira(a.cadeira_id)) + '</div>' : '') +
       (cat || a.CategoryDescription || a.procedureName ? '<div class="ag-pop-row"><div class="lbl">Categoria</div>' +
         (cat ? '<span class="ag-badge" style="background:' + cat.cor + ';color:#fff">' + esc(cat.nome) + '</span>' : esc(a.CategoryDescription)) +
         (a.procedureName ? '<div style="margin-top:4px">' + esc(a.procedureName) + '</div>' : '') + '</div>' : '') +
@@ -654,7 +655,7 @@
     abrirConsulta({
       id: a.id, paciente: a.paciente_id ? { id: a.paciente_id, nome: a.PatientName, telefone: a.MobilePhone } : { id: null, nome: a.PatientName },
       data: a.date, hora: a.fromTime, duracao: Math.max(5, (min(a.toTime) || min(a.fromTime) + 30) - min(a.fromTime)),
-      profissional_id: a.ProfessionalId, categoria_id: (categoriaDe(a) || {}).id, observacoes: a.observations, procedimento: a.procedureName,
+      profissional_id: a.ProfessionalId, categoria_id: (categoriaDe(a) || {}).id, cadeira_id: a.cadeira_id, observacoes: a.observations, procedimento: a.procedureName,
       primeira_consulta: a.primeira_consulta, status: a.status, confirmacao_envio: a.confirmacao_envio, canal_envio: a.canal_envio
     })
   }
@@ -663,9 +664,13 @@
     var ed = AG.ed = {
       id: o.id || null, paciente: o.paciente || null, data: o.data || ymd(AG.data), hora: o.hora || '',
       duracao: o.duracao || 30, profissional_id: o.profissional_id || (profsVisiveis()[0] || {}).id || '',
-      categoria_id: o.categoria_id || '', alerta_retorno_id: o.alerta_retorno_id || null, lista_espera_id: o.lista_espera_id || null
+      categoria_id: o.categoria_id || '', cadeira_id: o.cadeira_id || '', alerta_retorno_id: o.alerta_retorno_id || null, lista_espera_id: o.lista_espera_id || null
     }
     var cats = (AG.cfg && AG.cfg.categorias) || []
+    // Só aparece quando a clínica tem cadeiras; a desativada continua no agendamento que já a usava
+    var cads = cadeiras().filter(function (c) { return Number(c.ativo) || String(c.id) === String(ed.cadeira_id) })
+    var campoCad = cads.length ? '<div class="ag-row c2 ag-f"><div><label>Cadeira</label><select class="ag-in" id="agc-cad"><option value="">Sem cadeira</option>' +
+      cads.map(function (c) { return '<option value="' + c.id + '"' + (String(c.id) === String(ed.cadeira_id) ? ' selected' : '') + '>' + esc(c.nome) + (Number(c.ativo) ? '' : ' (desativada)') + '</option>' }).join('') + '</select></div><div></div></div>' : ''
     var corpo =
       (ed.id ? '' : '<div class="ag-tabs"><div class="ag-tab on">Consulta</div><div class="ag-tab" id="ag-tab-comp">Compromisso</div></div>') +
       '<div id="ag-c-err"></div>' +
@@ -683,7 +688,7 @@
           (([10, 15, 20, 30, 40, 45, 60, 75, 90, 120, 150, 180, 240].indexOf(ed.duracao) === -1) ? '<option value="' + ed.duracao + '" selected>' + ed.duracao + ' min</option>' : '') + '</select></div>' +
       '</div>' +
       '<div class="ag-f"><label>Horário <span id="agc-hora-sel" style="text-transform:none;letter-spacing:0;color:var(--text)"></span></label><div class="ag-chips" id="agc-chips"></div>' +
-        '<div class="ag-hint">Outro horário: <input type="time" id="agc-hora-livre" class="ag-in" style="width:120px;padding:4px 8px;display:inline-block" value="' + ed.hora + '"></div></div>' +
+        '<div class="ag-hint">Outro horário: <input type="time" id="agc-hora-livre" class="ag-in" style="width:120px;padding:4px 8px;display:inline-block" value="' + ed.hora + '"></div></div>' + campoCad +
       '<div class="ag-row c2 ag-f"><div><label>Procedimento</label><input class="ag-in" id="agc-proc" maxlength="200" value="' + esc(o.procedimento || '') + '"></div>' +
         '<div><label>Observações</label><input class="ag-in" id="agc-obs" maxlength="1000" value="' + esc(o.observacoes || '') + '"></div></div>' +
       '<div class="ag-row c2 ag-f"><div><label>Confirmação</label><select class="ag-in" id="agc-conf">' +
@@ -697,7 +702,7 @@
     if (el('ag-tab-comp')) el('ag-tab-comp').onclick = function () { abrirCompromisso({ data: el('agc-data').value, hora_inicio: ed.hora, profissional_id: el('agc-prof').value }) }
     if (el('agc-rep')) el('agc-rep').onchange = function () { el('agc-rep-box').style.display = this.checked ? '' : 'none' }
     el('agc-cats').onclick = function (e) { e.preventDefault(); abrirCategorias(function () { abrirConsulta(Object.assign({}, o, coletarConsulta(true))) }) }
-    ;['agc-data', 'agc-prof', 'agc-dur'].forEach(function (id) { el(id).onchange = chipsHorario })
+    ;['agc-data', 'agc-prof', 'agc-dur', 'agc-cad'].forEach(function (id) { if (el(id)) el(id).onchange = chipsHorario })
     el('agc-hora-livre').onchange = function () { ed.hora = this.value; chipsHorario() }
     el('agc-cancel').onclick = fecharModal
     el('agc-ok').onclick = function () { salvarConsulta(false) }
@@ -709,6 +714,7 @@
     return {
       id: ed.id, paciente: ed.paciente, data: el('agc-data').value, hora: ed.hora, duracao: +el('agc-dur').value,
       profissional_id: el('agc-prof').value ? +el('agc-prof').value : null, categoria_id: el('agc-cat').value ? +el('agc-cat').value : '',
+      cadeira_id: el('agc-cad') ? (el('agc-cad').value ? +el('agc-cad').value : null) : (AG.ed.cadeira_id || null),
       observacoes: el('agc-obs').value, procedimento: el('agc-proc').value, primeira_consulta: el('agc-primeira').checked,
       confirmacao_envio: el('agc-conf').value, canal_envio: el('agc-canal').value,
       alerta_retorno_id: ed.alerta_retorno_id, lista_espera_id: ed.lista_espera_id
@@ -721,7 +727,8 @@
     var mes = dataS.slice(0, 7)
     if (!AG.meses[mes]) { try { await carregarMes(mes) } catch (e) {} }
     var d = parseYmd(dataS), jan = janelaDia(), passo = +AG.prefs.intervalo || 15
-    var ocup = (ST.agendamentos || []).filter(function (a) { return a.date === dataS && prof && a.ProfessionalId === prof && !desmarcado(a) && a.status !== 'faltou' && a.id !== ed.id })
+    var cad = el('agc-cad') && el('agc-cad').value ? +el('agc-cad').value : null
+    var ocup = (ST.agendamentos || []).filter(function (a) { return a.date === dataS && ((prof && a.ProfessionalId === prof) || (cad && Number(a.cadeira_id) === cad)) && !desmarcado(a) && a.status !== 'faltou' && a.id !== ed.id })
     var bls = bloqueiosDe(prof, dataS).filter(function (b) { return b.bloqueia !== 0 })
     var h = ''
     for (var m = jan[0]; m + dur <= jan[1]; m += passo) {
@@ -746,7 +753,7 @@
     if (!c.data || !c.hora) { err.innerHTML = '<div class="ag-err">Escolha a data e o horário.</div>'; return }
     var body = {
       id: c.id || undefined, paciente_id: c.paciente.id || null, paciente_nome: c.paciente.nome, data: c.data, hora: c.hora,
-      hora_fim: hm(min(c.hora) + c.duracao), profissional_id: c.profissional_id, categoria_id: c.categoria_id || null,
+      hora_fim: hm(min(c.hora) + c.duracao), profissional_id: c.profissional_id, categoria_id: c.categoria_id || null, cadeira_id: c.cadeira_id || null,
       observacoes: c.observacoes, procedimento: c.procedimento, primeira_consulta: c.primeira_consulta,
       confirmacao_envio: c.confirmacao_envio, canal_envio: c.canal_envio || null, permitir_conflito: !!forcar, confirmar_inadimplencia: !!confirmarInad,
       alerta_retorno_id: c.alerta_retorno_id, lista_espera_id: c.lista_espera_id
@@ -895,6 +902,40 @@
     }
   }
 
+  // ── Cadeiras ─────────────────────────────────────────────────────
+  function cadeiras() { return (AG.cfg && AG.cfg.cadeiras) || [] }
+  function nomeCadeira(id) { if (!id) return ''; var c = cadeiras().filter(function (x) { return String(x.id) === String(id) })[0]; return c ? c.nome : '' }
+  function abrirCadeiras() {
+    var lista = cadeiras()
+    function linha(c) {
+      return '<div class="ag-cat-row" data-cad="' + (c.id || '') + '"' + (c.id && !Number(c.ativo) ? ' style="opacity:.6"' : '') + '><input class="ag-in" value="' + esc(c.nome || '') + '" maxlength="40" placeholder="Nova cadeira (ex.: Consultório 1)">' +
+        (c.id ? '<button class="btn btn-sm" data-at="' + (Number(c.ativo) ? 0 : 1) + '">' + (Number(c.ativo) ? 'Desativar' : 'Reativar') + '</button>' : '') + '</div>'
+    }
+    modal('Cadeiras', '<div id="ag-cad-err"></div><div id="ag-cad-list">' + lista.map(linha).join('') + linha({}) + '</div><p class="ag-hint">Com cadeiras cadastradas, o agendamento pede a cadeira e não deixa marcar dois pacientes na mesma cadeira no mesmo horário. Uma cadeira desativada some do agendamento novo e continua nos antigos.</p>',
+      '<button class="btn" id="agd-f">Fechar</button><button class="ag-btn-novo" id="agd-ok">Salvar</button>', 520)
+    el('ag-cad-list').querySelectorAll('[data-at]').forEach(function (b) {
+      b.onclick = async function () {
+        var id = +this.closest('[data-cad]').getAttribute('data-cad')
+        var r = await apiPost('agenda-cadeiras', { action: 'ativo', id: id, ativo: this.getAttribute('data-at') === '1' })
+        if (!r.success) { el('ag-cad-err').innerHTML = '<div class="ag-err">' + esc(r.error || 'Erro') + '</div>'; return }
+        await carregarConfig(true); abrirCadeiras()
+      }
+    })
+    el('agd-f').onclick = async function () { fecharModal(); await carregarConfig(true); renderTudo() }
+    el('agd-ok').onclick = async function () {
+      var rows = el('ag-cad-list').querySelectorAll('[data-cad]')
+      for (var i = 0; i < rows.length; i++) {
+        var id = rows[i].getAttribute('data-cad'), nome = rows[i].querySelector('.ag-in').value.trim()
+        if (!nome) continue
+        var orig = lista.filter(function (c) { return String(c.id) === id })[0]
+        if (orig && orig.nome === nome) continue
+        var r = await apiPost('agenda-cadeiras', { id: id ? +id : undefined, nome: nome })
+        if (!r.success) { el('ag-cad-err').innerHTML = '<div class="ag-err">' + esc(r.error || 'Erro') + '</div>'; return }
+      }
+      fecharModal(); await carregarConfig(true); renderTudo()
+    }
+  }
+
   // ── Categorias ───────────────────────────────────────────────────
   function abrirCategorias(depois) {
     var cats = ((AG.cfg && AG.cfg.categorias) || []).slice()
@@ -941,9 +982,10 @@
         '<div><span style="font-size:12px;color:var(--text3)">FIM DA GRADE</span><input class="ag-in" type="time" id="agp-fim" value="' + (p.fim || '') + '"></div></div>' +
       '<p class="ag-hint" style="margin:0">Sem início/fim, a grade usa o horário de funcionamento da clínica. Estas preferências valem só para você.</p>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border2);padding-top:12px">' +
-        '<button class="btn" id="agp-cats">Categorias</button><button class="btn" id="agp-hor">Horários de atendimento</button><button class="btn" id="agp-cores">Cores dos profissionais</button></div>' +
+        '<button class="btn" id="agp-cats">Categorias</button><button class="btn" id="agp-cads">Cadeiras</button><button class="btn" id="agp-hor">Horários de atendimento</button><button class="btn" id="agp-cores">Cores dos profissionais</button></div>' +
       '</div>', '<button class="ag-btn-novo" id="agp-ok">Aplicar</button>', 560)
     el('agp-cats').onclick = function () { abrirCategorias() }
+    el('agp-cads').onclick = function () { abrirCadeiras() }
     el('agp-hor').onclick = function () { abrirHorarios() }
     el('agp-cores').onclick = abrirCores
     el('agp-ok').onclick = function () {

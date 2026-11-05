@@ -59,13 +59,22 @@
       el('cx-abrir').onclick = async function () { var r = await apiPost('caixa', { action: 'abrir', saldo_inicial: v('cx-ini') }); if (!r.success) return alert(r.error); loadCaixa() }
       return
     }
-    var s = d.sessao, r = d.resumo
-    b.innerHTML = '<div class="fn-kpis">' + [['Troco inicial', moeda(r.saldo_inicial)], ['Dinheiro recebido', moeda(r.entradas_dinheiro)], ['Sangrias / suprimentos', '− ' + moeda(r.sangrias) + ' / + ' + moeda(r.suprimentos)], ['Esperado na gaveta', moeda(r.esperado)]].map(function (k) { return '<div class="pc-box fn-kpi"><div class="pc-box-h" style="margin-bottom:8px">' + k[0] + '</div><div class="fn-kpi-v">' + k[1] + '</div></div>' }).join('') + '</div>' +
+    var s = d.sessao, r = d.resumo, trav = !!Number(s.bloqueado)
+    function linhaMov(m) {
+      var neg = m.tipo === 'sangria' || (m.tipo === 'ajuste' && Number(m.valor) < 0)
+      var val = (neg ? '− ' : '+ ') + moeda(Math.abs(Number(m.valor)))
+      if (m.estornado_em) return '<div class="pc-nota" style="opacity:.6"><div><span style="text-decoration:line-through">' + esc(m.descricao) + '</span><small>Estornado ' + hora(m.estornado_em) + (m.estornado_por_nome ? ' · ' + esc(m.estornado_por_nome) : '') + ' · ' + esc(m.estorno_motivo || '') + '</small></div><b style="text-decoration:line-through;color:var(--text3)">' + val + '</b></div>'
+      var podeEst = !trav && (m.tipo !== 'ajuste' || isAdmin())
+      return '<div class="pc-nota"><div>' + esc(m.descricao) + '<small>' + hora(m.criado_em) + (m.usuario_nome ? ' · ' + esc(m.usuario_nome) : '') + (podeEst ? ' · <a href="#" data-est="' + m.id + '" style="color:var(--red)">Estornar</a>' : '') + '</small></div><b style="color:' + (neg ? 'var(--red)' : 'var(--green)') + '">' + val + '</b></div>'
+    }
+    b.innerHTML = (trav ? '<div class="pc-box" style="background:var(--orange-light);border-color:var(--orange);margin-bottom:16px"><b style="color:var(--orange)">Caixa travado</b> por ' + esc(s.bloqueado_por_nome || '—') + ' às ' + hora(s.bloqueado_em) + (s.bloqueio_motivo ? ' · ' + esc(s.bloqueio_motivo) : '') + '. Sangria, suprimento, estorno e fechamento ficam parados até destravar.</div>' : '') +
+      '<div class="fn-kpis">' + [['Troco inicial', moeda(r.saldo_inicial)], ['Dinheiro recebido', moeda(r.entradas_dinheiro)], ['Sangrias / suprimentos', '− ' + moeda(r.sangrias) + ' / + ' + moeda(r.suprimentos) + (r.ajustes ? '<div class="ag-hint" style="margin:4px 0 0">Ajustes: ' + (r.ajustes < 0 ? '− ' : '+ ') + moeda(Math.abs(r.ajustes)) + '</div>' : '')], ['Esperado na gaveta', moeda(r.esperado)]].map(function (k) { return '<div class="pc-box fn-kpi"><div class="pc-box-h" style="margin-bottom:8px">' + k[0] + '</div><div class="fn-kpi-v">' + k[1] + '</div></div>' }).join('') + '</div>' +
       '<div class="l4-cx"><div class="pc-box"><div class="pc-box-h">Recebido por forma de pagamento</div>' + (r.por_forma.length ? '<table class="pc-tbl"><tbody>' + r.por_forma.map(function (f) { return '<tr><td>' + esc(f.forma) + '</td><td class="fn-num">' + moeda(f.valor) + '</td></tr>' }).join('') + '<tr><td><b>Total</b></td><td class="fn-num"><b>' + moeda(r.total_recebido) + '</b></td></tr></tbody></table>' : '<div class="pc-vazio" style="padding:8px 0;text-align:left">Nenhum recebimento ainda.</div>') +
       '<p class="ag-hint">Use para conferir a maquininha e os PIX. Saídas pagas em dinheiro (' + moeda(r.saidas_dinheiro) + ') já foram descontadas do esperado.</p></div>' +
-      '<div class="pc-box"><div class="pc-box-h">Movimentações da gaveta</div>' + (r.manuais.length ? r.manuais.map(function (m) { return '<div class="pc-nota"><div>' + esc(m.descricao) + '<small>' + hora(m.criado_em) + (m.usuario_nome ? ' · ' + esc(m.usuario_nome) : '') + '</small></div><b style="color:' + (m.tipo === 'sangria' ? 'var(--red)' : 'var(--green)') + '">' + (m.tipo === 'sangria' ? '− ' : '+ ') + moeda(m.valor) + '</b></div>' }).join('') : '<div class="pc-vazio" style="padding:8px 0;text-align:left">Nenhuma sangria ou suprimento.</div>') +
-      '<div class="fn-acoes" style="justify-content:flex-start;margin-top:12px"><button class="btn btn-sm" data-mv="suprimento">+ Suprimento</button><button class="btn btn-sm" data-mv="sangria">− Sangria</button></div></div></div>' +
-      '<div class="pc-box" style="margin-top:16px"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div class="ag-hint" style="margin:0">Aberto em ' + br(s.aberto_em) + ' às ' + hora(s.aberto_em) + ' por ' + esc(s.aberto_por_nome || '—') + '</div><button class="ag-btn-novo" id="cx-fechar">Fechar caixa</button></div></div>'
+      '<div class="pc-box"><div class="pc-box-h">Movimentações da gaveta</div>' + (r.manuais.length ? r.manuais.map(linhaMov).join('') : '<div class="pc-vazio" style="padding:8px 0;text-align:left">Nenhuma sangria ou suprimento.</div>') +
+      (trav ? '' : '<div class="fn-acoes" style="justify-content:flex-start;margin-top:12px"><button class="btn btn-sm" data-mv="suprimento">+ Suprimento</button><button class="btn btn-sm" data-mv="sangria">− Sangria</button>' + (isAdmin() ? '<button class="btn btn-sm" id="cx-ajuste">Ajustar saldo</button>' : '') + '</div>') + '</div></div>' +
+      '<div class="pc-box" style="margin-top:16px"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div class="ag-hint" style="margin:0">Aberto em ' + br(s.aberto_em) + ' às ' + hora(s.aberto_em) + ' por ' + esc(s.aberto_por_nome || '—') + '</div><div class="fn-acoes">' +
+        (trav ? '<button class="ag-btn-novo" id="cx-destravar">Destravar caixa</button>' : '<button class="btn" id="cx-travar">Travar caixa</button><button class="ag-btn-novo" id="cx-fechar">Fechar caixa</button>') + '</div></div></div>'
     b.querySelectorAll('[data-mv]').forEach(function (bt) {
       bt.onclick = function () {
         var tp = this.getAttribute('data-mv')
@@ -75,6 +84,30 @@
         el('cx-ok').onclick = async function () { var x = await apiPost('caixa', { action: 'movimento', tipo: tp, valor: v('cx-v'), descricao: v('cx-d') }); if (!x.success) return erro(x.error); fechar(); loadCaixa() }
       }
     })
+    function acao(corpo, depois) { return apiPost('caixa', corpo).then(function (x) { if (!x.success) { if (depois) return erro(x.error); return alert(x.error) } fechar(); loadCaixa() }) }
+    if (el('cx-destravar')) { el('cx-destravar').onclick = function () { acao({ action: 'desbloquear' }) }; return }
+    el('cx-travar').onclick = function () {
+      modal('Travar caixa', '<p style="margin-top:0">Com o caixa travado, ninguém faz sangria, suprimento, estorno ou fechamento até ele ser destravado por você ou por um administrador. Os recebimentos da clínica continuam normais.</p><div class="ag-f"><label>Motivo (opcional)</label><input class="ag-in" id="cx-mot" maxlength="140" placeholder="Ex.: conferência, troca de turno"></div>',
+        '<button class="btn" id="cx-c">Cancelar</button><button class="ag-btn-novo" id="cx-ok">Travar</button>', 520)
+      el('cx-c').onclick = fechar
+      el('cx-ok').onclick = function () { acao({ action: 'bloquear', motivo: v('cx-mot') }, true) }
+    }
+    b.querySelectorAll('[data-est]').forEach(function (a) {
+      a.onclick = function (e) {
+        e.preventDefault()
+        var id = +this.getAttribute('data-est'), m = r.manuais.filter(function (x) { return x.id === id })[0]
+        modal('Estornar movimentação', '<p style="margin-top:0">' + esc(m.descricao) + ' · <b>' + moeda(Math.abs(Number(m.valor))) + '</b></p><p class="ag-hint">A movimentação continua no histórico, riscada, e deixa de contar no esperado da gaveta.</p><div class="ag-f"><label>Motivo</label><input class="ag-in" id="cx-mot" maxlength="140"></div>',
+          '<button class="btn" id="cx-c">Cancelar</button><button class="ag-btn-novo" id="cx-ok">Estornar</button>', 520)
+        el('cx-c').onclick = fechar
+        el('cx-ok').onclick = function () { acao({ action: 'estornar', movimento_id: id, motivo: v('cx-mot') }, true) }
+      }
+    })
+    if (el('cx-ajuste')) el('cx-ajuste').onclick = function () {
+      modal('Ajustar saldo do caixa', '<p style="margin-top:0">Use quando o esperado na gaveta não bate por um motivo conhecido. Valor positivo soma ao esperado; negativo (ex.: −10,00) tira.</p><div class="ag-row c2"><div class="ag-f"><label>Valor (R$)</label><input class="ag-in" id="cx-v" inputmode="decimal" placeholder="−10,00"></div><div class="ag-f"><label>Motivo</label><input class="ag-in" id="cx-mot" maxlength="140"></div></div>',
+        '<button class="btn" id="cx-c">Cancelar</button><button class="ag-btn-novo" id="cx-ok">Registrar ajuste</button>', 520)
+      el('cx-c').onclick = fechar
+      el('cx-ok').onclick = function () { acao({ action: 'ajuste', valor: String(v('cx-v')).replace('−', '-'), motivo: v('cx-mot') }, true) }
+    }
     el('cx-fechar').onclick = function () {
       modal('Fechar caixa', '<p style="margin-top:0">Conte o dinheiro da gaveta e informe o total. O sistema compara com o esperado (<b>' + moeda(r.esperado) + '</b>).</p><div class="ag-f"><label>Dinheiro contado (R$)</label><input class="ag-in" id="cx-cont" inputmode="decimal"></div><div id="cx-dif" class="ag-hint"></div><div class="ag-f"><label>Observação</label><textarea class="ag-in" id="cx-obs" rows="2" maxlength="300" placeholder="Obrigatória se houver diferença"></textarea></div>',
         '<button class="btn" id="cx-c">Cancelar</button><button class="ag-btn-novo" id="cx-ok">Fechar caixa</button>', 520)

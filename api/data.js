@@ -81,7 +81,7 @@ var ROTA_PERMISSAO = {
     'salvar-paciente': 'pacientes.editar_cadastro', 'salvar-paciente-edit': 'pacientes.editar_cadastro', 'salvar-foto-paciente': 'pacientes.editar_cadastro',
     // Agenda
     'salvar-agendamento': 'agenda.agendar_atendimento', 'excluir-agendamento': 'agenda.agendar_atendimento',
-    'agenda-categorias': 'agenda.editar_horarios', 'agenda-bloqueio': 'agenda.editar_horarios', 'agenda-horarios': 'agenda.editar_horarios',
+    'agenda-categorias': 'agenda.editar_horarios', 'agenda-cadeiras': 'agenda.editar_horarios', 'agenda-bloqueio': 'agenda.editar_horarios', 'agenda-horarios': 'agenda.editar_horarios',
     'agenda-cor-profissional': 'agenda.editar_horarios', 'lista-espera': 'agenda.agendar_atendimento',
     'alertas-retorno': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' },
     // Paciente e prontuário (lib/rotas/pacientes.js)
@@ -358,7 +358,7 @@ module.exports = async function handler(req, res) {
         // ── AGENDAMENTOS ────────────────────────────────────────────────────
         if (route === 'agendamentos') {
             var lim2 = Math.min(parseInt(q.limit) || 1000, 5000)
-            var base = "SELECT a.id,a.data_hora,a.hora_fim,a.tipo,a.status,a.procedimento,a.valor,a.observacoes,a.profissional_id,a.paciente_id,a.categoria_id,a.primeira_consulta,a.serie_id,a.criado_por_nome,a.criado_em,a.confirmacao_envio,a.alerta_envio,a.canal_envio,COALESCE(p.nome,a.paciente_nome) as paciente_nome,COALESCE(p.telefone,a.paciente_telefone) as paciente_telefone,p.foto_url as paciente_foto,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id"
+            var base = "SELECT a.id,a.data_hora,a.hora_fim,a.tipo,a.status,a.procedimento,a.valor,a.observacoes,a.profissional_id,a.paciente_id,a.categoria_id,a.cadeira_id,a.primeira_consulta,a.serie_id,a.criado_por_nome,a.criado_em,a.confirmacao_envio,a.alerta_envio,a.canal_envio,COALESCE(p.nome,a.paciente_nome) as paciente_nome,COALESCE(p.telefone,a.paciente_telefone) as paciente_telefone,p.foto_url as paciente_foto,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id"
             var wheres = ["a.clinica_id=?"], argsAg = [clinica_id]
             if (q.dataInicio && q.dataFim) { wheres.push("DATE(a.data_hora) BETWEEN ? AND ?"); argsAg.push(q.dataInicio, q.dataFim) }
             else if (q.data) { wheres.push("DATE(a.data_hora)=?"); argsAg.push(q.data) }
