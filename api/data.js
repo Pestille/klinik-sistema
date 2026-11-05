@@ -23,6 +23,7 @@ var rotasCrm = require('../lib/rotas/crm')
 var rotasOperacao = require('../lib/rotas/operacao')
 var rotasFollowup = require('../lib/rotas/followup')
 var cfgLib = require('../lib/config')
+var { gerarComissao } = require('../lib/comissoes')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
 // método; { GET, POST } quando leitura e escrita exigem recursos diferentes.
@@ -53,6 +54,7 @@ var ROTA_PERMISSAO = {
     'receitas-saude': { GET: 'pacientes.recibos', POST: 'financeiro.receita_saude' }, 'receita-saude-emitir': 'financeiro.receita_saude',
     'comissoes-relatorio': 'financeiro.comissoes', 'comissoes-pagar': 'financeiro.comissoes', 'comissoes-profissional': 'financeiro.comissoes',
     'comissoes-config': { GET: 'profissionais.acessar', POST: 'profissionais.editar', DELETE: 'profissionais.editar' },
+    'comissoes-procedimento': { GET: 'profissionais.acessar', POST: 'profissionais.editar' },
     // Paciente
     'parcelas-paciente': 'pacientes.financeiro', 'parcelas-orcamento': 'pacientes.financeiro', 'cobrancas-paciente': 'pacientes.financeiro',
     'gerar-cobranca': 'pacientes.financeiro', 'parcela-baixa': 'pacientes.financeiro', 'parcela-cancelar': 'pacientes.financeiro',
@@ -1793,17 +1795,9 @@ module.exports = async function handler(req, res) {
                     var aoItem = aoItens.rows[aoi]
                     var aoProfId = aoItem.profissional_id
                     if (!aoProfId) continue
-                    var aoConfig = await client.execute({ sql: "SELECT * FROM comissoes_config WHERE profissional_id=? AND momento='aprovacao' AND (tabela_preco=? OR tabela_preco='TODAS') AND clinica_id=? ORDER BY tabela_preco='TODAS' LIMIT 1", args: [aoProfId, aoTabela, clinica_id] })
-                    if (!aoConfig.rows.length) continue
-                    var aoR = aoConfig.rows[0]
-                    var aoValBase = (aoItem.valor_unitario || 0) * (aoItem.quantidade || 1)
-                    var aoValCom = aoR.tipo === 'percentual' ? aoValBase * aoR.valor / 100 : aoR.valor
                     var aoProfNome = aoItem.profissional_nome || ''
                     if (!aoProfNome) { var aoProfN = await client.execute({ sql: "SELECT nome FROM profissionais WHERE id=? AND clinica_id=?", args: [aoProfId, clinica_id] }); if (aoProfN.rows.length) aoProfNome = aoProfN.rows[0].nome }
-                    await client.execute({
-                        sql: "INSERT INTO comissoes_lancamentos(clinica_id, profissional_id, profissional_nome, orcamento_id, orcamento_item_id, paciente_id, paciente_nome, procedimento_nome, tabela_preco, momento, tipo, valor_base, percentual, valor_comissao, data_referencia) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                        args: [clinica_id, aoProfId, aoProfNome, ao.id, aoItem.id, aoPacId, aoPacNome, aoItem.procedimento_nome, aoTabela, 'aprovacao', aoR.tipo, aoValBase, aoR.tipo === 'percentual' ? aoR.valor : null, aoValCom, new Date().toISOString().slice(0, 10)]
-                    })
+                    await gerarComissao(client, { clinica_id: clinica_id, momento: 'aprovacao', data: new Date(Date.now() - 4 * 3600 * 1000).toISOString().slice(0, 10), item: aoItem, profissional_id: aoProfId, profissional_nome: aoProfNome, orcamento_id: ao.id, paciente_id: aoPacId, paciente_nome: aoPacNome, tabela: aoTabela })
                 }
             } catch(e) { console.error('[aprovar-orcamento] comissoes error:', e.message) }
 
@@ -1896,7 +1890,7 @@ module.exports = async function handler(req, res) {
 
                 // Cancel non-executed item commissions
                 for (var dai = 0; dai < daNaoExec.length; dai++) {
-                    await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_item_id=? AND status='pendente'", args: [daNaoExec[dai].id] })
+                    await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_item_id=? AND clinica_id=? AND status='pendente'", args: [daNaoExec[dai].id, clinica_id] })
                 }
 
                 // Cancel pending parcelas
@@ -2601,6 +2595,29 @@ module.exports = async function handler(req, res) {
             } catch(ccErr) { return res.status(200).json({ success: true, configs: [], error_debug: ccErr.message }) }
         }
 
+        // ── COMISSOES-PROCEDIMENTO (valor fixo por procedimento) ─────
+        if (route === 'comissoes-procedimento') {
+            if (req.method === 'POST') {
+                var cp = req.body || {}
+                if (cp.action === 'delete') {
+                    var cpx = parseInt(cp.id) || 0
+                    if (!cpx) return res.status(400).json({ success: false, error: 'id obrigatório' })
+                    var cpok = await moverParaLixeira(client, auth, 'comissao_procedimento', cpx)
+                    return cpok ? res.status(200).json({ success: true }) : res.status(404).json({ success: false, error: 'Regra não encontrada' })
+                }
+                var cpProf = parseInt(cp.profissional_id) || 0, cpNome = String(cp.procedimento_nome || '').trim().slice(0, 200), cpValor = Number(cp.valor)
+                if (!cpProf || !cpNome) return res.status(400).json({ success: false, error: 'Informe o profissional e o procedimento' })
+                if (!isFinite(cpValor) || cpValor < 0) return res.status(400).json({ success: false, error: 'Valor inválido' })
+                if (cp.valido_ate && cp.valido_desde && cp.valido_ate < cp.valido_desde) return res.status(400).json({ success: false, error: 'A data final é anterior à inicial' })
+                var cpPr = await client.execute({ sql: "SELECT id FROM profissionais WHERE id=? AND clinica_id=?", args: [cpProf, clinica_id] })
+                if (!cpPr.rows.length) return res.status(404).json({ success: false, error: 'Profissional não encontrado' })
+                var cpIns = await client.execute({ sql: "INSERT INTO comissoes_procedimento(clinica_id,profissional_id,tabela_preco,procedimento_nome,valor,valido_desde,valido_ate,editado_por) VALUES(?,?,?,?,?,?,?,?)", args: [clinica_id, cpProf, String(cp.tabela_preco || 'TODAS').slice(0, 60), cpNome, Math.round(cpValor * 100) / 100, cp.valido_desde || '', cp.valido_ate || '', auth.nome || ''] })
+                return res.status(200).json({ success: true, id: Number(cpIns.lastInsertRowid) })
+            }
+            var cpLista = await client.execute({ sql: "SELECT * FROM comissoes_procedimento WHERE clinica_id=? AND profissional_id=? ORDER BY procedimento_nome, tabela_preco, valido_desde DESC", args: [clinica_id, parseInt(q.profissional_id) || 0] })
+            return res.status(200).json({ success: true, regras: cpLista.rows })
+        }
+
         // ── COMISSOES-PROFISSIONAL (lista lançamentos) ──────────────
         if (route === 'comissoes-profissional') {
             var cpProfId = parseInt(q.profissional_id) || 0
@@ -2675,19 +2692,9 @@ module.exports = async function handler(req, res) {
                 var meI = meItem.rows[0]
                 var meProfId = me.profissional_id || meI.profissional_id
                 if (meProfId) {
-                    // Check for execution commission rule
-                    var meConfig = await client.execute({ sql: "SELECT * FROM comissoes_config WHERE profissional_id=? AND momento='execucao' AND (tabela_preco=? OR tabela_preco='TODAS') AND clinica_id=? ORDER BY tabela_preco='TODAS' LIMIT 1", args: [meProfId, meI.tabela_preco || 'PARTICULAR', clinica_id] })
-                    if (meConfig.rows.length) {
-                        var meR = meConfig.rows[0]
-                        var meValBase = meI.valor_unitario * (meI.quantidade || 1)
-                        var meValCom = meR.tipo === 'percentual' ? meValBase * meR.valor / 100 : meR.valor
-                        var meProfNome = meI.profissional_nome || ''
-                        if (!meProfNome) { var mePn = await client.execute({ sql: "SELECT nome FROM profissionais WHERE id=? AND clinica_id=?", args: [meProfId, clinica_id] }); if (mePn.rows.length) meProfNome = mePn.rows[0].nome }
-                        await client.execute({
-                            sql: "INSERT INTO comissoes_lancamentos(clinica_id, profissional_id, profissional_nome, orcamento_id, orcamento_item_id, paciente_id, paciente_nome, procedimento_nome, tabela_preco, momento, tipo, valor_base, percentual, valor_comissao, data_referencia) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                            args: [clinica_id, meProfId, meProfNome, meI.orcamento_id, me.orcamento_item_id, meI.paciente_id, meI.paciente_nome || '', meI.procedimento_nome, meI.tabela_preco || 'PARTICULAR', 'execucao', meR.tipo, meValBase, meR.tipo === 'percentual' ? meR.valor : null, meValCom, meData]
-                        })
-                    }
+                    var meProfNome = me.profissional_nome || meI.profissional_nome || ''
+                    if (!meProfNome) { var mePn = await client.execute({ sql: "SELECT nome FROM profissionais WHERE id=? AND clinica_id=?", args: [meProfId, clinica_id] }); if (mePn.rows.length) meProfNome = mePn.rows[0].nome }
+                    await gerarComissao(client, { clinica_id: clinica_id, momento: 'execucao', data: meData, item: meI, profissional_id: meProfId, profissional_nome: meProfNome, orcamento_id: meI.orcamento_id, paciente_id: meI.paciente_id, paciente_nome: meI.paciente_nome, tabela: meI.tabela_preco || 'PARTICULAR' })
                 }
             }
             return res.status(200).json({ success: true, msg: 'Procedimento marcado como executado' })
@@ -2726,7 +2733,7 @@ module.exports = async function handler(req, res) {
             }
             await client.execute({ sql: "UPDATE orcamento_itens SET executado=0, data_execucao=NULL WHERE id=? AND clinica_id=?", args: [de2.orcamento_item_id, clinica_id] })
             // Cancel related commission
-            try { await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_item_id=? AND momento='execucao' AND status='pendente'", args: [de2.orcamento_item_id] }) } catch(e) {}
+            try { await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_item_id=? AND clinica_id=? AND momento='execucao' AND status='pendente'", args: [de2.orcamento_item_id, clinica_id] }) } catch(e) {}
             return res.status(200).json({ success: true, msg: 'Execução desfeita' })
         }
 

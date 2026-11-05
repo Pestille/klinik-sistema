@@ -4317,6 +4317,7 @@ async function renderProfConfigComissao(p){
       html+='</tbody></table>'
     }
     el.innerHTML=html
+    if(window.renderComissaoProcedimento)window.renderComissaoProcedimento(el,profId,tabelas)
   }catch(e){el.innerHTML='<div style="color:#D32F2F;padding:20px">'+e.message+'</div>'}
 }
 
@@ -9382,6 +9383,7 @@ document.querySelectorAll('.module-card').forEach(card=>{
 <script src="/lote2.js"></script>
 <script src="/lote3.js"></script>
 <script src="/lote4.js"></script>
+<script src="/comissoes.js"></script>
 <script src="/paciente.js"></script>
 <script src="/klinik-turso.js"></script>
 </body>

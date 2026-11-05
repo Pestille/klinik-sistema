@@ -333,6 +333,20 @@ Base: este levantamento + o inventário do código do Klinov (14/10/2026). ✅ c
 | Estoque · Protético · Indicação · Alinhadores · Planos · Portal | ❌ | Só placeholders |
 | CRM de leads / campanhas | 🟡 | Campanhas de email/WhatsApp existem; falta funil de leads |
 
+## Regras de comissão observadas (05/11/2026)
+
+Fontes: tela do profissional (Configuração Comissão) e exportação BookEntry da Klinik.
+
+- **Momentos:** recebimento do pagamento (padrão) · execução · check-out · aprovação. Com "Valor fixo por procedimento" a opção de aprovação some.
+- **Percentuais:** Comissão Geral e Comissão Plano são campos separados.
+- **Opções:** requer aprovação · descontar impostos · descontar taxas/descontos de pagamento · considerar data de pagamento para cartão · gerar comissão de plano próprio na execução · validade determinada ou indeterminada.
+- **Por procedimento:** tabela de preço › procedimento: válido desde/até, valor, valor da comissão, "Somente fixa".
+- **Uso real na Klinik:** 6.909 de 6.937 linhas com gatilho EXECUTION. Em 63 grupos profissional + tabela + procedimento com 3+ casos: 46 valor fixo, 7 percentual fixo, 10 sempre zero.
+- **Particular:** a amostra da tabela PARTICULAR tem comissão 0,00, e a categoria COMISSÃO em contas a pagar soma R$ 141.854,92. Falta confirmar se é assim que a comissão do particular é paga.
+- **Não confirmado:** "Somente fixa", efeito da glosa, base com desconto. A lista de configurações apareceu vazia nos 3 profissionais abertos, inclusive no que tem mais comissões.
+
+Multa e juros: 2% + 1% ao mês pro rata conferem com o Klinov (89 de 102 pagamentos com diferença de até R$ 1).
+
 ## Prioridade zero — segurança (antes de qualquer réplica)
 
 Confirmado no código (`api/auth.js`):
