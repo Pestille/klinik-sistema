@@ -445,12 +445,12 @@
           var s = SIT_R[i.situacao]
           return '<tr><td><span class="pc-badge ' + s[1] + '">' + s[0] + '</span>' + (i.pagamento ? '<div class="ag-hint" style="margin:2px 0 0">em ' + br(i.pagamento) + '</div>' : '') + '</td><td>' + br(i.vencimento) + '</td><td>' + linkPac(i.paciente_id, i.paciente_nome) + '</td>' +
             '<td class="hide-sm">' + esc(i.descricao) + '</td><td class="hide-sm">' + esc(i.forma) + '</td><td class="fn-num">' + moeda(i.valor) + '</td><td style="text-align:right;white-space:nowrap">' +
-            (i.situacao !== 'pago' ? ((i.origem === 'parcela' || i.origem === 'avulso') && pode('financeiro.dar_baixa') ? '<button class="btn btn-sm btn-primary" data-rec="' + i.id + '" data-org="' + i.origem + '">Receber</button>' : i.origem === 'cobranca' ? '<span class="ag-hint" style="margin:0">via Asaas</span>' : '') : '') + '</td></tr>'
+            (i.situacao !== 'pago' ? ((i.origem === 'parcela' || i.origem === 'avulso' || i.origem === 'plano') && pode('financeiro.dar_baixa') ? '<button class="btn btn-sm btn-primary" data-rec="' + i.id + '" data-org="' + i.origem + '">Receber</button>' : i.origem === 'cobranca' ? '<span class="ag-hint" style="margin:0">via Asaas</span>' : '') : '') + '</td></tr>'
         }).join('') + '</tbody><tfoot><tr><td colspan="5"><b>Total</b></td><td class="fn-num"><b>' + moeda(total) + '</b></td><td></td></tr></tfoot></table></div></div>' : vazio('Nada a receber no período.'))
     ligarPacientes(res)
     res.querySelectorAll('[data-rec]').forEach(function (b) { b.onclick = function () { receberParcela(d.itens.filter(function (i) { return i.origem === b.getAttribute('data-org') && i.id === +b.getAttribute('data-rec') })[0]) } })
   }
-  async function receberParcela(i) {
+  async function receberParcela(i, depois) {
     var cs = await contas()
     modal('Receber parcela', '<div id="fn-err"></div><div class="ag-hint" style="margin:0 0 12px">' + esc(i.paciente_nome || '') + ' · ' + esc(i.descricao) + ' · ' + moeda(i.valor) + '</div>' +
       '<div class="ag-row c3"><div class="ag-f"><label>Data</label><input class="ag-in" type="date" id="rc-data" value="' + hoje() + '"></div><div class="ag-f"><label>Forma</label><select class="ag-in" id="rc-forma">' + opcoesTexto(FORMAS, 'PIX') + '</select></div>' +
@@ -464,7 +464,7 @@
     el('rc-ok').onclick = async function () {
       var r = await apiPost('fin-receber-baixa', { id: i.id, origem: i.origem, acrescimo: el('enc-acr') ? el('enc-acr').value : 0, desconto: el('enc-desc') ? el('enc-desc').value : 0, data: el('rc-data').value, forma_pagamento: el('rc-forma').value, conta_id: el('rc-conta').value, detalhe: lerRecebivel(el('rc-forma').value) })
       if (!r.success) return erro(r.error || 'Erro')
-      fechar(); renderCReceber()
+      fechar(); (depois || renderCReceber)()
     }
   }
 
@@ -521,7 +521,7 @@
   }
 
   // Utilitários compartilhados com public/financeiro-controles.js
-  window.KFIN = { modal: modal, fechar: fechar, erro: erro, esc: esc, moeda: moeda, br: br, hoje: hoje, inicioMes: inicioMes, fimMes: fimMes, diaSemana: diaSemana, contas: contas, categorias: categorias,
+  window.KFIN = { receberParcela: receberParcela, modal: modal, fechar: fechar, erro: erro, esc: esc, moeda: moeda, br: br, hoje: hoje, inicioMes: inicioMes, fimMes: fimMes, diaSemana: diaSemana, contas: contas, categorias: categorias,
     opcoes: opcoes, opcoesTexto: opcoesTexto, sub: sub, linkPac: linkPac, ligarPacientes: ligarPacientes, csv: csv, kpi: kpi, vazio: vazio, carregando: carregando, pode: pode, isAdmin: isAdmin,
     camposRecebivel: camposRecebivel, lerRecebivel: lerRecebivel, gerenciarContas: gerenciarContas, FORMAS: FORMAS, cache: FN.cache }
   window.renderCC = renderCC

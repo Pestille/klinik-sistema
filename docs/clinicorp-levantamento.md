@@ -303,6 +303,7 @@ Layout: menu lateral com busca "Buscar configurações", grupos recolhíveis; co
 - **Controle de Estoque** (`/inventory_control`): lista de produtos com busca; por item: entrada (+), movimentação (entrada/saída), excluir, editar, quantidade disponível, unidade (UN/CX), alerta de estoque mínimo (i). + Adicionar produto.
 - **Gestão de alinhadores** (`/marketplace/aligners-management`): fichas de casos por status: Iniciados · Pendências da clínica · Pendências da empresa · Em tratamento · Finalizados (integração com fornecedor de alinhadores).
 - **Planos** (`/financial/plans`): **Plano próprio** (tabela de preço própria para empresas/famílias, checkout integrado) e **Plano recorrente** (tratamento em mensalidades com cobrança automática).
+  - **Plano recorrente** (`/plan_control`, observado sem salvar em 05/11/2026): nome, observações, lista de preços e procedimentos; cobrança Mensal, Bimestral, Trimestral, Semestral ou Outros; valor; juros a partir do mês seguinte ao vencimento (taxa não vista); duração indeterminada ou em meses; liberar a execução a cada N pagamentos; ao liberar, avisar a secretária (alerta de retorno) e o paciente (Clini.Me, SMS, e-mail). Traz 4 modelos prontos. Sem plano cadastrado na conta da Klinik, a adesão do paciente não foi observada.
 - **Portal de assinatura** (`/signature_portal`): Documentos pendentes · Documentos assinados · Certificado digital do profissional; assinatura em lote por período.
 - **Clinipay**: conta digital própria (abrir conta, extrato, recebíveis, maquininha). **No Klinov = Asaas.**
 - **Tutoriais do sistema**: vídeos de ajuda.
@@ -345,7 +346,6 @@ Fontes: 1.370 rotas de API e 163 rotas de tela do Clinicorp, telas abertas na co
 |---|---|---|---|
 | Portal de Assinatura | Pendentes e assinados feitos em 05/11. Faltam assinatura em lote e aba Certificado Digital (depende de B) | tela + código | 1 |
 | Agendamento online (link público, profissionais, horários) | Feito em 05/11 a partir das rotas: está desligado na conta da Klinik, então as opções internas do Clinicorp não foram vistas. Faltam link por paciente e por indicador, e aprovar ou rejeitar o pedido (`reject_scheduling`) | tela + rota | 1 |
-| Painel de atendimento (semana, pacientes por dia, por profissional, alertas de retorno) | Não existe | tela | 1 |
 | Comissão: recebimento, check-out, Geral × Plano, descontar impostos e taxas, requer aprovação, por especialidade | Só aprovação e execução, sem especialidade | tela + rota | 2 |
 | Cadeiras: cadastro e uso na agenda | Não existe; há só limite de simultâneos por profissional | rota | 2 |
 | Caixa: bloquear, desbloquear, devolver transação, saldo manual | Abre e fecha; o resto não | rota | 2 |
@@ -365,7 +365,7 @@ Fontes: 1.370 rotas de API e 163 rotas de tela do Clinicorp, telas abertas na co
 
 | Funcionalidade | O que depende | Prioridade |
 |---|---|---|
-| Plano Recorrente (mensalidade com cobrança automática) | Asaas, já usado | 1 |
+| Plano Recorrente: cobrança automática e juros (cadastro, adesões e mensalidades manuais já existem em `lib/rotas/planos.js`) | Asaas, já usado | 1 |
 | NFS-e | Emissor por município, certificado A1. Hoje o botão só registra um recibo | 2 |
 | Avaliações e perfil Google, Reservar com o Google | Conta e aprovação Google | 3 |
 | Alinhadores (casos, ClearCorrect) | Parceiro; esta conta não abre a tela | 3 |
@@ -384,6 +384,7 @@ Conta digital, maquininha e Clinipay (19 + 95 rotas; no Klinov o Asaas cumpre es
 ### Limites desta matriz
 
 - Prioridade 1 é o que falta no dia a dia da Klinik ou que já tem backend pronto. É uma proposta.
+- `/attendance-panel` saiu da matriz em 05/11: nesta conta, com perfil administrador, mostra a mesma tela de `/calendar`, não aparece no menu e não tem rota de API própria. O comportamento com perfil de dentista não foi visto.
 - Itens de origem "rota" podem existir no Klinov com outro nome. Cada um é conferido antes de implementar.
 - Paridade "exata" não se prova só por rotas: o comportamento de cada tela precisa ser observado quando for implementada.
 

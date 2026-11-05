@@ -19,6 +19,7 @@ var rotasPublico = require('../lib/rotas/publico')
 var rotasEquipe = require('../lib/rotas/equipe')
 var rotasAssinaturas = require('../lib/rotas/assinaturas')
 var rotasAgendaOnline = require('../lib/rotas/agenda-online')
+var rotasPlanos = require('../lib/rotas/planos')
 var rotasPacienteFin = require('../lib/rotas/paciente-fin')
 var rotasCrm = require('../lib/rotas/crm')
 var rotasOperacao = require('../lib/rotas/operacao')
@@ -56,6 +57,7 @@ var ROTA_PERMISSAO = {
     'comissoes-relatorio': 'financeiro.comissoes', 'comissoes-pagar': 'financeiro.comissoes', 'comissoes-profissional': 'financeiro.comissoes',
     'comissoes-config': { GET: 'profissionais.acessar', POST: 'profissionais.editar', DELETE: 'profissionais.editar' },
     'comissoes-procedimento': { GET: 'profissionais.acessar', POST: 'profissionais.editar' },
+    'planos-recorrentes': 'financeiro.planos', 'planos-adesoes': 'financeiro.planos', 'plano-adesao': 'financeiro.planos', 'plano-uso': 'financeiro.planos', 'plano-parcela': 'financeiro.dar_baixa',
     // Paciente
     'parcelas-paciente': 'pacientes.financeiro', 'parcelas-orcamento': 'pacientes.financeiro', 'cobrancas-paciente': 'pacientes.financeiro',
     'gerar-cobranca': 'pacientes.financeiro', 'parcela-baixa': 'pacientes.financeiro', 'parcela-cancelar': 'pacientes.financeiro',
@@ -176,6 +178,7 @@ module.exports = async function handler(req, res) {
         if (auth && await rotasEquipe.handle(route, ctxRota)) return
         if (auth && await rotasAssinaturas.handle(route, ctxRota)) return
         if (auth && await rotasAgendaOnline.handle(route, ctxRota)) return
+        if (auth && await rotasPlanos.handle(route, ctxRota)) return
         if (auth && await rotasPacienteFin.handle(route, ctxRota)) return
         if (auth && await rotasCrm.handle(route, ctxRota)) return
         if (auth && await rotasOperacao.handle(route, ctxRota)) return
