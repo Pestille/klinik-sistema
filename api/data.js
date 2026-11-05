@@ -62,7 +62,7 @@ var ROTA_PERMISSAO = {
     'recibos-paciente': 'pacientes.recibos',
     'salvar-odontograma': 'pacientes.odontograma', 'salvar-anamnese': 'pacientes.anamnese', 'anamnese-modelo': 'pacientes.anamnese', 'anamnese-link': 'pacientes.anamnese',
     'checkin-config': 'agenda.visualizar_classificacao', 'receita-saude': 'financeiro.receita_saude',
-    'assinaturas': 'pacientes.acessar', 'assinatura-solicitar': 'pacientes.acessar', 'assinatura-cancelar': 'pacientes.acessar',
+    'assinaturas': 'pacientes.acessar', 'assinaturas-portal': 'pacientes.acessar', 'assinatura-solicitar': 'pacientes.acessar', 'assinatura-cancelar': 'pacientes.acessar',
     'paciente-credito': 'pacientes.financeiro', 'paciente-avulso': 'pacientes.financeiro', 'anexos': 'financeiro.contas',
     'fotos-pastas': 'pacientes.fotos', 'foto-pasta': 'pacientes.fotos',
     'leads': 'crm.acessar', 'lead-interacoes': 'crm.acessar', 'orcamento-contrato': 'pacientes.documentos',

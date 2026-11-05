@@ -93,6 +93,8 @@
     return (d.data || []).filter(function (a) { return a.status === 'assinado' })[0] || null
   }
 
+  window.abrirAssinatura = abrirAssinatura
+
   // Ficha clínica (procedimentos executados): botão "Solicitar" do app.html
   window.solicitarAssinatura = function (procId) { abrirAssinatura('procedimento', procId, marcarFicha) }
   var marcando = false

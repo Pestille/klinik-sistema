@@ -333,6 +333,60 @@ Base: este levantamento + o inventário do código do Klinov (14/10/2026). ✅ c
 | Estoque · Protético · Indicação · Alinhadores · Planos · Portal | ❌ | Só placeholders |
 | CRM de leads / campanhas | 🟡 | Campanhas de email/WhatsApp existem; falta funil de leads |
 
+## Matriz de lacunas para paridade (05/11/2026)
+
+A tabela de comparação acima é de 14/10, antes das fases 0–9. Esta matriz a substitui para decidir o que falta.
+
+Fontes: 1.370 rotas de API e 163 rotas de tela do Clinicorp, telas abertas na conta da Klinik e busca no código do Klinov. **Origem:** tela = aberta na conta; rota = só pelo nome da rota, comportamento não observado; código = busca no Klinov.
+
+### A. Falta e não depende de terceiros
+
+| Funcionalidade | Situação no Klinov | Origem | Prioridade |
+|---|---|---|---|
+| Portal de Assinatura | Pendentes e assinados feitos em 05/11. Faltam assinatura em lote e aba Certificado Digital (depende de B) | tela + código | 1 |
+| Agendamento online (link público, profissionais, horários) | Nada no Klinov; existe só o app separado Agenda Link | tela + código | 1 |
+| Painel de atendimento (semana, pacientes por dia, por profissional, alertas de retorno) | Não existe | tela | 1 |
+| Comissão: recebimento, check-out, Geral × Plano, descontar impostos e taxas, requer aprovação, por especialidade | Só aprovação e execução, sem especialidade | tela + rota | 2 |
+| Cadeiras: cadastro e uso na agenda | Não existe; há só limite de simultâneos por profissional | rota | 2 |
+| Caixa: bloquear, desbloquear, devolver transação, saldo manual | Abre e fecha; o resto não | rota | 2 |
+| Fichas clínicas: ortodontia, implante | Não existem | rota | 2 |
+| Autorizar ou negar execução de procedimento | Não existe | rota | 2 |
+| Áudio de procedimento | Não existe | rota | 3 |
+| Tratamento: reordenar procedimentos, recuperar excluído, oportunidade | A confirmar | rota | 3 |
+| Estoque: consumo por procedimento, validade, em uso, devolução, descarte | Parcial | rota | 3 |
+| Fotos: pastas de comparação, pontos, baixar ZIP | Parcial (`fotos-pastas`) | rota | 3 |
+| Plano Próprio (tabela da clínica vendida a pacientes, empresas, famílias) | Não existe | tela | 3 |
+| Vouchers (15 rotas) | Não existe; esta conta não abre a tela | rota | 3 |
+| Central de agenda | Não existe; esta conta não abre a tela | rota | 3 |
+| Multiunidade (grupo, franquia, ranking, royalties) | Não existe; a Klinik tem uma unidade | rota | 3 |
+| Relatórios ausentes: Balancete, NFSe, Notas externas, Recibos, Avaliações Google, SPC/Serasa, Exames radiológicos, Planos recorrentes, Controle de ortodontia, Tratamentos ortodônticos, Implantes em tratamento, Estatística de implantes, Procedimentos vencidos | Dependem dos módulos acima, exceto Balancete, Recibos e Procedimentos vencidos | código | conforme o módulo |
+
+### B. Falta e depende de terceiros (contrato, credencial ou regulação)
+
+| Funcionalidade | O que depende | Prioridade |
+|---|---|---|
+| Plano Recorrente (mensalidade com cobrança automática) | Asaas, já usado | 1 |
+| NFS-e | Emissor por município, certificado A1. Hoje o botão só registra um recibo | 2 |
+| Avaliações e perfil Google, Reservar com o Google | Conta e aprovação Google | 3 |
+| Alinhadores (casos, ClearCorrect) | Parceiro; esta conta não abre a tela | 3 |
+| Consulta e registro SPC/Serasa | Adesão à CDL ou birô | 3 |
+| Centros radiológicos, diagnóstico digital | Convênio com cada centro | 3 |
+| Certificado digital ICP na assinatura | Provedor de certificado | 3 |
+| DDA | Banco | 3 |
+| SMS | Provedor pago | 3 |
+| Smartboard com conexão Meta | Aprovação Meta | 3 |
+| Clinicorp IA, BI e planejamento estratégico | Modelo de IA; o Klinov já usa IA no follow-up | 3 |
+
+### C. Proposta: não replicar
+
+Conta digital, maquininha e Clinipay (19 + 95 rotas; no Klinov o Asaas cumpre esse papel), empréstimo ao paciente (exige parceiro financeiro), `admin_clinicorp` e `subscription_panel` (administração interna do fornecedor), escola e cursos (`edu`, 100 rotas) e migração de banco (`migration_spanner`).
+
+### Limites desta matriz
+
+- Prioridade 1 é o que falta no dia a dia da Klinik ou que já tem backend pronto. É uma proposta.
+- Itens de origem "rota" podem existir no Klinov com outro nome. Cada um é conferido antes de implementar.
+- Paridade "exata" não se prova só por rotas: o comportamento de cada tela precisa ser observado quando for implementada.
+
 ## Regras de comissão observadas (05/11/2026)
 
 Fontes: tela do profissional (Configuração Comissão) e exportação BookEntry da Klinik.
