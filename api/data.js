@@ -25,7 +25,7 @@ var rotasCrm = require('../lib/rotas/crm')
 var rotasOperacao = require('../lib/rotas/operacao')
 var rotasFollowup = require('../lib/rotas/followup')
 var cfgLib = require('../lib/config')
-var { gerarComissao } = require('../lib/comissoes')
+var { gerarComissao, comissaoRecebimentoSegura } = require('../lib/comissoes')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
 // método; { GET, POST } quando leitura e escrita exigem recursos diferentes.
@@ -1862,7 +1862,7 @@ module.exports = async function handler(req, res) {
                 await client.execute({ sql: "UPDATE cobrancas SET status='cancelado', updated_at=datetime('now') WHERE id IN (SELECT cobranca_id FROM parcelas_orcamento WHERE orcamento_id=? AND clinica_id=? AND cobranca_id IS NOT NULL) AND clinica_id=? AND status='pendente'", args: [da.id, clinica_id, clinica_id] })
 
                 // Cancel pending commissions
-                await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_id=? AND clinica_id=? AND status='pendente'", args: [da.id, clinica_id] })
+                await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_id=? AND clinica_id=? AND status IN ('pendente','aguardando')", args: [da.id, clinica_id] })
 
                 // Calculate refund: how much was already paid
                 var daPago = await client.execute({ sql: "SELECT COALESCE(SUM(valor),0) as total FROM parcelas_orcamento WHERE orcamento_id=? AND clinica_id=? AND status='pago'", args: [da.id, clinica_id] })
@@ -1896,7 +1896,7 @@ module.exports = async function handler(req, res) {
 
                 // Cancel non-executed item commissions
                 for (var dai = 0; dai < daNaoExec.length; dai++) {
-                    await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_item_id=? AND clinica_id=? AND status='pendente'", args: [daNaoExec[dai].id, clinica_id] })
+                    await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_item_id=? AND clinica_id=? AND status IN ('pendente','aguardando')", args: [daNaoExec[dai].id, clinica_id] })
                 }
 
                 // Cancel pending parcelas
@@ -1992,7 +1992,7 @@ module.exports = async function handler(req, res) {
             var rnCob = await client.execute({ sql: "UPDATE cobrancas SET status='cancelado', updated_at=datetime('now') WHERE id IN (SELECT cobranca_id FROM parcelas_orcamento WHERE orcamento_id=? AND clinica_id=? AND cobranca_id IS NOT NULL AND status='cancelado') AND clinica_id=? AND status IN ('pendente','vencido')", args: [rn.id, clinica_id, clinica_id] })
 
             // Cancel pending commissions
-            try { await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_id=? AND clinica_id=? AND status='pendente'", args: [rn.id, clinica_id] }) } catch(e) {}
+            try { await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_id=? AND clinica_id=? AND status IN ('pendente','aguardando')", args: [rn.id, clinica_id] }) } catch(e) {}
 
             // Try to cancel in Asaas API
             var rnApiKey = ''
@@ -2428,7 +2428,9 @@ module.exports = async function handler(req, res) {
                         // Cascade to parcelas
                         try {
                             if (scNovoStatus === 'pago') {
+                                var scParcIds = (await client.execute({ sql: "SELECT id FROM parcelas_orcamento WHERE cobranca_id=? AND clinica_id=? AND status!='pago'", args: [scCob.id, clinica_id] })).rows.map(function (r) { return r.id })
                                 await client.execute({ sql: "UPDATE parcelas_orcamento SET status='pago', data_pagamento=datetime('now'), updated_at=datetime('now') WHERE cobranca_id=? AND status!='pago'", args: [scCob.id] })
+                                for (var scPi = 0; scPi < scParcIds.length; scPi++) await comissaoRecebimentoSegura(client, clinica_id, scParcIds[scPi], new Date(Date.now() - 4 * 3600 * 1000).toISOString().slice(0, 10))
                                 await client.execute({ sql: "UPDATE clinicas SET saldo=saldo+? WHERE id=?", args: [scCob.valor, clinica_id] })
                             } else if (scNovoStatus === 'vencido') {
                                 await client.execute({ sql: "UPDATE parcelas_orcamento SET status='vencido', updated_at=datetime('now') WHERE cobranca_id=? AND status='pendente'", args: [scCob.id] })
@@ -2579,11 +2581,17 @@ module.exports = async function handler(req, res) {
             if (req.method === 'POST') {
                 var cc = req.body || {}
                 if (!cc.profissional_id || !cc.momento || !cc.tipo || cc.valor === undefined) return res.status(400).json({ success: false, error: 'profissional_id, momento, tipo e valor obrigatórios' })
+                if (['aprovacao', 'execucao', 'recebimento'].indexOf(cc.momento) < 0) return res.status(400).json({ success: false, error: 'Momento inválido' })
+                var ccImp = parseFloat(cc.imposto_pct) || 0
+                if (ccImp < 0 || ccImp >= 100) return res.status(400).json({ success: false, error: 'Imposto deve ficar entre 0 e 99,99%' })
+                // Desconto de taxas e de imposto só fazem sentido sobre o valor recebido
+                var ccRec = cc.momento === 'recebimento'
+                var ccOpc = [cc.requer_aprovacao ? 1 : 0, ccRec && cc.descontar_taxas ? 1 : 0, ccRec ? ccImp : 0]
                 if (cc.id) {
-                    await client.execute({ sql: "UPDATE comissoes_config SET tabela_preco=?, momento=?, tipo=?, valor=?, valido_desde=?, valido_ate=?, editado_por=? WHERE id=? AND clinica_id=?", args: [cc.tabela_preco || 'PARTICULAR', cc.momento, cc.tipo, parseFloat(cc.valor), cc.valido_desde || '', cc.valido_ate || '', cc.editado_por || '', cc.id, clinica_id] })
+                    await client.execute({ sql: "UPDATE comissoes_config SET tabela_preco=?, momento=?, tipo=?, valor=?, valido_desde=?, valido_ate=?, editado_por=?, requer_aprovacao=?, descontar_taxas=?, imposto_pct=? WHERE id=? AND clinica_id=?", args: [cc.tabela_preco || 'PARTICULAR', cc.momento, cc.tipo, parseFloat(cc.valor), cc.valido_desde || '', cc.valido_ate || '', cc.editado_por || ''].concat(ccOpc, [cc.id, clinica_id]) })
                     return res.status(200).json({ success: true, msg: 'Regra atualizada' })
                 }
-                var ccIns = await client.execute({ sql: "INSERT INTO comissoes_config(clinica_id, profissional_id, tabela_preco, momento, tipo, valor, valido_desde, valido_ate, editado_por) VALUES(?,?,?,?,?,?,?,?,?)", args: [clinica_id, cc.profissional_id, cc.tabela_preco || 'PARTICULAR', cc.momento, cc.tipo, parseFloat(cc.valor), cc.valido_desde || '', cc.valido_ate || '', cc.editado_por || ''] })
+                var ccIns = await client.execute({ sql: "INSERT INTO comissoes_config(clinica_id, profissional_id, tabela_preco, momento, tipo, valor, valido_desde, valido_ate, editado_por, requer_aprovacao, descontar_taxas, imposto_pct) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", args: [clinica_id, cc.profissional_id, cc.tabela_preco || 'PARTICULAR', cc.momento, cc.tipo, parseFloat(cc.valor), cc.valido_desde || '', cc.valido_ate || '', cc.editado_por || ''].concat(ccOpc) })
                 return res.status(200).json({ success: true, id: Number(ccIns.lastInsertRowid) })
             }
             if (req.method === 'DELETE' || (req.method === 'POST' && (req.body || {}).action === 'delete')) {
@@ -2626,6 +2634,15 @@ module.exports = async function handler(req, res) {
 
         // ── COMISSOES-PROFISSIONAL (lista lançamentos) ──────────────
         if (route === 'comissoes-profissional') {
+            if (req.method === 'POST') {
+                // Comissões geradas por regra com aprovação: aprovar libera para pagamento
+                var cpa = req.body || {}
+                var cpaIds = (Array.isArray(cpa.ids) ? cpa.ids : [cpa.id]).map(function (x) { return parseInt(x) || 0 }).filter(Boolean)
+                if (!cpaIds.length) return res.status(400).json({ success: false, error: 'Nenhuma comissão selecionada' })
+                if (cpa.action !== 'aprovar' && cpa.action !== 'recusar') return res.status(400).json({ success: false, error: 'Ação inválida' })
+                var cpaUp = await client.execute({ sql: "UPDATE comissoes_lancamentos SET status=? WHERE clinica_id=? AND status='aguardando' AND id IN (" + cpaIds.map(function () { return '?' }).join(',') + ")", args: [cpa.action === 'aprovar' ? 'pendente' : 'cancelado', clinica_id].concat(cpaIds) })
+                return res.status(200).json({ success: true, alteradas: cpaUp.rowsAffected })
+            }
             var cpProfId = parseInt(q.profissional_id) || 0
             if (!cpProfId) return res.status(400).json({ success: false, error: 'profissional_id obrigatório' })
             var cpW = ["clinica_id=?", "profissional_id=?"], cpA = [clinica_id, cpProfId]
@@ -2634,7 +2651,7 @@ module.exports = async function handler(req, res) {
             if (q.ate) { cpW.push("data_referencia<=?"); cpA.push(q.ate) }
             if (!q.de && !q.ate && q.mes) { cpW.push("strftime('%Y-%m',data_referencia)=?"); cpA.push(q.mes) }
             var cpRows = await client.execute({ sql: "SELECT * FROM comissoes_lancamentos WHERE " + cpW.join(' AND ') + " ORDER BY data_referencia DESC", args: cpA })
-            var cpTotais = { pendente: 0, pago: 0, cancelado: 0 }
+            var cpTotais = { aguardando: 0, pendente: 0, pago: 0, cancelado: 0 }
             cpRows.rows.forEach(function(r) { if (cpTotais[r.status] !== undefined) cpTotais[r.status] += r.valor_comissao })
             return res.status(200).json({ success: true, comissoes: cpRows.rows, totais: cpTotais })
         }
@@ -2646,20 +2663,25 @@ module.exports = async function handler(req, res) {
             var cpgData = cpg.data_pagamento || new Date().toISOString().slice(0, 10)
             if (cpg.ids && cpg.ids.length) {
                 // Batch pay
+                // Só entram no total as que estavam pendentes (não as já pagas nem as aguardando aprovação)
+                var cpgPagas = []
                 for (var cpi = 0; cpi < cpg.ids.length; cpi++) {
-                    await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='pago', data_pagamento=? WHERE id=? AND clinica_id=?", args: [cpgData, cpg.ids[cpi], clinica_id] })
+                    var cpgUp = await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='pago', data_pagamento=? WHERE id=? AND clinica_id=? AND status='pendente'", args: [cpgData, cpg.ids[cpi], clinica_id] })
+                    if (cpgUp.rowsAffected) cpgPagas.push(cpg.ids[cpi])
                 }
+                if (!cpgPagas.length) return res.status(400).json({ success: false, error: 'Nenhuma comissão pendente entre as selecionadas' })
                 // Create lancamento for total
-                var cpgTotal = await client.execute({ sql: "SELECT SUM(valor_comissao) as total, profissional_nome FROM comissoes_lancamentos WHERE clinica_id=? AND id IN (" + cpg.ids.map(function() { return '?' }).join(',') + ")", args: [clinica_id].concat(cpg.ids) })
+                var cpgTotal = await client.execute({ sql: "SELECT SUM(valor_comissao) as total, profissional_nome FROM comissoes_lancamentos WHERE clinica_id=? AND id IN (" + cpgPagas.map(function() { return '?' }).join(',') + ")", args: [clinica_id].concat(cpgPagas) })
                 if (cpgTotal.rows.length && cpgTotal.rows[0].total) {
                     try {
                         await client.execute({ sql: "INSERT INTO lancamentos(clinica_id, data, tipo, descricao, valor, classificacao, categoria, status) VALUES(?,?,?,?,?,?,?,?)", args: [clinica_id, cpgData, 'Saída', 'Comissão - ' + (cpgTotal.rows[0].profissional_nome || ''), cpgTotal.rows[0].total, 'Custo Variável', 'Comissão Profissionais', 'realizado'] })
                     } catch(e) {}
                 }
-                return res.status(200).json({ success: true, msg: cpg.ids.length + ' comissões pagas' })
+                return res.status(200).json({ success: true, msg: cpgPagas.length + ' comissões pagas' })
             }
             if (cpg.id) {
-                await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='pago', data_pagamento=? WHERE id=? AND clinica_id=?", args: [cpgData, cpg.id, clinica_id] })
+                var cpgUm = await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='pago', data_pagamento=? WHERE id=? AND clinica_id=? AND status='pendente'", args: [cpgData, cpg.id, clinica_id] })
+                if (!cpgUm.rowsAffected) return res.status(400).json({ success: false, error: 'Esta comissão não está pendente' })
                 return res.status(200).json({ success: true, msg: 'Comissão paga' })
             }
             return res.status(400).json({ success: false, error: 'id ou ids obrigatório' })
@@ -2739,7 +2761,7 @@ module.exports = async function handler(req, res) {
             }
             await client.execute({ sql: "UPDATE orcamento_itens SET executado=0, data_execucao=NULL WHERE id=? AND clinica_id=?", args: [de2.orcamento_item_id, clinica_id] })
             // Cancel related commission
-            try { await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_item_id=? AND clinica_id=? AND momento='execucao' AND status='pendente'", args: [de2.orcamento_item_id, clinica_id] }) } catch(e) {}
+            try { await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_item_id=? AND clinica_id=? AND momento='execucao' AND status IN ('pendente','aguardando')", args: [de2.orcamento_item_id, clinica_id] }) } catch(e) {}
             return res.status(200).json({ success: true, msg: 'Execução desfeita' })
         }
 
@@ -3465,6 +3487,7 @@ module.exports = async function handler(req, res) {
                 sql: "UPDATE parcelas_orcamento SET status='pago', data_pagamento=?, forma_pagamento=COALESCE(?,forma_pagamento), conta_id=COALESCE(?,conta_id), valor_pago=?, acrescimo=?, desconto_baixa=?, updated_at=datetime('now') WHERE id=? AND clinica_id=?",
                 args: [pbData, pb.forma_pagamento || null, parseInt(pb.conta_id) || null, pbVal.valor_pago, pbVal.acrescimo, pbVal.desconto, pb.id, clinica_id]
             })
+            await comissaoRecebimentoSegura(client, clinica_id, pb.id, pbData)
 
             return res.status(200).json({ success: true, msg: 'Baixa realizada' })
         }
@@ -3487,6 +3510,7 @@ module.exports = async function handler(req, res) {
                 sql: "UPDATE parcelas_orcamento SET status='cancelado', updated_at=datetime('now') WHERE id=? AND clinica_id=?",
                 args: [pc.id, clinica_id]
             })
+            try { await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE parcela_id=? AND clinica_id=? AND status IN ('pendente','aguardando')", args: [pc.id, clinica_id] }) } catch(e) {}
             return res.status(200).json({ success: true, msg: 'Parcela cancelada' })
         }
 

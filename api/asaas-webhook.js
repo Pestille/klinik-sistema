@@ -70,11 +70,13 @@ module.exports = async function handler(req, res) {
                         await client.execute({ sql: "UPDATE clinicas SET saldo=saldo+? WHERE id=?", args: [cob.valor, cob.clinica_id] })
                         // Cascade: mark linked parcela as paid
                         try {
+                            var parcIds = (await client.execute({ sql: "SELECT id FROM parcelas_orcamento WHERE cobranca_id=? AND clinica_id=? AND status!='pago'", args: [cob.id, cob.clinica_id] })).rows.map(function (r) { return r.id })
                             var parcUpd = await client.execute({
                                 sql: "UPDATE parcelas_orcamento SET status='pago', data_pagamento=datetime('now'), updated_at=datetime('now') WHERE cobranca_id=? AND status!='pago'",
                                 args: [cob.id]
                             })
                             if (parcUpd.rowsAffected > 0) console.log('[asaas-webhook] Parcela baixada automaticamente via cobranca_id=' + cob.id)
+                            for (var pi = 0; pi < parcIds.length; pi++) await require('../lib/comissoes').comissaoRecebimentoSegura(client, cob.clinica_id, parcIds[pi], new Date(Date.now() - 4 * 3600 * 1000).toISOString().slice(0, 10))
                         } catch(ep) { console.error('[asaas-webhook] Parcela cascade error:', ep.message) }
                         console.log('[asaas-webhook] Pagamento confirmado: R$' + cob.valor + ' clinica_id=' + cob.clinica_id)
                     }

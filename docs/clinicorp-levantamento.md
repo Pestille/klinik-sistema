@@ -346,7 +346,7 @@ Fontes: 1.370 rotas de API e 163 rotas de tela do Clinicorp, telas abertas na co
 |---|---|---|---|
 | Portal de Assinatura | Pendentes e assinados feitos em 05/11. Faltam assinatura em lote e aba Certificado Digital (depende de B) | tela + código | 1 |
 | Agendamento online (link público, profissionais, horários) | Feito em 05/11 a partir das rotas: está desligado na conta da Klinik, então as opções internas do Clinicorp não foram vistas. Faltam link por paciente e por indicador, e aprovar ou rejeitar o pedido (`reject_scheduling`) | tela + rota | 1 |
-| Comissão: recebimento, check-out, Geral × Plano, descontar impostos e taxas, requer aprovação, por especialidade | Só aprovação e execução, sem especialidade | tela + rota | 2 |
+| Comissão: check-out, Geral × Plano, por especialidade, data de pagamento do cartão | Feito em 05/11: recebimento (dividido entre os procedimentos na proporção do valor), requer aprovação, descontar taxa do cartão e % de imposto. Falta o resto | tela + rota | 2 |
 | Cadeiras: cadastro e uso na agenda | Não existe; há só limite de simultâneos por profissional | rota | 2 |
 | Caixa: bloquear, desbloquear, devolver transação, saldo manual | Abre e fecha; o resto não | rota | 2 |
 | Fichas clínicas: ortodontia, implante | Não existem | rota | 2 |

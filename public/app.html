@@ -4299,7 +4299,7 @@ async function renderProfConfigComissao(p){
     var d=await apiData('comissoes-config',{profissional_id:profId})
     var configs=d.configs||[]
     var tabelas=['PARTICULAR','CASSEMS','SULAMERICA','VIVENTERIS','PREVIDENT','TODAS']
-    var momentoLabel={'aprovacao':'Aprovação','execucao':'Execução'}
+    var momentoLabel={'aprovacao':'Aprovação','execucao':'Execução','recebimento':'Recebimento'}
     var tipoLabel={'percentual':'Percentual','fixo':'Valor Fixo'}
 
     var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'+
@@ -4309,10 +4309,10 @@ async function renderProfConfigComissao(p){
 
     if(!configs.length){html+='<div style="text-align:center;padding:40px;color:#9e9e9e">Nenhuma regra configurada. Adicione uma configuração de comissão.</div>'}
     else{
-      html+='<table class="tbl" style="width:100%"><thead><tr><th>Tabela de Preço</th><th>Momento</th><th>Tipo</th><th>Valor</th><th>Válido desde</th><th>Válido até</th><th>Editado por</th><th>Ações</th></tr></thead><tbody>'
+      html+='<table class="tbl" style="width:100%"><thead><tr><th>Tabela de Preço</th><th>Momento</th><th>Tipo</th><th>Valor</th><th>Opções</th><th>Válido desde</th><th>Válido até</th><th>Editado por</th><th>Ações</th></tr></thead><tbody>'
       configs.forEach(function(c){
         var valStr=c.tipo==='percentual'?c.valor+'%':fmtBrl(c.valor)
-        html+='<tr><td><span class="badge badge-blue">'+(c.tabela_preco||'PARTICULAR')+'</span></td><td>'+(momentoLabel[c.momento]||c.momento)+'</td><td>'+(tipoLabel[c.tipo]||c.tipo)+'</td><td style="font-weight:600;color:#1B5E3B">'+valStr+'</td><td>'+(c.valido_desde?fmtDt(c.valido_desde):'—')+'</td><td>'+(c.valido_ate?fmtDt(c.valido_ate):'—')+'</td><td style="font-size:12px;color:var(--text3)">'+(c.editado_por||'—')+'</td><td><button onclick="excluirComConfig('+c.id+','+profId+')" style="background:transparent;color:var(--red);border:1px solid var(--red);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Excluir</button></td></tr>'
+        html+='<tr><td><span class="badge badge-blue">'+(c.tabela_preco||'PARTICULAR')+'</span></td><td>'+(momentoLabel[c.momento]||c.momento)+'</td><td>'+(tipoLabel[c.tipo]||c.tipo)+'</td><td style="font-weight:600;color:#1B5E3B">'+valStr+'</td><td style="font-size:12px;color:var(--text3)">'+comOpcoesTxt(c)+'</td><td>'+(c.valido_desde?fmtDt(c.valido_desde):'—')+'</td><td>'+(c.valido_ate?fmtDt(c.valido_ate):'—')+'</td><td style="font-size:12px;color:var(--text3)">'+(c.editado_por||'—')+'</td><td><button onclick="excluirComConfig('+c.id+','+profId+')" style="background:transparent;color:var(--red);border:1px solid var(--red);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Excluir</button></td></tr>'
       })
       html+='</tbody></table>'
     }
@@ -4332,7 +4332,7 @@ function abrirModalComConfig(profId){
       '<div style="font-size:18px;font-weight:500;color:#1A1A1A;margin-bottom:20px">Nova Regra de Comissão</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Tabela de Preço</label><select id="cc-tabela" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none">'+tabelas.map(function(t){return '<option value="'+t+'">'+t+'</option>'}).join('')+'</select></div>'+
-        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Momento da Comissão</label><select id="cc-momento" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none"><option value="aprovacao">Na Aprovação do Orçamento</option><option value="execucao">Na Execução do Procedimento</option></select></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Momento da Comissão</label><select id="cc-momento" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none"><option value="aprovacao">Na Aprovação do Orçamento</option><option value="execucao">Na Execução do Procedimento</option><option value="recebimento">No Recebimento do Pagamento</option></select></div>'+
       '</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Tipo</label><select id="cc-tipo" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none"><option value="percentual">Percentual (%)</option><option value="fixo">Valor Fixo (R$)</option></select></div>'+
@@ -4342,6 +4342,12 @@ function abrirModalComConfig(profId){
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Válido desde</label><input id="cc-desde" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Válido até (opcional)</label><input id="cc-ate" type="date" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
       '</div>'+
+      '<label style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text2);margin-bottom:12px;cursor:pointer"><input type="checkbox" id="cc-aprov" style="accent-color:#034030"> Requer aprovação antes do pagamento</label>'+
+      '<div id="cc-rec-opc" style="display:none;border-top:1px solid var(--border2);padding-top:12px;margin-bottom:16px">'+
+        '<div style="font-size:12px;color:var(--text3);margin-bottom:8px">O valor pago na parcela é dividido entre os procedimentos do orçamento, na proporção do valor de cada um.</div>'+
+        '<label style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text2);margin-bottom:12px;cursor:pointer"><input type="checkbox" id="cc-taxas" style="accent-color:#034030"> Descontar a taxa do cartão</label>'+
+        '<div style="width:50%"><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Imposto a descontar (%)</label><input id="cc-imposto" type="number" min="0" max="99.99" step="0.01" placeholder="0" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+      '</div>'+
       '<div style="display:flex;gap:8px;justify-content:flex-end">'+
         '<button onclick="document.getElementById(\'modal-com-config\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
         '<button onclick="salvarComConfig('+profId+')" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Salvar</button>'+
@@ -4349,6 +4355,16 @@ function abrirModalComConfig(profId){
     '</div>'
   document.body.appendChild(m)
   m.onclick=function(ev){if(ev.target===m)m.remove()}
+  var sel=document.getElementById('cc-momento')
+  sel.onchange=function(){document.getElementById('cc-rec-opc').style.display=sel.value==='recebimento'?'block':'none'}
+}
+
+function comOpcoesTxt(c){
+  var o=[]
+  if(Number(c.requer_aprovacao))o.push('Requer aprovação')
+  if(c.momento==='recebimento'&&Number(c.descontar_taxas))o.push('Desconta taxa do cartão')
+  if(c.momento==='recebimento'&&Number(c.imposto_pct)>0)o.push('Desconta '+String(c.imposto_pct).replace('.',',')+'% de imposto')
+  return o.length?o.join(' · '):'—'
 }
 
 async function salvarComConfig(profId){
@@ -4360,7 +4376,8 @@ async function salvarComConfig(profId){
   var ate=document.getElementById('cc-ate').value
   if(!valor){alert('Informe o valor');return}
   try{
-    var r=await apiPost('comissoes-config',{profissional_id:profId,tabela_preco:tabela,momento:momento,tipo:tipo,valor:parseFloat(valor),valido_desde:desde,valido_ate:ate,editado_por:(ST.user||{}).nome||''})
+    var r=await apiPost('comissoes-config',{profissional_id:profId,tabela_preco:tabela,momento:momento,tipo:tipo,valor:parseFloat(valor),valido_desde:desde,valido_ate:ate,editado_por:(ST.user||{}).nome||'',
+      requer_aprovacao:document.getElementById('cc-aprov').checked?1:0,descontar_taxas:document.getElementById('cc-taxas').checked?1:0,imposto_pct:parseFloat(document.getElementById('cc-imposto').value)||0})
     if(r.success){document.getElementById('modal-com-config').remove();renderProfConfigComissao(_profDetData)}
     else alert(r.error||'Erro')
   }catch(e){alert('Erro: '+e.message)}
@@ -4382,12 +4399,12 @@ async function renderProfAnaliseComissao(p){
     var mesAtual=new Date().toISOString().slice(0,7)
     var d=await apiData('comissoes-profissional',{profissional_id:profId,mes:mesAtual})
     var comissoes=d.comissoes||[],tots=d.totais||{}
-    var momentoLabel={'aprovacao':'Aprovação','execucao':'Execução'}
+    var momentoLabel={'aprovacao':'Aprovação','execucao':'Execução','recebimento':'Recebimento'}
 
     var html='<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px">'+
       '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:#9e9e9e">De</span><input type="date" id="ca-de" style="border:1px solid #e0e0e0;border-radius:4px;padding:6px 10px;font-size:13px"></div>'+
       '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:#9e9e9e">Até</span><input type="date" id="ca-ate" style="border:1px solid #e0e0e0;border-radius:4px;padding:6px 10px;font-size:13px"></div>'+
-      '<select id="ca-status" style="border:1px solid #e0e0e0;border-radius:4px;padding:6px 10px;font-size:13px"><option value="todas">Todos Status</option><option value="pendente">Pendentes</option><option value="pago">Pagas</option></select>'+
+      '<select id="ca-status" style="border:1px solid #e0e0e0;border-radius:4px;padding:6px 10px;font-size:13px"><option value="todas">Todos Status</option><option value="aguardando">Aguardando aprovação</option><option value="pendente">Pendentes</option><option value="pago">Pagas</option></select>'+
       '<button onclick="filtrarAnaliseComissao('+profId+')" class="pdt-btn-outline">Listar</button></div>'
 
     // Summary cards
@@ -4401,11 +4418,11 @@ async function renderProfAnaliseComissao(p){
     else{
       comissoes.forEach(function(c){
         var stClass=c.status==='pago'?'green':c.status==='cancelado'?'gray':'orange'
-        var stLabel=c.status==='pago'?'PAGO':c.status==='cancelado'?'CANCELADO':'PENDENTE'
+        var stLabel=c.status==='pago'?'PAGO':c.status==='cancelado'?'CANCELADO':c.status==='aguardando'?'AGUARDANDO APROVAÇÃO':'PENDENTE'
         var tipoStr=c.tipo==='percentual'?c.percentual+'%':'Fixo'
         html+='<div class="comissao-card"><div class="comissao-card-head">'+
           '<div style="font-size:13px;color:#616161;min-width:100px">'+fmtDt(c.data_referencia)+'</div>'+
-          '<div class="comissao-badge" style="background:'+(c.momento==='aprovacao'?'#1565C0':'#2E7D32')+'">'+(momentoLabel[c.momento]||c.momento)+'</div>'+
+          '<div class="comissao-badge" style="background:'+(c.momento==='aprovacao'?'#1565C0':c.momento==='recebimento'?'#E65100':'#2E7D32')+'">'+(momentoLabel[c.momento]||c.momento)+'</div>'+
           '<div class="comissao-col"><div class="comissao-col-label">Paciente</div><div class="comissao-col-val">'+escHtml(c.paciente_nome||'—')+'</div></div>'+
           '<div class="comissao-col"><div class="comissao-col-label">Procedimento</div><div class="comissao-col-val">'+escHtml(c.procedimento_nome||'—')+'</div></div>'+
           '<div class="comissao-col"><div class="comissao-col-label">Valor Base</div><div class="comissao-col-val">'+fmtBrl(c.valor_base)+'</div></div>'+
@@ -4444,6 +4461,8 @@ async function renderProfComissoes(p){
     var d=await apiData('comissoes-profissional',{profissional_id:profId,status:'pendente'})
     var comissoes=d.comissoes||[],tots=d.totais||{}
     var totalPend=tots.pendente||0
+    var dAg=await apiData('comissoes-profissional',{profissional_id:profId,status:'aguardando'})
+    var aguard=dAg.comissoes||[]
 
     var html='<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">'+
       '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:#9e9e9e">De</span><input type="date" id="cp-de" style="border:1px solid #e0e0e0;border-radius:4px;padding:6px 10px;font-size:13px"></div>'+
@@ -4454,17 +4473,39 @@ async function renderProfComissoes(p){
     }
     html+='</div>'
 
+    if(aguard.length){
+      html+='<div style="background:var(--orange-light);border-radius:8px;padding:16px;margin-bottom:20px">'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><div style="font-size:13px;font-weight:500;color:var(--orange);text-transform:uppercase;letter-spacing:.04em">Aguardando aprovação ('+aguard.length+')</div>'+
+        '<button onclick="aprovarComissoes(\'aprovar\')" style="margin-left:auto;background:var(--orange);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Aprovar selecionadas</button>'+
+        '<button onclick="aprovarComissoes(\'recusar\')" style="background:transparent;color:var(--red);border:1.5px solid var(--red);border-radius:6px;padding:7px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Recusar</button></div>'+
+        '<table class="tbl" style="width:100%;background:#fff"><thead><tr><th></th><th>Data</th><th>Momento</th><th>Procedimento</th><th>Paciente</th><th style="text-align:right">Valor Base</th><th style="text-align:right">Comissão</th></tr></thead><tbody>'
+      aguard.forEach(function(c){
+        html+='<tr><td><input type="checkbox" class="ca-aprov" value="'+c.id+'" checked style="accent-color:#034030"></td><td>'+fmtDt(c.data_referencia)+'</td><td>'+({aprovacao:'Aprovação',execucao:'Execução',recebimento:'Recebimento'}[c.momento]||c.momento)+'</td><td style="font-size:12px">'+escHtml(c.procedimento_nome||'—')+'</td><td>'+escHtml(c.paciente_nome||'—')+'</td><td style="text-align:right">'+fmtBrl(c.valor_base)+'</td><td style="text-align:right;font-weight:500">'+fmtBrl(c.valor_comissao)+'</td></tr>'
+      })
+      html+='</tbody></table></div>'
+    }
     if(!comissoes.length){html+='<div style="text-align:center;padding:40px;color:#9e9e9e">Sem comissões pendentes</div>'}
     else{
       html+='<table class="tbl" style="width:100%"><thead><tr><th><input type="checkbox" id="cp-check-all" onchange="cpToggleAll()" style="accent-color:#034030"></th><th>Data</th><th>Momento</th><th>Procedimento</th><th>Paciente</th><th>Tabela</th><th style="text-align:right">Valor Base</th><th style="text-align:right">Comissão</th><th>Ações</th></tr></thead><tbody>'
       comissoes.forEach(function(c){
-        var momentoLabel=c.momento==='aprovacao'?'Aprovação':'Execução'
-        html+='<tr><td><input type="checkbox" class="cp-check" value="'+c.id+'" style="accent-color:#034030"></td><td>'+fmtDt(c.data_referencia)+'</td><td><span class="badge badge-'+(c.momento==='aprovacao'?'blue':'green')+'">'+momentoLabel+'</span></td><td style="font-size:12px">'+escHtml(c.procedimento_nome||'—')+'</td><td>'+escHtml(c.paciente_nome||'—')+'</td><td style="font-size:12px">'+(c.tabela_preco||'—')+'</td><td style="text-align:right">'+fmtBrl(c.valor_base)+'</td><td style="text-align:right;font-weight:600;color:#1B5E3B">'+fmtBrl(c.valor_comissao)+'</td><td><button onclick="pagarComissao('+c.id+','+profId+')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Pagar</button></td></tr>'
+        var momentoLabel={aprovacao:'Aprovação',execucao:'Execução',recebimento:'Recebimento'}[c.momento]||c.momento
+        html+='<tr><td><input type="checkbox" class="cp-check" value="'+c.id+'" style="accent-color:#034030"></td><td>'+fmtDt(c.data_referencia)+'</td><td><span class="badge badge-'+(c.momento==='aprovacao'?'blue':c.momento==='recebimento'?'orange':'green')+'">'+momentoLabel+'</span></td><td style="font-size:12px">'+escHtml(c.procedimento_nome||'—')+'</td><td>'+escHtml(c.paciente_nome||'—')+'</td><td style="font-size:12px">'+(c.tabela_preco||'—')+'</td><td style="text-align:right">'+fmtBrl(c.valor_base)+'</td><td style="text-align:right;font-weight:600;color:#1B5E3B">'+fmtBrl(c.valor_comissao)+'</td><td><button onclick="pagarComissao('+c.id+','+profId+')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Pagar</button></td></tr>'
       })
       html+='</tbody><tfoot><tr style="border-top:2px solid var(--border)"><td colspan="7" style="padding:12px 14px;text-align:right;font-weight:700">Total Pendente</td><td style="padding:12px 14px;text-align:right;font-weight:700;color:#1B5E3B">'+fmtBrl(totalPend)+'</td><td></td></tr></tfoot></table>'
     }
     el.innerHTML=html
   }catch(e){el.innerHTML='<div style="color:#D32F2F;padding:20px">'+e.message+'</div>'}
+}
+
+async function aprovarComissoes(acao){
+  var ids=[];document.querySelectorAll('.ca-aprov:checked').forEach(function(cb){ids.push(parseInt(cb.value))})
+  if(!ids.length){alert('Nenhuma comissão selecionada');return}
+  if(!confirm((acao==='aprovar'?'Aprovar ':'Recusar ')+ids.length+' comissão(ões)?'))return
+  try{
+    var r=await apiPost('comissoes-profissional',{action:acao,ids:ids})
+    if(r.success)renderProfComissoes(_profDetData)
+    else alert(r.error||'Erro')
+  }catch(e){alert('Erro: '+e.message)}
 }
 
 function cpToggleAll(){
