@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Agendar consulta — Klinov</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/publico.css">
+</head>
+<body>
+<header class="pb-top"><span id="clinica">Agendar consulta</span></header>
+<main class="pb-main" id="app"><div class="pb-card"><div class="pb-sk"></div><div class="pb-sk" style="width:60%"></div></div></main>
+<footer class="pb-rodape">Usamos seus dados só para marcar e confirmar a consulta.</footer>
+<script>
+;(function () {
+  'use strict'
+  var c = new URLSearchParams(location.search).get('c') || ''
+  var app = document.getElementById('app')
+  var E = { clinica: '', profs: [], prof: null, dias: [], dia: null, hora: null }
+  var SEM = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') }
+  function br(d) { var p = String(d).split('-'); return p[2] + '/' + p[1] + '/' + p[0] }
+  function sem(d) { return SEM[new Date(d + 'T12:00:00Z').getUTCDay()] }
+  function aviso(titulo, texto) { app.innerHTML = '<div class="pb-card pb-centro"><h1>' + esc(titulo) + '</h1><p>' + esc(texto) + '</p></div>' }
+
+  async function api(query, corpo) {
+    var op = corpo ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ acao: 'agenda', c: c }, corpo)) } : {}
+    var r = await fetch('/api/data?r=publico&acao=agenda&c=' + encodeURIComponent(c) + (query || ''), op)
+    var j = {}
+    try { j = await r.json() } catch (e) { j = { success: false, error: 'Sem resposta do servidor. Tente de novo.' } }
+    return j
+  }
+
+  function telaProfissional() {
+    if (!E.profs.length) return aviso('Sem horários por enquanto', 'Fale com a clínica para marcar sua consulta.')
+    app.innerHTML = '<div class="pb-card"><h1>Com quem você quer consultar?</h1>' + E.profs.map(function (p, i) {
+      return '<button class="pb-op" data-i="' + i + '">' + esc(p.nome) + (p.especialidade ? '<small>' + esc(p.especialidade) + '</small>' : '') + '</button>'
+    }).join('') + '</div>'
+    app.querySelectorAll('[data-i]').forEach(function (b) { b.onclick = function () { E.prof = E.profs[+b.getAttribute('data-i')]; carregarDias() } })
+  }
+
+  async function carregarDias(erro) {
+    app.innerHTML = '<div class="pb-card"><div class="pb-sk"></div><div class="pb-sk" style="width:60%"></div></div>'
+    var d = await api('&prof=' + encodeURIComponent(E.prof.id))
+    if (!d.success) return aviso('Não foi possível carregar', d.error || 'Tente de novo em instantes.')
+    E.dias = d.dias || []; E.dia = E.dias[0] || null
+    telaHorario(erro)
+  }
+
+  function telaHorario(erro) {
+    var voltar = E.profs.length > 1 ? '<button class="pb-btn pb-sec" id="volta">Trocar profissional</button>' : ''
+    if (!E.dia) {
+      app.innerHTML = '<div class="pb-card pb-centro"><h1>Sem horários livres</h1><p>' + esc(E.prof.nome) + ' não tem horários livres no período. Fale com a clínica.</p>' + voltar + '</div>'
+    } else {
+      app.innerHTML = '<div class="pb-card"><h1>Escolha o dia e o horário</h1><p>' + esc(E.prof.nome) + '</p>' + (erro ? '<div class="pb-err" role="alert" style="margin:0 0 12px">' + esc(erro) + '</div>' : '') +
+        '<div class="pb-dias">' + E.dias.map(function (x, i) { return '<button class="pb-dia' + (x === E.dia ? ' on' : '') + '" data-d="' + i + '">' + sem(x.data) + '<b>' + x.data.slice(8, 10) + '/' + x.data.slice(5, 7) + '</b></button>' }).join('') + '</div>' +
+        '<div class="pb-horas">' + E.dia.horas.map(function (h) { return '<button class="pb-hora" data-h="' + h + '">' + h + '</button>' }).join('') + '</div>' + voltar + '</div>'
+      app.querySelectorAll('[data-d]').forEach(function (b) { b.onclick = function () { E.dia = E.dias[+b.getAttribute('data-d')]; telaHorario() } })
+      app.querySelectorAll('[data-h]').forEach(function (b) { b.onclick = function () { E.hora = b.getAttribute('data-h'); telaDados() } })
+    }
+    var v = document.getElementById('volta'); if (v) v.onclick = telaProfissional
+  }
+
+  function telaDados() {
+    app.innerHTML = '<div class="pb-card"><h1>Seus dados</h1><div class="pb-resumo">' + esc(E.prof.nome) + '<br>' + sem(E.dia.data) + ', ' + br(E.dia.data) + ' às ' + E.hora + '</div>' +
+      '<form id="f" novalidate><label class="pb-lbl" for="nome">Nome completo</label><input id="nome" autocomplete="name" maxlength="120">' +
+      '<label class="pb-lbl" for="tel">Celular com DDD</label><input id="tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="16">' +
+      '<label class="pb-lbl" for="nasc">Data de nascimento</label><input id="nasc" type="date" autocomplete="bday">' +
+      '<label class="pb-lbl" for="email">E-mail (opcional)</label><input id="email" type="email" autocomplete="email" maxlength="120">' +
+      '<label class="pb-lbl" for="obs">Motivo da consulta (opcional)</label><textarea id="obs" rows="2" maxlength="500"></textarea>' +
+      '<div class="pb-oculto" aria-hidden="true"><label for="site">Não preencha</label><input id="site" tabindex="-1" autocomplete="off"></div>' +
+      '<label class="pb-chk" style="margin-top:16px;font-size:14px"><input type="checkbox" id="aceite"> <span>Concordo com o uso destes dados pela clínica para marcar e confirmar a consulta.</span></label>' +
+      '<div id="err"></div><button class="pb-btn" id="ok" type="submit">Confirmar agendamento</button><button class="pb-btn pb-sec" id="volta" type="button">Trocar horário</button></form></div>'
+    document.getElementById('volta').onclick = function () { telaHorario() }
+    document.getElementById('f').onsubmit = enviar
+  }
+
+  async function enviar(e) {
+    e.preventDefault()
+    function v(id) { return document.getElementById(id).value }
+    var ok = document.getElementById('ok'), err = document.getElementById('err')
+    ok.disabled = true; err.innerHTML = ''
+    var r = await api('', { prof: E.prof.id, data: E.dia.data, hora: E.hora, nome: v('nome'), telefone: v('tel'), nascimento: v('nasc'), email: v('email'), observacoes: v('obs'), site: v('site'), aceite: document.getElementById('aceite').checked })
+    if (r.ocupado) return carregarDias(r.error)
+    if (!r.success) { ok.disabled = false; err.innerHTML = '<div class="pb-err" role="alert">' + esc(r.error || 'Não foi possível agendar.') + '</div>'; return }
+    app.innerHTML = '<div class="pb-card pb-centro"><h1>Consulta agendada</h1><p>' + esc(E.prof.nome) + '<br>' + sem(E.dia.data) + ', ' + br(E.dia.data) + ' às ' + E.hora + '</p><p>' + esc(E.clinica) + ' entrará em contato para confirmar, se precisar. Para desmarcar, fale com a clínica.</p></div>'
+  }
+
+  ;(async function () {
+    var d = await api('')
+    if (!d.success) return aviso('Link indisponível', d.error || 'Fale com a clínica.')
+    E.clinica = d.clinica; E.profs = d.profissionais || []
+    var cab = document.getElementById('clinica')
+    cab.textContent = d.clinica
+    if (d.logo) { var img = document.createElement('img'); img.src = d.logo; img.alt = ''; cab.parentNode.insertBefore(img, cab) }
+    document.title = 'Agendar consulta — ' + d.clinica
+    if (E.profs.length === 1) { E.prof = E.profs[0]; carregarDias() } else telaProfissional()
+  })()
+})()
+</script>
+</body>
+</html>

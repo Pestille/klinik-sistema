@@ -416,6 +416,7 @@
   window.cfgAnamnese = cfgAnamnese
   window.cfgMedicamentos = cfgMedicamentos
   window.cfgCheckin = cfgCheckin
+  window.svgQr = svgQr
 
   window.loadEstoque = loadEstoque
   window.loadProtetico = loadProtetico

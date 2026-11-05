@@ -18,6 +18,7 @@ var rotasExtras = require('../lib/rotas/extras')
 var rotasPublico = require('../lib/rotas/publico')
 var rotasEquipe = require('../lib/rotas/equipe')
 var rotasAssinaturas = require('../lib/rotas/assinaturas')
+var rotasAgendaOnline = require('../lib/rotas/agenda-online')
 var rotasPacienteFin = require('../lib/rotas/paciente-fin')
 var rotasCrm = require('../lib/rotas/crm')
 var rotasOperacao = require('../lib/rotas/operacao')
@@ -61,6 +62,7 @@ var ROTA_PERMISSAO = {
     'parcela-vincular-cobranca': 'pacientes.financeiro', 'gerar-parcelas': 'pacientes.financeiro', 'sincronizar-cobrancas': 'pacientes.financeiro',
     'recibos-paciente': 'pacientes.recibos',
     'salvar-odontograma': 'pacientes.odontograma', 'salvar-anamnese': 'pacientes.anamnese', 'anamnese-modelo': 'pacientes.anamnese', 'anamnese-link': 'pacientes.anamnese',
+    'agenda-online-config': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.editar_horarios' },
     'checkin-config': 'agenda.visualizar_classificacao', 'receita-saude': 'financeiro.receita_saude',
     'assinaturas': 'pacientes.acessar', 'assinaturas-portal': 'pacientes.acessar', 'assinatura-solicitar': 'pacientes.acessar', 'assinatura-cancelar': 'pacientes.acessar',
     'paciente-credito': 'pacientes.financeiro', 'paciente-avulso': 'pacientes.financeiro', 'anexos': 'financeiro.contas',
@@ -173,6 +175,7 @@ module.exports = async function handler(req, res) {
         if (auth && await rotasPublico.handle(route, ctxRota)) return
         if (auth && await rotasEquipe.handle(route, ctxRota)) return
         if (auth && await rotasAssinaturas.handle(route, ctxRota)) return
+        if (auth && await rotasAgendaOnline.handle(route, ctxRota)) return
         if (auth && await rotasPacienteFin.handle(route, ctxRota)) return
         if (auth && await rotasCrm.handle(route, ctxRota)) return
         if (auth && await rotasOperacao.handle(route, ctxRota)) return

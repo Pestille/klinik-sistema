@@ -20,6 +20,7 @@
     { "source": "/app", "destination": "/app.html" },
     { "source": "/anamnese", "destination": "/anamnese.html" },
     { "source": "/checkin", "destination": "/checkin.html" },
+    { "source": "/agendar", "destination": "/agendar.html" },
     { "source": "/validador", "destination": "/validador.html" },
     { "source": "/assinar", "destination": "/assinar.html" },
     { "source": "/api/cron-followup", "destination": "/api/cron-confirmacoes?tarefa=followup" }

@@ -30,3 +30,17 @@ textarea{resize:vertical}
 .pb-rodape{text-align:center;font-size:12px;color:var(--text3);padding:8px 16px 32px}
 .pb-sk{height:16px;border-radius:4px;margin:8px 0;background:linear-gradient(90deg,#EEE 25%,#F5F5F5 50%,#EEE 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* Agendamento online */
+.pb-op{display:block;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px;font-size:15px;color:var(--text);cursor:pointer;transition-property:background,border-color}
+.pb-op:hover{background:var(--green-light);border-color:var(--green3)}
+.pb-op small{display:block;font-size:12px;color:var(--text3)}
+.pb-dias{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px}
+.pb-dia{flex:0 0 auto;min-width:64px;min-height:44px;background:var(--surface);border:1.5px solid var(--border);border-radius:6px;padding:8px;font-size:13px;color:var(--text2);cursor:pointer;text-align:center;line-height:1.2;transition-property:background,border-color}
+.pb-dia b{display:block;font-size:16px;font-weight:500;color:var(--text)}
+.pb-dia.on{background:var(--green);border-color:var(--green);color:#fff}
+.pb-dia.on b{color:#fff}
+.pb-horas{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:8px}
+.pb-hora{min-height:44px;background:var(--surface);border:1.5px solid var(--green3);border-radius:6px;font-size:15px;color:var(--green);cursor:pointer;transition-property:background}
+.pb-hora:hover{background:var(--green-light)}
+.pb-resumo{background:var(--green-light);color:var(--green);border-radius:6px;padding:12px;margin-bottom:12px;font-size:14px}
+.pb-oculto{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}

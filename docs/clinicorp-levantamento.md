@@ -344,7 +344,7 @@ Fontes: 1.370 rotas de API e 163 rotas de tela do Clinicorp, telas abertas na co
 | Funcionalidade | Situação no Klinov | Origem | Prioridade |
 |---|---|---|---|
 | Portal de Assinatura | Pendentes e assinados feitos em 05/11. Faltam assinatura em lote e aba Certificado Digital (depende de B) | tela + código | 1 |
-| Agendamento online (link público, profissionais, horários) | Nada no Klinov; existe só o app separado Agenda Link | tela + código | 1 |
+| Agendamento online (link público, profissionais, horários) | Feito em 05/11 a partir das rotas: está desligado na conta da Klinik, então as opções internas do Clinicorp não foram vistas. Faltam link por paciente e por indicador, e aprovar ou rejeitar o pedido (`reject_scheduling`) | tela + rota | 1 |
 | Painel de atendimento (semana, pacientes por dia, por profissional, alertas de retorno) | Não existe | tela | 1 |
 | Comissão: recebimento, check-out, Geral × Plano, descontar impostos e taxas, requer aprovação, por especialidade | Só aprovação e execução, sem especialidade | tela + rota | 2 |
 | Cadeiras: cadastro e uso na agenda | Não existe; há só limite de simultâneos por profissional | rota | 2 |
