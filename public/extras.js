@@ -84,8 +84,8 @@
       d.data.map(function (p) {
         var s = SIT_E[p.situacao] || SIT_E.ok
         return '<tr><td>' + esc(p.nome) + (p.codigo || p.localizacao ? '<div class="ag-hint" style="margin:0">' + esc([p.codigo, p.localizacao].filter(Boolean).join(' · ')) + '</div>' : '') + '</td><td class="hide-sm">' + esc(p.categoria || '—') + '</td>' +
-          '<td class="fn-num"><b>' + qtd(p.quantidade) + '</b> ' + esc(p.unidade) + '</td><td class="fn-num hide-sm">' + (p.minimo ? qtd(p.minimo) : '—') + '</td><td class="hide-sm">' + (br(p.validade) || '—') + '</td><td><span class="pc-badge ' + s[1] + '">' + s[0] + '</span></td>' +
-          '<td style="text-align:right;white-space:nowrap"><button class="btn btn-sm btn-primary" data-mv="entrada" data-id="' + p.id + '" title="Entrada">+</button> <button class="btn btn-sm" data-mv="saida" data-id="' + p.id + '" title="Saída">−</button> <button class="btn btn-sm" data-ac="hist" data-id="' + p.id + '">Histórico</button>' + (edita ? ' <button class="btn btn-sm" data-ac="editar" data-id="' + p.id + '">Editar</button>' : '') + '</td></tr>'
+          '<td class="fn-num"><b>' + qtd(p.quantidade) + '</b> ' + esc(p.unidade) + (Number(p.em_uso) > 0 ? '<div class="ag-hint" style="margin:0;color:var(--orange)">Em uso: ' + qtd(p.em_uso) + '</div>' : '') + '</td><td class="fn-num hide-sm">' + (p.minimo ? qtd(p.minimo) : '—') + '</td><td class="hide-sm">' + (br(p.validade) || '—') + '</td><td><span class="pc-badge ' + s[1] + '">' + s[0] + '</span></td>' +
+          '<td style="text-align:right;white-space:nowrap"><button class="btn btn-sm btn-primary" data-mv="entrada" data-id="' + p.id + '" title="Entrada">+</button> <button class="btn btn-sm" data-mv="saida" data-id="' + p.id + '" title="Saída">−</button>' + (edita ? ' <button class="btn btn-sm" data-mv="' + (Number(p.em_uso) > 0 ? 'consumo' : 'em_uso') + '" data-id="' + p.id + '">Em Uso</button>' : '') + ' <button class="btn btn-sm" data-ac="hist" data-id="' + p.id + '">Histórico</button>' + (edita ? ' <button class="btn btn-sm" data-ac="editar" data-id="' + p.id + '">Editar</button>' : '') + '</td></tr>'
       }).join('') + '</tbody></table></div></div>' : '<div class="pc-vazio" style="padding:40px 0">Nenhum produto' + (ES.q || ES.situacao ? ' encontrado' : ' cadastrado. Use "+ Adicionar produto".') + '</div>'
     res.querySelectorAll('[data-mv]').forEach(function (b) { b.onclick = function () { movimentar(produto(+this.getAttribute('data-id')), this.getAttribute('data-mv')) } })
     res.querySelectorAll('[data-ac]').forEach(function (b) { b.onclick = function () { var p = produto(+this.getAttribute('data-id')); if (this.getAttribute('data-ac') === 'hist') historico(p); else editarProduto(p) } })
@@ -110,10 +110,10 @@
     }
   }
   async function movimentar(p, tipo) {
-    var fs = tipo === 'entrada' ? await fornecedores() : []
-    var titulos = { entrada: 'Entrada', saida: 'Saída', ajuste: 'Ajuste de inventário' }
-    modal(titulos[tipo] + ' — ' + p.nome, '<p class="ag-hint" style="margin:0 0 12px">Em estoque: <b>' + qtd(p.quantidade) + ' ' + esc(p.unidade) + '</b>' + (p.custo_medio ? ' · custo médio ' + moeda(p.custo_medio) : '') + '</p>' +
-      '<div class="ag-chips" id="mv-tipo">' + ['entrada', 'saida', 'ajuste'].map(function (t) { return '<span class="ag-chip' + (t === tipo ? ' on' : '') + '" data-t="' + t + '">' + titulos[t] + '</span>' }).join('') + '</div>' +
+    var fs = await fornecedores()
+    var titulos = { entrada: 'Entrada', saida: 'Saída', ajuste: 'Ajuste de inventário', em_uso: 'Colocar em Uso', consumo: 'Consumir Produto', devolucao: 'Devolver ao Estoque', descarte: 'Descartar' }
+    modal(titulos[tipo] + ' — ' + p.nome, '<p class="ag-hint" style="margin:0 0 12px">Em estoque: <b>' + qtd(p.quantidade) + ' ' + esc(p.unidade) + '</b> · Quantidade Em Uso: <b>' + qtd(p.em_uso) + '</b>' + (p.custo_medio ? ' · custo médio ' + moeda(p.custo_medio) : '') + '</p>' +
+      '<div class="ag-chips" id="mv-tipo">' + ['entrada', 'saida', 'ajuste', 'em_uso', 'consumo', 'devolucao', 'descarte'].map(function (t) { return '<span class="ag-chip' + (t === tipo ? ' on' : '') + '" data-t="' + t + '">' + titulos[t] + '</span>' }).join('') + '</div>' +
       '<div class="ag-row c2" style="margin-top:12px"><div class="ag-f"><label id="mv-qrot">' + (tipo === 'ajuste' ? 'Quantidade contada' : 'Quantidade') + ' (' + esc(p.unidade) + ')</label><input class="ag-in" id="mv-q" inputmode="decimal"></div><div class="ag-f" id="mv-cu-box"><label>Custo unitário (R$)</label><input class="ag-in" id="mv-cu" inputmode="decimal"></div></div>' +
       '<div id="mv-ent"><div class="ag-row c2"><div class="ag-f"><label>Lote</label><input class="ag-in" id="mv-lote" maxlength="40"></div><div class="ag-f"><label>Validade</label><input class="ag-in" type="date" id="mv-val"></div></div>' +
         '<label class="ag-chk" style="margin:4px 0 12px"><input type="checkbox" id="mv-conta"> Lançar em contas a pagar</label><div class="ag-row c2" id="mv-conta-box" style="display:none"><div class="ag-f"><label>Fornecedor</label><select class="ag-in" id="mv-forn">' + opcoes(fs, p.fornecedor_id, 'Nenhum') + '</select></div><div class="ag-f"><label>Vencimento</label><input class="ag-in" type="date" id="mv-venc" value="' + hoje() + '"></div></div></div>' +
@@ -123,7 +123,7 @@
     ligarPaciente('mv-pac')
     function ajustar() {
       el('mv-ent').style.display = tipo === 'entrada' ? '' : 'none'; el('mv-cu-box').style.visibility = tipo === 'entrada' ? 'visible' : 'hidden'
-      el('mv-sai').style.display = tipo === 'saida' ? '' : 'none'
+      el('mv-sai').style.display = (tipo === 'saida' || tipo === 'consumo') ? '' : 'none'
       el('mv-qrot').textContent = (tipo === 'ajuste' ? 'Quantidade contada' : 'Quantidade') + ' (' + p.unidade + ')'
     }
     el('mv-tipo').querySelectorAll('[data-t]').forEach(function (s) { s.onclick = function () { tipo = this.getAttribute('data-t'); el('mv-tipo').querySelectorAll('[data-t]').forEach(function (x) { x.classList.toggle('on', x === s) }); ajustar() } })
@@ -131,15 +131,16 @@
     ajustar()
     el('mv-c').onclick = fechar
     el('mv-ok').onclick = async function () {
-      var r = await apiPost('estoque-movimentar', { produto_id: p.id, tipo: tipo, quantidade: v('mv-q'), custo_unitario: v('mv-cu'), lote: v('mv-lote'), validade: v('mv-val'), motivo: v('mv-mot'), paciente_id: tipo === 'saida' ? v('mv-pac') : '', gerar_conta: tipo === 'entrada' && el('mv-conta').checked, fornecedor_id: v('mv-forn'), vencimento: v('mv-venc') })
+      var r = await apiPost('estoque-movimentar', { produto_id: p.id, tipo: tipo, quantidade: v('mv-q'), custo_unitario: v('mv-cu'), lote: v('mv-lote'), validade: v('mv-val'), motivo: v('mv-mot'), paciente_id: (tipo === 'saida' || tipo === 'consumo') ? v('mv-pac') : '', gerar_conta: tipo === 'entrada' && el('mv-conta').checked, fornecedor_id: v('mv-forn'), vencimento: v('mv-venc') })
       if (!r.success) return erro(r.error || 'Erro')
       fechar(); listar()
+      if (r.msg) { if (typeof toast === 'function') toast(r.msg); else alert(r.msg) }
     }
   }
   async function historico(p) {
     var d = await apiData('estoque-movimentos', p ? { produto_id: p.id } : {}).catch(function (e) { return { success: false, error: e.message } })
     if (!d.success) return alert(d.error || 'Erro')
-    var N = { entrada: ['Entrada', 'ok'], saida: ['Saída', 'err'], ajuste: ['Ajuste', 'off'] }
+    var N = { entrada: ['Entrada', 'ok'], saida: ['Saída', 'err'], ajuste: ['Ajuste', 'off'], em_uso: ['Em Uso', 'pend'], devolucao: ['Devolução', 'ok'], consumo: ['Consumo', 'err'], descarte: ['Descarte', 'err'] }
     modal(p ? 'Histórico — ' + p.nome : 'Movimentações recentes', d.data.length ? '<div class="oc-scroll"><table class="pc-tbl"><thead><tr><th>Data</th>' + (p ? '' : '<th>Produto</th>') + '<th>Tipo</th><th style="text-align:right">Qtd</th><th style="text-align:right">Saldo</th><th class="hide-sm">Detalhe</th><th class="hide-sm">Por</th></tr></thead><tbody>' +
       d.data.map(function (m) { var n = N[m.tipo] || N.ajuste; return '<tr><td>' + br(m.criado_em) + ' ' + String(m.criado_em || '').slice(11, 16) + '</td>' + (p ? '' : '<td>' + esc(m.produto) + '</td>') + '<td><span class="pc-badge ' + n[1] + '">' + n[0] + '</span></td><td class="fn-num">' + qtd(m.quantidade) + ' ' + esc(m.unidade) + '</td><td class="fn-num">' + qtd(m.saldo) + '</td>' +
         '<td class="hide-sm">' + esc([m.motivo, m.paciente_nome, m.lote ? 'lote ' + m.lote : '', m.custo_unitario ? moeda(m.custo_unitario) + '/un' : '', m.conta_pagar_id ? 'conta a pagar lançada' : ''].filter(Boolean).join(' · ') || '—') + '</td><td class="hide-sm">' + esc(m.usuario_nome || '') + '</td></tr>' }).join('') + '</tbody></table></div>' : '<div class="pc-vazio">Nenhuma movimentação.</div>',
