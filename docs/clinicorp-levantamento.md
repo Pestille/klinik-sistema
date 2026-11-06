@@ -356,9 +356,9 @@ Fontes: 1.370 rotas de API e 163 rotas de tela do Clinicorp, telas abertas na co
 | Áudio de procedimento | Não existe | rota | 3 |
 | Tratamento: reordenar procedimentos, recuperar excluído, oportunidade | A confirmar | rota | 3 |
 | Estoque: consumo por procedimento, validade, em uso, devolução, descarte | Parcial | rota | 3 |
-| Fotos: pastas de comparação, pontos, baixar ZIP | Parcial (`fotos-pastas`) | rota | 3 |
+| Fotos: pastas de comparação, pontos, baixar ZIP | Feito em 06/11 (7be2ae9): seleção múltipla (Baixar Selecionadas em ZIP montado no navegador, Mover/Tirar da Pasta, Excluir, Comparar as 2 selecionadas), legenda da foto, renomear/excluir pasta, comparação com divisão/lado a lado/cima e baixo/Inverter/Exportar comparacao.jpg. Faltam os pontos (marcadores sobre a foto) | rota | 3 |
 | Plano Próprio (tabela da clínica vendida a pacientes, empresas, famílias) | Feito em 06/11 (1248c32): cobrança mensal/total por pessoa, taxa de adesão, juros por atraso, 4 regras de liberação, faixas por quantidade de pessoas, titular e dependentes; sem cobrança automática | — | — |
-| Vouchers (15 rotas) | Não existe; esta conta não abre a tela | rota | 3 |
+| Vouchers (15 rotas) | Feito em 06/11 (a9e584e, migration 033) a partir do código local (a tela do Clinicorp não abre nesta conta): Configurações › Vouchers com modelos Desconto/Valor/Gratuito/Procedimento, códigos de 6 dígitos, venda, validade e limite; Inserir Voucher no orçamento com os erros numerados do Clinicorp (-1..-4) e consumo na aprovação | rota | — |
 | Central de agenda | Não existe; esta conta não abre a tela | rota | 3 |
 | Multiunidade (grupo, franquia, ranking, royalties) | Não existe; a Klinik tem uma unidade | rota | 3 |
 | Relatórios ausentes: Balancete, NFSe, Notas externas, Recibos, Avaliações Google, SPC/Serasa, Exames radiológicos, Planos recorrentes, Procedimentos vencidos (Controle de ortodontia, Tratamentos ortodônticos, Implantes em tratamento e Estatística de implantes feitos em 2026-11-05) | Dependem dos módulos acima, exceto Balancete, Recibos e Procedimentos vencidos | código | conforme o módulo |
