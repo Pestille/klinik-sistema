@@ -4299,7 +4299,7 @@ async function renderProfConfigComissao(p){
     var d=await apiData('comissoes-config',{profissional_id:profId})
     var configs=d.configs||[]
     var tabelas=['PARTICULAR','CASSEMS','SULAMERICA','VIVENTERIS','PREVIDENT','TODAS']
-    var momentoLabel={'aprovacao':'Aprovação','execucao':'Execução','recebimento':'Recebimento'}
+    var momentoLabel={'aprovacao':'Aprovação','execucao':'Execução','checkout':'Check Out','recebimento':'Recebimento'}
     var tipoLabel={'percentual':'Percentual','fixo':'Valor Fixo'}
 
     var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'+
@@ -4311,8 +4311,8 @@ async function renderProfConfigComissao(p){
     else{
       html+='<table class="tbl" style="width:100%"><thead><tr><th>Tabela de Preço</th><th>Momento</th><th>Tipo</th><th>Valor</th><th>Opções</th><th>Válido desde</th><th>Válido até</th><th>Editado por</th><th>Ações</th></tr></thead><tbody>'
       configs.forEach(function(c){
-        var valStr=c.tipo==='percentual'?c.valor+'%':fmtBrl(c.valor)
-        html+='<tr><td><span class="badge badge-blue">'+(c.tabela_preco||'PARTICULAR')+'</span></td><td>'+(momentoLabel[c.momento]||c.momento)+'</td><td>'+(tipoLabel[c.tipo]||c.tipo)+'</td><td style="font-weight:600;color:#1B5E3B">'+valStr+'</td><td style="font-size:12px;color:var(--text3)">'+comOpcoesTxt(c)+'</td><td>'+(c.valido_desde?fmtDt(c.valido_desde):'—')+'</td><td>'+(c.valido_ate?fmtDt(c.valido_ate):'—')+'</td><td style="font-size:12px;color:var(--text3)">'+(c.editado_por||'—')+'</td><td><button onclick="excluirComConfig('+c.id+','+profId+')" style="background:transparent;color:var(--red);border:1px solid var(--red);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Excluir</button></td></tr>'
+        var valStr=c.tipo==='percentual'?('Geral '+c.valor+'%'+(c.percentual_plano!==null&&c.percentual_plano!==undefined&&c.percentual_plano!==''?' · Plano '+c.percentual_plano+'%':'')):fmtBrl(c.valor)
+        html+='<tr><td><span class="badge badge-blue">'+(c.tabela_preco||'PARTICULAR')+'</span></td><td>'+(momentoLabel[c.momento]||c.momento)+'</td><td>'+(tipoLabel[c.tipo]||c.tipo)+'</td><td style="font-weight:600;color:#1B5E3B">'+valStr+'</td><td style="font-size:12px;color:var(--text3)">'+comOpcoesTxt(c)+'</td><td>'+(c.valido_desde?fmtDt(c.valido_desde):'—')+'</td><td>'+(c.valido_ate?fmtDt(c.valido_ate):'—')+'</td><td style="font-size:12px;color:var(--text3)">'+(c.editado_por||'—')+'</td><td style="white-space:nowrap">'+(c.tipo==='percentual'?'<button onclick="abrirComEspecialidade('+c.id+','+profId+')" title="Comissão por especialidade" style="background:transparent;color:#034030;border:1px solid #2E7D52;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif;margin-right:4px">Especialidade'+(Number(c.n_especialidades)?' ('+c.n_especialidades+')':'')+'</button>':'')+'<button onclick="excluirComConfig('+c.id+','+profId+')" style="background:transparent;color:var(--red);border:1px solid var(--red);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Excluir</button></td></tr>'
       })
       html+='</tbody></table>'
     }
@@ -4332,11 +4332,14 @@ function abrirModalComConfig(profId){
       '<div style="font-size:18px;font-weight:500;color:#1A1A1A;margin-bottom:20px">Nova Regra de Comissão</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Tabela de Preço</label><select id="cc-tabela" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none">'+tabelas.map(function(t){return '<option value="'+t+'">'+t+'</option>'}).join('')+'</select></div>'+
-        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Momento da Comissão</label><select id="cc-momento" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none"><option value="aprovacao">Na Aprovação do Orçamento</option><option value="execucao">Na Execução do Procedimento</option><option value="recebimento">No Recebimento do Pagamento</option></select></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Momento da Comissão</label><select id="cc-momento" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none"><option value="aprovacao">Na Aprovação do Orçamento</option><option value="execucao">Na Execução do Procedimento</option><option value="checkout">No Check Out do Paciente</option><option value="recebimento">No Recebimento do Pagamento</option></select></div>'+
       '</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Tipo</label><select id="cc-tipo" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);background:#fff;outline:none"><option value="percentual">Percentual (%)</option><option value="fixo">Valor Fixo (R$)</option></select></div>'+
-        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Valor</label><input id="cc-valor" type="number" step="0.01" placeholder="Ex: 30 para 30%" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+        '<div><label id="cc-valor-lbl" style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Comissão Geral (%)</label><input id="cc-valor" type="number" step="0.01" placeholder="Ex: 30 para 30%" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+      '</div>'+
+      '<div id="cc-plano-box" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px"><div></div>'+
+        '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Comissão Plano (%)</label><input id="cc-plano" type="number" min="0" max="100" step="0.01" placeholder="Igual à Geral" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
       '</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">'+
         '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Válido desde</label><input id="cc-desde" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
@@ -4346,6 +4349,7 @@ function abrirModalComConfig(profId){
       '<div id="cc-rec-opc" style="display:none;border-top:1px solid var(--border2);padding-top:12px;margin-bottom:16px">'+
         '<div style="font-size:12px;color:var(--text3);margin-bottom:8px">O valor pago na parcela é dividido entre os procedimentos do orçamento, na proporção do valor de cada um.</div>'+
         '<label style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text2);margin-bottom:12px;cursor:pointer"><input type="checkbox" id="cc-taxas" style="accent-color:#034030"> Descontar a taxa do cartão</label>'+
+        '<label style="display:flex;align-items:flex-start;gap:8px;font-size:14px;color:var(--text2);margin-bottom:12px;cursor:pointer" title="Quando marcado, pagamentos via Cartão de Crédito irão gerar comissão na data de pagamento registrada no lançamento financeiro. Nesse caso, a data de recebimento será desconsiderada, e a comissão será contabilizada pelo valor pago na data de pagamento."><input type="checkbox" id="cc-cartao" style="accent-color:#034030;margin-top:3px"> <span>Considerar data de pagamento para Cartão de Crédito<br><span style="font-size:12px;color:var(--text3)">Sem marcar, a comissão de cartão de crédito é contabilizada na data de recebimento de cada parcela do cartão.</span></span></label>'+
         '<div style="width:50%"><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Imposto a descontar (%)</label><input id="cc-imposto" type="number" min="0" max="99.99" step="0.01" placeholder="0" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
       '</div>'+
       '<div style="display:flex;gap:8px;justify-content:flex-end">'+
@@ -4357,12 +4361,15 @@ function abrirModalComConfig(profId){
   m.onclick=function(ev){if(ev.target===m)m.remove()}
   var sel=document.getElementById('cc-momento')
   sel.onchange=function(){document.getElementById('cc-rec-opc').style.display=sel.value==='recebimento'?'block':'none'}
+  var tp=document.getElementById('cc-tipo')
+  tp.onchange=function(){var pc=tp.value==='percentual';document.getElementById('cc-plano-box').style.display=pc?'grid':'none';document.getElementById('cc-valor-lbl').textContent=pc?'Comissão Geral (%)':'Valor (R$)'}
 }
 
 function comOpcoesTxt(c){
   var o=[]
   if(Number(c.requer_aprovacao))o.push('Requer aprovação')
   if(c.momento==='recebimento'&&Number(c.descontar_taxas))o.push('Desconta taxa do cartão')
+  if(c.momento==='recebimento'&&Number(c.data_pagamento_cartao))o.push('Cartão na data de pagamento')
   if(c.momento==='recebimento'&&Number(c.imposto_pct)>0)o.push('Desconta '+String(c.imposto_pct).replace('.',',')+'% de imposto')
   return o.length?o.join(' · '):'—'
 }
@@ -4377,10 +4384,63 @@ async function salvarComConfig(profId){
   if(!valor){alert('Informe o valor');return}
   try{
     var r=await apiPost('comissoes-config',{profissional_id:profId,tabela_preco:tabela,momento:momento,tipo:tipo,valor:parseFloat(valor),valido_desde:desde,valido_ate:ate,editado_por:(ST.user||{}).nome||'',
-      requer_aprovacao:document.getElementById('cc-aprov').checked?1:0,descontar_taxas:document.getElementById('cc-taxas').checked?1:0,imposto_pct:parseFloat(document.getElementById('cc-imposto').value)||0})
+      requer_aprovacao:document.getElementById('cc-aprov').checked?1:0,descontar_taxas:document.getElementById('cc-taxas').checked?1:0,imposto_pct:parseFloat(document.getElementById('cc-imposto').value)||0,
+      percentual_plano:tipo==='percentual'?document.getElementById('cc-plano').value:'',data_pagamento_cartao:momento==='recebimento'&&document.getElementById('cc-cartao').checked?1:0})
     if(r.success){document.getElementById('modal-com-config').remove();renderProfConfigComissao(_profDetData)}
     else alert(r.error||'Erro')
   }catch(e){alert('Erro: '+e.message)}
+}
+
+// Comissão por especialidade (Clinicorp: Comissão Geral e Comissão Plano por especialidade)
+async function abrirComEspecialidade(configId,profId){
+  var old=document.getElementById('modal-com-esp');if(old)old.remove()
+  var m=document.createElement('div');m.id='modal-com-esp'
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;padding:16px'
+  m.innerHTML='<div style="background:#fff;border-radius:8px;width:100%;max-width:640px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-size:18px;font-weight:500;color:#1A1A1A">Comissão por especialidade</div>'+
+    '<button id="ce-add" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">+ Adicionar Especialidade</button></div>'+
+    '<div id="ce-form" style="display:none;border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px"></div>'+
+    '<div id="ce-lista" style="font-size:14px;color:var(--text3)">Carregando…</div>'+
+    '<div style="display:flex;justify-content:flex-end;margin-top:20px"><button id="ce-fechar" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Fechar</button></div></div>'
+  document.body.appendChild(m)
+  var fechar=function(){m.remove();renderProfConfigComissao(_profDetData)}
+  m.onclick=function(ev){if(ev.target===m)fechar()}
+  document.getElementById('ce-fechar').onclick=fechar
+  var esps=[];try{esps=((await apiData('especialidades',{})).data||[]).filter(function(e){return Number(e.ativo)!==0}).map(function(e){return e.nome})}catch(e){}
+  var lista=[]
+  var pct=function(v){return v===null||v===undefined||v===''?'—':String(v).replace('.',',')+'%'}
+  async function carregar(){
+    var r=await apiPost('comissoes-config',{action:'esp-listar',config_id:configId});lista=r.lista||[]
+    var box=document.getElementById('ce-lista')
+    if(!lista.length){box.innerHTML='<div style="text-align:center;padding:24px">Nenhuma especialidade configurada. Sem configuração própria, vale a Comissão Geral e a Comissão Plano da regra.</div>';return}
+    box.innerHTML='<table class="tbl" style="width:100%"><thead><tr><th>Especialidade</th><th>Comissão</th><th style="text-align:right">Comissão Geral</th><th style="text-align:right">Comissão Plano</th><th></th></tr></thead><tbody>'+
+      lista.map(function(x,i){return '<tr><td>'+escHtml(x.especialidade)+'</td><td>Porcentagem</td><td style="text-align:right">'+pct(x.geral_pct)+'</td><td style="text-align:right">'+pct(x.plano_pct)+'</td><td style="text-align:right;white-space:nowrap"><button class="pdt-icon-btn" title="Editar" data-ed="'+i+'">✏️</button><button class="pdt-icon-btn" title="Excluir" data-ex="'+x.id+'">🗑</button></td></tr>'}).join('')+'</tbody></table>'
+    box.querySelectorAll('[data-ed]').forEach(function(b){b.onclick=function(){form(lista[+b.getAttribute('data-ed')])}})
+    box.querySelectorAll('[data-ex]').forEach(function(b){b.onclick=async function(){if(!confirm('Tem certeza que deseja excluir o registro selecionado?'))return;var r=await apiPost('comissoes-config',{action:'esp-excluir',config_id:configId,id:+b.getAttribute('data-ex')});if(r.success){if(typeof toast==='function')toast(r.msg);carregar()}else alert(r.error||'Erro')}})
+  }
+  function form(ed){
+    var f=document.getElementById('ce-form'),usadas={}
+    lista.forEach(function(x){usadas[String(x.especialidade).toUpperCase()]=1})
+    var opc=esps.filter(function(e){return ed||!usadas[String(e).toUpperCase()]})
+    if(!ed&&!opc.length){f.style.display='block';f.innerHTML='<div style="font-size:14px;color:var(--text2)">Todas as especialidades cadastradas já têm configuração. Cadastre especialidades em Configurações.</div>';return}
+    f.style.display='block'
+    f.innerHTML='<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;align-items:end">'+
+      '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Especialidade</label>'+(ed?'<input value="'+escHtml(ed.especialidade)+'" disabled style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box">':'<select id="ce-esp" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box">'+opc.map(function(e){return '<option>'+escHtml(e)+'</option>'}).join('')+'</select>')+'</div>'+
+      '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Comissão Geral (%)</label><input id="ce-g" type="number" min="0" max="100" step="0.01" value="'+(ed&&ed.geral_pct!==null?ed.geral_pct:'')+'" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div>'+
+      '<div><label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Comissão Plano (%)</label><input id="ce-p" type="number" min="0" max="100" step="0.01" value="'+(ed&&ed.plano_pct!==null?ed.plano_pct:'')+'" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"></div></div>'+
+      '<div id="ce-err" style="color:#C62828;font-size:13px;margin-top:8px"></div>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button id="ce-cancel" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button><button id="ce-salvar" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Salvar</button></div>'
+    document.getElementById('ce-cancel').onclick=function(){f.style.display='none'}
+    document.getElementById('ce-salvar').onclick=async function(){
+      this.disabled=true
+      var r=await apiPost('comissoes-config',{action:'esp-salvar',config_id:configId,id:ed?ed.id:undefined,especialidade:ed?ed.especialidade:document.getElementById('ce-esp').value,geral_pct:document.getElementById('ce-g').value,plano_pct:document.getElementById('ce-p').value})
+      if(!r.success){this.disabled=false;document.getElementById('ce-err').textContent=r.error||'Erro';return}
+      if(typeof toast==='function')toast(r.msg)
+      f.style.display='none';carregar()
+    }
+  }
+  document.getElementById('ce-add').onclick=function(){form(null)}
+  carregar()
 }
 
 async function excluirComConfig(id,profId){
@@ -4399,7 +4459,7 @@ async function renderProfAnaliseComissao(p){
     var mesAtual=new Date().toISOString().slice(0,7)
     var d=await apiData('comissoes-profissional',{profissional_id:profId,mes:mesAtual})
     var comissoes=d.comissoes||[],tots=d.totais||{}
-    var momentoLabel={'aprovacao':'Aprovação','execucao':'Execução','recebimento':'Recebimento'}
+    var momentoLabel={'aprovacao':'Aprovação','execucao':'Execução','checkout':'Check Out','recebimento':'Recebimento'}
 
     var html='<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px">'+
       '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:#9e9e9e">De</span><input type="date" id="ca-de" style="border:1px solid #e0e0e0;border-radius:4px;padding:6px 10px;font-size:13px"></div>'+

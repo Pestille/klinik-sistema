@@ -26,7 +26,7 @@ var rotasOperacao = require('../lib/rotas/operacao')
 var rotasFollowup = require('../lib/rotas/followup')
 var rotasFichas = require('../lib/rotas/fichas')
 var cfgLib = require('../lib/config')
-var { gerarComissao, comissaoRecebimentoSegura } = require('../lib/comissoes')
+var { gerarComissao, comissaoRecebimentoSegura, comissaoCheckoutSegura } = require('../lib/comissoes')
 
 // Rota → recurso da matriz "Permissões por Perfil". String vale para qualquer
 // método; { GET, POST } quando leitura e escrita exigem recursos diferentes.
@@ -2583,20 +2583,54 @@ module.exports = async function handler(req, res) {
                 var ccok = await moverParaLixeira(client, auth, 'comissao_config', ccx)
                 return ccok ? res.status(200).json({ success: true, msg: 'Regra excluída' }) : res.status(404).json({ success: false, error: 'Regra não encontrada' })
             }
+            // Comissão por especialidade (dentro de uma regra percentual)
+            if (req.method === 'POST' && /^esp-/.test((req.body || {}).action || '')) {
+                var ce = req.body || {}
+                var ceReg = (await client.execute({ sql: "SELECT id, profissional_id, tipo FROM comissoes_config WHERE id=? AND clinica_id=?", args: [parseInt(ce.config_id) || 0, clinica_id] })).rows[0]
+                if (!ceReg) return res.status(404).json({ success: false, error: 'Configuração de comissão não encontrada' })
+                if (ce.action === 'esp-listar') {
+                    var ceL = await client.execute({ sql: "SELECT * FROM comissoes_especialidade WHERE clinica_id=? AND config_id=? ORDER BY especialidade", args: [clinica_id, ceReg.id] })
+                    return res.status(200).json({ success: true, lista: ceL.rows })
+                }
+                if (ce.action === 'esp-excluir') {
+                    await client.execute({ sql: "DELETE FROM comissoes_especialidade WHERE id=? AND clinica_id=? AND config_id=?", args: [parseInt(ce.id) || 0, clinica_id, ceReg.id] })
+                    return res.status(200).json({ success: true, msg: 'Registro excluído' })
+                }
+                if (ceReg.tipo !== 'percentual') return res.status(400).json({ success: false, error: 'Comissão por especialidade só vale para regra em Porcentagem' })
+                var ceEsp = String(ce.especialidade || '').trim().slice(0, 80)
+                if (!ceEsp) return res.status(400).json({ success: false, error: 'Selecione a especialidade' })
+                var cePct = function (v) { if (v === '' || v === null || v === undefined) return null; var n = parseFloat(v); return isFinite(n) && n >= 0 && n <= 100 ? Math.round(n * 100) / 100 : NaN }
+                var ceG = cePct(ce.geral_pct), ceP = cePct(ce.plano_pct)
+                if (ceG !== ceG || ceP !== ceP) return res.status(400).json({ success: false, error: 'Percentual deve ficar entre 0 e 100' })
+                if (ceG === null && ceP === null) return res.status(400).json({ success: false, error: 'Informe a Comissão Geral ou a Comissão Plano' })
+                if (ce.id) await client.execute({ sql: "UPDATE comissoes_especialidade SET geral_pct=?, plano_pct=?, editado_por=? WHERE id=? AND clinica_id=? AND config_id=?", args: [ceG, ceP, auth.nome || '', parseInt(ce.id) || 0, clinica_id, ceReg.id] })
+                else {
+                    var ceJa = await client.execute({ sql: "SELECT 1 FROM comissoes_especialidade WHERE clinica_id=? AND config_id=? AND UPPER(especialidade)=UPPER(?)", args: [clinica_id, ceReg.id, ceEsp] })
+                    if (ceJa.rows.length) return res.status(409).json({ success: false, error: 'Essa especialidade já tem configuração nesta regra' })
+                    await client.execute({ sql: "INSERT INTO comissoes_especialidade(clinica_id,profissional_id,config_id,especialidade,geral_pct,plano_pct,editado_por) VALUES(?,?,?,?,?,?,?)", args: [clinica_id, ceReg.profissional_id, ceReg.id, ceEsp, ceG, ceP, auth.nome || ''] })
+                }
+                return res.status(200).json({ success: true, msg: ce.id ? 'Registro atualizado' : 'Registro criado' })
+            }
             if (req.method === 'POST') {
                 var cc = req.body || {}
                 if (!cc.profissional_id || !cc.momento || !cc.tipo || cc.valor === undefined) return res.status(400).json({ success: false, error: 'profissional_id, momento, tipo e valor obrigatórios' })
-                if (['aprovacao', 'execucao', 'recebimento'].indexOf(cc.momento) < 0) return res.status(400).json({ success: false, error: 'Momento inválido' })
+                if (['aprovacao', 'execucao', 'checkout', 'recebimento'].indexOf(cc.momento) < 0) return res.status(400).json({ success: false, error: 'Momento inválido' })
                 var ccImp = parseFloat(cc.imposto_pct) || 0
                 if (ccImp < 0 || ccImp >= 100) return res.status(400).json({ success: false, error: 'Imposto deve ficar entre 0 e 99,99%' })
                 // Desconto de taxas e de imposto só fazem sentido sobre o valor recebido
                 var ccRec = cc.momento === 'recebimento'
                 var ccOpc = [cc.requer_aprovacao ? 1 : 0, ccRec && cc.descontar_taxas ? 1 : 0, ccRec ? ccImp : 0]
+                if (cc.data_pagamento_cartao && !ccRec) return res.status(400).json({ success: false, error: 'A opção "Considerar data de pagamento para Cartão de Crédito" só pode ser utilizada quando o momento da comissão for "No recebimento do pagamento".' })
+                var ccPlano = cc.percentual_plano === '' || cc.percentual_plano === null || cc.percentual_plano === undefined || cc.tipo !== 'percentual' ? null : parseFloat(cc.percentual_plano)
+                if (ccPlano !== null && !(ccPlano >= 0 && ccPlano <= 100)) return res.status(400).json({ success: false, error: 'Comissão Plano deve ficar entre 0 e 100%' })
+                var ccExtra = [ccPlano, ccRec && cc.data_pagamento_cartao ? 1 : 0]
                 if (cc.id) {
                     await client.execute({ sql: "UPDATE comissoes_config SET tabela_preco=?, momento=?, tipo=?, valor=?, valido_desde=?, valido_ate=?, editado_por=?, requer_aprovacao=?, descontar_taxas=?, imposto_pct=? WHERE id=? AND clinica_id=?", args: [cc.tabela_preco || 'PARTICULAR', cc.momento, cc.tipo, parseFloat(cc.valor), cc.valido_desde || '', cc.valido_ate || '', cc.editado_por || ''].concat(ccOpc, [cc.id, clinica_id]) })
+                    await client.execute({ sql: "UPDATE comissoes_config SET percentual_plano=?, data_pagamento_cartao=? WHERE id=? AND clinica_id=?", args: ccExtra.concat([cc.id, clinica_id]) })
                     return res.status(200).json({ success: true, msg: 'Regra atualizada' })
                 }
                 var ccIns = await client.execute({ sql: "INSERT INTO comissoes_config(clinica_id, profissional_id, tabela_preco, momento, tipo, valor, valido_desde, valido_ate, editado_por, requer_aprovacao, descontar_taxas, imposto_pct) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", args: [clinica_id, cc.profissional_id, cc.tabela_preco || 'PARTICULAR', cc.momento, cc.tipo, parseFloat(cc.valor), cc.valido_desde || '', cc.valido_ate || '', cc.editado_por || ''].concat(ccOpc) })
+                await client.execute({ sql: "UPDATE comissoes_config SET percentual_plano=?, data_pagamento_cartao=? WHERE id=? AND clinica_id=?", args: ccExtra.concat([Number(ccIns.lastInsertRowid), clinica_id]) })
                 return res.status(200).json({ success: true, id: Number(ccIns.lastInsertRowid) })
             }
             if (req.method === 'DELETE' || (req.method === 'POST' && (req.body || {}).action === 'delete')) {
@@ -2609,7 +2643,7 @@ module.exports = async function handler(req, res) {
             var ccProfId = parseInt(q.profissional_id) || 0
             var ccW = ["cc.clinica_id=?"], ccA = [clinica_id]
             if (ccProfId) { ccW.push("cc.profissional_id=?"); ccA.push(ccProfId) }
-            var ccRows = await client.execute({ sql: "SELECT cc.*, p.nome as profissional_nome FROM comissoes_config cc LEFT JOIN profissionais p ON p.id=cc.profissional_id WHERE " + ccW.join(' AND ') + " ORDER BY cc.profissional_id, cc.tabela_preco", args: ccA })
+            var ccRows = await client.execute({ sql: "SELECT cc.*, p.nome as profissional_nome, (SELECT COUNT(*) FROM comissoes_especialidade ce WHERE ce.config_id=cc.id AND ce.clinica_id=cc.clinica_id) as n_especialidades FROM comissoes_config cc LEFT JOIN profissionais p ON p.id=cc.profissional_id WHERE " + ccW.join(' AND ') + " ORDER BY cc.profissional_id, cc.tabela_preco", args: ccA })
             return res.status(200).json({ success: true, configs: ccRows.rows })
             } catch(ccErr) { return res.status(200).json({ success: true, configs: [], error_debug: ccErr.message }) }
         }
@@ -2733,6 +2767,9 @@ module.exports = async function handler(req, res) {
                     var meProfNome = me.profissional_nome || meI.profissional_nome || ''
                     if (!meProfNome) { var mePn = await client.execute({ sql: "SELECT nome FROM profissionais WHERE id=? AND clinica_id=?", args: [meProfId, clinica_id] }); if (mePn.rows.length) meProfNome = mePn.rows[0].nome }
                     await gerarComissao(client, { clinica_id: clinica_id, momento: 'execucao', data: meData, item: meI, profissional_id: meProfId, profissional_nome: meProfNome, orcamento_id: meI.orcamento_id, paciente_id: meI.paciente_id, paciente_nome: meI.paciente_nome, tabela: meI.tabela_preco || 'PARTICULAR' })
+                    // Já teve check out (Atendido) no dia com este profissional: gera a comissão do check out
+                    var meAt = await client.execute({ sql: "SELECT 1 FROM agendamentos WHERE clinica_id=? AND paciente_id=? AND profissional_id=? AND DATE(data_hora)=? AND status='atendido' LIMIT 1", args: [clinica_id, meI.paciente_id, meProfId, String(meData).slice(0, 10)] })
+                    if (meAt.rows.length) await comissaoCheckoutSegura(client, clinica_id, meI.paciente_id, meProfId, meData)
                 }
             }
             return res.status(200).json({ success: true, msg: 'Procedimento marcado como executado' })
