@@ -214,12 +214,12 @@
   // ════════════════════════════════════════════════════════════════
   // BAIXA MANUAL COM MULTA, JUROS E DESCONTO (ficha do paciente)
   // ════════════════════════════════════════════════════════════════
-  async function blocoEncargos(parcelaId, dataId, alvoId) {
+  async function blocoEncargos(parcelaId, dataId, alvoId, rota) {
     var alvo = el(alvoId); if (!alvo) return
-    var d = await apiData('parcela-encargos', { id: parcelaId, data: v(dataId) }).catch(function () { return null })
+    var d = await apiData(rota || 'parcela-encargos', { id: parcelaId, data: v(dataId) }).catch(function () { return null })
     if (!d || !el(alvoId)) return
     alvo.innerHTML = '<div class="ag-row c3"><div class="ag-f"><label>Acréscimo (multa + juros)</label><input class="ag-in" id="enc-acr" inputmode="decimal" value="' + numBr(d.acrescimo) + '"></div><div class="ag-f"><label>Desconto</label><input class="ag-in" id="enc-desc" inputmode="decimal" value="' + numBr(d.desconto) + '"></div><div class="ag-f"><label>Total a receber</label><input class="ag-in" id="enc-tot" readonly value="' + moeda(d.total) + '"></div></div>' +
-      '<p class="ag-hint" style="margin-top:0">' + (d.dias_atraso ? d.dias_atraso + ' dia(s) de atraso: multa ' + moeda(d.multa) + ' + juros ' + moeda(d.juros) + ' (Configurações › Taxas e encargos).' : (d.desconto ? 'Desconto por pagamento antecipado.' : 'Parcela em dia.')) + ' Você pode ajustar os valores.</p>'
+      '<p class="ag-hint" style="margin-top:0">' + (d.dias_atraso ? d.dias_atraso + ' dia(s) de atraso: multa ' + moeda(d.multa) + ' + juros ' + moeda(d.juros) + ' (Configurações › Taxas e encargos).' : (d.desconto ? 'Desconto por pagamento antecipado.' : (rota === 'plano-encargos' && !d.juros_atraso ? 'Plano sem juros por atraso.' : 'Parcela em dia.'))) + ' Você pode ajustar os valores.</p>'
     function recalc() { var a = Number(String(v('enc-acr')).replace(/\./g, '').replace(',', '.')) || 0, ds = Number(String(v('enc-desc')).replace(/\./g, '').replace(',', '.')) || 0; el('enc-tot').value = moeda(d.valor + a - ds) }
     el('enc-acr').oninput = recalc; el('enc-desc').oninput = recalc
   }

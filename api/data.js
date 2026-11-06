@@ -58,7 +58,7 @@ var ROTA_PERMISSAO = {
     'comissoes-relatorio': 'financeiro.comissoes', 'comissoes-pagar': 'financeiro.comissoes', 'comissoes-profissional': 'financeiro.comissoes',
     'comissoes-config': { GET: 'profissionais.acessar', POST: 'profissionais.editar', DELETE: 'profissionais.editar' },
     'comissoes-procedimento': { GET: 'profissionais.acessar', POST: 'profissionais.editar' },
-    'planos-recorrentes': 'financeiro.planos', 'planos-adesoes': 'financeiro.planos', 'plano-adesao': 'financeiro.planos', 'plano-uso': 'financeiro.planos', 'plano-parcela': 'financeiro.dar_baixa',
+    'planos-recorrentes': 'financeiro.planos', 'planos-adesoes': 'financeiro.planos', 'plano-adesao': 'financeiro.planos', 'plano-uso': 'financeiro.planos', 'plano-parcela': 'financeiro.dar_baixa', 'plano-encargos': 'financeiro.dar_baixa',
     // Paciente
     'parcelas-paciente': 'pacientes.financeiro', 'parcelas-orcamento': 'pacientes.financeiro', 'cobrancas-paciente': 'pacientes.financeiro',
     'gerar-cobranca': 'pacientes.financeiro', 'parcela-baixa': 'pacientes.financeiro', 'parcela-cancelar': 'pacientes.financeiro',
