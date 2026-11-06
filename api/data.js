@@ -78,6 +78,7 @@ var ROTA_PERMISSAO = {
     'marcadores': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' }, 'agendamento-marcadores': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' }, 'medicamentos': { GET: 'pacientes.documentos', POST: 'pacientes.prescricoes' },
     'marcar-executado': 'pacientes.ficha_clinica', 'procedimento-autorizacao': 'pacientes.ficha_clinica', 'editar-execucao': 'pacientes.ficha_clinica', 'desfazer-execucao': 'pacientes.ficha_clinica',
     'salvar-orcamento': 'pacientes.orcamentos',
+    'oportunidade': 'pacientes.orcamentos',
     'vouchers': { GET: 'pacientes.orcamentos', POST: 'configuracoes.editar' }, 'voucher-codigo': 'pacientes.orcamentos',
     'aprovar-orcamento': 'pacientes.editar_orcamento', 'reprovar-orcamento': 'pacientes.editar_orcamento',
     'desaprovar-orcamento': 'pacientes.editar_orcamento', 'renegociar-orcamento': 'pacientes.editar_orcamento',
@@ -335,8 +336,8 @@ async function handlerInterno(req, res, cap) {
                 if (orcIds2.length) {
                     var itR = await client.execute({ sql: "SELECT * FROM orcamento_itens WHERE orcamento_id IN (" + orcIds2.map(function(){return '?'}).join(',') + ") ORDER BY id", args: orcIds2 })
                     var itMap2 = {}
-                    itR.rows.forEach(function(it) { if (!itMap2[it.orcamento_id]) itMap2[it.orcamento_id] = []; itMap2[it.orcamento_id].push(it) })
-                    orcRows.forEach(function(o) { o.itens = itMap2[o.id] || [] })
+                    itR.rows.forEach(function(it) { it.excluido = Number(it.excluido) || 0; it.ordem = it.ordem == null ? null : Number(it.ordem); if (!itMap2[it.orcamento_id]) itMap2[it.orcamento_id] = []; itMap2[it.orcamento_id].push(it) })
+                    orcRows.forEach(function(o) { o.oportunidade_id = o.oportunidade_id == null ? null : Number(o.oportunidade_id) || null; o.itens = itMap2[o.id] || [] })
                 }
             } catch(e) { /* tabela não existe */ }
             return res.status(200).json({ success: true, paciente: pac, agendamentos: rs5[0].rows, pagamentos: rs5[1].rows, financeiro: rs5[2].rows, odontograma: odontRows, orcamentos: orcRows, anamnese: anamneseRows })
@@ -1750,14 +1751,27 @@ async function handlerInterno(req, res, cap) {
             var orcIds = orcList.map(function(o) { return o.id })
             var itensMap = {}
             if (orcIds.length) {
-                var itensRows = await client.execute({ sql: "SELECT * FROM orcamento_itens WHERE orcamento_id IN (" + orcIds.map(function(){return '?'}).join(',') + ") ORDER BY id", args: orcIds })
+                var itensRows
+                try {
+                    itensRows = await client.execute({ sql: "SELECT * FROM orcamento_itens WHERE orcamento_id IN (" + orcIds.map(function(){return '?'}).join(',') + ") ORDER BY CASE WHEN ordem IS NULL THEN 1 ELSE 0 END, ordem, id", args: orcIds })
+                } catch (e) {
+                    itensRows = await client.execute({ sql: "SELECT * FROM orcamento_itens WHERE orcamento_id IN (" + orcIds.map(function(){return '?'}).join(',') + ") ORDER BY id", args: orcIds })
+                }
                 itensRows.rows.forEach(function(it) {
                     if (!itensMap[it.orcamento_id]) itensMap[it.orcamento_id] = []
                     itensMap[it.orcamento_id].push(it)
                 })
             }
             var opAut = require('../lib/autorizacao'), opExigem = await opAut.tabelasQueExigem(client, clinica_id)
-            orcList.forEach(function(o) { o.itens = (itensMap[o.id] || []).map(function(it) { it.autorizacao_status = opAut.situacao(it, o.tabela_preco, opExigem); return it }) })
+            orcList.forEach(function(o) {
+                o.oportunidade_id = o.oportunidade_id == null ? null : Number(o.oportunidade_id) || null
+                o.itens = (itensMap[o.id] || []).map(function(it) {
+                    it.autorizacao_status = opAut.situacao(it, o.tabela_preco, opExigem)
+                    it.excluido = Number(it.excluido) || 0
+                    it.ordem = it.ordem == null ? null : Number(it.ordem)
+                    return it
+                })
+            })
             return res.status(200).json({ success: true, orcamentos: orcList })
         }
 
@@ -2042,7 +2056,18 @@ async function handlerInterno(req, res, cap) {
             var eo = req.body || {}
             if (!eo.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
             // moverParaLixeira confere a clínica e leva os itens junto
+            var eoOpo = 0
+            try { eoOpo = ((await client.execute({ sql: "SELECT oportunidade_id FROM orcamentos WHERE id=? AND clinica_id=?", args: [eo.id, clinica_id] })).rows[0] || {}).oportunidade_id || 0 } catch (e) {}
             if (!await moverParaLixeira(client, auth, 'orcamento', eo.id)) return res.status(404).json({ success: false, error: 'Orçamento não encontrado' })
+            if (eoOpo) {
+                try {
+                    var eoRest = (await client.execute({ sql: "SELECT COUNT(*) n FROM orcamentos WHERE oportunidade_id=? AND clinica_id=?", args: [eoOpo, clinica_id] })).rows[0]
+                    if (Number(eoRest.n) < 2) {
+                        await client.execute({ sql: "UPDATE orcamentos SET oportunidade_id=NULL WHERE oportunidade_id=? AND clinica_id=?", args: [eoOpo, clinica_id] })
+                        await client.execute({ sql: "DELETE FROM oportunidades WHERE id=? AND clinica_id=?", args: [eoOpo, clinica_id] })
+                    }
+                } catch (e) {}
+            }
             return res.status(200).json({ success: true, msg: 'Orçamento excluído' })
         }
 

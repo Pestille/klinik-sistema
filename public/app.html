@@ -2548,23 +2548,65 @@ async function salvarAnamnese(pacienteId){
 }
 
 // ── ORÇAMENTOS ──────────────────────────────────────────────────
-var _orcExpanded={},_orcEditData=null
+var _orcExpanded={},_orcEditData=null,_orcMostrarExcluidos=false
+
+function orcItensOrdenados(orc){
+  return (orc.itens||[]).slice().sort(function(a,b){
+    var oa=a.ordem==null?1e9:+a.ordem,ob=b.ordem==null?1e9:+b.ordem
+    return oa-ob||a.id-b.id
+  })
+}
 
 function renderOrcamentosTab(el,p){
   var orcs=(_prontData.orcamentos||[])
-  var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
-    '<div style="font-size:13px;color:#757575;text-transform:uppercase;letter-spacing:.04em;font-weight:500">Orçamentos ('+orcs.length+')</div>'+
-    '<button onclick="abrirOrcamentoModal(null)" style="background:#E65100;color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;transition:background .15s">+ Novo Orçamento</button>'+
+  var temExcl=orcs.some(function(o){return (o.itens||[]).some(function(i){return i.excluido})})
+  if(!temExcl)_orcMostrarExcluidos=false
+  // Clinicorp: orçamentos cujos procedimentos foram todos excluídos ficam ocultos sem o toggle
+  var visiveis=orcs.filter(function(o){
+    var its=o.itens||[]
+    return _orcMostrarExcluidos||!its.length||its.some(function(i){return !i.excluido})
+  })
+  var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap">'+
+    '<div style="font-size:13px;color:#757575;text-transform:uppercase;letter-spacing:.04em;font-weight:500">Orçamentos ('+visiveis.length+')</div>'+
+    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+      (temExcl?'<label style="display:flex;align-items:center;gap:8px;border:1px solid #E0E0E0;background:#fff;border-radius:6px;padding:8px 12px;font-size:12px;color:#424242;cursor:pointer"><input type="checkbox" '+(_orcMostrarExcluidos?'checked':'')+' onchange="_orcMostrarExcluidos=this.checked;renderOrcamentosTab(document.getElementById(\'pront-content\'))" style="accent-color:#034030">Exibir orçamentos com procedimentos excluídos</label>':'')+
+      '<button onclick="abrirOportunidadeModal(null)" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Agrupar Oportunidades</button>'+
+      '<button onclick="abrirOrcamentoModal(null)" style="background:#E65100;color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;transition:background .15s">+ Novo Orçamento</button>'+
+    '</div>'+
   '</div>'
-  if(!orcs.length){
+  if(!visiveis.length){
     h+='<div style="text-align:center;padding:40px;color:#9e9e9e">Nenhum orçamento cadastrado</div>'
   } else {
-    orcs.forEach(function(orc){
+    var porOpo={}
+    visiveis.forEach(function(o){if(o.oportunidade_id){(porOpo[o.oportunidade_id]=porOpo[o.oportunidade_id]||[]).push(o)}})
+    var jaRenderizada={}
+    visiveis.forEach(function(orc){
+      if(orc.oportunidade_id){
+        if(jaRenderizada[orc.oportunidade_id])return
+        jaRenderizada[orc.oportunidade_id]=1
+        h+='<div style="border:1.5px solid #2E7D52;border-radius:8px;margin-bottom:8px;background:#fff;overflow:hidden">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;background:#E8F5E9;padding:8px 16px">'+
+            '<span style="font-size:12px;font-weight:500;color:#034030;text-transform:uppercase;letter-spacing:.04em">Oportunidade (Agrupado)</span>'+
+            '<span onclick="abrirOportunidadeModal('+orc.oportunidade_id+')" style="font-size:12px;color:#1565C0;cursor:pointer;font-weight:500">Editar oportunidade</span>'+
+          '</div><div style="padding:8px">'
+        porOpo[orc.oportunidade_id].forEach(function(o2){h+=orcCardHtml(o2)})
+        h+='</div></div>'
+        return
+      }
+      h+=orcCardHtml(orc)
+    })
+  }
+  el.innerHTML=h
+}
+
+function orcCardHtml(orc){
+  var h=''
+  ;(function(){
       var stColor=orc.status==='aprovado'?'green':orc.status==='reprovado'?'red':'orange'
       var stLabel=orc.status==='aprovado'?'APROVADO':orc.status==='reprovado'?'REPROVADO':'ABERTO'
       var stInfo=orc.status==='aprovado'?'Aprovado por '+(orc.aprovado_por||'—'):orc.status==='reprovado'?'Reprovado'+(orc.motivo_reprovacao?' - '+orc.motivo_reprovacao:''):'Em aberto'
       var expanded=_orcExpanded[orc.id]
-      var itens=orc.itens||[]
+      var itens=orcItensOrdenados(orc).filter(function(i){return _orcMostrarExcluidos||!i.excluido})
       h+='<div style="border:1px solid #E0E0E0;border-radius:8px;margin-bottom:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)">'+
         '<div style="padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="toggleOrcExpand('+orc.id+')">'+
           '<span style="font-size:16px;color:#757575;transition:transform .15s;transform:rotate('+(expanded?'90':'0')+'deg)">&#9654;</span>'+
@@ -2585,8 +2627,9 @@ function renderOrcamentosTab(el,p){
             '<th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:#757575;border-bottom:1px solid #E0E0E0">Valor</th>'+
           '</tr></thead><tbody>'
         itens.forEach(function(it){
-          h+='<tr><td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242">'+(it.procedimento_codigo||'—')+'</td>'+
-            '<td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242">'+escHtml(it.procedimento_nome||'—')+'</td>'+
+          var exSt=it.excluido?';text-decoration:line-through;color:#9e9e9e':''
+          h+='<tr><td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242'+exSt+'">'+(it.procedimento_codigo||'—')+'</td>'+
+            '<td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242'+exSt+'">'+escHtml(it.procedimento_nome||'—')+(it.excluido?' <span style="background:#FFEBEE;color:#C62828;padding:1px 8px;border-radius:4px;font-size:10px;font-weight:500;text-decoration:none;display:inline-block">EXCLUÍDO</span>':'')+'</td>'+
             '<td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242">'+escHtml(it.dente||it.regiao||'—')+'</td>'+
             '<td style="padding:8px;border-bottom:1px solid #F0F0F0;color:#424242">'+escHtml(it.profissional_nome||'—')+'</td>'+
             '<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(it.valor_unitario)+'</td></tr>'
@@ -2594,9 +2637,8 @@ function renderOrcamentosTab(el,p){
         h+='</tbody></table></div>'
       }
       h+='</div>'
-    })
-  }
-  el.innerHTML=h
+  })()
+  return h
 }
 
 function toggleOrcExpand(id){
@@ -2619,6 +2661,95 @@ async function reloadOrcamentos(){
     _prontData.orcamentos=d.orcamentos||[]
     renderProntTab()
   }catch(e){}
+}
+
+// ── Oportunidade de orçamentos (Clinicorp: Agrupar Oportunidades) ─
+var _opoEditId=null,_opoSel={}
+
+function abrirOportunidadeModal(editId){
+  _opoEditId=editId||null
+  _opoSel={}
+  var orcs=(_prontData.orcamentos||[])
+  if(editId)orcs.forEach(function(o){if(o.oportunidade_id===editId)_opoSel[o.id]=1})
+  renderOpoModal()
+}
+
+function _opoElegiveis(){
+  var orcs=(_prontData.orcamentos||[])
+  return orcs.filter(function(o){
+    var temAtivo=(o.itens||[]).some(function(i){return !i.excluido})
+    if(_opoEditId)return o.oportunidade_id===_opoEditId||(!o.oportunidade_id&&temAtivo)
+    return !o.oportunidade_id&&temAtivo
+  }).sort(function(a,b){return String(b.data_criacao||'').localeCompare(String(a.data_criacao||''))})
+}
+
+function opoToggle(id){
+  var orcs=_opoElegiveis()
+  var o=orcs.filter(function(x){return x.id===id})[0]
+  if(!o)return
+  if(_opoSel[id]){delete _opoSel[id]}
+  else{
+    // Clinicorp: a oportunidade pode ter no máximo um orçamento aprovado
+    if(o.status==='aprovado'&&orcs.some(function(x){return _opoSel[x.id]&&x.status==='aprovado'}))return
+    _opoSel[id]=1
+  }
+  renderOpoModal()
+}
+
+function renderOpoModal(){
+  var old=document.getElementById('modal-opo');if(old)old.remove()
+  var orcs=_opoElegiveis()
+  var selCount=Object.keys(_opoSel).length
+  var aprovadoSel=orcs.some(function(o){return _opoSel[o.id]&&o.status==='aprovado'})
+  var alterou=_opoEditId?orcs.some(function(o){return (o.oportunidade_id===_opoEditId)!==!!_opoSel[o.id]}):false
+  var desfaz=_opoEditId&&alterou&&selCount<2
+  var podeS=_opoEditId?alterou:selCount>=2
+  var rotulo=_opoEditId?(desfaz?'Desfazer oportunidade':'Salvar'):'Agrupar'
+  var linhas=''
+  if(!orcs.length){
+    linhas='<div style="text-align:center;padding:32px;color:#9e9e9e;font-size:13px">Nenhum orçamento disponível para agrupamento.</div>'
+  }else orcs.forEach(function(o){
+    var sel=!!_opoSel[o.id]
+    var bloqueado=o.status==='aprovado'&&aprovadoSel&&!sel
+    var stColor=o.status==='aprovado'?'green':o.status==='reprovado'?'red':'orange'
+    var stLabel=o.status==='aprovado'?'APROVADO':o.status==='reprovado'?'REPROVADO':'ABERTO'
+    var procs=orcItensOrdenados(o).filter(function(i){return !i.excluido})
+    var nomes=procs.slice(0,3).map(function(i){return '<div style="font-size:13px;color:#1A1A1A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escHtml(i.procedimento_nome||'')+'</div>'}).join('')
+    if(procs.length>3)nomes+='<div style="font-size:11px;color:#9e9e9e">+'+(procs.length-3)+' procedimentos</div>'
+    linhas+='<label style="display:flex;align-items:center;gap:12px;border:1.5px solid '+(sel?'#2E7D52':'#E0E0E0')+';background:'+(sel?'#E8F5E9':'#fff')+';border-radius:8px;padding:12px 16px;margin-bottom:8px;'+(bloqueado?'opacity:.5;cursor:not-allowed':'cursor:pointer')+'">'+
+      '<input type="checkbox" '+(sel?'checked':'')+(bloqueado?' disabled':'')+' onchange="opoToggle('+o.id+')" style="accent-color:#034030">'+
+      '<span class="badge badge-'+stColor+'" style="flex-shrink:0">'+stLabel+'</span>'+
+      '<span style="width:84px;flex-shrink:0;font-size:13px;color:#424242">'+fmtDt(o.data_criacao)+'</span>'+
+      '<span style="flex:1;min-width:0">'+(nomes||'<span style="font-size:12px;color:#9e9e9e">Sem procedimentos</span>')+'</span>'+
+      '<span style="flex-shrink:0;font-size:14px;font-weight:600;color:#1B5E3B">'+fmtBrl(o.valor_total)+'</span>'+
+    '</label>'
+  })
+  var m=document.createElement('div')
+  m.id='modal-opo'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10002;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:720px;max-width:95%;max-height:calc(100vh - 32px);overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
+      '<div style="font-size:18px;font-weight:500;color:#1A1A1A;margin-bottom:16px">'+(_opoEditId?'Editar oportunidade':'Selecione os orçamentos para a oportunidade')+'</div>'+
+      '<div style="max-height:55vh;overflow-y:auto;padding-right:4px">'+linhas+'</div>'+
+      (desfaz?'<div style="display:flex;gap:10px;background:#FFF3E0;border:1px solid #FFB74D;border-radius:6px;padding:12px;margin-top:12px"><span style="color:#E65100;font-size:16px">&#9888;</span><div><div style="font-size:13px;font-weight:500;color:#1A1A1A">A oportunidade será desfeita</div><div style="font-size:12px;color:#424242;margin-top:2px">Uma oportunidade precisa de pelo menos 2 orçamentos. Ao salvar, os orçamentos voltam a ficar avulsos.</div></div></div>':'')+
+      '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">'+
+        '<button onclick="document.getElementById(\'modal-opo\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+        '<button onclick="salvarOportunidade()" '+(podeS?'':'disabled')+' style="background:#034030;color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:'+(podeS?'pointer':'not-allowed')+';opacity:'+(podeS?'1':'.5')+';font-family:Roboto,sans-serif">'+rotulo+'</button>'+
+      '</div>'+
+    '</div>'
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)m.remove()}
+}
+
+async function salvarOportunidade(){
+  var ids=Object.keys(_opoSel).map(Number)
+  try{
+    var r=await apiPost('oportunidade',_opoEditId?{action:'atualizar',id:_opoEditId,orcamento_ids:ids}:{action:'criar',orcamento_ids:ids})
+    if(!r.success){alert(r.error||(_opoEditId?'Erro ao atualizar oportunidade':'Erro ao criar oportunidade'));return}
+    var mo=document.getElementById('modal-opo');if(mo)mo.remove()
+    alert(r.msg||'Oportunidade salva')
+    await reloadOrcamentos()
+  }catch(e){alert(_opoEditId?'Erro ao atualizar oportunidade':'Erro ao criar oportunidade')}
 }
 
 async function abrirOrcamentoModal(orcId){
@@ -2653,7 +2784,7 @@ async function abrirOrcamentoModal(orcId){
     status:orc?orc.status:'aberto',
     forma_pagamento:orc?orc.forma_pagamento:null,
     tipo_pagamento:orc?orc.tipo_pagamento:'valor_total',
-    itens:orc?(orc.itens||[]).map(function(it){return {id:it.id,executado:it.executado||0,faces:it.faces||'',procedimento_codigo:it.procedimento_codigo,procedimento_nome:it.procedimento_nome,dente:it.dente||'',regiao:it.regiao||'',profissional_id:it.profissional_id,profissional_nome:it.profissional_nome,valor_unitario:+(it.valor_unitario||0),valor_plano:+(it.valor_plano||0),quantidade:+(it.quantidade||1)}}):[]
+    itens:orc?orcItensOrdenados(orc).map(function(it){return {id:it.id,executado:it.executado||0,excluido:it.excluido||0,faces:it.faces||'',procedimento_codigo:it.procedimento_codigo,procedimento_nome:it.procedimento_nome,dente:it.dente||'',regiao:it.regiao||'',profissional_id:it.profissional_id,profissional_nome:it.profissional_nome,valor_unitario:+(it.valor_unitario||0),valor_plano:+(it.valor_plano||0),quantidade:+(it.quantidade||1)}}):[]
   }
   renderOrcModal()
 }
@@ -2675,22 +2806,29 @@ function renderOrcModal(){
     old.remove()
   }
 
-  var totalPart=d.itens.reduce(function(s,it){return s+(+(it.valor_unitario||0)*(+(it.quantidade||1)))},0)
-  var totalPlano=d.itens.reduce(function(s,it){return s+(+(it.valor_plano||0)*(+(it.quantidade||1)))},0)
+  var totalPart=d.itens.reduce(function(s,it){return s+(it.excluido?0:+(it.valor_unitario||0)*(+(it.quantidade||1)))},0)
+  var totalPlano=d.itens.reduce(function(s,it){return s+(it.excluido?0:+(it.valor_plano||0)*(+(it.quantidade||1)))},0)
 
   var profOpts='<option value="">Selecione o profissional</option>'+profs.map(function(pr){return '<option value="'+pr.id+'" '+(pr.id==d.profissional_id?'selected':'')+'>'+(pr.nome||pr.name||pr.Name||'Profissional')+'</option>'}).join('')
   var tabOpts=tabelas.map(function(t){return '<option value="'+t+'" '+(t===d.tabela_preco?'selected':'')+'>'+t+'</option>'}).join('')
 
   // Items list HTML
   var itensHtml=''
+  var nItens=d.itens.length
   d.itens.forEach(function(it,idx){
+    var exSt=it.excluido?'text-decoration:line-through;color:#9e9e9e':''
+    var setas=(nItens>1&&!it.excluido)?('<span style="display:inline-flex;flex-direction:column;line-height:1;width:16px">'+
+        (idx>0?'<span onclick="orcMoveItem('+idx+',-1)" title="Mover para Cima" style="cursor:pointer;color:#757575;font-size:11px">&#9650;</span>':'<span style="font-size:11px">&nbsp;</span>')+
+        (idx<nItens-1?'<span onclick="orcMoveItem('+idx+',1)" title="Mover para Baixo" style="cursor:pointer;color:#757575;font-size:11px">&#9660;</span>':'<span style="font-size:11px">&nbsp;</span>')+
+      '</span>'):'<span style="width:16px"></span>'
     itensHtml+='<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #F0F0F0;font-size:13px">'+
+      setas+
       '<div style="flex:1">'+
-        '<div style="font-weight:500;color:#1A1A1A">'+(it.procedimento_codigo?it.procedimento_codigo+' - ':'')+it.procedimento_nome+'</div>'+
+        '<div style="font-weight:500;color:#1A1A1A;'+exSt+'">'+(it.procedimento_codigo?it.procedimento_codigo+' - ':'')+it.procedimento_nome+(it.excluido?' <span style="background:#FFEBEE;color:#C62828;padding:1px 8px;border-radius:4px;font-size:10px;font-weight:500;text-decoration:none;display:inline-block">EXCLUÍDO</span>':'')+'</div>'+
         '<div style="font-size:12px;color:#757575;margin-top:2px">'+[it.dente?'Dente: '+escHtml(it.dente)+(it.faces?' ('+escHtml(it.faces)+')':''):'',it.regiao?'Região: '+escHtml(it.regiao):'',(+it.quantidade>1)?it.quantidade+'x':'',it.profissional_nome?escHtml(it.profissional_nome):'',it.executado?'<b style="color:#034030">Executado</b>':''].filter(Boolean).join(' | ')+'</div>'+
       '</div>'+
-      (+it.valor_plano&&!+it.valor_unitario?'<span style="background:#FFF3E0;color:#E65100;padding:3px 10px;border-radius:4px;font-size:12px;font-weight:500" title="Coberto pelo plano">Plano '+fmtBrl(it.valor_plano)+'</span>':'<span style="background:#E8F5E9;color:#034030;padding:3px 10px;border-radius:4px;font-size:12px;font-weight:500">'+fmtBrl(it.valor_unitario)+'</span>')+
-      (it.executado?'<span style="width:24px"></span>':'<span onclick="orcRemoveItem('+idx+')" style="cursor:pointer;color:#C62828;font-size:16px;padding:4px" title="Remover">&times;</span>')+
+      (+it.valor_plano&&!+it.valor_unitario?'<span style="background:#FFF3E0;color:#E65100;padding:3px 10px;border-radius:4px;font-size:12px;font-weight:500" title="Coberto pelo plano">Plano '+fmtBrl(it.valor_plano)+'</span>':'<span style="background:#E8F5E9;color:#034030;padding:3px 10px;border-radius:4px;font-size:12px;font-weight:500;'+(it.excluido?'opacity:.5':'')+'">'+fmtBrl(it.valor_unitario)+'</span>')+
+      (it.executado?'<span style="width:24px"></span>':it.excluido?'<span onclick="orcRestaurarItem('+idx+')" style="cursor:pointer;color:#1565C0;font-size:12px;font-weight:500;padding:4px">Restaurar</span>':'<span onclick="orcRemoveItem('+idx+')" style="cursor:pointer;color:#C62828;font-size:16px;padding:4px" title="Excluir procedimento">&times;</span>')+
     '</div>'
   })
 
@@ -2982,7 +3120,7 @@ async function buscarVoucherOrc(){
 function aplicarVoucherOrc(vch){
   var d=_orcEditData;if(!d)return
   var msgEl=document.getElementById('vch-msg')
-  var total=(d.itens||[]).reduce(function(s,i){return s+(+(i.valor_unitario||0))*(+(i.quantidade||1))},0)
+  var total=(d.itens||[]).reduce(function(s,i){return s+(i.excluido?0:(+(i.valor_unitario||0))*(+(i.quantidade||1)))},0)
   if(vch.tipo==='procedimento'){
     (vch.procedimentos||[]).forEach(function(pp){
       for(var k=0;k<(pp.quantidade||1);k++) d.itens.push({procedimento_codigo:'',procedimento_nome:pp.procedimento,dente:'',regiao:'',profissional_id:d.profissional_id,profissional_nome:d.profissional_nome,valor_unitario:0,valor_plano:0,quantidade:1,is_voucher:1})
@@ -3013,7 +3151,7 @@ function removerVoucherOrc(){
 
 function atualizarOrcTotais(){
   if(!_orcEditData)return
-  var totalPart=(_orcEditData.itens||[]).reduce(function(s,i){return s+(+(i.valor_unitario||0))*(+(i.quantidade||1))},0)
+  var totalPart=(_orcEditData.itens||[]).reduce(function(s,i){return s+(i.excluido?0:(+(i.valor_unitario||0))*(+(i.quantidade||1)))},0)
   var desconto=+(_orcEditData.desconto||0)
 
   var partEl=document.getElementById('orc-total-part')
@@ -3130,8 +3268,30 @@ function orcAddItem(){
 
 function orcRemoveItem(idx){
   if(!_orcEditData)return
-  if((_orcEditData.itens[idx]||{}).executado){alert('Este procedimento já foi executado e não pode ser removido do orçamento.');return}
-  _orcEditData.itens.splice(idx,1)
+  var it=_orcEditData.itens[idx]||{}
+  if(it.executado){alert('Este procedimento já foi executado e não pode ser removido do orçamento.');return}
+  if(it.id){
+    // Clinicorp: procedimento salvo é excluído (riscado), não some do orçamento
+    if(!confirm('Excluir procedimento\n\nDeseja realmente excluir o procedimento '+(it.procedimento_nome||'')+' do orçamento?'))return
+    it.excluido=1
+  }else{
+    _orcEditData.itens.splice(idx,1)
+  }
+  renderOrcModal()
+}
+
+function orcRestaurarItem(idx){
+  if(!_orcEditData)return
+  var it=_orcEditData.itens[idx];if(!it)return
+  it.excluido=0
+  renderOrcModal()
+}
+
+function orcMoveItem(idx,dir){
+  if(!_orcEditData)return
+  var its=_orcEditData.itens,alvo=idx+dir
+  if(alvo<0||alvo>=its.length)return
+  var t=its[idx];its[idx]=its[alvo];its[alvo]=t
   renderOrcModal()
 }
 

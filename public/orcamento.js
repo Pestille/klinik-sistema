@@ -85,37 +85,78 @@
 
   window.PRONT_TABS = window.PRONT_TABS || {}
   window.PRONT_TABS.orcamentos = function (box, p) {
-    var orcs = (_prontData.orcamentos || []).slice()
+    var todos = (_prontData.orcamentos || []).slice()
     var hoje = hojeYmd()
+    var temExcl = todos.some(function (o) { return (o.itens || []).some(function (i) { return +i.excluido }) })
+    if (!temExcl) window._orcMostrarExcluidos = false
+    var mostrarExcl = !!window._orcMostrarExcluidos
+    // Clinicorp: orçamentos cujos procedimentos foram todos excluídos ficam ocultos sem o toggle
+    var orcs = todos.filter(function (o) {
+      var its = o.itens || []
+      return mostrarExcl || !its.length || its.some(function (i) { return !+i.excluido })
+    })
+
+    function cartao(o) {
+      var st = STATUS_ORC[o.status] || STATUS_ORC.aberto
+      var itens = (window.orcItensOrdenados ? orcItensOrdenados(o) : (o.itens || [])).filter(function (i) { return mostrarExcl || !+i.excluido })
+      var ativos = itens.filter(function (i) { return !+i.excluido })
+      var totPlano = ativos.reduce(function (s, i) { return s + num(i.valor_plano) * (i.quantidade || 1) }, 0)
+      var vencido = o.validade && o.validade < hoje && (o.status === 'aberto' || !o.status)
+      var exec = ativos.filter(function (i) { return i.executado }).length
+      return '<div class="pc-box" style="margin-bottom:10px;padding:0">' +
+        '<div class="oc-orc-h" data-tg="' + o.id + '"><span class="pc-badge ' + st[1] + '">' + st[0] + '</span>' +
+          '<div style="flex:1;min-width:0"><b style="color:var(--text);font-weight:500">' + esc(o.titulo || ('Orçamento #' + o.id)) + '</b>' +
+            '<div class="ag-hint" style="margin:2px 0 0">' + br(o.data_criacao) + ' · ' + esc(o.tabela_preco || '') + (o.profissional_nome ? ' · ' + esc(o.profissional_nome) : '') +
+            (o.validade ? ' · <span style="color:' + (vencido ? 'var(--red)' : 'inherit') + '">válido até ' + br(o.validade) + (vencido ? ' (vencido)' : '') + '</span>' : '') +
+            (o.status === 'aprovado' && ativos.length ? ' · ' + exec + '/' + ativos.length + ' executado(s)' : '') + '</div></div>' +
+          '<div style="text-align:right"><b style="color:var(--green);font-size:15px">' + moeda(o.valor_total - (o.desconto || 0)) + '</b>' + (totPlano ? '<div class="ag-hint" style="margin:0">Plano ' + moeda(totPlano) + '</div>' : '') + '</div></div>' +
+        (abertos[o.id] ? '<div style="padding:0 16px 14px;border-top:1px solid var(--border2)">' +
+          '<div class="oc-scroll"><table class="pc-tbl" style="margin-top:8px"><thead><tr><th>Procedimento</th><th>Dente / região</th><th class="hide-sm">Profissional</th><th style="text-align:right">Particular</th><th style="text-align:right">Plano</th></tr></thead><tbody>' +
+          itens.map(function (i) {
+            var ex = +i.excluido ? ' style="text-decoration:line-through;color:#9e9e9e"' : ''
+            return '<tr><td' + ex + '>' + esc(i.procedimento_nome) + (i.executado ? ' <span class="pc-badge ok">Executado</span>' : '') + (+i.excluido ? ' <span class="pc-badge off" style="text-decoration:none">Excluído</span>' : '') + '</td><td' + ex + '>' + esc([i.dente, i.faces ? '(' + i.faces + ')' : '', i.regiao].filter(Boolean).join(' ') || '—') + '</td>' +
+              '<td class="hide-sm"' + ex + '>' + esc(i.profissional_nome || '—') + '</td><td' + ex + ' style="text-align:right' + (+i.excluido ? ';text-decoration:line-through;color:#9e9e9e' : '') + '">' + (num(i.valor_unitario) || !num(i.valor_plano) ? moeda(num(i.valor_unitario) * (i.quantidade || 1)) : '—') + '</td><td' + ex + ' style="text-align:right' + (+i.excluido ? ';text-decoration:line-through;color:#9e9e9e' : '') + '">' + (num(i.valor_plano) ? moeda(num(i.valor_plano) * (i.quantidade || 1)) : '—') + '</td></tr>'
+          }).join('') + '</tbody></table></div>' +
+          (o.observacoes ? '<div class="ag-hint">' + esc(o.observacoes) + '</div>' : '') +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"><button class="btn btn-sm" data-ac="editar" data-id="' + o.id + '">' + (o.status === 'aprovado' ? 'Abrir' : 'Editar') + '</button>' +
+            '<button class="btn btn-sm" data-ac="imprimir" data-id="' + o.id + '">Imprimir</button><button class="btn btn-sm" data-ac="whatsapp" data-id="' + o.id + '">Enviar por WhatsApp</button>' +
+            '<button class="btn btn-sm" data-ac="duplicar" data-id="' + o.id + '">Duplicar</button>' +
+            (itens.length ? '<button class="btn btn-sm" data-ac="contrato" data-id="' + o.id + '">Gerar contrato</button>' : '') +
+            (o.status !== 'aprovado' ? '<button class="btn btn-sm" data-ac="excluir" data-id="' + o.id + '" style="color:var(--red)">Excluir</button>' : '') + '</div></div>' : '') +
+        '</div>'
+    }
+
+    var corpo = ''
+    if (orcs.length) {
+      var porOpo = {}, jaFoi = {}
+      orcs.forEach(function (o) { if (o.oportunidade_id) (porOpo[o.oportunidade_id] = porOpo[o.oportunidade_id] || []).push(o) })
+      orcs.forEach(function (o) {
+        if (o.oportunidade_id) {
+          if (jaFoi[o.oportunidade_id]) return
+          jaFoi[o.oportunidade_id] = 1
+          corpo += '<div style="border:1.5px solid var(--green3);border-radius:8px;margin-bottom:10px;overflow:hidden">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--green-light);padding:8px 16px">' +
+              '<span style="font-size:12px;font-weight:500;color:var(--green);text-transform:uppercase;letter-spacing:.04em">Oportunidade (Agrupado)</span>' +
+              '<span data-opo-edit="' + o.oportunidade_id + '" style="font-size:12px;color:var(--blue);cursor:pointer;font-weight:500">Editar oportunidade</span>' +
+            '</div><div style="padding:8px 8px 0">' + porOpo[o.oportunidade_id].map(cartao).join('') + '</div></div>'
+          return
+        }
+        corpo += cartao(o)
+      })
+    } else corpo = '<div class="pc-vazio">Nenhum orçamento. Use "+ Novo orçamento".</div>'
+
     box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">' +
-      '<div class="pc-box-h" style="margin:0">Orçamentos (' + orcs.length + ')</div><button class="ag-btn-novo" id="oc-novo">+ Novo orçamento</button></div>' +
-      (orcs.length ? orcs.map(function (o) {
-        var st = STATUS_ORC[o.status] || STATUS_ORC.aberto, itens = o.itens || []
-        var totPlano = itens.reduce(function (s, i) { return s + num(i.valor_plano) * (i.quantidade || 1) }, 0)
-        var vencido = o.validade && o.validade < hoje && (o.status === 'aberto' || !o.status)
-        var exec = itens.filter(function (i) { return i.executado }).length
-        return '<div class="pc-box" style="margin-bottom:10px;padding:0">' +
-          '<div class="oc-orc-h" data-tg="' + o.id + '"><span class="pc-badge ' + st[1] + '">' + st[0] + '</span>' +
-            '<div style="flex:1;min-width:0"><b style="color:var(--text);font-weight:500">' + esc(o.titulo || ('Orçamento #' + o.id)) + '</b>' +
-              '<div class="ag-hint" style="margin:2px 0 0">' + br(o.data_criacao) + ' · ' + esc(o.tabela_preco || '') + (o.profissional_nome ? ' · ' + esc(o.profissional_nome) : '') +
-              (o.validade ? ' · <span style="color:' + (vencido ? 'var(--red)' : 'inherit') + '">válido até ' + br(o.validade) + (vencido ? ' (vencido)' : '') + '</span>' : '') +
-              (o.status === 'aprovado' && itens.length ? ' · ' + exec + '/' + itens.length + ' executado(s)' : '') + '</div></div>' +
-            '<div style="text-align:right"><b style="color:var(--green);font-size:15px">' + moeda(o.valor_total - (o.desconto || 0)) + '</b>' + (totPlano ? '<div class="ag-hint" style="margin:0">Plano ' + moeda(totPlano) + '</div>' : '') + '</div></div>' +
-          (abertos[o.id] ? '<div style="padding:0 16px 14px;border-top:1px solid var(--border2)">' +
-            '<div class="oc-scroll"><table class="pc-tbl" style="margin-top:8px"><thead><tr><th>Procedimento</th><th>Dente / região</th><th class="hide-sm">Profissional</th><th style="text-align:right">Particular</th><th style="text-align:right">Plano</th></tr></thead><tbody>' +
-            itens.map(function (i) {
-              return '<tr><td>' + esc(i.procedimento_nome) + (i.executado ? ' <span class="pc-badge ok">Executado</span>' : '') + '</td><td>' + esc([i.dente, i.faces ? '(' + i.faces + ')' : '', i.regiao].filter(Boolean).join(' ') || '—') + '</td>' +
-                '<td class="hide-sm">' + esc(i.profissional_nome || '—') + '</td><td style="text-align:right">' + (num(i.valor_unitario) || !num(i.valor_plano) ? moeda(num(i.valor_unitario) * (i.quantidade || 1)) : '—') + '</td><td style="text-align:right">' + (num(i.valor_plano) ? moeda(num(i.valor_plano) * (i.quantidade || 1)) : '—') + '</td></tr>'
-            }).join('') + '</tbody></table></div>' +
-            (o.observacoes ? '<div class="ag-hint">' + esc(o.observacoes) + '</div>' : '') +
-            '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"><button class="btn btn-sm" data-ac="editar" data-id="' + o.id + '">' + (o.status === 'aprovado' ? 'Abrir' : 'Editar') + '</button>' +
-              '<button class="btn btn-sm" data-ac="imprimir" data-id="' + o.id + '">Imprimir</button><button class="btn btn-sm" data-ac="whatsapp" data-id="' + o.id + '">Enviar por WhatsApp</button>' +
-              '<button class="btn btn-sm" data-ac="duplicar" data-id="' + o.id + '">Duplicar</button>' +
-              (itens.length ? '<button class="btn btn-sm" data-ac="contrato" data-id="' + o.id + '">Gerar contrato</button>' : '') +
-              (o.status !== 'aprovado' ? '<button class="btn btn-sm" data-ac="excluir" data-id="' + o.id + '" style="color:var(--red)">Excluir</button>' : '') + '</div></div>' : '') +
-          '</div>'
-      }).join('') : '<div class="pc-vazio">Nenhum orçamento. Use "+ Novo orçamento".</div>')
+      '<div class="pc-box-h" style="margin:0">Orçamentos (' + orcs.length + ')</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+        (temExcl ? '<label style="display:flex;align-items:center;gap:8px;border:1px solid var(--border);background:var(--surface);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="oc-excl-toggle" ' + (mostrarExcl ? 'checked' : '') + ' style="accent-color:var(--green)">Exibir orçamentos com procedimentos excluídos</label>' : '') +
+        '<button class="btn" id="oc-agrupar">Agrupar Oportunidades</button>' +
+        '<button class="ag-btn-novo" id="oc-novo">+ Novo orçamento</button>' +
+      '</div></div>' + corpo
     el('oc-novo').onclick = function () { abrirOrcamentoModal(null) }
+    el('oc-agrupar').onclick = function () { abrirOportunidadeModal(null) }
+    var tg = el('oc-excl-toggle')
+    if (tg) tg.onchange = function () { window._orcMostrarExcluidos = this.checked; window.PRONT_TABS.orcamentos(box, p) }
+    box.querySelectorAll('[data-opo-edit]').forEach(function (h) { h.onclick = function (e) { e.stopPropagation(); abrirOportunidadeModal(+this.getAttribute('data-opo-edit')) } })
     box.querySelectorAll('[data-tg]').forEach(function (h) { h.onclick = function () { var id = +this.getAttribute('data-tg'); abertos[id] = !abertos[id]; window.PRONT_TABS.orcamentos(box, p) } })
     box.querySelectorAll('[data-ac]').forEach(function (b) {
       b.onclick = async function (e) {
