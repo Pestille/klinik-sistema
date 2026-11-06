@@ -119,7 +119,7 @@
       (d.resumo && d.resumo.length ? '<div class="fn-kpis rl-kpis">' + d.resumo.map(function (k) { return '<div class="pc-box fn-kpi"><div class="pc-box-h" style="margin-bottom:8px">' + esc(k.rotulo) + '</div><div class="fn-kpi-v">' + fmt(k.valor, k.tipo) + '</div></div>' }).join('') + '</div>' : '') +
       g +
       (linhas.length ? '<div class="pc-box" style="padding:0"><div class="oc-scroll"><table class="pc-tbl rl-tbl"><thead><tr>' + cols.map(function (c) { return '<th' + (/moeda|num|pct/.test(c.tipo) ? ' style="text-align:right"' : '') + '>' + esc(c.t) + '</th>' }).join('') + '</tr></thead><tbody>' +
-        linhas.map(function (l) { return '<tr' + (l._destaque ? ' class="rl-dest"' : '') + '>' + cols.map(function (c) { return celula(l, c) }).join('') + '</tr>' }).join('') + '</tbody>' +
+        linhas.map(function (l) { return '<tr' + (l._destaque ? ' class="rl-dest"' : '') + '>' + cols.map(function (c, ci) { return celula(l, c, ci === 0 ? l._nivel : null) }).join('') + '</tr>' }).join('') + '</tbody>' +
         (d.totais ? '<tfoot><tr>' + cols.map(function (c, i) { return i === 0 ? '<td><b>Total</b></td>' : '<td' + (/moeda|num|pct/.test(c.tipo) ? ' class="fn-num"' : '') + '><b>' + (d.totais[c.k] != null ? fmt(d.totais[c.k], c.tipo) : '') + '</b></td>' }).join('') + '</tr></tfoot>' : '') +
         '</table></div></div>' : '<div class="pc-vazio" style="padding:40px 0">Nada encontrado com esses filtros.</div>')
     res.querySelectorAll('[data-pac]').forEach(function (a) { a.onclick = function () { abrirProntuario('', +this.getAttribute('data-pac')) } })
@@ -127,8 +127,10 @@
     el('rl-csv').onclick = function () { exportar(r, d) }
     el('rl-print').onclick = function () { imprimir(r, d) }
   }
-  function celula(l, c) {
+  function celula(l, c, nivel) {
     var v = l[c.k], num = /moeda|num|pct/.test(c.tipo)
+    if (l._limpo && (v == null || v === '')) return '<td></td>'
+    if (nivel != null) return '<td style="padding-left:' + (16 + nivel * 16) + 'px;white-space:nowrap">' + esc(fmt(v, c.tipo)) + '</td>'
     if (c.tipo === 'paciente') return '<td>' + (l.paciente_id ? '<a class="fn-pac" data-pac="' + l.paciente_id + '">' + esc(v || 'Paciente') + '</a>' : esc(v || '—')) + '</td>'
     return '<td' + (num ? ' class="fn-num' + (c.tipo === 'moeda' && Number(v) < 0 ? ' rl-neg' : '') + '"' : '') + '>' + esc(fmt(v, c.tipo)) + '</td>'
   }
