@@ -231,7 +231,33 @@
   // ════════════════════════════════════════════════════════════════
   // FOTOS EM PASTAS (aba Fotos do prontuário)
   // ════════════════════════════════════════════════════════════════
-  var FT = { pasta: '' }
+  var FT = { pasta: '', sel: null }   // sel = null (fora do modo seleção) ou {ids}
+
+  // ZIP sem compressão (método store) para "Baixar Selecionadas"
+  function _crcTab() { if (_crcTab.t) return _crcTab.t; var t = new Uint32Array(256); for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0 } return _crcTab.t = t }
+  function _crc32(u8) { var t = _crcTab(), c = 0xFFFFFFFF; for (var i = 0; i < u8.length; i++) c = t[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0 }
+  function _b64bytes(dataUrl) { var b = atob(String(dataUrl).split(',')[1] || ''), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u }
+  function montarZip(arquivos) { // [{nome, dados(Uint8Array)}] → Blob
+    var pedacos = [], centro = [], off = 0, enc = new TextEncoder()
+    function n2(v) { return [v & 255, (v >> 8) & 255] } function n4(v) { return [v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >>> 24) & 255] }
+    arquivos.forEach(function (a) {
+      var nome = enc.encode(a.nome), crc = _crc32(a.dados), tam = a.dados.length
+      var loc = new Uint8Array([].concat(n4(0x04034b50), n2(20), n2(0), n2(0), n2(0), n2(0), n4(crc), n4(tam), n4(tam), n2(nome.length), n2(0)))
+      pedacos.push(loc, nome, a.dados)
+      centro.push({ nome: nome, crc: crc, tam: tam, off: off })
+      off += loc.length + nome.length + tam
+    })
+    var cdIni = off, cdTam = 0
+    centro.forEach(function (c) {
+      var cd = new Uint8Array([].concat(n4(0x02014b50), n2(20), n2(20), n2(0), n2(0), n2(0), n2(0), n4(c.crc), n4(c.tam), n4(c.tam), n2(c.nome.length), n2(0), n2(0), n2(0), n2(0), n4(0), n4(c.off)))
+      pedacos.push(cd, c.nome); cdTam += cd.length + c.nome.length
+    })
+    pedacos.push(new Uint8Array([].concat(n4(0x06054b50), n2(0), n2(0), n2(arquivos.length), n2(arquivos.length), n4(cdTam), n4(cdIni), n2(0))))
+    return new Blob(pedacos, { type: 'application/zip' })
+  }
+  function baixarBlob(blob, nome) { var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome; a.click(); setTimeout(function () { URL.revokeObjectURL(a.href) }, 5000) }
+  function nomeArquivoFoto(f, i) { var n = String(f.nome || 'foto-' + (i + 1)); if (!/\.(jpe?g|png|webp|gif)$/i.test(n)) n += /image\/png/.test(f.url) ? '.png' : '.jpg'; return n.replace(/[\\/:*?"<>|]/g, '_') }
+
   async function abaFotos(box, p) {
     box.innerHTML = '<div class="crc-sk" style="height:160px"></div>'
     var d = await apiData('documentos-paciente', { paciente_id: p.id, tipo: 'foto' }).catch(function (e) { return { success: false, error: e.message } })
@@ -241,19 +267,92 @@
     if (FT.pasta && FT.pasta !== '__sem' && !pastas.some(function (x) { return x.nome === FT.pasta })) FT.pasta = ''
     var vis = fotos.filter(function (f) { return !FT.pasta || (FT.pasta === '__sem' ? !f.pasta : f.pasta === FT.pasta) })
     var podeEnviar = pode('pacientes.fotos')
-    box.innerHTML = '<div class="l2-ft-h"><div class="gpage-title" style="font-size:16px">Fotos</div><div class="fn-acoes">' + (fotos.length > 1 ? '<button class="btn" id="l2-cmp">Comparar</button>' : '') + (podeEnviar ? '<button class="btn" id="l2-pasta">+ Nova pasta</button><label class="btn" style="cursor:pointer">Tirar foto<input type="file" accept="image/*" capture="environment" id="l2-cam" style="display:none"></label><label class="ag-btn-novo" style="cursor:pointer">+ Adicionar fotos<input type="file" accept="image/*" multiple id="l2-up" style="display:none"></label>' : '') + '</div></div>' +
-      '<div class="ag-chips l2-pastas"><span class="ag-chip' + (!FT.pasta ? ' on' : '') + '" data-p="">Todas (' + fotos.length + ')</span>' + pastas.map(function (x) { return '<span class="ag-chip' + (FT.pasta === x.nome ? ' on' : '') + '" data-p="' + esc(x.nome) + '">' + esc(x.nome) + ' (' + x.n + ')</span>' }).join('') + (ps.sem_pasta && pastas.length ? '<span class="ag-chip' + (FT.pasta === '__sem' ? ' on' : '') + '" data-p="__sem">Sem pasta (' + ps.sem_pasta + ')</span>' : '') + '</div>' +
+    var sel = FT.sel
+    var nomePastaAtual = FT.pasta && FT.pasta !== '__sem' ? FT.pasta : ''
+    box.innerHTML = '<div class="l2-ft-h"><div class="gpage-title" style="font-size:16px">Fotos</div><div class="fn-acoes">' +
+      (fotos.length > 1 && !sel ? '<button class="btn" id="l2-cmp">Comparar fotos</button>' : '') + (fotos.length && !sel ? '<button class="btn" id="l2-selm">Selecionar</button>' : '') +
+      (podeEnviar && !sel ? '<button class="btn" id="l2-pasta">+ Nova Pasta</button><label class="btn" style="cursor:pointer">Câmera Intraoral<input type="file" accept="image/*" capture="environment" id="l2-cam" style="display:none"></label><label class="ag-btn-novo" style="cursor:pointer">+ Adicionar fotos<input type="file" accept="image/*" multiple id="l2-up" style="display:none"></label>' : '') + '</div></div>' +
+      (sel ? '<div class="pc-box" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 16px;margin-bottom:12px"><b id="l2-sel-n" style="font-size:13px">' + sel.ids.length + (sel.ids.length === 1 ? ' Foto Selecionada' : ' fotos selecionadas') + '</b>' +
+        '<button class="btn btn-sm" id="l2-sel-todas">Selecionar Todas</button><button class="btn btn-sm" id="l2-sel-cmp">Comparar as 2 fotos selecionadas</button><button class="btn btn-sm" id="l2-sel-bx">Baixar Selecionadas</button>' +
+        (podeEnviar ? '<select class="ag-in btn-sm" id="l2-sel-mv" style="width:auto;padding:4px 8px"><option value="">Mover para Pasta…</option><option value="__sem">Tirar da Pasta</option>' + pastas.map(function (x) { return '<option value="' + esc(x.nome) + '">' + esc(x.nome) + '</option>' }).join('') + '</select><button class="btn btn-sm" id="l2-sel-ex" style="color:var(--red)">Excluir Selecionadas</button>' : '') +
+        '<button class="btn btn-sm" id="l2-sel-c">Cancelar Seleção</button></div>' : '') +
+      '<div class="ag-chips l2-pastas"><span class="ag-chip' + (!FT.pasta ? ' on' : '') + '" data-p="">Todas (' + fotos.length + ')</span>' + pastas.map(function (x) { return '<span class="ag-chip' + (FT.pasta === x.nome ? ' on' : '') + '" data-p="' + esc(x.nome) + '">' + esc(x.nome) + ' (' + x.n + ')</span>' }).join('') + (ps.sem_pasta && pastas.length ? '<span class="ag-chip' + (FT.pasta === '__sem' ? ' on' : '') + '" data-p="__sem">Sem pasta (' + ps.sem_pasta + ')</span>' : '') +
+      (nomePastaAtual && podeEnviar ? ' <a href="#" id="l2-p-ren" style="font-size:12px">Renomear Pasta</a> · <a href="#" id="l2-p-exc" style="font-size:12px;color:var(--red)">Excluir pasta</a>' : '') + '</div>' +
       (vis.length ? '<div class="l2-ft-grid">' + vis.map(function (f) {
-        return '<div class="l2-ft"><div class="l2-ft-img" data-ver="' + f.id + '">' + (/^data:image/.test(f.url || '') ? '<img src="' + f.url + '" alt="">' : '') + '</div><div class="l2-ft-i"><div class="l2-ft-n" title="' + esc(f.nome || '') + '">' + esc(f.nome || 'Foto') + '</div><div class="ag-hint" style="margin:0">' + br(f.created_at) + (f.pasta ? ' · ' + esc(f.pasta) : '') + '</div>' +
-          (podeEnviar ? '<div class="l2-ft-a"><select class="ag-in" data-mv="' + f.id + '"><option value="">Mover para…</option><option value="__sem">Sem pasta</option>' + pastas.filter(function (x) { return x.nome !== f.pasta }).map(function (x) { return '<option value="' + esc(x.nome) + '">' + esc(x.nome) + '</option>' }).join('') + '</select><a href="#" data-ex="' + f.id + '" style="color:var(--red);font-size:12px">Excluir</a></div>' : '') + '</div></div>'
-      }).join('') + '</div>' : '<div class="pc-vazio" style="padding:40px 0">' + (fotos.length ? 'Nenhuma foto nesta pasta.' : 'Nenhuma foto. Use "+ Adicionar fotos" ou "Tirar foto".') + '</div>')
+        var marcada = sel && sel.ids.indexOf(f.id) >= 0
+        return '<div class="l2-ft' + (marcada ? ' l2-ft-on' : '') + '">' +
+          (sel ? '<label style="display:block;padding:6px 10px;border-bottom:1px solid var(--border2);font-size:12px;cursor:pointer"><input type="checkbox" data-sel="' + f.id + '"' + (marcada ? ' checked' : '') + '> Selecionar</label>' : '') +
+          '<div class="l2-ft-img" data-ver="' + f.id + '">' + (/^data:image/.test(f.url || '') ? '<img src="' + f.url + '" alt="">' : '') + '</div><div class="l2-ft-i"><div class="l2-ft-n" title="' + esc(f.nome || '') + '">' + esc(f.nome || 'Foto') + '</div>' +
+          '<div class="ag-hint" style="margin:0">' + br(f.created_at) + (f.pasta ? ' · ' + esc(f.pasta) : '') + '</div>' +
+          '<div class="ag-hint l2-ft-leg" data-leg="' + f.id + '" style="margin:2px 0 0;cursor:pointer;font-style:' + (f.descricao ? 'normal' : 'italic') + '" title="Clique para editar a legenda">' + (f.descricao ? esc(f.descricao) : 'Legenda...') + '</div>' +
+          (podeEnviar && !sel ? '<div class="l2-ft-a"><select class="ag-in" data-mv="' + f.id + '"><option value="">Mover para Pasta</option><option value="__sem">Tirar da Pasta</option>' + pastas.filter(function (x) { return x.nome !== f.pasta }).map(function (x) { return '<option value="' + esc(x.nome) + '">' + esc(x.nome) + '</option>' }).join('') + '</select><a href="#" data-bx="' + f.id + '" style="font-size:12px">Baixar</a><a href="#" data-ex="' + f.id + '" style="color:var(--red);font-size:12px">Excluir</a></div>' : '') + '</div></div>'
+      }).join('') + '</div>' : '<div class="pc-vazio" style="padding:40px 0">' + (fotos.length ? 'Nenhuma foto nesta pasta' : 'Adicione fotos, exames ou radiografias para visualizá-los aqui.') + '</div>')
     function recarregar() { abaFotos(box, p) }
+    function fotosSel() { return fotos.filter(function (f) { return sel && sel.ids.indexOf(f.id) >= 0 }) }
     if (el('l2-cmp')) el('l2-cmp').onclick = function () { if (window.compararFotos) compararFotos(vis.length > 1 ? vis : fotos) }
+    if (el('l2-selm')) el('l2-selm').onclick = function () { FT.sel = { ids: [] }; recarregar() }
+    if (el('l2-sel-c')) el('l2-sel-c').onclick = function () { FT.sel = null; recarregar() }
+    if (el('l2-sel-todas')) el('l2-sel-todas').onclick = function () { FT.sel = { ids: vis.map(function (f) { return f.id }) }; recarregar() }
+    box.querySelectorAll('[data-sel]').forEach(function (c) { c.onchange = function () { var id = +this.getAttribute('data-sel'); var i = sel.ids.indexOf(id); if (this.checked && i < 0) sel.ids.push(id); if (!this.checked && i >= 0) sel.ids.splice(i, 1); recarregar() } })
+    if (el('l2-sel-cmp')) el('l2-sel-cmp').onclick = function () { var fs = fotosSel(); if (fs.length !== 2) return alert('Selecione exatamente 2 fotos para comparar'); if (window.compararFotos) compararFotos(fs, true) }
+    if (el('l2-sel-bx')) el('l2-sel-bx').onclick = function () {
+      var fs = fotosSel(); if (!fs.length) return alert('Nenhuma foto na lista.')
+      try {
+        var arqs = fs.map(function (f, i) { return { nome: nomeArquivoFoto(f, i), dados: _b64bytes(f.url) } })
+        baixarBlob(montarZip(arqs), 'fotos-' + String(p.nome || 'paciente').trim().split(/\s+/)[0].toLowerCase() + '.zip')
+        if (typeof toast === 'function') toast('Download realizado com sucesso.')
+      } catch (e) { alert('Não foi possível baixar as fotos selecionadas.') }
+    }
+    if (el('l2-sel-mv')) el('l2-sel-mv').onchange = async function () {
+      if (!this.value || !sel.ids.length) return
+      var r = await apiPost('foto-pasta', { ids: sel.ids, pasta: this.value === '__sem' ? '' : this.value })
+      if (!r.success) return alert(r.error || 'Não foi possível mover as fotos selecionadas.')
+      FT.sel = null; recarregar()
+    }
+    if (el('l2-sel-ex')) el('l2-sel-ex').onclick = async function () {
+      var fs = fotosSel(); if (!fs.length) return alert('Nenhuma foto na lista.')
+      if (!confirm('Excluir fotos selecionadas?\n\n' + fs.length + (fs.length === 1 ? ' foto será removida permanentemente.' : ' fotos serão removidas permanentemente.') + ' Esta ação não pode ser desfeita.')) return
+      for (var i = 0; i < fs.length; i++) await apiPost('excluir-documento', { id: fs[i].id }).catch(function () { })
+      FT.sel = null; recarregar()
+    }
     box.querySelectorAll('[data-p]').forEach(function (c) { c.onclick = function () { FT.pasta = this.getAttribute('data-p'); recarregar() } })
-    box.querySelectorAll('[data-ver]').forEach(function (c) { c.onclick = function () { abrirPreviewDoc(this.getAttribute('data-ver')) } })
+    if (el('l2-p-ren')) el('l2-p-ren').onclick = async function (e) {
+      e.preventDefault()
+      var n = prompt('Nome da Pasta:', nomePastaAtual); if (!n || !n.trim() || n.trim() === nomePastaAtual) return
+      var r = await apiPost('foto-pasta', { action: 'renomear', paciente_id: p.id, pasta: nomePastaAtual, novo: n.trim() })
+      if (!r.success) return alert(r.error || 'Não foi possível renomear a pasta.')
+      FT.pasta = n.trim().slice(0, 60); recarregar()
+    }
+    if (el('l2-p-exc')) el('l2-p-exc').onclick = async function (e) {
+      e.preventDefault()
+      if (!confirm('Excluir pasta?\n\nAs fotos desta pasta voltarão para "Sem pasta".')) return
+      var r = await apiPost('foto-pasta', { action: 'excluir', paciente_id: p.id, pasta: nomePastaAtual })
+      if (!r.success) return alert(r.error || 'Não foi possível excluir a pasta.')
+      FT.pasta = ''; recarregar()
+    }
+    box.querySelectorAll('[data-leg]').forEach(function (a) {
+      a.onclick = async function () {
+        if (!podeEnviar) return
+        var f = fotos.filter(function (x) { return x.id === +a.getAttribute('data-leg') })[0] || {}
+        var leg = prompt('Legenda:', f.descricao || ''); if (leg == null) return
+        var r = await apiPost('foto-pasta', { action: 'legenda', id: f.id, legenda: leg })
+        if (!r.success) return alert(r.error || 'Não foi possível atualizar a legenda.')
+        if (typeof toast === 'function') toast('Legenda atualizada.')
+        recarregar()
+      }
+    })
+    box.querySelectorAll('[data-ver]').forEach(function (c) { c.onclick = function () { if (sel) { var cb = c.parentNode.querySelector('[data-sel]'); if (cb) { cb.checked = !cb.checked; cb.onchange() } return } abrirPreviewDoc(this.getAttribute('data-ver')) } })
     box.querySelectorAll('[data-mv]').forEach(function (s) { s.onchange = async function () { if (!this.value) return; var r = await apiPost('foto-pasta', { id: +this.getAttribute('data-mv'), pasta: this.value === '__sem' ? '' : this.value }); if (!r.success) return alert(r.error); recarregar() } })
+    box.querySelectorAll('[data-bx]').forEach(function (a) {
+      a.onclick = function (e) {
+        e.preventDefault()
+        var f = fotos.filter(function (x) { return x.id === +a.getAttribute('data-bx') })[0]
+        if (!f) return
+        try { baixarBlob(new Blob([_b64bytes(f.url)], { type: /png/.test(f.url) ? 'image/png' : 'image/jpeg' }), nomeArquivoFoto(f, 0)); if (typeof toast === 'function') toast('Foto baixada com sucesso.') } catch (x) { alert('Não foi possível baixar a foto.') }
+      }
+    })
     box.querySelectorAll('[data-ex]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); excluirDocumento(+this.getAttribute('data-ex'), p.id, 'foto') } })
-    if (el('l2-pasta')) el('l2-pasta').onclick = async function () { var n = prompt('Nome da pasta (ex.: Antes, Depois, Clareamento):'); if (!n || !n.trim()) return; var r = await apiPost('foto-pasta', { action: 'criar', paciente_id: p.id, pasta: n.trim() }); if (!r.success) return alert(r.error); FT.pasta = n.trim().slice(0, 60); recarregar() }
+    if (el('l2-pasta')) el('l2-pasta').onclick = async function () { var n = prompt('Digite o nome da pasta para organizar os arquivos.'); if (!n || !n.trim()) return; var r = await apiPost('foto-pasta', { action: 'criar', paciente_id: p.id, pasta: n.trim() }); if (!r.success) return alert(r.error); FT.pasta = n.trim().slice(0, 60); recarregar() }
     async function enviar(files) {
       var pasta = FT.pasta && FT.pasta !== '__sem' ? FT.pasta : '', erros = []
       for (var i = 0; i < files.length; i++) {
@@ -262,6 +361,7 @@
         if (!r.success) erros.push(files[i].name)
       }
       if (erros.length) alert('Não foi possível enviar: ' + erros.join(', '))
+      else if (typeof toast === 'function') toast('Foto(s) salva(s) com sucesso')
       recarregar()
     }
     if (el('l2-up')) el('l2-up').onchange = function () { enviar(this.files) }

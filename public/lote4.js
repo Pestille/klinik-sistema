@@ -244,14 +244,54 @@
   window.compararFotos = function (fotos) {
     if (fotos.length < 2) return alert('São necessárias pelo menos duas fotos.')
     var ops = fotos.map(function (f, i) { return '<option value="' + i + '">' + esc((f.pasta ? f.pasta + ' · ' : '') + (f.nome || 'Foto') + ' · ' + br(f.created_at)) + '</option>' }).join('')
-    modal('Comparar fotos', '<div class="ag-row c2"><div class="ag-f"><label>Antes</label><select class="ag-in" id="cmp-a">' + ops + '</select></div><div class="ag-f"><label>Depois</label><select class="ag-in" id="cmp-b">' + ops + '</select></div></div>' +
+    modal('Comparar fotos', '<div class="ag-row c3"><div class="ag-f"><label>Antes</label><select class="ag-in" id="cmp-a">' + ops + '</select></div><div class="ag-f"><label>Depois</label><select class="ag-in" id="cmp-b">' + ops + '</select></div>' +
+      '<div class="ag-f"><label>Disposição das fotos</label><select class="ag-in" id="cmp-m"><option value="div">Ajustar divisão</option><option value="lado">Lado a lado</option><option value="cima">Cima e baixo</option></select></div></div>' +
       '<div class="l4-cmp" id="cmp-box"><img id="cmp-ia" alt="Antes"><div class="l4-cmp-dep" id="cmp-dep"><img id="cmp-ib" alt="Depois"></div><div class="l4-cmp-linha" id="cmp-lin"></div></div>' +
-      '<input type="range" min="0" max="100" value="50" id="cmp-r" style="width:100%;margin-top:8px"><div class="ag-hint" style="display:flex;justify-content:space-between;margin:0"><span>Antes</span><span>Arraste para comparar</span><span>Depois</span></div>',
-      '<button class="ag-btn-novo" id="cmp-f">Fechar</button>', 900)
+      '<div id="cmp-duo" style="display:none;gap:8px"></div>' +
+      '<input type="range" min="0" max="100" value="50" id="cmp-r" style="width:100%;margin-top:8px"><div class="ag-hint" id="cmp-leg" style="display:flex;justify-content:space-between;margin:0"><span>Antes</span><span>Arraste para comparar</span><span>Depois</span></div>',
+      '<button class="btn" id="cmp-inv">Inverter</button><button class="btn" id="cmp-exp">Exportar</button><button class="ag-btn-novo" id="cmp-f">Fechar</button>', 900)
     el('cmp-b').value = String(fotos.length > 1 ? 1 : 0)
-    function trocar() { el('cmp-ia').src = fotos[+v('cmp-a')].url; el('cmp-ib').src = fotos[+v('cmp-b')].url }
+    function fa() { return fotos[+v('cmp-a')] } function fb() { return fotos[+v('cmp-b')] }
+    function trocar() {
+      var m = v('cmp-m'), duo = m !== 'div'
+      el('cmp-box').style.display = duo ? 'none' : ''
+      el('cmp-r').style.display = duo ? 'none' : ''
+      el('cmp-leg').style.display = duo ? 'none' : 'flex'
+      el('cmp-duo').style.display = duo ? 'flex' : 'none'
+      if (duo) {
+        el('cmp-duo').style.flexDirection = m === 'cima' ? 'column' : 'row'
+        el('cmp-duo').innerHTML = [['Antes', fa()], ['Depois', fb()]].map(function (x) {
+          return '<figure style="flex:1;margin:0;min-width:0"><img src="' + x[1].url + '" alt="' + x[0] + '" style="width:100%;border-radius:8px;border:1px solid var(--border)"><figcaption class="ag-hint" style="margin:4px 0 0;text-align:center">' + x[0] + (x[1].descricao ? ' · ' + esc(x[1].descricao) : '') + '</figcaption></figure>'
+        }).join('')
+      } else { el('cmp-ia').src = fa().url; el('cmp-ib').src = fb().url }
+    }
     function deslizar() { var p = v('cmp-r') + '%'; el('cmp-dep').style.clipPath = 'inset(0 0 0 ' + p + ')'; el('cmp-lin').style.left = p }
-    el('cmp-a').onchange = trocar; el('cmp-b').onchange = trocar; el('cmp-r').oninput = deslizar
+    el('cmp-a').onchange = trocar; el('cmp-b').onchange = trocar; el('cmp-m').onchange = trocar; el('cmp-r').oninput = deslizar
+    el('cmp-inv').onclick = function () { var a = v('cmp-a'); el('cmp-a').value = v('cmp-b'); el('cmp-b').value = a; trocar() }
+    el('cmp-exp').onclick = function () {
+      // Exporta a comparação como comparacao.jpg (lado a lado ou cima e baixo)
+      var cima = v('cmp-m') === 'cima'
+      var ia = new Image(), ib = new Image(), prontos = 0
+      function desenhar() {
+        if (++prontos < 2) return
+        try {
+          var H = 800
+          var wa = Math.round(ia.width * H / ia.height), wb = Math.round(ib.width * H / ib.height)
+          var c = document.createElement('canvas')
+          if (cima) { var W2 = Math.max(wa, wb); c.width = W2; c.height = H * 2 + 8; }
+          else { c.width = wa + wb + 8; c.height = H }
+          var g = c.getContext('2d')
+          g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height)
+          if (cima) { g.drawImage(ia, 0, 0, wa, H); g.drawImage(ib, 0, H + 8, wb, H) }
+          else { g.drawImage(ia, 0, 0, wa, H); g.drawImage(ib, wa + 8, 0, wb, H) }
+          var a = document.createElement('a'); a.href = c.toDataURL('image/jpeg', 0.92); a.download = 'comparacao.jpg'; a.click()
+          if (typeof toast === 'function') toast('Comparação exportada com sucesso.')
+        } catch (e) { alert('Não foi possível exportar a comparação.') }
+      }
+      ia.onload = desenhar; ib.onload = desenhar
+      ia.onerror = ib.onerror = function () { alert('Não foi possível gerar o arquivo da comparação.') }
+      ia.src = fa().url; ib.src = fb().url
+    }
     el('cmp-f').onclick = fechar
     trocar(); deslizar()
   }
