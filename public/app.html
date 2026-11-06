@@ -2647,6 +2647,8 @@ async function abrirOrcamentoModal(orcId){
     titulo:orc?orc.titulo||'':'',
     validade:orc?(orc.validade||''):(function(){var v=new Date();v.setDate(v.getDate()+30);return v.toISOString().slice(0,10)})(),
     desconto:orc?+(orc.desconto||0):0,
+    voucher_codigo:orc?(orc.voucher_codigo||''):'',
+    voucher_nome:orc?(orc.voucher_nome||''):'',
     tabela_preco:orc?orc.tabela_preco:'PARTICULAR',
     status:orc?orc.status:'aberto',
     forma_pagamento:orc?orc.forma_pagamento:null,
@@ -2786,6 +2788,8 @@ function renderOrcModal(){
                 '<div onclick="limparDesconto()" style="padding:12px 16px;font-size:13px;color:var(--red);cursor:pointer;display:flex;align-items:center;gap:8px;border-top:1px solid #F0F0F0;transition:background .1s" onmouseover="this.style.background=\'#FFF5F5\'" onmouseout="this.style.background=\'#fff\'">'+
                   '<span style="font-size:15px">&#10005;</span> Remover Desconto'+
                 '</div>'+
+                (d.voucher_codigo?'<div onclick="removerVoucherOrc()" style="padding:12px 16px;font-size:13px;color:var(--red);cursor:pointer;border-top:1px solid #F0F0F0;transition:background .1s" onmouseover="this.style.background=\'#FFF5F5\'" onmouseout="this.style.background=\'#fff\'">Remover Voucher</div>'
+                :'<div onclick="abrirVoucherModal()" style="padding:12px 16px;font-size:13px;color:var(--text);cursor:pointer;border-top:1px solid #F0F0F0;transition:background .1s" onmouseover="this.style.background=\'#F5F5F5\'" onmouseout="this.style.background=\'#fff\'">Inserir Voucher</div>')+
                 (d.id?'<div onclick="orcMenuAcao(\'imprimir\')" style="padding:12px 16px;font-size:13px;color:var(--text);cursor:pointer;border-top:1px solid #F0F0F0;transition:background .1s" onmouseover="this.style.background=\'#F5F5F5\'" onmouseout="this.style.background=\'#fff\'">Imprimir</div>'+
                 '<div onclick="orcMenuAcao(\'whatsapp\')" style="padding:12px 16px;font-size:13px;color:var(--text);cursor:pointer;border-top:1px solid #F0F0F0;transition:background .1s" onmouseover="this.style.background=\'#F5F5F5\'" onmouseout="this.style.background=\'#fff\'">Enviar por WhatsApp</div>'+
                 '<div onclick="orcMenuAcao(\'duplicar\')" style="padding:12px 16px;font-size:13px;color:var(--text);cursor:pointer;border-top:1px solid #F0F0F0;transition:background .1s" onmouseover="this.style.background=\'#F5F5F5\'" onmouseout="this.style.background=\'#fff\'">Duplicar orçamento</div>':'')+
@@ -2797,6 +2801,7 @@ function renderOrcModal(){
           '</div>'+
           '<div id="orc-totais-area" style="background:#fff;border:1px solid #E0E0E0;border-radius:8px;padding:16px;margin-bottom:16px">'+
             '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:13px;color:#757575">Total Particular</span><span style="font-size:16px;font-weight:600;color:#1A1A1A" id="orc-total-part">'+fmtBrl(totalPart)+'</span></div>'+
+            (d.voucher_codigo?'<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:13px;color:#00695C">Voucher '+escHtml(d.voucher_nome||'')+' ('+escHtml(d.voucher_codigo)+')</span><span style="font-size:12px;color:#00695C">Aplicado</span></div>':'')+
             '<div style="display:flex;justify-content:space-between'+(d.desconto>0?'':';display:none')+'" id="orc-desconto-row"><span style="font-size:13px;color:#C62828">Desconto</span><span style="font-size:14px;font-weight:600;color:#C62828" id="orc-desconto-val">- '+fmtBrl(d.desconto||0)+'</span></div>'+
             '<div style="display:flex;justify-content:space-between;border-top:1px solid #E0E0E0;padding-top:8px;margin-top:8px" id="orc-total-liq-row"><span style="font-size:13px;color:#757575">Total do paciente</span><span style="font-size:16px;font-weight:600;color:#1B5E3B" id="orc-total-liq">'+fmtBrl(totalPart-(d.desconto||0))+'</span></div>'+
             '<div style="justify-content:space-between;margin-top:8px;display:'+(totalPlano>0?'flex':'none')+'" id="orc-total-plano-row"><span style="font-size:13px;color:#757575">Coberto pelo plano</span><span style="font-size:14px;font-weight:500;color:#E65100" id="orc-total-plano">'+fmtBrl(totalPlano)+'</span></div>'+
@@ -2936,6 +2941,76 @@ function limparDesconto(){
   atualizarOrcTotais()
 }
 
+// ── Voucher no orçamento (Clinicorp: "Inserir Voucher") ──────────
+function abrirVoucherModal(){
+  document.getElementById('orc-menu-dropdown').style.display='none'
+  var old=document.getElementById('modal-voucher');if(old)old.remove()
+  if(!_orcEditData)return
+  var m=document.createElement('div')
+  m.id='modal-voucher'
+  m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10003;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
+  m.innerHTML=
+    '<div style="background:#fff;border-radius:8px;width:420px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:24px">'+
+      '<div style="font-size:18px;font-weight:500;color:#1A1A1A;margin-bottom:16px">Inserir Voucher</div>'+
+      '<label style="display:block;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Código do Voucher</label>'+
+      '<input id="vch-cod" type="text" inputmode="numeric" maxlength="10" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:12px;font-size:16px;color:var(--text);outline:none;box-sizing:border-box;text-align:center;letter-spacing:.2em">'+
+      '<div id="vch-msg" style="color:#C62828;font-size:13px;margin-top:8px;min-height:18px"></div>'+
+      '<div id="vch-info" style="display:none;background:#E8F5E9;color:#034030;border-radius:6px;padding:12px;font-size:13px;margin-top:4px"></div>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">'+
+        '<button onclick="document.getElementById(\'modal-voucher\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+        '<button id="vch-ok" onclick="buscarVoucherOrc()" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Inserir Voucher</button>'+
+      '</div>'+
+    '</div>'
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)m.remove()}
+  document.getElementById('vch-cod').focus()
+}
+
+async function buscarVoucherOrc(){
+  var cod=(document.getElementById('vch-cod').value||'').trim()
+  var msgEl=document.getElementById('vch-msg')
+  if(!/^\d{6,}$/.test(cod)){msgEl.textContent='Voucher não Encontrado';return}
+  var btn=document.getElementById('vch-ok');btn.disabled=true
+  try{
+    var r=await apiData('voucher-codigo',{codigo:cod})
+    btn.disabled=false
+    if(!r.success){msgEl.textContent=r.error||'Voucher não Encontrado';return}
+    aplicarVoucherOrc(r.voucher)
+  }catch(e){btn.disabled=false;msgEl.textContent='Erro: '+e.message}
+}
+
+function aplicarVoucherOrc(vch){
+  var d=_orcEditData;if(!d)return
+  var msgEl=document.getElementById('vch-msg')
+  var total=(d.itens||[]).reduce(function(s,i){return s+(+(i.valor_unitario||0))*(+(i.quantidade||1))},0)
+  if(vch.tipo==='procedimento'){
+    (vch.procedimentos||[]).forEach(function(pp){
+      for(var k=0;k<(pp.quantidade||1);k++) d.itens.push({procedimento_codigo:'',procedimento_nome:pp.procedimento,dente:'',regiao:'',profissional_id:d.profissional_id,profissional_nome:d.profissional_nome,valor_unitario:0,valor_plano:0,quantidade:1,is_voucher:1})
+    })
+  }else{
+    if(!d.itens||!d.itens.length){msgEl.textContent='Adicione procedimentos ao orçamento antes de usar o voucher';return}
+    var desc=0
+    if(vch.tipo==='desconto') desc=vch.desconto_tipo==='valor'?vch.desconto_valor:Math.round(total*vch.desconto_percent)/100
+    if(vch.tipo==='valor') desc=Math.min(vch.valor,total)
+    if(vch.tipo==='gratuito') desc=total
+    if(vch.tipo==='desconto'&&vch.desconto_tipo==='valor'&&desc>total){msgEl.textContent='O Voucher não pode ser aplicado, o valor é maior do que o total do Orçamento';return}
+    d.desconto=Math.round(Math.min(desc,total)*100)/100
+  }
+  d.voucher_codigo=vch.codigo
+  d.voucher_nome=vch.nome
+  var mv=document.getElementById('modal-voucher');if(mv)mv.remove()
+  alert('Voucher Aplicado\n\nSerá consumido mediante a aprovação do orçamento. Se você apenas salvar, o voucher será removido.'+(vch.validade?'\nA data para o uso do voucher vai até '+vch.validade.split('-').reverse().join('/')+'.':''))
+  renderOrcModal()
+}
+
+function removerVoucherOrc(){
+  document.getElementById('orc-menu-dropdown').style.display='none'
+  var d=_orcEditData;if(!d)return
+  d.itens=(d.itens||[]).filter(function(i){return !i.is_voucher})
+  d.voucher_codigo='';d.voucher_nome='';d.desconto=0
+  renderOrcModal()
+}
+
 function atualizarOrcTotais(){
   if(!_orcEditData)return
   var totalPart=(_orcEditData.itens||[]).reduce(function(s,i){return s+(+(i.valor_unitario||0))*(+(i.quantidade||1))},0)
@@ -3068,7 +3143,8 @@ function orcPayload(){
     id:d.id,paciente_id:d.paciente_id,profissional_id:d.profissional_id,profissional_nome:d.profissional_nome,
     data_criacao:v('orc-data',d.data_criacao),observacoes:v('orc-obs',d.observacoes),
     titulo:v('orc-titulo',d.titulo||''),validade:v('orc-validade',d.validade||''),
-    tabela_preco:d.tabela_preco,forma_pagamento:d.forma_pagamento,tipo_pagamento:d.tipo_pagamento,desconto:d.desconto||0,itens:d.itens
+    tabela_preco:d.tabela_preco,forma_pagamento:d.forma_pagamento,tipo_pagamento:d.tipo_pagamento,desconto:d.desconto||0,
+    voucher_codigo:d.voucher_codigo||null,voucher_nome:d.voucher_nome||null,itens:d.itens
   }
 }
 

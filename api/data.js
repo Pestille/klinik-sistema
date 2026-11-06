@@ -25,6 +25,7 @@ var rotasCrm = require('../lib/rotas/crm')
 var rotasOperacao = require('../lib/rotas/operacao')
 var rotasFollowup = require('../lib/rotas/followup')
 var rotasFichas = require('../lib/rotas/fichas')
+var rotasVouchers = require('../lib/rotas/vouchers')
 var cfgLib = require('../lib/config')
 var { gerarComissao, comissaoRecebimentoSegura, comissaoCheckoutSegura } = require('../lib/comissoes')
 
@@ -77,6 +78,7 @@ var ROTA_PERMISSAO = {
     'marcadores': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' }, 'agendamento-marcadores': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' }, 'medicamentos': { GET: 'pacientes.documentos', POST: 'pacientes.prescricoes' },
     'marcar-executado': 'pacientes.ficha_clinica', 'procedimento-autorizacao': 'pacientes.ficha_clinica', 'editar-execucao': 'pacientes.ficha_clinica', 'desfazer-execucao': 'pacientes.ficha_clinica',
     'salvar-orcamento': 'pacientes.orcamentos',
+    'vouchers': { GET: 'pacientes.orcamentos', POST: 'configuracoes.editar' }, 'voucher-codigo': 'pacientes.orcamentos',
     'aprovar-orcamento': 'pacientes.editar_orcamento', 'reprovar-orcamento': 'pacientes.editar_orcamento',
     'desaprovar-orcamento': 'pacientes.editar_orcamento', 'renegociar-orcamento': 'pacientes.editar_orcamento',
     'excluir-orcamento': 'pacientes.editar_orcamento',
@@ -189,6 +191,7 @@ async function handlerInterno(req, res, cap) {
         if (auth && await rotasOperacao.handle(route, ctxRota)) return
         if (auth && await rotasFollowup.handle(route, ctxRota)) return
         if (auth && await rotasFichas.handle(route, ctxRota)) return
+        if (auth && await rotasVouchers.handle(route, ctxRota)) return
         // Anamnese por link e check-in por QR: sem login, só por token
         if (route === 'publico') { await rotasPublico.handlePublico(ctxRota); return }
 
@@ -1771,13 +1774,13 @@ async function handlerInterno(req, res, cap) {
             var orcId
             if (so.id) {
                 // Update existing
-                await client.execute({ sql: "UPDATE orcamentos SET profissional_id=?,profissional_nome=?,data_criacao=?,observacoes=?,tabela_preco=?,forma_pagamento=?,tipo_pagamento=?,parcelas=?,desconto=?,valor_total=?,status=CASE WHEN status IN ('desaprovado','reprovado') THEN 'aberto' ELSE status END,updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [so.profissional_id||null, so.profissional_nome||'', so.data_criacao||new Date().toISOString().slice(0,10), so.observacoes||'', so.tabela_preco||'PARTICULAR', so.forma_pagamento||null, so.tipo_pagamento||'valor_total', so.parcelas||1, so.desconto||0, soValorTotal, so.id, clinica_id] })
+                await client.execute({ sql: "UPDATE orcamentos SET profissional_id=?,profissional_nome=?,data_criacao=?,observacoes=?,tabela_preco=?,forma_pagamento=?,tipo_pagamento=?,parcelas=?,desconto=?,valor_total=?,voucher_codigo=?,voucher_nome=?,status=CASE WHEN status IN ('desaprovado','reprovado') THEN 'aberto' ELSE status END,updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [so.profissional_id||null, so.profissional_nome||'', so.data_criacao||new Date().toISOString().slice(0,10), so.observacoes||'', so.tabela_preco||'PARTICULAR', so.forma_pagamento||null, so.tipo_pagamento||'valor_total', so.parcelas||1, so.desconto||0, soValorTotal, so.voucher_codigo||null, so.voucher_nome||null, so.id, clinica_id] })
                 orcId = so.id
                 // Delete old items and re-insert
                 await client.execute({ sql: "DELETE FROM orcamento_itens WHERE orcamento_id=? AND clinica_id=?", args: [orcId, clinica_id] })
             } else {
                 // Insert new
-                var insResult = await client.execute({ sql: "INSERT INTO orcamentos (clinica_id,paciente_id,profissional_id,profissional_nome,data_criacao,observacoes,tabela_preco,forma_pagamento,tipo_pagamento,parcelas,desconto,valor_total) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", args: [clinica_id, so.paciente_id, so.profissional_id||null, so.profissional_nome||'', so.data_criacao||new Date().toISOString().slice(0,10), so.observacoes||'', so.tabela_preco||'PARTICULAR', so.forma_pagamento||null, so.tipo_pagamento||'valor_total', so.parcelas||1, so.desconto||0, soValorTotal] })
+                var insResult = await client.execute({ sql: "INSERT INTO orcamentos (clinica_id,paciente_id,profissional_id,profissional_nome,data_criacao,observacoes,tabela_preco,forma_pagamento,tipo_pagamento,parcelas,desconto,valor_total,voucher_codigo,voucher_nome) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", args: [clinica_id, so.paciente_id, so.profissional_id||null, so.profissional_nome||'', so.data_criacao||new Date().toISOString().slice(0,10), so.observacoes||'', so.tabela_preco||'PARTICULAR', so.forma_pagamento||null, so.tipo_pagamento||'valor_total', so.parcelas||1, so.desconto||0, soValorTotal, so.voucher_codigo||null, so.voucher_nome||null] })
                 orcId = Number(insResult.lastInsertRowid)
             }
             // Insert items
@@ -1793,6 +1796,14 @@ async function handlerInterno(req, res, cap) {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var ao = req.body || {}
             if (!ao.id) return res.status(400).json({ success: false, error: 'id obrigatório' })
+            // Voucher: "Será consumido mediante a aprovação do orçamento."
+            try {
+                var aoVc = await client.execute({ sql: "SELECT voucher_codigo FROM orcamentos WHERE id=? AND clinica_id=?", args: [ao.id, clinica_id] })
+                if (aoVc.rows.length && aoVc.rows[0].voucher_codigo) {
+                    var aoVr = await require('../lib/rotas/vouchers').consumir(client, clinica_id, aoVc.rows[0].voucher_codigo, ao.id, auth)
+                    if (aoVr.erro) return res.status(409).json({ success: false, error: aoVr.erro })
+                }
+            } catch (e) { if (!/no such (table|column)/i.test(e.message || '')) throw e }
             await client.execute({ sql: "UPDATE orcamentos SET status='aprovado',aprovado_por=?,data_aprovacao=datetime('now'),updated_at=datetime('now') WHERE id=? AND clinica_id=?", args: [ao.aprovado_por||'', ao.id, clinica_id] })
 
             // Generate approval commissions for each item's professional

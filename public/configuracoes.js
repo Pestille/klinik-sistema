@@ -34,7 +34,7 @@
     ['Clínica', [['clinica-dados', 'Dados da clínica', 'Nome, CNPJ, contato, endereço, responsável técnico e logo', true], ['clinica-cobranca', 'Cobrança e Asaas', 'PIX, conta para recebimento e chave da API do Asaas', true], ['clinica-tema', 'Personalização', 'Cor da barra superior e título do sistema', true]]],
     ['Agenda', [['agenda-geral', 'Geral', 'Atendimentos no mesmo horário e encaixes', true], ['agenda-horarios', 'Horários e categorias', 'Horário de funcionamento, agenda dos profissionais e categorias'], ['agenda-mensagens', 'Confirmações e lembretes', 'Envio automático e textos das mensagens', true], ['agenda-checkin', 'Check-in por QR Code', 'Cartaz para a recepção e chegadas do dia'], ['agenda-online', 'Agendamento online', 'Link para o paciente marcar consulta pela internet', true], ['agenda-bloqueios', 'Bloqueios', 'O que fazer ao agendar paciente com parcelas vencidas', true]]],
     ['Prontuário', [['pront-documentos', 'Modelos de documento', 'Atestados, receituários, contratos e termos'], ['pront-anamnese', 'Questionário de anamnese', 'Perguntas, ordem e alertas; o paciente também responde por link', true], ['pront-medicamentos', 'Medicamentos', 'Lista usada no receituário, com posologia']]],
-    ['Orçamentos', [['orc-tabelas', 'Tabelas de preço', 'Particular, convênios e planos próprios'], ['orc-especialidades', 'Especialidades', 'Lista usada no cadastro de profissionais e procedimentos'], ['orc-regras', 'Regras de orçamento', 'Desconto máximo por perfil', true]]],
+    ['Orçamentos', [['orc-tabelas', 'Tabelas de preço', 'Particular, convênios e planos próprios'], ['orc-especialidades', 'Especialidades', 'Lista usada no cadastro de profissionais e procedimentos'], ['orc-regras', 'Regras de orçamento', 'Desconto máximo por perfil', true], ['orc-vouchers', 'Vouchers', 'Crie e personalize o Voucher, venda a seus pacientes e eles o utilizam na tela de orçamento', true]]],
     ['Financeiro', [['fin-contas', 'Contas bancárias', 'Caixa e contas usadas nos lançamentos e conciliação'], ['fin-taxas', 'Taxas e encargos', 'Taxas da maquininha, multa, juros e desconto'], ['fin-regua', 'Régua de cobrança', 'Lembretes automáticos de pagamento'], ['fin-recibos', 'Recibos', 'Numeração sequencial dos recibos', true]]],
     ['Equipe', [['eq-usuarios', 'Usuários e permissões', 'Acessos, perfis e exceções por usuário'], ['eq-profissionais', 'Profissionais', 'Cadastro, agenda de trabalho e comissões']]],
     ['Segurança', [['seg-acesso', 'Segurança e acesso', 'Login em duas etapas, duração da sessão e exportação', true], ['seg-auditoria', 'Auditoria', 'Quem fez o quê: acessos, exportações e alterações', true]]],
@@ -175,6 +175,104 @@
     if (el('es-add')) el('es-add').onclick = async function () { var r = await apiPost('especialidades', { nome: v('es-nova') }); if (!r.success) return msg(r.error); SECOES['orc-especialidades'](box) }
     box.querySelectorAll('[data-rm]').forEach(function (a) { a.onclick = async function () { await apiPost('especialidades', { action: 'excluir', id: +this.getAttribute('data-rm') }); SECOES['orc-especialidades'](box) } })
   }
+  // ── Controle de Voucher (Clinicorp: Configurações > Vouchers) ──
+  SECOES['orc-vouchers'] = async function (box) {
+    box.innerHTML = '<div class="crc-sk" style="height:120px"></div>'
+    var d = await apiData('vouchers', {}).catch(function (e) { return { success: false, error: e.message } })
+    if (!d.success) { box.innerHTML = '<div class="ag-err">' + esc(d.error || 'Erro') + '</div>'; return }
+    var vs = d.data || []
+    var TIPO_NOME = { desconto: 'Voucher de Desconto', valor: 'Voucher de Valor', gratuito: 'Voucher Gratuito', procedimento: 'Voucher de Procedimento' }
+    var ST_COD = { disponivel: ['Disponível', 'pend'], vendido: ['Vendido', 'ok'], utilizado: ['Voucher Utilizado', 'ok'], cancelado: ['Cancelado', 'err'] }
+    box.innerHTML = '<div class="pc-box"><div class="l2-ft-h"><div><div class="pc-box-h" style="margin:0">Controle de Voucher</div>' +
+      '<p class="ag-hint" style="margin:4px 0 0">Nessa tela você pode criar e personalizar o Voucher, poderá vendê-lo a seus pacientes onde eles poderão utilizá-lo na tela de orçamento.</p></div>' +
+      '<button class="ag-btn-novo" id="vch-novo">Criar Voucher</button></div>' +
+      (vs.length ? vs.map(function (v) {
+        var det = v.tipo === 'desconto' ? (v.desconto_tipo === 'valor' ? 'R$ ' + Number(v.desconto_valor).toFixed(2).replace('.', ',') : Number(v.desconto_percent) + '%')
+          : v.tipo === 'valor' ? 'R$ ' + Number(v.valor).toFixed(2).replace('.', ',')
+          : v.tipo === 'procedimento' ? (v.procedimentos || []).map(function (pp) { return pp.procedimento + (pp.quantidade > 1 ? ' ×' + pp.quantidade : '') }).join(', ') : 'Gratuito'
+        return '<div class="pc-box" style="margin-top:12px"><div class="l2-ft-h" style="margin-bottom:4px"><div><b style="font-size:14px">' + esc(v.nome) + '</b> <span class="pc-badge ' + (Number(v.ativo) ? 'ok' : '') + '">' + (Number(v.ativo) ? 'Ativo' : 'Inativo') + '</span>' +
+          '<div class="ag-hint" style="margin:2px 0 0">' + esc(TIPO_NOME[v.tipo] || v.tipo) + ' · ' + esc(det) +
+          (v.validade_dias ? ' · validade de ' + v.validade_dias + ' dias' : '') + (v.limite_codigos ? ' · Limite de Códigos: ' + v.limite_codigos : '') +
+          (Number(v.exige_pagamento) ? ' · venda por R$ ' + Number(v.preco_venda || 0).toFixed(2).replace('.', ',') : '') +
+          ' · ' + v.gerados + ' código(s), ' + v.utilizados + ' utilizado(s)</div></div>' +
+          '<div class="fn-acoes"><button class="btn btn-sm" data-ger="' + v.id + '">Gerar Voucher</button><button class="btn btn-sm" data-ed="' + v.id + '">Editar Voucher</button>' +
+          '<button class="btn btn-sm" data-at="' + v.id + '" data-para="' + (Number(v.ativo) ? 'inativar' : 'ativar') + '">' + (Number(v.ativo) ? 'Inativar' : 'Ativar') + '</button></div></div>' +
+          (v.codigos.length ? '<div class="oc-scroll"><table class="pc-tbl"><thead><tr><th>Código</th><th>Validade</th><th>Situação</th><th>Comprador</th><th>Pagamento</th><th></th></tr></thead><tbody>' + v.codigos.map(function (c) {
+            var st = ST_COD[c.status] || [c.status, '']
+            return '<tr><td><b>' + esc(c.codigo) + '</b></td><td>' + (c.validade ? c.validade.split('-').reverse().join('/') : '—') + '</td><td><span class="pc-badge ' + st[1] + '">' + st[0] + '</span>' + (c.usado_orcamento_id ? ' <span class="ag-hint">orçamento #' + c.usado_orcamento_id + '</span>' : '') + '</td>' +
+              '<td>' + esc(c.comprador || c.comprador_nome || '—') + '</td>' +
+              '<td>' + (Number(c.exige_pagamento) ? (Number(c.pago) ? 'Pago' + (c.valor_venda ? ' · R$ ' + Number(c.valor_venda).toFixed(2).replace('.', ',') : '') : (c.status === 'vendido' ? 'Pendente' : '—')) : 'Não exige') + '</td>' +
+              '<td style="text-align:right;white-space:nowrap">' + (c.status === 'disponivel' ? '<button class="btn btn-sm" data-vd="' + c.id + '">Vender Voucher</button> ' : '') +
+              (c.status === 'vendido' && Number(c.exige_pagamento) && !Number(c.pago) ? '<button class="btn btn-sm" data-rc="' + c.id + '">Receber</button> ' : '') +
+              (c.status !== 'utilizado' && c.status !== 'cancelado' ? '<button class="btn btn-sm" data-cc="' + c.id + '" style="color:var(--red)">Cancelar</button>' : '') + '</td></tr>'
+          }).join('') + '</tbody></table></div>' : '<p class="ag-hint" style="margin:8px 0 0">Nenhum código gerado. Use "Gerar Voucher".</p>') + '</div>'
+      }).join('') : '<div class="pc-vazio" style="padding:30px 0">Nenhum voucher. Use "Criar Voucher".</div>') + '</div>'
+    function de() { SECOES['orc-vouchers'](box) }
+    el('vch-novo').onclick = function () { editarVoucherCfg(null, de) }
+    box.querySelectorAll('[data-ed]').forEach(function (bt) { bt.onclick = function () { editarVoucherCfg(vs.filter(function (v) { return v.id === +bt.getAttribute('data-ed') })[0], de) } })
+    box.querySelectorAll('[data-at]').forEach(function (bt) { bt.onclick = async function () { var r = await apiPost('vouchers', { action: bt.getAttribute('data-para'), id: +bt.getAttribute('data-at') }); if (!r.success) return msg(r.error); de() } })
+    box.querySelectorAll('[data-ger]').forEach(function (bt) {
+      bt.onclick = async function () {
+        var qt = prompt('Quantidade de Vouchers:', '1'); if (!qt) return
+        var r = await apiPost('vouchers', { action: 'gerar', id: +bt.getAttribute('data-ger'), quantidade: qt })
+        if (!r.success) return msg(r.error)
+        alert('Código(s) gerado(s):\n\n' + r.codigos.join('\n') + (r.validade ? '\n\nA data para o uso do voucher vai até ' + r.validade.split('-').reverse().join('/') : ''))
+        de()
+      }
+    })
+    box.querySelectorAll('[data-vd]').forEach(function (bt) {
+      bt.onclick = function () {
+        var cid = +bt.getAttribute('data-vd')
+        var corpo = '<div id="vv-err"></div>' + campo('vv-nome', 'Comprador (nome)', '') + campo('vv-valor', 'Valor da venda (R$)', '', ' inputmode="decimal"') +
+          chk('vv-pago', 'Pagamento recebido', false, 'Sem o pagamento, o código fica com pendência e não pode ser usado no orçamento.')
+        if (typeof window.KFIN === 'object' && KFIN.modal) {
+          KFIN.modal('Vender Voucher', corpo, '<button class="btn" onclick="KFIN.fechar()">Cancelar</button><button class="ag-btn-novo" id="vv-ok">Vender</button>', 480)
+          el('vv-ok').onclick = async function () {
+            var r = await apiPost('vouchers', { action: 'vender', codigo_id: cid, comprador_nome: v('vv-nome'), valor_venda: v('vv-valor'), pago: v('vv-pago') })
+            if (!r.success) { el('vv-err').innerHTML = '<div class="ag-err">' + esc(r.error || 'Erro') + '</div>'; return }
+            KFIN.fechar(); de()
+          }
+        }
+      }
+    })
+    box.querySelectorAll('[data-rc]').forEach(function (bt) { bt.onclick = async function () { var r = await apiPost('vouchers', { action: 'receber', codigo_id: +bt.getAttribute('data-rc') }); if (!r.success) return msg(r.error); de() } })
+    box.querySelectorAll('[data-cc]').forEach(function (bt) { bt.onclick = async function () { if (!confirm('Cancelar este código de voucher?')) return; var r = await apiPost('vouchers', { action: 'cancelar', codigo_id: +bt.getAttribute('data-cc') }); if (!r.success) return msg(r.error); de() } })
+  }
+
+  var VCH_INFO = { desconto: 'O Voucher de desconto deverá ser utilizado na tela de orçamento!', valor: 'O Voucher de valor deverá ser utilizado na tela de orçamento e irá descontar do valor do orçamento!', gratuito: 'O voucher gratuito torna o orçamento sem custo para o paciente.', procedimento: 'Aqui serão inseridos os procedimentos do voucher.' }
+  function editarVoucherCfg(vch, depois) {
+    vch = vch || {}
+    if (!(typeof window.KFIN === 'object' && KFIN.modal)) return
+    var corpo = '<div id="vc-err"></div>' +
+      '<div class="ag-row c2">' + campo('vc-nome', 'Nome do Voucher', vch.nome || '') +
+      '<div class="ag-f"><label>Tipo</label><select class="ag-in" id="vc-tipo"><option value="desconto">Voucher de Desconto</option><option value="valor">Voucher de Valor</option><option value="gratuito">Voucher Gratuito</option><option value="procedimento">Voucher de Procedimento</option></select></div></div>' +
+      '<p class="ag-hint" id="vc-info" style="margin:0 0 8px"></p>' +
+      '<div id="vc-desc" class="ag-row c2"><div class="ag-f"><label>Desconto em</label><select class="ag-in" id="vc-dtipo"><option value="percent">Porcentagem (%)</option><option value="valor">Valor Fixo (R$)</option></select></div>' + campo('vc-dval', 'Valor do desconto', vch.desconto_tipo === 'valor' ? vch.desconto_valor : (vch.desconto_percent || ''), ' inputmode="decimal"') + '</div>' +
+      '<div id="vc-valor-box">' + campo('vc-valor', 'Valor do Voucher (R$)', vch.valor || '', ' inputmode="decimal"') + '</div>' +
+      '<div id="vc-procs-box"><div class="lbl">Procedimentos Adicionados ao Voucher</div><textarea class="ag-in" id="vc-procs" rows="3" placeholder="Um por linha. Ex.: LIMPEZA ou LIMPEZA;2">' + esc((vch.procedimentos || []).map(function (pp) { return pp.procedimento + (pp.quantidade > 1 ? ';' + pp.quantidade : '') }).join('\n')) + '</textarea></div>' +
+      '<div class="ag-row c3">' + campo('vc-validade', 'Validade do código (dias)', vch.validade_dias || '', ' type="number" min="0"') + campo('vc-limite', 'Limite de Códigos', vch.limite_codigos || '', ' type="number" min="0"') + campo('vc-preco', 'Preço de venda (R$)', vch.preco_venda || '', ' inputmode="decimal"') + '</div>' +
+      chk('vc-pag', 'Exige pagamento (venda)', !!Number(vch.exige_pagamento), 'Com esta opção, o código só pode ser usado no orçamento depois de vendido e pago.')
+    KFIN.modal(vch.id ? 'Editar Voucher' : 'Criar Voucher', corpo, '<button class="btn" onclick="KFIN.fechar()">Cancelar</button><button class="ag-btn-novo" id="vc-ok">Salvar</button>', 640)
+    el('vc-tipo').value = vch.tipo || 'desconto'
+    el('vc-dtipo').value = vch.desconto_tipo || 'percent'
+    function mudaTipo() {
+      var t = el('vc-tipo').value
+      el('vc-info').textContent = VCH_INFO[t] || ''
+      el('vc-desc').style.display = t === 'desconto' ? '' : 'none'
+      el('vc-valor-box').style.display = t === 'valor' ? '' : 'none'
+      el('vc-procs-box').style.display = t === 'procedimento' ? '' : 'none'
+      var pg = el('vc-pag'); if (pg) { pg.disabled = t === 'gratuito'; if (t === 'gratuito') pg.checked = false }
+    }
+    el('vc-tipo').onchange = mudaTipo; mudaTipo()
+    el('vc-ok').onclick = async function () {
+      var t = el('vc-tipo').value, dt = el('vc-dtipo').value
+      var procs = String(v('vc-procs') || '').split('\n').map(function (l) { var pp = l.split(';'); return { procedimento: pp[0].trim(), quantidade: parseInt(pp[1], 10) || 1 } }).filter(function (pp) { return pp.procedimento })
+      var r = await apiPost('vouchers', { id: vch.id, nome: v('vc-nome'), tipo: t, desconto_tipo: dt, desconto_percent: dt === 'percent' ? v('vc-dval') : 0, desconto_valor: dt === 'valor' ? v('vc-dval') : 0, valor: v('vc-valor'), procedimentos: procs, validade_dias: v('vc-validade'), limite_codigos: v('vc-limite'), preco_venda: v('vc-preco'), exige_pagamento: v('vc-pag') })
+      if (!r.success) { el('vc-err').innerHTML = '<div class="ag-err">' + esc(r.error || 'Erro') + '</div>'; return }
+      KFIN.fechar(); if (depois) depois()
+    }
+  }
+
   SECOES['orc-regras'] = async function (box) {
     var d; try { d = await dados() } catch (e) { return falha(box, e) }
     var lim = d.cfg.orcamento.desconto_max
