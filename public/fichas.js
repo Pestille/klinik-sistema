@@ -9,6 +9,9 @@
   'use strict'
 
   var OP = null // opções que o servidor devolve (status, filosofias, etapas…)
+  function MOD(t) { return (window.FICHAS_MODELOS || {})[t] } // endodontia, periodontia, alinhadores, toxina (fichas-modelos.js)
+  function rotVisita(t) { return MOD(t) ? MOD(t).visita : t === 'ortodontia' ? '+ Manutenção' : '+ Retorno' }
+  function rotVisitas(t) { return MOD(t) ? MOD(t).visitas : t === 'ortodontia' ? 'Manutenções' : 'Retornos' }
   var filtro = 'todas'
 
   function el(id) { return document.getElementById(id) }
@@ -58,10 +61,10 @@
 
     box.innerHTML = '<div style="max-width:980px">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px">' +
-        '<div class="pc-seg" id="fe-seg" style="margin:0;min-width:320px">' + [['todas', 'Todas'], ['ortodontia', 'Ortodontia'], ['implante', 'Implante']].map(function (x) {
+        '<div class="pc-seg" id="fe-seg" style="margin:0;min-width:320px;flex-wrap:wrap">' + [['todas', 'Todas'], ['ortodontia', 'Ortodontia'], ['implante', 'Implante'], ['endodontia', 'Endodontia'], ['periodontia', 'Periodontia'], ['alinhadores', 'Alinhadores'], ['toxina', 'Toxina']].filter(function (x) { return x[0] === 'todas' || x[0] === 'ortodontia' || x[0] === 'implante' || cont(x[0]) || filtro === x[0] }).map(function (x) {
           return '<div data-f="' + x[0] + '"' + (filtro === x[0] ? ' class="on"' : '') + '>' + x[1] + ' (' + cont(x[0]) + ')</div>' }).join('') + '</div>' +
         (edita ? '<button class="ag-btn-novo" id="fe-nova">+ Nova ficha</button>' : '') + '</div>' +
-      (lista.length ? lista.map(cartao).join('') : '<div class="pc-vazio" style="padding:40px 0;text-align:center">' + (todas.length ? 'Nenhuma ficha deste tipo.' : 'Nenhuma ficha de especialidade. Use "+ Nova ficha" para abrir uma ficha de ortodontia ou de implante.') + '</div>') +
+      (lista.length ? lista.map(cartao).join('') : '<div class="pc-vazio" style="padding:40px 0;text-align:center">' + (todas.length ? 'Nenhuma ficha deste tipo.' : 'Nenhuma ficha de especialidade. Use "+ Nova ficha" para abrir uma ficha de ortodontia, implante, endodontia, periodontia, alinhadores ou toxina botulínica.') + '</div>') +
       '</div>'
 
     el('fe-seg').querySelectorAll('[data-f]').forEach(function (d) { d.onclick = function () { filtro = this.getAttribute('data-f'); recarregar() } })
@@ -85,7 +88,8 @@
 
     function cartao(f) {
       var d = f.dados || {}, titulo, corpo
-      if (f.tipo === 'ortodontia') {
+      if (MOD(f.tipo)) { var c = MOD(f.tipo).cartao(f, OP); titulo = c.titulo; corpo = c.corpo }
+      else if (f.tipo === 'ortodontia') {
         titulo = 'Ortodontia' + (d.filosofia ? ' · ' + esc(OP.filosofias[d.filosofia]) : '')
         var atrasada = f.proxima_manutencao && f.proxima_manutencao < hoje()
         corpo = '<div class="fe-kv">' +
@@ -110,10 +114,10 @@
           '<div><div style="font-size:15px;font-weight:500;color:var(--text)">' + titulo + ' ' + badge(f.status) + '</div>' +
           '<div class="ag-hint" style="margin:4px 0 0">Início ' + br(f.data_inicio) + (f.profissional_nome ? ' · ' + esc(f.profissional_nome) : '') + (f.criado_por_nome ? ' · aberta por ' + esc(f.criado_por_nome) : '') + '</div></div>' +
           '<div class="fn-acoes"><button class="btn btn-sm" data-abrir="' + f.id + '">' + (edita ? 'Abrir / editar' : 'Abrir') + '</button>' +
-            (edita ? '<button class="btn btn-sm" data-visita="' + f.id + '">' + (f.tipo === 'ortodontia' ? '+ Manutenção' : '+ Retorno') + '</button>' : '') +
+            (edita ? '<button class="btn btn-sm" data-visita="' + f.id + '">' + rotVisita(f.tipo) + '</button>' : '') +
             (edita && (isAdmin() || Number(f.criado_por_id) === meuId()) ? '<button class="btn btn-sm" data-excluir="' + f.id + '" style="color:var(--red)">Excluir</button>' : '') + '</div></div>' +
         corpo +
-        (vis.length ? '<div class="pc-box-h" style="margin:16px 0 8px">' + (f.tipo === 'ortodontia' ? 'Manutenções' : 'Retornos') + ' (' + vis.length + ')</div>' + vis.slice(0, 5).map(function (v) {
+        (vis.length ? '<div class="pc-box-h" style="margin:16px 0 8px">' + rotVisitas(f.tipo) + ' (' + vis.length + ')</div>' + vis.slice(0, 5).map(function (v) {
           return '<div class="pc-nota"><div>' + esc(v.descricao) + '<small>' + br(v.data) + (v.profissional_nome ? ' · ' + esc(v.profissional_nome) : '') + (v.usuario_nome ? ' · registrado por ' + esc(v.usuario_nome) : '') +
             (edita ? ' · <a href="#" data-rmv="' + v.id + '" style="color:var(--red)">Remover</a>' : '') + '</small></div></div>'
         }).join('') + (vis.length > 5 ? '<div class="ag-hint">+ ' + (vis.length - 5) + ' anterior(es) — veja em "Abrir".</div>' : '') : '') +
@@ -126,7 +130,8 @@
   function escolherModelo(p, depois) {
     modal('Nova ficha de especialidade', '<p style="margin-top:0">Escolha o modelo da ficha.</p>' +
       '<div class="ag-row c2"><button class="pc-box fe-modelo" data-t="ortodontia" style="text-align:left;cursor:pointer"><b style="color:var(--text)">Ortodontia</b><div class="ag-hint" style="margin:4px 0 0">Aparelho, arcada, classe, plano, previsão de término e manutenções.</div></button>' +
-      '<button class="pc-box fe-modelo" data-t="implante" style="text-align:left;cursor:pointer"><b style="color:var(--text)">Implante</b><div class="ag-hint" style="margin:4px 0 0">Um ou mais implantes por dente, com medidas, torque e as etapas do tratamento.</div></button></div>',
+      '<button class="pc-box fe-modelo" data-t="implante" style="text-align:left;cursor:pointer"><b style="color:var(--text)">Implante</b><div class="ag-hint" style="margin:4px 0 0">Um ou mais implantes por dente, com medidas, torque e as etapas do tratamento.</div></button>' +
+      Object.keys(window.FICHAS_MODELOS || {}).map(function (t) { var m = FICHAS_MODELOS[t]; return '<button class="pc-box fe-modelo" data-t="' + t + '" style="text-align:left;cursor:pointer"><b style="color:var(--text)">' + esc(m.nome) + '</b><div class="ag-hint" style="margin:4px 0 0">' + esc(m.descricao) + '</div></button>' }).join('') + '</div>',
       '<button class="btn" id="fe-c">Cancelar</button>', 620)
     el('fe-c').onclick = fechar
     document.querySelectorAll('.fe-modelo').forEach(function (b) { b.onclick = function () { editar(p, this.getAttribute('data-t'), null, depois) } })
@@ -135,7 +140,8 @@
   // ── Formulário (novo ou edição) ──────────────────────────────────
   async function editar(p, tipo, f, depois, soLeitura) {
     var profs = await profissionais()
-    var d = (f && f.dados) || (tipo === 'ortodontia' ? { intervalo_dias: 30 } : { implantes: [{ etapas: {} }] })
+    var M = MOD(tipo)
+    var d = (f && f.dados) || (M ? M.novo() : tipo === 'ortodontia' ? { intervalo_dias: 30 } : { implantes: [{ etapas: {} }] })
     var implantes = JSON.parse(JSON.stringify(d.implantes || []))
     var dis = soLeitura ? ' disabled' : ''
     var topo = '<div id="fe-err"></div><div class="ag-row c3">' +
@@ -143,7 +149,8 @@
       '<div class="ag-f"><label>Profissional responsável</label><select class="ag-in" id="fe-prof"' + dis + '><option value="">—</option>' + profs.map(function (x) { return '<option value="' + x.id + '"' + (f && String(f.profissional_id) === String(x.id) ? ' selected' : '') + '>' + esc(x.nome) + '</option>' }).join('') + '</select></div>' +
       '<div class="ag-f"><label>Início do tratamento</label><input class="ag-in" type="date" id="fe-ini" value="' + ((f && f.data_inicio) || hoje()) + '"' + dis + '></div></div>'
     var corpo
-    if (tipo === 'ortodontia') {
+    if (M) corpo = topo + M.form(d, dis, OP)
+    else if (tipo === 'ortodontia') {
       corpo = topo + '<div class="ag-row c3">' +
         '<div class="ag-f"><label>Aparelho / técnica</label><select class="ag-in" id="fe-fil"' + dis + '>' + opts(OP.filosofias, d.filosofia, '—') + '</select></div>' +
         '<div class="ag-f"><label>Arcada</label><select class="ag-in" id="fe-arc"' + dis + '>' + opts(OP.arcadas, d.arcada, '—') + '</select></div>' +
@@ -159,13 +166,14 @@
         '<div class="ag-f"><label>Enxerto / regeneração</label><input class="ag-in" id="fe-enx" maxlength="500" placeholder="Ex.: levantamento de seio, enxerto ósseo particulado"' + dis + ' value="' + esc(d.enxerto || '') + '"></div>' +
         '<div class="ag-f"><label>Observações</label><textarea class="ag-in" id="fe-obs" rows="2" maxlength="3000"' + dis + '>' + esc(d.observacoes || '') + '</textarea></div>'
     }
-    if (f && f.visitas && f.visitas.length) corpo += '<div class="pc-box-h" style="margin:16px 0 8px">' + (tipo === 'ortodontia' ? 'Manutenções' : 'Retornos') + '</div>' +
+    if (f && f.visitas && f.visitas.length) corpo += '<div class="pc-box-h" style="margin:16px 0 8px">' + rotVisitas(tipo) + '</div>' +
       f.visitas.map(function (v) { return '<div class="pc-nota"><div>' + esc(v.descricao) + '<small>' + br(v.data) + (v.profissional_nome ? ' · ' + esc(v.profissional_nome) : '') + '</small></div></div>' }).join('')
 
-    modal((f ? '' : 'Nova ficha · ') + (tipo === 'ortodontia' ? 'Ortodontia' : 'Implante'), corpo,
+    modal((f ? '' : 'Nova ficha · ') + (M ? M.nome : tipo === 'ortodontia' ? 'Ortodontia' : 'Implante'), corpo,
       '<button class="btn" id="fe-c">' + (soLeitura ? 'Fechar' : 'Cancelar') + '</button>' + (soLeitura ? '' : '<button class="ag-btn-novo" id="fe-ok">Salvar ficha</button>'), 860)
     el('fe-c').onclick = fechar
 
+    if (M) M.montar(d, dis, OP)
     if (tipo === 'implante') { desenharImplantes(); if (el('fe-add')) el('fe-add').onclick = function () { lerImplantes(); implantes.push({ etapas: {} }); desenharImplantes() } }
 
     function desenharImplantes() {
@@ -199,7 +207,8 @@
     if (soLeitura) return
     el('fe-ok').onclick = async function () {
       var dados
-      if (tipo === 'ortodontia') dados = { filosofia: el('fe-fil').value, arcada: el('fe-arc').value, classe: el('fe-cla').value, previsao_termino: el('fe-prev').value || null, intervalo_dias: el('fe-int').value === '' ? '' : +el('fe-int').value, queixa: el('fe-qx').value, plano: el('fe-pl').value, contencao: el('fe-ct').value, observacoes: el('fe-obs').value }
+      if (M) dados = M.ler()
+      else if (tipo === 'ortodontia') dados = { filosofia: el('fe-fil').value, arcada: el('fe-arc').value, classe: el('fe-cla').value, previsao_termino: el('fe-prev').value || null, intervalo_dias: el('fe-int').value === '' ? '' : +el('fe-int').value, queixa: el('fe-qx').value, plano: el('fe-pl').value, contencao: el('fe-ct').value, observacoes: el('fe-obs').value }
       else { lerImplantes(); dados = { implantes: implantes, enxerto: el('fe-enx').value, observacoes: el('fe-obs').value } }
       var bt = this; bt.disabled = true
       var r = await apiPost('fichas-especialidade', { id: f ? f.id : undefined, paciente_id: p.id, tipo: tipo, status: el('fe-st').value, profissional_id: el('fe-prof').value || null, data_inicio: el('fe-ini').value, dados: dados })
@@ -212,10 +221,10 @@
   // ── Visita de acompanhamento ─────────────────────────────────────
   async function novaVisita(f, depois) {
     var profs = await profissionais(), orto = f.tipo === 'ortodontia'
-    modal(orto ? 'Registrar manutenção' : 'Registrar retorno', '<div id="fe-err"></div><div class="ag-row c2">' +
+    modal(orto ? 'Registrar manutenção' : MOD(f.tipo) ? 'Registrar ' + MOD(f.tipo).visita.replace('+ ', '').toLowerCase() : 'Registrar retorno', '<div id="fe-err"></div><div class="ag-row c2">' +
       '<div class="ag-f"><label>Data</label><input class="ag-in" type="date" id="fe-vd" max="' + hoje() + '" value="' + hoje() + '"></div>' +
       '<div class="ag-f"><label>Profissional</label><select class="ag-in" id="fe-vp"><option value="">—</option>' + profs.map(function (x) { return '<option value="' + x.id + '"' + (String(f.profissional_id) === String(x.id) ? ' selected' : '') + '>' + esc(x.nome) + '</option>' }).join('') + '</select></div></div>' +
-      '<div class="ag-f"><label>O que foi feito</label><textarea class="ag-in" id="fe-vt" rows="3" maxlength="2000" placeholder="' + (orto ? 'Ex.: troca de fio 0.16 NiTi superior, ativação, elásticos classe II' : 'Ex.: controle pós-cirúrgico, remoção de sutura') + '"></textarea></div>',
+      '<div class="ag-f"><label>O que foi feito</label><textarea class="ag-in" id="fe-vt" rows="3" maxlength="2000" placeholder="' + (orto ? 'Ex.: troca de fio 0.16 NiTi superior, ativação, elásticos classe II' : f.tipo === 'implante' ? 'Ex.: controle pós-cirúrgico, remoção de sutura' : 'Descreva o que foi feito') + '"></textarea></div>',
       '<button class="btn" id="fe-c">Cancelar</button><button class="ag-btn-novo" id="fe-ok">Registrar</button>', 560)
     el('fe-c').onclick = fechar
     el('fe-ok').onclick = async function () {
