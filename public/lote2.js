@@ -258,6 +258,10 @@
   function baixarBlob(blob, nome) { var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome; a.click(); setTimeout(function () { URL.revokeObjectURL(a.href) }, 5000) }
   function nomeArquivoFoto(f, i) { var n = String(f.nome || 'foto-' + (i + 1)); if (!/\.(jpe?g|png|webp|gif)$/i.test(n)) n += /image\/png/.test(f.url) ? '.png' : '.jpg'; return n.replace(/[\\/:*?"<>|]/g, '_') }
 
+  // Marcadores padrão do Clinicorp ("Adicionar Marcador")
+  var MARCADORES_PADRAO = ['Face', 'Frontal', 'Intra-oral', 'Lateral', 'Oclusal', 'Panorâmica', 'Perfil', 'Periapical', 'Sorriso', 'Teleradiografia', 'Tomografia']
+  function fotoMarcadores(f) { try { var m = JSON.parse(f.marcadores || '[]'); return Array.isArray(m) ? m : [] } catch (e) { return [] } }
+
   async function abaFotos(box, p) {
     box.innerHTML = '<div class="crc-sk" style="height:160px"></div>'
     var d = await apiData('documentos-paciente', { paciente_id: p.id, tipo: 'foto' }).catch(function (e) { return { success: false, error: e.message } })
@@ -285,6 +289,16 @@
           '<div class="l2-ft-img" data-ver="' + f.id + '">' + (/^data:image/.test(f.url || '') ? '<img src="' + f.url + '" alt="">' : '') + '</div><div class="l2-ft-i"><div class="l2-ft-n" title="' + esc(f.nome || '') + '">' + esc(f.nome || 'Foto') + '</div>' +
           '<div class="ag-hint" style="margin:0">' + br(f.created_at) + (f.pasta ? ' · ' + esc(f.pasta) : '') + '</div>' +
           '<div class="ag-hint l2-ft-leg" data-leg="' + f.id + '" style="margin:2px 0 0;cursor:pointer;font-style:' + (f.descricao ? 'normal' : 'italic') + '" title="Clique para editar a legenda">' + (f.descricao ? esc(f.descricao) : 'Legenda...') + '</div>' +
+          (function () {
+            var ms = fotoMarcadores(f)
+            if (!ms.length && (!podeEnviar || sel)) return ''
+            return '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;align-items:center">' +
+              ms.map(function (m2) { return '<span class="l2-ft-tag">' + esc(m2) + (podeEnviar && !sel ? '<a href="#" data-mrm="' + f.id + '" data-nome="' + esc(m2) + '" aria-label="Remover marcador ' + esc(m2) + '">&times;</a>' : '') + '</span>' }).join('') +
+              (podeEnviar && !sel ? '<select class="ag-in" data-marc="' + f.id + '" style="width:auto;max-width:140px;padding:2px 6px;font-size:11px"><option value="">Adicionar Marcador</option>' +
+                MARCADORES_PADRAO.filter(function (m2) { return !ms.some(function (x) { return x.toLocaleLowerCase('pt-BR') === m2.toLocaleLowerCase('pt-BR') }) }).map(function (m2) { return '<option value="' + esc(m2) + '">' + esc(m2) + '</option>' }).join('') +
+                '<option value="__novo">Novo marcador…</option></select>' : '') +
+            '</div>'
+          })() +
           (podeEnviar && !sel ? '<div class="l2-ft-a"><select class="ag-in" data-mv="' + f.id + '"><option value="">Mover para Pasta</option><option value="__sem">Tirar da Pasta</option>' + pastas.filter(function (x) { return x.nome !== f.pasta }).map(function (x) { return '<option value="' + esc(x.nome) + '">' + esc(x.nome) + '</option>' }).join('') + '</select><a href="#" data-bx="' + f.id + '" style="font-size:12px">Baixar</a><a href="#" data-ex="' + f.id + '" style="color:var(--red);font-size:12px">Excluir</a></div>' : '') + '</div></div>'
       }).join('') + '</div>' : '<div class="pc-vazio" style="padding:40px 0">' + (fotos.length ? 'Nenhuma foto nesta pasta' : 'Adicione fotos, exames ou radiografias para visualizá-los aqui.') + '</div>')
     function recarregar() { abaFotos(box, p) }
@@ -352,6 +366,24 @@
       }
     })
     box.querySelectorAll('[data-ex]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); excluirDocumento(+this.getAttribute('data-ex'), p.id, 'foto') } })
+    box.querySelectorAll('[data-marc]').forEach(function (s) {
+      s.onchange = async function () {
+        var v = this.value
+        if (!v) return
+        if (v === '__novo') { v = prompt('Nome do marcador:') || ''; v = v.trim().slice(0, 40); if (!v) { this.value = ''; return } }
+        var r = await apiPost('foto-pasta', { action: 'marcador', id: +this.getAttribute('data-marc'), nome: v })
+        if (!r.success) return alert(r.error || 'Não foi possível adicionar o marcador.')
+        recarregar()
+      }
+    })
+    box.querySelectorAll('[data-mrm]').forEach(function (a) {
+      a.onclick = async function (e) {
+        e.preventDefault()
+        var r = await apiPost('foto-pasta', { action: 'marcador', id: +this.getAttribute('data-mrm'), nome: this.getAttribute('data-nome'), remover: 1 })
+        if (!r.success) return alert(r.error || 'Não foi possível remover o marcador.')
+        recarregar()
+      }
+    })
     if (el('l2-pasta')) el('l2-pasta').onclick = async function () { var n = prompt('Digite o nome da pasta para organizar os arquivos.'); if (!n || !n.trim()) return; var r = await apiPost('foto-pasta', { action: 'criar', paciente_id: p.id, pasta: n.trim() }); if (!r.success) return alert(r.error); FT.pasta = n.trim().slice(0, 60); recarregar() }
     async function enviar(files) {
       var pasta = FT.pasta && FT.pasta !== '__sem' ? FT.pasta : '', erros = []

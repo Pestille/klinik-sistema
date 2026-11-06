@@ -344,15 +344,59 @@
         '<div class="ag-f"><label>Dente / região</label><input class="ag-in" id="pce-ev-dente" maxlength="60" placeholder="Ex.: 36, arcada superior"></div></div>' +
       '<div class="ag-f"><label>Descrição do atendimento</label><textarea class="ag-in" id="pce-ev-txt" rows="4" maxlength="10000" placeholder="Procedimentos realizados, materiais, intercorrências, orientações"></textarea></div>' +
       '<div class="ag-f"><label>Próxima consulta</label><input class="ag-in" id="pce-ev-prox" maxlength="500" placeholder="O que fazer na próxima sessão"></div>' +
+      '<div class="ag-f"><label>Áudio do atendimento</label><div id="pce-ev-audio" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div></div>' +
       '<div style="display:flex;justify-content:flex-end;gap:8px"><input type="hidden" id="pce-ev-id"><button class="btn" id="pce-ev-limpar" style="display:none">Cancelar edição</button><button class="ag-btn-novo" id="pce-ev-ok">Salvar evolução</button></div></div>' +
       '<div id="pce-ev-lista"><div style="color:var(--text3)">Carregando…</div></div></div>'
     var lista = []
+    // ── Gravação de áudio (Clinicorp: "Iniciar gravação" / "Encerrar gravação") ──
+    var AUD = { gravador: null, partes: [], dataUri: undefined, gravando: false }
+    function audioUI() {
+      var box2 = el('pce-ev-audio'); if (!box2) return
+      var h = ''
+      if (AUD.gravando) {
+        h = '<button class="btn" id="pce-ev-rec-stop" style="color:var(--red);border-color:var(--red)">&#9632; Encerrar gravação</button><span class="ag-hint" style="margin:0">Gravando...</span>'
+      } else if (AUD.dataUri) {
+        h = '<audio controls src="' + AUD.dataUri + '" style="height:32px;max-width:280px"></audio><button class="btn btn-sm" id="pce-ev-rec">Gravar novamente</button><a href="#" id="pce-ev-rec-rm" style="color:var(--red);font-size:12px">Remover áudio</a>'
+      } else {
+        h = '<button class="btn" id="pce-ev-rec">&#127908; Iniciar gravação</button>' + (AUD.dataUri === '' ? '<span class="ag-hint" style="margin:0">O áudio será removido ao salvar.</span>' : '')
+      }
+      box2.innerHTML = h
+      if (el('pce-ev-rec')) el('pce-ev-rec').onclick = gravarAudio
+      if (el('pce-ev-rec-stop')) el('pce-ev-rec-stop').onclick = function () { if (AUD.gravador) AUD.gravador.stop() }
+      if (el('pce-ev-rec-rm')) el('pce-ev-rec-rm').onclick = function (ev) { ev.preventDefault(); AUD.dataUri = ''; audioUI() }
+    }
+    async function gravarAudio() {
+      try {
+        var stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        var mime = window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '')
+        AUD.gravador = mime ? new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 32000 }) : new MediaRecorder(stream)
+        AUD.partes = []
+        AUD.gravador.ondataavailable = function (ev) { if (ev.data && ev.data.size) AUD.partes.push(ev.data) }
+        AUD.gravador.onstop = function () {
+          stream.getTracks().forEach(function (t) { t.stop() })
+          AUD.gravando = false
+          var blob = new Blob(AUD.partes, { type: AUD.gravador.mimeType || 'audio/webm' })
+          var fr = new FileReader()
+          fr.onload = function () {
+            if (String(fr.result).length > 2500000) { alert('Áudio muito grande (máximo ~2 MB / 2 minutos). Grave um áudio mais curto.'); AUD.dataUri = undefined } else AUD.dataUri = String(fr.result)
+            audioUI()
+          }
+          fr.readAsDataURL(blob)
+        }
+        AUD.gravador.start()
+        AUD.gravando = true
+        audioUI()
+        // encerra sozinho em 2 minutos
+        setTimeout(function () { if (AUD.gravando && AUD.gravador && AUD.gravador.state === 'recording') AUD.gravador.stop() }, 120000)
+      } catch (e) { alert('Não foi possível processar a gravação. Verifique a permissão do microfone.') }
+    }
+    audioUI()
     async function carregar() {
       try { var d = await apiData('paciente-evolucoes', { paciente_id: p.id }); lista = d.data || [] } catch (e) { el('pce-ev-lista').innerHTML = '<div class="ag-err">' + esc(e.message) + '</div>'; return }
       el('pce-ev-lista').innerHTML = lista.length ? lista.map(function (e) {
         return '<div class="pc-ev"><div class="pc-ev-h"><span><b style="color:var(--text)">' + br(e.data) + '</b>' + (e.profissional_nome ? ' · ' + esc(e.profissional_nome) : '') + (e.dente ? ' · Dente/região ' + esc(e.dente) : '') + '</span>' +
           '<span>' + esc(e.autor_nome || '') + (e.editado_em ? ' (editado)' : '') + ' <a href="#" data-ass="' + e.id + '" style="color:var(--green3)">Assinatura</a> · <a href="#" data-ed="' + e.id + '" style="color:var(--blue)">Editar</a> · <a href="#" data-del="' + e.id + '" style="color:var(--red)">Excluir</a></span></div>' +
-          '<div class="pc-ev-t">' + esc(e.texto) + '</div>' + (e.proxima_consulta ? '<div class="ag-hint" style="margin-top:6px"><b>Próxima consulta:</b> ' + esc(e.proxima_consulta) + '</div>' : '') + '</div>'
+          '<div class="pc-ev-t">' + esc(e.texto) + '</div>' + (e.audio ? '<div style="margin-top:6px"><audio controls src="' + e.audio + '" style="height:32px;max-width:280px"></audio></div>' : '') + (e.proxima_consulta ? '<div class="ag-hint" style="margin-top:6px"><b>Próxima consulta:</b> ' + esc(e.proxima_consulta) + '</div>' : '') + '</div>'
       }).join('') : '<div class="pc-vazio">Nenhuma evolução registrada.</div>'
       if (window.ligarAssinaturas) ligarAssinaturas(el('pce-ev-lista'), 'evolucao', p.id)
       el('pce-ev-lista').querySelectorAll('[data-ed]').forEach(function (a) {
@@ -360,17 +404,20 @@
           ev.preventDefault(); var e = lista.filter(function (x) { return x.id === +a.getAttribute('data-ed') })[0]; if (!e) return
           el('pce-ev-id').value = e.id; el('pce-ev-data').value = e.data; el('pce-ev-prof').value = e.profissional_id || ''; el('pce-ev-dente').value = e.dente || ''
           el('pce-ev-txt').value = e.texto; el('pce-ev-prox').value = e.proxima_consulta || ''; el('pce-ev-limpar').style.display = ''; el('pce-ev-txt').focus()
+          AUD.dataUri = e.audio || undefined; audioUI()
         }
       })
       el('pce-ev-lista').querySelectorAll('[data-del]').forEach(function (a) {
         a.onclick = async function (ev) { ev.preventDefault(); if (!confirm('Excluir este registro? Ele vai para a lixeira.')) return; var r = await apiPost('paciente-evolucoes', { action: 'delete', id: +a.getAttribute('data-del') }); if (!r.success) return alert(r.error || 'Erro'); carregar() }
       })
     }
-    function limpar() { el('pce-ev-id').value = ''; el('pce-ev-txt').value = ''; el('pce-ev-prox').value = ''; el('pce-ev-dente').value = ''; el('pce-ev-limpar').style.display = 'none'; erro('pce-ev-err') }
+    function limpar() { el('pce-ev-id').value = ''; el('pce-ev-txt').value = ''; el('pce-ev-prox').value = ''; el('pce-ev-dente').value = ''; el('pce-ev-limpar').style.display = 'none'; erro('pce-ev-err'); AUD.dataUri = undefined; AUD.gravando = false; audioUI() }
     el('pce-ev-limpar').onclick = limpar
     el('pce-ev-ok').onclick = async function () {
       var body = { paciente_id: p.id, id: el('pce-ev-id').value ? +el('pce-ev-id').value : undefined, data: el('pce-ev-data').value, profissional_id: el('pce-ev-prof').value || null,
         dente: el('pce-ev-dente').value, texto: el('pce-ev-txt').value.trim(), proxima_consulta: el('pce-ev-prox').value }
+      if (AUD.gravando) return erro('pce-ev-err', 'Encerre a gravação antes de salvar.')
+      if (AUD.dataUri !== undefined) body.audio = AUD.dataUri
       if (!body.texto) return erro('pce-ev-err', 'Descreva o atendimento.')
       var r = await apiPost('paciente-evolucoes', body)
       if (!r.success) return erro('pce-ev-err', r.error || 'Erro ao salvar')
