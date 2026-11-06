@@ -326,7 +326,7 @@ Base: este levantamento + o inventário do código do Klinov (14/10/2026). ✅ c
 | CRC (9 filas kanban) | ❌ | Só a lista de inativos; nenhuma fila, nenhum registro de interação |
 | Financeiro | 🟡 | Modelo de dados unificado; fornecedores; contas bancárias; caixa; OFX; cheques; taxas; DDA; edição de lançamentos |
 | Metas | 🟡 | Por profissional/usuário |
-| Relatórios (49) | 🟡 | ~10 hoje; faltam a maioria, filtros e exportação |
+| Relatórios (49) | 🟡 | 06/11 (5b8b957): +Recibos, Planos, Caixa, Ações Usuários (auditoria de toda escrita). Faltam Balancete (precisa plano de contas), Procedimentos Vencidos (precisa data de retorno e ação indicada na execução), Notas Fiscais Externas (precisa chave/número da NFS no pagamento), Insumos Consumidos (baixa de insumo por procedimento). Fora do escopo: Exames Radiológicos (parceiros), Follow Up de Produção (marketplace), SPC |
 | Dashboard analítico | 🟡 | Vários gráficos com dados fictícios (inadimplência = 2% fixo, metas zeradas) |
 | Profissionais | 🟡 | Agenda de trabalho não salva; inativar; cor da agenda não usada |
 | Usuários e permissões | 🟡 | Permissões só escondem itens do menu; não valem no servidor; sem 2FA nem auditoria |
