@@ -48,7 +48,7 @@
   // ── Preferências (por usuário, no navegador — como no Clinicorp) ──
   function prefKey() { return 'klinov_agenda_prefs_' + ((window.KLINOV_USER && KLINOV_USER.id) || 'x') }
   function loadPrefs() {
-    var p = { sabado: true, domingo: false, desmarcados: true, foraExpediente: true, corCategoria: false, apagarPassados: true, intervalo: 15, inicio: '', fim: '' }
+    var p = { sabado: true, domingo: false, desmarcados: true, foraExpediente: true, corCategoria: false, apagarPassados: true, intervalo: 15, inicio: '', fim: '', colunas: 'prof' }
     try { var s = JSON.parse(localStorage.getItem(prefKey()) || '{}'); Object.keys(s).forEach(function (k) { p[k] = s[k] }) } catch (e) {}
     AG.prefs = p
   }
@@ -179,6 +179,7 @@
         '<div class="ag-title" id="ag-title"></div>' +
         '<button class="ag-ico" title="Atualizar" id="ag-refresh">⟳</button>' +
         '<div class="ag-spacer"></div>' +
+        '<select class="ag-sel" id="ag-cols" title="Dividir a agenda do dia por" style="display:none"><option value="prof">Por profissional</option><option value="cadeira">Por cadeira</option></select>' +
         '<select class="ag-sel" id="ag-view"><option value="dia">Dia</option><option value="semana">Semana</option><option value="mes">Mês</option></select>' +
         '<button class="ag-ico" title="Imprimir agenda do dia" id="ag-print-btn">⎙</button>' +
         '<button class="ag-ico" title="Configurações da agenda" id="ag-prefs-btn">⚙</button>' +
@@ -204,6 +205,7 @@
     el('ag-hoje').onclick = function () { AG.data = hojeLocal(); AG.mini = new Date(AG.data.getFullYear(), AG.data.getMonth(), 1); atualizar() }
     el('ag-refresh').onclick = function () { AG.meses = {}; atualizar(true) }
     el('ag-view').onchange = function () { AG.view = this.value; window.agendaView = AG.view; atualizar() }
+    el('ag-cols').onchange = function () { AG.prefs.colunas = this.value; savePrefs(); renderTudo() }
     el('ag-todos').onclick = function () {
       var todos = (ST.profissionais || []).every(function (p) { return !AG.off[p.id] })
       ;(ST.profissionais || []).forEach(function (p) { AG.off[p.id] = todos })
@@ -232,6 +234,9 @@
   function renderTudo() {
     if (!el('ag-main')) return
     el('ag-view').value = AG.view
+    var temCad = cadeiras().some(function (c) { return Number(c.ativo) })
+    el('ag-cols').style.display = temCad && AG.view === 'dia' ? '' : 'none'
+    el('ag-cols').value = porCadeira() ? 'cadeira' : 'prof'
     el('ag-title').textContent = tituloPeriodo()
     renderMini(); renderProfs(); renderAlertas(); renderEspera()
     if (AG.view === 'mes') renderMes(); else renderGrade()
@@ -303,7 +308,26 @@
   }
 
   // ── Grade dia / semana ───────────────────────────────────────────
+  // Agenda do dia dividida por cadeira (só quando a clínica tem cadeiras ativas)
+  function porCadeira() { return AG.view === 'dia' && AG.prefs.colunas === 'cadeira' && cadeiras().some(function (c) { return Number(c.ativo) }) }
+  function colunasCadeira() {
+    var ds = ymd(AG.data), usadas = {}, semCad = false, vis = {}
+    profsVisiveis().forEach(function (p) { vis[p.id] = 1 })
+    ;(ST.agendamentos || []).forEach(function (a) {
+      if (a.date !== ds || (a.ProfessionalId && !vis[a.ProfessionalId])) return
+      if (!AG.prefs.desmarcados && desmarcado(a)) return
+      if (a.cadeira_id) usadas[a.cadeira_id] = 1; else semCad = true
+    })
+    // a desativada só aparece se tiver paciente nela no dia
+    var cols = cadeiras().filter(function (c) { return Number(c.ativo) || usadas[c.id] }).map(function (c) {
+      return { titulo: c.nome, sub: '', data: AG.data, prof: null, cad: c.id, cor: null, clk: null }
+    })
+    if (semCad) cols.push({ titulo: 'Sem cadeira', sub: '', data: AG.data, prof: null, cad: 0, cor: null, clk: null })
+    return cols
+  }
+
   function colunas() {
+    if (porCadeira()) return colunasCadeira()
     if (AG.view === 'dia') {
       return profsVisiveis().map(function (p) {
         return { titulo: p.nome, sub: '', data: AG.data, prof: p.id, cor: corProf(p.id), clk: null }
@@ -325,6 +349,7 @@
       if (a.date !== ds) return false
       if (!AG.prefs.desmarcados && desmarcado(a)) return false
       if (col.prof) return a.ProfessionalId === col.prof
+      if (col.cad != null && (a.cadeira_id || 0) !== col.cad && String(a.cadeira_id || 0) !== String(col.cad)) return false
       return !a.ProfessionalId || visiveis[a.ProfessionalId]
     })
   }
@@ -375,7 +400,7 @@
         var off = AG.prefs.foraExpediente && !disponivel(c.prof, c.data, s, s + passo)
         h += '<div class="ag-slot' + ((s + passo) % 60 === 0 ? ' h' : '') + (off ? ' off' : '') + '" style="height:' + H + 'px" data-slot="' + hm(s) + '"></div>'
       }
-      bloqueiosDe(c.prof, ds).forEach(function (b) {
+      bloqueiosDe(c.prof, ds).filter(function (b) { return c.cad == null || b.profissional_id == null }).forEach(function (b) {
         var top = (min(b.hora_inicio) - jan[0]) * PX_MIN, alt = (min(b.hora_fim) - min(b.hora_inicio)) * PX_MIN
         if (top + alt <= 0 || top >= (jan[1] - jan[0]) * PX_MIN) return
         h += '<div class="ag-blk" data-blk="' + b.id + '" style="top:' + Math.max(0, top) + 'px;height:' + Math.max(16, alt) + 'px" title="' + esc(b.titulo) + '"><b>' + esc(b.titulo) + '</b> ' + b.hora_inicio + '–' + b.hora_fim +
@@ -388,7 +413,7 @@
         var passado = AG.prefs.apagarPassados && (a.date < hojeS || (a.date === hojeS && it.f < agoraMin))
         h += '<div class="ag-ev' + (passado ? ' past' : '') + (desmarcado(a) ? ' desm' : '') + '" data-ev="' + a.id + '" style="top:' + top + 'px;height:' + alt + 'px;left:calc(' + esq + '% + 2px);width:calc(' + larg + '% - 4px);background:' + corEvento(a) + '">' +
           '<b><span class="st" style="background:' + st.cor + '"></span>' + esc(a.PatientName || 'Paciente') + '</b>' +
-          (alt > 30 ? '<span>' + a.fromTime + (a.toTime ? '–' + a.toTime : '') + (AG.view === 'semana' && a.ProfessionalName ? ' · ' + esc(a.ProfessionalName.split(' ')[0]) : '') + (nomeCadeira(a.cadeira_id) ? ' · ' + esc(nomeCadeira(a.cadeira_id)) : '') + '</span>' : '') +
+          (alt > 30 ? '<span>' + a.fromTime + (a.toTime ? '–' + a.toTime : '') + ((AG.view === 'semana' || c.cad != null) && a.ProfessionalName ? ' · ' + esc(a.ProfessionalName.split(' ')[0]) : '') + (c.cad == null && nomeCadeira(a.cadeira_id) ? ' · ' + esc(nomeCadeira(a.cadeira_id)) : '') + '</span>' : '') +
           (alt > 46 && a.CategoryDescription ? '<br><span style="opacity:.85">' + esc(a.CategoryDescription) + '</span>' : '') + '</div>'
       })
       if (ds === hojeS && agoraMin >= jan[0] && agoraMin < jan[1]) h += '<div class="ag-now" style="top:' + ((agoraMin - jan[0]) * PX_MIN) + 'px"></div>'
@@ -405,7 +430,7 @@
         var blk = e.target.closest('[data-blk]')
         if (blk) { e.stopPropagation(); acaoBloqueio(+blk.getAttribute('data-blk')); return }
         var slot = e.target.closest('[data-slot]')
-        if (slot && !slot.classList.contains('off')) abrirConsulta({ data: ymd(c.data), hora: slot.getAttribute('data-slot'), profissional_id: c.prof })
+        if (slot && !slot.classList.contains('off')) abrirConsulta({ data: ymd(c.data), hora: slot.getAttribute('data-slot'), profissional_id: c.prof, cadeira_id: c.cad || '' })
       })
     })
     // rola para o horário atual ou para o início do expediente
