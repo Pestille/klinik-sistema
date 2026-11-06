@@ -84,7 +84,7 @@ module.exports = async function handler(req, res) {
 
             // Get tomorrow's appointments for this clinic
             var agR = await client.execute({
-                sql: "SELECT a.id,a.data_hora,a.hora_fim,a.procedimento,a.tipo,a.paciente_id,a.canal_envio,COALESCE(p.nome,a.paciente_nome) as paciente_nome,p.email,p.telefone,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE ((DATE(a.data_hora)=? AND a.confirmacao_envio='mesmo_dia') OR (DATE(a.data_hora)=? AND (a.confirmacao_envio IS NULL OR a.confirmacao_envio='1_dia')) OR (DATE(a.data_hora)=? AND a.confirmacao_envio='2_dias')) AND (a.status IS NULL OR a.status NOT IN ('cancelado','realizado','desmarcado')) AND a.clinica_id=?",
+                sql: "SELECT a.id,a.data_hora,a.hora_fim,a.procedimento,a.tipo,a.paciente_id,a.canal_envio,COALESCE(p.nome,a.paciente_nome) as paciente_nome,p.email,p.telefone,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE ((DATE(a.data_hora)=? AND a.confirmacao_envio='mesmo_dia') OR (DATE(a.data_hora)=? AND (a.confirmacao_envio IS NULL OR a.confirmacao_envio='1_dia')) OR (DATE(a.data_hora)=? AND a.confirmacao_envio='2_dias')) AND (a.status IS NULL OR a.status NOT IN ('cancelado','realizado','desmarcado','solicitado')) AND a.clinica_id=?",
                 args: [dataHoje, dataAmanha, dataEm2, clinica_id]
             })
 

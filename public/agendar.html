@@ -87,6 +87,7 @@
     var r = await api('', { prof: E.prof.id, data: E.dia.data, hora: E.hora, nome: v('nome'), telefone: v('tel'), nascimento: v('nasc'), email: v('email'), observacoes: v('obs'), site: v('site'), aceite: document.getElementById('aceite').checked })
     if (r.ocupado) return carregarDias(r.error)
     if (!r.success) { ok.disabled = false; err.innerHTML = '<div class="pb-err" role="alert">' + esc(r.error || 'Não foi possível agendar.') + '</div>'; return }
+    if (r.pendente) { app.innerHTML = '<div class="pb-card pb-centro"><h1>Pedido enviado</h1><p>' + esc(E.prof.nome) + '<br>' + sem(E.dia.data) + ', ' + br(E.dia.data) + ' às ' + E.hora + '</p><p>O horário fica reservado até ' + esc(E.clinica) + ' aprovar o pedido. A clínica vai entrar em contato.</p></div>'; return }
     app.innerHTML = '<div class="pb-card pb-centro"><h1>Consulta agendada</h1><p>' + esc(E.prof.nome) + '<br>' + sem(E.dia.data) + ', ' + br(E.dia.data) + ' às ' + E.hora + '</p><p>' + esc(E.clinica) + ' entrará em contato para confirmar, se precisar. Para desmarcar, fale com a clínica.</p></div>'
   }
 

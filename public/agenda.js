@@ -19,10 +19,12 @@
     ['em_atendimento', 'Em atendimento', '#1976D2'], ['atendido', 'Atendido', '#2E7D52'], ['atrasado', 'Atrasado', '#D32F2F'],
     ['faltou', 'Faltou', '#212121'], ['desmarcado', 'Desmarcado', '#9E9E9E']
   ]
+  var ST_SOLICITADO = { rot: 'Aguardando aprovação', cor: '#E65100' }
   var STATUS_MAP = {}
   STATUS.forEach(function (s) { STATUS_MAP[s[0]] = { rot: s[1], cor: s[2] } })
   STATUS_MAP.cancelado = STATUS_MAP.desmarcado
   STATUS_MAP.nao_confirmado = { rot: 'Não confirmado', cor: '#D32F2F' }
+  STATUS_MAP.solicitado = ST_SOLICITADO
   var PX_MIN = 1.6 // altura por minuto na grade
 
   // ── Estado ────────────────────────────────────────────────────────
@@ -188,6 +190,7 @@
         '<div class="ag-left">' +
           '<div class="ag-mini" id="ag-mini"></div>' +
           '<div class="ag-sec"><div class="ag-sec-h">Profissionais <a id="ag-todos">Todos</a></div><div id="ag-profs"></div></div>' +
+          '<div class="ag-sec" id="ag-ped-sec" style="display:none"><div class="ag-sec-h">Pedidos online</div><div id="ag-pedidos"></div></div>' +
           '<div class="ag-sec"><div class="ag-sec-h">Alertas de retorno <a data-novo="retorno">+ Novo</a></div><div id="ag-alertas"></div></div>' +
           '<div class="ag-sec"><div class="ag-sec-h">Lista de espera <a data-novo="espera">+ Novo</a></div><div id="ag-espera"></div></div>' +
         '</div>' +
@@ -238,7 +241,7 @@
     el('ag-cols').style.display = temCad && AG.view === 'dia' ? '' : 'none'
     el('ag-cols').value = porCadeira() ? 'cadeira' : 'prof'
     el('ag-title').textContent = tituloPeriodo()
-    renderMini(); renderProfs(); renderAlertas(); renderEspera()
+    renderMini(); renderProfs(); renderAlertas(); renderEspera(); renderPedidos()
     if (AG.view === 'mes') renderMes(); else renderGrade()
   }
 
@@ -294,6 +297,30 @@
         '<span class="' + (a.data_retorno < hoje ? 'late' : '') + '">' + br(a.data_retorno) + '</span>' + (a.motivo ? ' · ' + esc(a.motivo) : '') + '</div>'
     }).join('') + (lista.length > 30 ? '<div class="ag-empty">+ ' + (lista.length - 30) + ' alertas</div>' : '')
     box.querySelectorAll('[data-alerta]').forEach(function (b) { b.onclick = function () { acaoAlerta(+this.getAttribute('data-alerta')) } })
+  }
+
+  // Pedidos do agendamento online que esperam aprovação (Configurações › Agendamento online)
+  async function renderPedidos() {
+    var sec = el('ag-ped-sec'), box = el('ag-pedidos'); if (!box) return
+    var r = await apiData('agenda-online-pedidos', {}).catch(function () { return null })
+    var lista = (r && r.success && r.data) || []
+    sec.style.display = lista.length ? '' : 'none'
+    box.innerHTML = lista.map(function (p) {
+      var d = String(p.data_hora || ''), dt = d.slice(8, 10) + '/' + d.slice(5, 7) + ' ' + d.slice(11, 16)
+      return '<div class="ag-list-item" style="cursor:default"><b>' + esc(p.paciente_nome) + '</b><br><span style="color:var(--text3);font-size:12px">' + esc(dt) + (p.profissional_nome ? ' · ' + esc(p.profissional_nome) : '') + '</span>' +
+        (p.observacoes ? '<div style="font-size:12px;color:var(--text2)">' + esc(p.observacoes) + '</div>' : '') +
+        '<div style="display:flex;gap:8px;margin-top:4px"><a href="#" data-ped-ok="' + p.id + '">Aprovar</a><a href="#" data-ped-no="' + p.id + '" style="color:var(--red)">Recusar</a><a href="#" data-ped-ver="' + esc(d.slice(0, 10)) + '">Ver no dia</a></div></div>'
+    }).join('')
+    async function decidir(id, decisao) {
+      var motivo = ''
+      if (decisao === 'recusar') { motivo = prompt('Motivo da recusa (fica no histórico da consulta):') || ''; if (!motivo.trim()) return }
+      var x = await apiPost('agenda-online-pedidos', { id: id, decisao: decisao, motivo: motivo }).catch(function (e) { return { success: false, error: e.message } })
+      if (!x.success) toast(x.error || 'Erro')
+      AG.meses = {}; atualizar(true)
+    }
+    box.querySelectorAll('[data-ped-ok]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); decidir(+this.getAttribute('data-ped-ok'), 'aprovar') } })
+    box.querySelectorAll('[data-ped-no]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); decidir(+this.getAttribute('data-ped-no'), 'recusar') } })
+    box.querySelectorAll('[data-ped-ver]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); AG.data = parseYmd(this.getAttribute('data-ped-ver')); AG.view = 'dia'; atualizar() } })
   }
 
   function renderEspera() {

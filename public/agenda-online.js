@@ -15,6 +15,7 @@
     box.innerHTML =
       '<div class="pc-box"><div class="pc-box-h">Link público</div>' +
         '<label class="ag-chk cf-chk"><input type="checkbox" id="ao-ativo"' + (c.ativo ? ' checked' : '') + '> <span>Permitir que pacientes agendem pela internet</span></label>' +
+        '<label class="ag-chk cf-chk" style="margin-top:8px"><input type="checkbox" id="ao-aprov"' + (c.exigir_aprovacao ? ' checked' : '') + '> <span>Exigir aprovação da clínica (o pedido aparece em Agenda › Pedidos online)</span></label>' +
         '<div class="ag-f" style="margin-top:12px"><label for="ao-url">Link para divulgar</label><input class="ag-in" id="ao-url" readonly value="' + esc(url) + '"></div>' +
         '<div class="fn-acoes" style="margin-top:8px"><button class="btn" id="ao-copiar">Copiar link</button><button class="btn" id="ao-abrir">Abrir</button><button class="btn" id="ao-qr">Ver QR Code</button></div>' +
         '<div id="ao-qr-box" style="margin-top:12px"></div>' +
@@ -22,7 +23,7 @@
           '<div class="ag-f"><label for="ao-ant">Antecedência mínima (horas)</label><input class="ag-in" id="ao-ant" type="number" min="0" max="168" value="' + Number(c.antecedencia_horas) + '"></div>' +
           '<div class="ag-f"><label for="ao-dias">Agendar até quantos dias à frente</label><input class="ag-in" id="ao-dias" type="number" min="1" max="90" value="' + Number(c.dias_max) + '"></div>' +
         '</div>' +
-        '<p class="ag-hint">O paciente só vê horários livres, dentro do horário de atendimento de cada profissional e sem bloqueios. A consulta entra na agenda como "Agendado" e segue a confirmação padrão da clínica.</p>' +
+        '<p class="ag-hint">O paciente só vê horários livres, dentro do horário de atendimento de cada profissional e sem bloqueios. Sem aprovação, a consulta entra na agenda como "Agendado" e segue a confirmação padrão da clínica. Com aprovação, entra como "Aguardando aprovação", segura o horário e não recebe confirmação até ser aprovada.</p>' +
       '</div>' +
       '<div class="pc-box" style="margin-top:16px"><div class="pc-box-h">Profissionais no link</div>' +
         (d.profissionais.length ? '<table class="tbl"><thead><tr><th>Profissional</th><th style="width:120px">No link</th><th style="width:160px">Duração (min)</th></tr></thead><tbody>' + d.profissionais.map(function (p) {
@@ -32,7 +33,7 @@
         '<div id="ao-msg" style="margin-top:8px"></div><div style="text-align:right;margin-top:16px"><button class="ag-btn-novo" id="ao-ok">Salvar</button></div>' +
       '</div>' +
       '<div class="pc-box" style="margin-top:16px"><div class="pc-box-h">Últimos agendamentos pelo link</div>' +
-        (d.recentes.length ? d.recentes.map(function (r) { return '<div class="pc-item"><b>' + esc(r.paciente_nome) + '</b> · ' + esc(brHora(r.data_hora)) + ' · ' + esc(r.profissional_nome || '') + ' · ' + esc(r.status || '') + '</div>' }).join('') : '<p class="ag-hint" style="margin:0">Nenhum agendamento pelo link até agora.</p>') +
+        (d.recentes.length ? d.recentes.map(function (r) { return '<div class="pc-item"><b>' + esc(r.paciente_nome) + '</b> · ' + esc(brHora(r.data_hora)) + ' · ' + esc(r.profissional_nome || '') + ' · ' + esc(r.status === 'solicitado' ? 'aguardando aprovação' : (r.status || '')) + '</div>' }).join('') : '<p class="ag-hint" style="margin:0">Nenhum agendamento pelo link até agora.</p>') +
         '<p class="ag-hint" style="margin:16px 0 0">Se o link for parar onde não deve, gere outro: o atual para de funcionar. <a href="#" id="ao-ren" style="color:var(--red)">Gerar novo link</a></p>' +
       '</div>'
 
@@ -46,7 +47,7 @@
       var ativo = el('ao-ativo').checked
       var m = el('ao-msg')
       if (ativo && !lista.some(function (x) { return x.ativo })) { m.innerHTML = '<div class="ag-err">Escolha ao menos um profissional para ligar o link.</div>'; return }
-      var r = await apiPost('agenda-online-config', { ativo: ativo, antecedencia_horas: el('ao-ant').value, dias_max: el('ao-dias').value, profissionais: lista }).catch(function (e) { return { success: false, error: e.message } })
+      var r = await apiPost('agenda-online-config', { ativo: ativo, exigir_aprovacao: el('ao-aprov').checked, antecedencia_horas: el('ao-ant').value, dias_max: el('ao-dias').value, profissionais: lista }).catch(function (e) { return { success: false, error: e.message } })
       if (!r.success) { m.innerHTML = '<div class="ag-err">' + esc(r.error || 'Erro ao salvar') + '</div>'; return }
       cfgAgendaOnline(box)
     }
