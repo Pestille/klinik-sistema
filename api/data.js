@@ -26,6 +26,7 @@ var rotasOperacao = require('../lib/rotas/operacao')
 var rotasFollowup = require('../lib/rotas/followup')
 var rotasFichas = require('../lib/rotas/fichas')
 var rotasVouchers = require('../lib/rotas/vouchers')
+var rotasImportar = require('../lib/rotas/importar')
 var cfgLib = require('../lib/config')
 var { gerarComissao, comissaoRecebimentoSegura, comissaoCheckoutSegura } = require('../lib/comissoes')
 
@@ -193,6 +194,7 @@ async function handlerInterno(req, res, cap) {
         if (auth && await rotasFollowup.handle(route, ctxRota)) return
         if (auth && await rotasFichas.handle(route, ctxRota)) return
         if (auth && await rotasVouchers.handle(route, ctxRota)) return
+        if (auth && await rotasImportar.handle(route, ctxRota)) return
         // Anamnese por link e check-in por QR: sem login, só por token
         if (route === 'publico') { await rotasPublico.handlePublico(ctxRota); return }
 
