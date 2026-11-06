@@ -17,9 +17,11 @@
 <script>
 ;(function () {
   'use strict'
-  var c = new URLSearchParams(location.search).get('c') || ''
+  var QS = new URLSearchParams(location.search)
+  var c = QS.get('c') || '', pTok = QS.get('p') || '', ind = QS.get('i') || ''
+  var extra = (pTok ? '&p=' + encodeURIComponent(pTok) : '') + (ind ? '&i=' + encodeURIComponent(ind) : '')
   var app = document.getElementById('app')
-  var E = { clinica: '', profs: [], prof: null, dias: [], dia: null, hora: null }
+  var E = { paciente: null, clinica: '', profs: [], prof: null, dias: [], dia: null, hora: null }
   var SEM = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') }
@@ -28,8 +30,8 @@
   function aviso(titulo, texto) { app.innerHTML = '<div class="pb-card pb-centro"><h1>' + esc(titulo) + '</h1><p>' + esc(texto) + '</p></div>' }
 
   async function api(query, corpo) {
-    var op = corpo ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ acao: 'agenda', c: c }, corpo)) } : {}
-    var r = await fetch('/api/data?r=publico&acao=agenda&c=' + encodeURIComponent(c) + (query || ''), op)
+    var op = corpo ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ acao: 'agenda', c: c, p: pTok || undefined, i: ind || undefined }, corpo)) } : {}
+    var r = await fetch('/api/data?r=publico&acao=agenda&c=' + encodeURIComponent(c) + extra + (query || ''), op)
     var j = {}
     try { j = await r.json() } catch (e) { j = { success: false, error: 'Sem resposta do servidor. Tente de novo.' } }
     return j
@@ -66,6 +68,18 @@
   }
 
   function telaDados() {
+    if (E.paciente) {
+      // Link do paciente: os dados já vêm do cadastro da clínica
+      app.innerHTML = '<div class="pb-card"><h1>Seus dados</h1><div class="pb-resumo">' + esc(E.prof.nome) + '<br>' + sem(E.dia.data) + ', ' + br(E.dia.data) + ' às ' + E.hora + '</div>' +
+        '<form id="f" novalidate><label class="pb-lbl">Paciente</label><input value="' + esc(E.paciente.nome) + '" disabled>' +
+        '<label class="pb-lbl" for="obs">Motivo da consulta (opcional)</label><textarea id="obs" rows="2" maxlength="500"></textarea>' +
+        '<div class="pb-oculto" aria-hidden="true"><label for="site">Não preencha</label><input id="site" tabindex="-1" autocomplete="off"></div>' +
+        '<label class="pb-chk" style="margin-top:16px;font-size:14px"><input type="checkbox" id="aceite"> <span>Concordo com o uso destes dados pela clínica para marcar e confirmar a consulta.</span></label>' +
+        '<div id="err"></div><button class="pb-btn" id="ok" type="submit">Confirmar agendamento</button><button class="pb-btn pb-sec" id="volta" type="button">Trocar horário</button></form></div>'
+      document.getElementById('volta').onclick = function () { telaHorario() }
+      document.getElementById('f').onsubmit = enviar
+      return
+    }
     app.innerHTML = '<div class="pb-card"><h1>Seus dados</h1><div class="pb-resumo">' + esc(E.prof.nome) + '<br>' + sem(E.dia.data) + ', ' + br(E.dia.data) + ' às ' + E.hora + '</div>' +
       '<form id="f" novalidate><label class="pb-lbl" for="nome">Nome completo</label><input id="nome" autocomplete="name" maxlength="120">' +
       '<label class="pb-lbl" for="tel">Celular com DDD</label><input id="tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="16">' +
@@ -81,10 +95,11 @@
 
   async function enviar(e) {
     e.preventDefault()
-    function v(id) { return document.getElementById(id).value }
+    function v(id) { var el = document.getElementById(id); return el ? el.value : '' }
     var ok = document.getElementById('ok'), err = document.getElementById('err')
     ok.disabled = true; err.innerHTML = ''
     var r = await api('', { prof: E.prof.id, data: E.dia.data, hora: E.hora, nome: v('nome'), telefone: v('tel'), nascimento: v('nasc'), email: v('email'), observacoes: v('obs'), site: v('site'), aceite: document.getElementById('aceite').checked })
+    if (r.expirado) return aviso('Link expirado', r.error)
     if (r.ocupado) return carregarDias(r.error)
     if (!r.success) { ok.disabled = false; err.innerHTML = '<div class="pb-err" role="alert">' + esc(r.error || 'Não foi possível agendar.') + '</div>'; return }
     if (r.pendente) { app.innerHTML = '<div class="pb-card pb-centro"><h1>Pedido enviado</h1><p>' + esc(E.prof.nome) + '<br>' + sem(E.dia.data) + ', ' + br(E.dia.data) + ' às ' + E.hora + '</p><p>O horário fica reservado até ' + esc(E.clinica) + ' aprovar o pedido. A clínica vai entrar em contato.</p></div>'; return }
@@ -93,7 +108,9 @@
 
   ;(async function () {
     var d = await api('')
+    if (d.expirado) return aviso('Link expirado', d.error)
     if (!d.success) return aviso('Link indisponível', d.error || 'Fale com a clínica.')
+    E.paciente = d.paciente || null
     E.clinica = d.clinica; E.profs = d.profissionais || []
     var cab = document.getElementById('clinica')
     cab.textContent = d.clinica

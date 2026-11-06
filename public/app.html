@@ -2298,7 +2298,7 @@ async function abrirProntuario(nome, id) {
           '</div>'+
         '</div>'+
         '<div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">'+
-          '<div style="display:flex;gap:8px"><button class="pdt-icon-btn" title="Excluir" onclick="pacExcluir()">🗑</button><button class="pdt-icon-btn" title="'+(p.ativo===0?'Reativar':'Inativar')+'" onclick="pacAlternarAtivo()">🚫</button><button class="pdt-icon-btn" title="Imprimir ficha" onclick="pacImprimir()">🖨</button><button class="pdt-icon-btn" title="WhatsApp" onclick="window.open(\'https://wa.me/55'+(tel||'').replace(/\\D/g,'')+'\')">💬</button><button class="pdt-btn-outline" onclick="abrirCadastroPaciente()">+ Novo Paciente</button></div>'+
+          '<div style="display:flex;gap:8px"><button class="pdt-icon-btn" title="Excluir" onclick="pacExcluir()">🗑</button><button class="pdt-icon-btn" title="'+(p.ativo===0?'Reativar':'Inativar')+'" onclick="pacAlternarAtivo()">🚫</button><button class="pdt-icon-btn" title="Imprimir ficha" onclick="pacImprimir()">🖨</button><button class="pdt-icon-btn" title="Gerar Link para Agendamento Online" onclick="abrirLinkAgendamento('+p.id+',\''+String(tel||'').replace(/\D/g,'')+'\')">📅</button><button class="pdt-icon-btn" title="Link de agendamento por indicação" onclick="abrirLinkIndicacao('+p.id+')">🔗</button><button class="pdt-icon-btn" title="WhatsApp" onclick="window.open(\'https://wa.me/55'+(tel||'').replace(/\\D/g,'')+'\')">💬</button><button class="pdt-btn-outline" onclick="abrirCadastroPaciente()">+ Novo Paciente</button></div>'+
           '<div style="display:flex;gap:8px"><div style="border:1px solid #e0e0e0;border-radius:4px;padding:8px 14px;font-size:12px;color:#616161"><span>🕐 Alerta de retorno</span><div style="color:#E65100;cursor:pointer;margin-top:2px" onclick="novoAlertaRetorno({id:_prontData.paciente.id,nome:_prontData.paciente.nome,telefone:_prontData.paciente.telefone})">Criar alerta</div></div>'+'<div style="border:1px solid #e0e0e0;border-radius:4px;padding:8px 14px;font-size:12px;color:#616161"><span>📅 Consulta</span><div style="color:#E65100;cursor:pointer;margin-top:2px" onclick="novoAgendamentoPaciente({id:_prontData.paciente.id,nome:_prontData.paciente.nome,telefone:_prontData.paciente.telefone})">Agendar</div></div></div>'+
         '</div>'+
       '</div>'
@@ -7380,6 +7380,78 @@ function abrirExecutarModal(itemId,pacId,procNome){
 }
 
 // Autorizar / Negar execução de procedimento de convênio (Número de Guia)
+// ── Link para Agendamento do Paciente (24h) e Link de agendamento por indicação (como no Clinicorp)
+function _linkModal(id,titulo,corpo){
+  var ant=document.getElementById(id); if(ant) ant.remove()
+  var m=document.createElement('div'); m.id=id
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px'
+  m.innerHTML='<div style="background:#fff;border-radius:8px;width:100%;max-width:520px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,.12)">'+
+    '<div style="font-size:20px;font-weight:500;color:var(--text);margin-bottom:16px">'+titulo+'</div><div class="lk-corpo">'+corpo+'</div>'+
+    '<div style="display:flex;justify-content:flex-end;margin-top:20px"><button class="lk-fechar" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Fechar</button></div></div>'
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)m.remove()}
+  m.querySelector('.lk-fechar').onclick=function(){m.remove()}
+  return m
+}
+function _linkCampo(url,regerar){
+  return '<div style="display:flex;gap:8px;align-items:center;border:1.5px solid var(--border);border-radius:6px;padding:4px 4px 4px 12px">'+
+    '<input class="lk-url" readonly value="'+escHtml(url)+'" style="flex:1;min-width:0;border:none;outline:none;font-size:14px;color:var(--text);background:transparent">'+
+    '<button class="lk-copiar pdt-icon-btn" title="Copiar">📋</button>'+(regerar?'<button class="lk-regerar pdt-icon-btn" title="Gerar Novo Link">🔄</button>':'')+'</div>'+
+    '<div class="lk-copiado" style="font-size:12px;color:#034030;height:16px;margin-top:4px"></div>'
+}
+function _linkCopiar(m,url){
+  var b=m.querySelector('.lk-copiar'); if(!b) return
+  b.onclick=function(){
+    var ok=function(){m.querySelector('.lk-copiado').textContent='Link Copiado'}
+    var manual=function(){m.querySelector('.lk-url').select();document.execCommand('copy');ok()}
+    if(navigator.clipboard) navigator.clipboard.writeText(url).then(ok,manual)
+    else manual()
+  }
+}
+function _btnWhats(){return '<button class="lk-whats" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;margin-top:12px">💬 Enviar pelo WhatsApp</button>'}
+function _dataHora(iso){var d=new Date(iso),z=function(n){return String(n).padStart(2,'0')};return z(d.getDate())+'/'+z(d.getMonth()+1)+'/'+d.getFullYear()+' às '+z(d.getHours())+':'+z(d.getMinutes())}
+function _semAgendaOnline(tipo){return '<div style="font-size:16px;font-weight:500;color:var(--text);margin-bottom:8px">Habilite o Agendamento Online</div><div style="font-size:14px;color:var(--text2)">Para utilizar o Link'+(tipo?' de '+tipo:'')+' habilite o Agendamento Online em Configuração &gt; Clínicas</div>'}
+async function abrirLinkAgendamento(pacId,tel){
+  var m=_linkModal('modal-link-agend','Link para Agendamento do Paciente','<div style="font-size:14px;color:var(--text3)">Carregando…</div>')
+  var corpo=m.querySelector('.lk-corpo')
+  var info='<div style="background:#FFF3E0;color:#E65100;border-radius:6px;padding:12px;font-size:14px;margin-bottom:16px">Os dados do paciente serão enviados por este Link. Através dele o paciente poderá agendar a consulta.</div>'
+  function desenhar(d){
+    if(!d.success){corpo.innerHTML='<div style="color:#C62828;font-size:14px">'+escHtml(d.error||'Erro')+'</div>';return}
+    if(!d.ativo){corpo.innerHTML=_semAgendaOnline('');return}
+    if(!d.link){
+      corpo.innerHTML=info+'<div style="font-size:14px;color:var(--text2)">'+escHtml(d.paciente||'')+'</div><button class="lk-gerar" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif;margin-top:12px">Gerar Novo Link</button><div class="lk-err" style="color:#C62828;font-size:13px;margin-top:8px"></div>'
+      corpo.querySelector('.lk-gerar').onclick=gerar
+      return
+    }
+    var url=location.origin+d.link
+    corpo.innerHTML=info+_linkCampo(url,true)+'<div style="font-size:12px;color:var(--text3)">* O Link expira em '+_dataHora(d.expira_em)+', após este período será necessário gerar um novo Link.</div>'+_btnWhats()+'<div class="lk-err" style="color:#C62828;font-size:13px;margin-top:8px"></div>'
+    _linkCopiar(m,url)
+    corpo.querySelector('.lk-regerar').onclick=gerar
+    corpo.querySelector('.lk-whats').onclick=function(){
+      window.open('https://wa.me/'+(tel?'55'+tel:'')+'?text='+encodeURIComponent('Olá, esse é seu link para agendar sua consulta: '+url),'_blank')
+    }
+  }
+  async function gerar(){
+    this.disabled=true
+    try{desenhar(await apiPost('agenda-online-link',{paciente_id:pacId}))}
+    catch(e){this.disabled=false;var er=corpo.querySelector('.lk-err');if(er)er.textContent='Erro: '+e.message}
+  }
+  try{desenhar(await apiData('agenda-online-link',{paciente_id:pacId}))}catch(e){desenhar({success:false,error:e.message})}
+}
+async function abrirLinkIndicacao(pacId){
+  var m=_linkModal('modal-link-ind','Link de agendamento por indicação','<div style="font-size:14px;color:var(--text3)">Carregando…</div>')
+  var corpo=m.querySelector('.lk-corpo'),d
+  try{d=await apiData('agenda-online-link',{paciente_id:pacId})}catch(e){d={success:false,error:e.message}}
+  if(!d.success){corpo.innerHTML='<div style="color:#C62828;font-size:14px">'+escHtml(d.error||'Erro')+'</div>';return}
+  if(!d.ativo){corpo.innerHTML=_semAgendaOnline('Indicação');return}
+  var url=location.origin+d.indicacao
+  corpo.innerHTML='<div style="background:#FFF3E0;color:#E65100;border-radius:6px;padding:12px;font-size:14px;margin-bottom:16px">Os dados do indicador serão enviados por este Link. Através dele o indicado poderá agendar a consulta.</div>'+_linkCampo(url,false)+_btnWhats()
+  _linkCopiar(m,url)
+  corpo.querySelector('.lk-whats').onclick=function(){
+    window.open('https://wa.me/?text='+encodeURIComponent('Oii, tudo bem? Sabia que eu te indiquei na Clínica '+(d.clinica||'')+'? Se tiver interesse é só acessar e efetuar seu agendamento pelo link: '+url),'_blank')
+  }
+}
+
 function abrirAutorizacaoModal(dec,itemId,pacId,procNome,guia){
   var aut=dec==='autorizar'
   var ant=document.getElementById('modal-autorizacao'); if(ant) ant.remove()

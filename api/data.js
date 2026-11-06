@@ -67,6 +67,7 @@ var ROTA_PERMISSAO = {
     'salvar-odontograma': 'pacientes.odontograma', 'salvar-anamnese': 'pacientes.anamnese', 'anamnese-modelo': 'pacientes.anamnese', 'anamnese-link': 'pacientes.anamnese',
     'agenda-online-config': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.editar_horarios' },
     'agenda-online-pedidos': 'agenda.agendar_atendimento',
+    'agenda-online-link': { GET: 'pacientes.acessar', POST: 'pacientes.agendamentos' },
     'checkin-config': 'agenda.visualizar_classificacao', 'receita-saude': 'financeiro.receita_saude',
     'assinaturas': 'pacientes.acessar', 'assinaturas-portal': 'pacientes.acessar', 'assinatura-solicitar': 'pacientes.acessar', 'assinatura-cancelar': 'pacientes.acessar',
     'paciente-credito': 'pacientes.financeiro', 'paciente-avulso': 'pacientes.financeiro', 'anexos': 'financeiro.contas',
