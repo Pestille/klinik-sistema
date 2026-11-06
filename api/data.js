@@ -24,6 +24,7 @@ var rotasPacienteFin = require('../lib/rotas/paciente-fin')
 var rotasCrm = require('../lib/rotas/crm')
 var rotasOperacao = require('../lib/rotas/operacao')
 var rotasFollowup = require('../lib/rotas/followup')
+var rotasFichas = require('../lib/rotas/fichas')
 var cfgLib = require('../lib/config')
 var { gerarComissao, comissaoRecebimentoSegura } = require('../lib/comissoes')
 
@@ -87,7 +88,7 @@ var ROTA_PERMISSAO = {
     // Paciente e prontuário (lib/rotas/pacientes.js)
     'pacientes-lista': 'pacientes.acessar', 'paciente-resumo': 'pacientes.acessar', 'paciente-notas': 'pacientes.acessar',
     'paciente-salvar': 'pacientes.editar_cadastro', 'paciente-status': 'pacientes.editar_cadastro', 'excluir-paciente': 'pacientes.excluir',
-    'paciente-evolucoes': { GET: 'pacientes.prontuario', POST: 'pacientes.ficha_clinica' }, 'paciente-indicacoes': 'pacientes.indicacoes',
+    'paciente-evolucoes': { GET: 'pacientes.prontuario', POST: 'pacientes.ficha_clinica' }, 'fichas-especialidade': { GET: 'pacientes.prontuario', POST: 'pacientes.ficha_clinica' }, 'paciente-indicacoes': 'pacientes.indicacoes',
     'documento-modelos': { GET: 'pacientes.documentos', POST: 'configuracoes.editar' },
     // Orçamentos e tabelas de preço (lib/rotas/orcamentos.js)
     'crc-filas': { GET: 'crc.acessar', POST: 'crc.editar' }, 'crc-quadro': 'crc.acessar', 'crc-cartao': 'crc.acessar', 'crc-interacao': 'crc.acessar', 'crc-interacoes': 'crc.acessar',
@@ -183,6 +184,7 @@ module.exports = async function handler(req, res) {
         if (auth && await rotasCrm.handle(route, ctxRota)) return
         if (auth && await rotasOperacao.handle(route, ctxRota)) return
         if (auth && await rotasFollowup.handle(route, ctxRota)) return
+        if (auth && await rotasFichas.handle(route, ctxRota)) return
         // Anamnese por link e check-in por QR: sem login, só por token
         if (route === 'publico') { await rotasPublico.handlePublico(ctxRota); return }
 

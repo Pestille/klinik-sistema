@@ -69,14 +69,16 @@
   }
 
   async function desenharFiltros(r) {
-    var F = RL.f[r.id] = RL.f[r.id] || { faixa: 'mes', de: faixas()[0][2], ate: faixas()[0][3], profissional_id: '', status: '', dias_min: 180 }
+    var F = RL.f[r.id] = RL.f[r.id] || { faixa: 'mes', de: faixas()[0][2], ate: faixas()[0][3], profissional_id: '', status: '', dias_min: r.id === 'tr-orto-controle' ? 60 : 180 }
     var profs = []
     if (r.filtros.indexOf('profissional') >= 0) { try { profs = ((await apiData('profissionais')).data || []).filter(function (p) { return p.ativo !== 0 }) } catch (e) {} }
     var STATUS = {
       status_agenda: [['', 'Todas'], ['agendado', 'Agendado'], ['confirmado', 'Confirmado'], ['atendido', 'Atendido'], ['faltou', 'Faltou'], ['desmarcado', 'Desmarcado']],
       status_conta: [['', 'Todas'], ['aberta', 'Em aberto'], ['paga', 'Pagas']],
       status_orcamento: [['', 'Todas'], ['aberto', 'Em aberto'], ['aprovado', 'Aprovado'], ['reprovado', 'Reprovado'], ['desaprovado', 'Desaprovado']],
-      status_parcela: [['', 'Todas'], ['vencido', 'Vencidas'], ['a_vencer', 'A vencer'], ['pago', 'Pagas']]
+      status_parcela: [['', 'Todas'], ['vencido', 'Vencidas'], ['a_vencer', 'A vencer'], ['pago', 'Pagas']],
+      status_orto: [['', r.id === 'tr-orto-controle' ? 'Em tratamento' : 'Todas'], ['avaliacao', 'Em avaliação'], ['tratamento', 'Em tratamento'], ['suspenso', 'Suspenso'], ['finalizado', 'Finalizado']],
+      status_etapa: [['', 'Todas'], ['prevista', 'Previstas'], ['atrasada', 'Atrasadas'], ['feita', 'Feitas']]
     }
     var stKey = r.filtros.filter(function (x) { return STATUS[x] })[0]
     el('rl-main').innerHTML = '<div class="fn-head"><div><div class="gpage-title">' + esc(r.nome) + '</div><div class="gpage-sub">' + esc(r.cat) + ' · ' + esc(r.desc) + '</div></div>' +

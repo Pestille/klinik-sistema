@@ -349,7 +349,7 @@ Fontes: 1.370 rotas de API e 163 rotas de tela do Clinicorp, telas abertas na co
 | Comissão: check-out, Geral × Plano, por especialidade, data de pagamento do cartão | Feito em 05/11: recebimento (dividido entre os procedimentos na proporção do valor), requer aprovação, descontar taxa do cartão e % de imposto. Falta o resto | tela + rota | 2 |
 | Cadeiras: agenda organizada por cadeira (colunas) | Feito em 05/11: cadastro, escolha no agendamento e bloqueio de duas consultas na mesma cadeira. Falta a visão em colunas por cadeira | tela | 2 |
 | Caixa: exigir senha nas operações, formas aceitas no caixa | Feito em 05/11: travar/destravar, estornar movimentação da gaveta e ajuste de saldo (admin). Tela do caixa do Clinicorp não vista: desligado na conta da Klinik | tela + rota | 2 |
-| Fichas clínicas: ortodontia, implante | Não existem | rota | 2 |
+| Fichas clínicas: ortodontia, implante | **Feito (2026-11-05)**: aba Fichas Especialidades com modelos Ortodontia (aparelho, arcada, classe, plano, previsão, intervalo e manutenções) e Implante (por dente FDI, medidas, torque, carga e 5 etapas com prevista/feita). Outros modelos do Clinicorp (endodontia, periodontia, alinhadores, toxina) ainda não | rota | — |
 | Autorizar ou negar execução de procedimento | Não existe | rota | 2 |
 | Áudio de procedimento | Não existe | rota | 3 |
 | Tratamento: reordenar procedimentos, recuperar excluído, oportunidade | A confirmar | rota | 3 |
@@ -359,7 +359,7 @@ Fontes: 1.370 rotas de API e 163 rotas de tela do Clinicorp, telas abertas na co
 | Vouchers (15 rotas) | Não existe; esta conta não abre a tela | rota | 3 |
 | Central de agenda | Não existe; esta conta não abre a tela | rota | 3 |
 | Multiunidade (grupo, franquia, ranking, royalties) | Não existe; a Klinik tem uma unidade | rota | 3 |
-| Relatórios ausentes: Balancete, NFSe, Notas externas, Recibos, Avaliações Google, SPC/Serasa, Exames radiológicos, Planos recorrentes, Controle de ortodontia, Tratamentos ortodônticos, Implantes em tratamento, Estatística de implantes, Procedimentos vencidos | Dependem dos módulos acima, exceto Balancete, Recibos e Procedimentos vencidos | código | conforme o módulo |
+| Relatórios ausentes: Balancete, NFSe, Notas externas, Recibos, Avaliações Google, SPC/Serasa, Exames radiológicos, Planos recorrentes, Procedimentos vencidos (Controle de ortodontia, Tratamentos ortodônticos, Implantes em tratamento e Estatística de implantes feitos em 2026-11-05) | Dependem dos módulos acima, exceto Balancete, Recibos e Procedimentos vencidos | código | conforme o módulo |
 
 ### B. Falta e depende de terceiros (contrato, credencial ou regulação)
 
