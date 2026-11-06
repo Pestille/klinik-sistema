@@ -78,7 +78,8 @@
       status_orcamento: [['', 'Todas'], ['aberto', 'Em aberto'], ['aprovado', 'Aprovado'], ['reprovado', 'Reprovado'], ['desaprovado', 'Desaprovado']],
       status_parcela: [['', 'Todas'], ['vencido', 'Vencidas'], ['a_vencer', 'A vencer'], ['pago', 'Pagas']],
       status_orto: [['', r.id === 'tr-orto-controle' ? 'Em tratamento' : 'Todas'], ['avaliacao', 'Em avaliação'], ['tratamento', 'Em tratamento'], ['suspenso', 'Suspenso'], ['finalizado', 'Finalizado']],
-      status_etapa: [['', 'Todas'], ['prevista', 'Previstas'], ['atrasada', 'Atrasadas'], ['feita', 'Feitas']]
+      status_etapa: [['', 'Todas'], ['prevista', 'Previstas'], ['atrasada', 'Atrasadas'], ['feita', 'Feitas']],
+      status_plano: [['', 'Todos'], ['aberto', 'Em Aberto'], ['pago', 'Pago'], ['vencido', 'Vencido'], ['cancelado', 'Cancelado']]
     }
     var stKey = r.filtros.filter(function (x) { return STATUS[x] })[0]
     el('rl-main').innerHTML = '<div class="fn-head"><div><div class="gpage-title">' + esc(r.nome) + '</div><div class="gpage-sub">' + esc(r.cat) + ' · ' + esc(r.desc) + '</div></div>' +
@@ -88,6 +89,7 @@
           '<div class="ag-f"><label>De</label><input class="ag-in" type="date" id="rl-de" value="' + F.de + '"></div><div class="ag-f"><label>Até</label><input class="ag-in" type="date" id="rl-ate" value="' + F.ate + '"></div>' : '') +
         (r.filtros.indexOf('profissional') >= 0 ? '<div class="ag-f"><label>Profissional</label><select class="ag-in" id="rl-prof"><option value="">Todos</option>' + profs.map(function (p) { return '<option value="' + p.id + '"' + (String(F.profissional_id) === String(p.id) ? ' selected' : '') + '>' + esc(p.nome) + '</option>' }).join('') + '</select></div>' : '') +
         (stKey ? '<div class="ag-f"><label>Situação</label><select class="ag-in" id="rl-st">' + STATUS[stKey].map(function (x) { return '<option value="' + x[0] + '"' + (F.status === x[0] ? ' selected' : '') + '>' + x[1] + '</option>' }).join('') + '</select></div>' : '') +
+        (r.selects || []).map(function (sx) { return '<div class="ag-f"><label for="rl-x-' + sx.k + '">' + esc(sx.rotulo) + '</label><select class="ag-in" id="rl-x-' + sx.k + '">' + sx.opcoes.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (String((F.x || {})[sx.k] == null ? sx.opcoes[0][0] : F.x[sx.k]) === String(o[0]) ? ' selected' : '') + '>' + esc(o[1]) + '</option>' }).join('') + '</select></div>' }).join('') +
         (r.filtros.indexOf('dias_min') >= 0 ? '<div class="ag-f"><label>Sem vir há pelo menos (dias)</label><input class="ag-in" type="number" min="0" id="rl-dias" value="' + F.dias_min + '"></div>' : '') +
         '<div class="ag-f fn-f-btn"><label>&nbsp;</label><button class="btn btn-primary" id="rl-ok">Listar</button></div></div>' +
       '<div id="rl-res"><div class="pc-vazio" style="padding:40px 0">Ajuste os filtros e clique em Listar.</div></div>'
@@ -98,6 +100,7 @@
       if (el('rl-prof')) F.profissional_id = el('rl-prof').value
       if (el('rl-st')) F.status = el('rl-st').value
       if (el('rl-dias')) F.dias_min = el('rl-dias').value
+      F.x = {}; (r.selects || []).forEach(function (sx) { F.x[sx.k] = el('rl-x-' + sx.k).value })
       listar(r, F)
     }
     listar(r, F)
@@ -106,7 +109,7 @@
   async function listar(r, F) {
     var res = el('rl-res'); if (!res) return
     res.innerHTML = '<div class="fn-sk"></div><div class="fn-sk" style="height:220px"></div>'
-    var d = await apiData('relatorio', { id: r.id, de: F.de, ate: F.ate, profissional_id: F.profissional_id, status: F.status, dias_min: F.dias_min }).catch(function (e) { return { success: false, error: e.message } })
+    var d = await apiData('relatorio', Object.assign({ id: r.id, de: F.de, ate: F.ate, profissional_id: F.profissional_id, status: F.status, dias_min: F.dias_min }, F.x || {})).catch(function (e) { return { success: false, error: e.message } })
     if (RL.atual !== r || !el('rl-res')) return
     if (!d.success) { res.innerHTML = '<div class="ag-err">' + esc(d.error || 'Erro') + '</div>'; return }
     RL.dados = d

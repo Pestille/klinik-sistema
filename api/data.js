@@ -111,7 +111,7 @@ var ROTA_PERMISSAO = {
     'permissoes-perfil': 'usuarios.acessar'
 }
 
-module.exports = async function handler(req, res) {
+async function handlerInterno(req, res, cap) {
     setCorsHeaders(req, res)
     res.setHeader('Content-Type', 'application/json')
     if (req.method === 'OPTIONS') { res.status(200).end(); return }
@@ -135,6 +135,7 @@ module.exports = async function handler(req, res) {
         auth = await authenticateRequest(req)
         if (!auth) return res.status(401).json({ success: false, error: 'Não autenticado' })
         clinica_id = auth.clinica_id
+        cap.auth = auth; cap.clinica_id = clinica_id
     }
 
     // Rotas que alteram permissões, rodam migrações/importações em massa, exportam
@@ -155,6 +156,7 @@ module.exports = async function handler(req, res) {
 
     try {
         var client = getClient()
+        cap.client = client
         await runMigrations(client)
 
         // Permissões por perfil aplicadas no servidor (antes só escondiam o menu)
@@ -3739,4 +3741,14 @@ module.exports = async function handler(req, res) {
         console.error('[data.js] r=' + (req.query.r||'?'), error.message)
         return res.status(500).json({ success: false, error: error.message })
     }
+}
+
+// Envolve o handler: depois de toda escrita que deu certo, registra a ação do
+// usuário (relatório Ações Usuários). Aguarda antes de terminar (Vercel corta
+// promessas soltas).
+module.exports = async function handler(req, res) {
+    var cap = {}, jsonOrig = res.json.bind(res)
+    res.json = function (o) { cap.resposta = o; return jsonOrig(o) }
+    await handlerInterno(req, res, cap)
+    if (req.method !== 'GET' && cap.auth && cap.client) await require('../lib/acoes').registrar(cap.client, { auth: cap.auth, clinica_id: cap.clinica_id, req: req, res: res, route: (req.query || {}).r || '', resposta: cap.resposta })
 }
