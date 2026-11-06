@@ -7126,8 +7126,15 @@ async function renderPlanoFichaClinica(el,p){
                 '<div style="font-size:10px;color:#E65100;font-weight:500">Profissional</div>'+
                 '<select id="fc-prof-'+it.id+'" style="border:1.5px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--text);background:#fff;outline:none;min-width:200px">'+selOpts+'</select>'+
               '</div>'+
-              '<button onclick="abrirExecutarModal('+it.id+','+pacId+',\''+((it.procedimento_nome||'').replace(/'/g,"\\'"))+'\')" style="background:#2E7D52;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Executar</button>'+
-              '<div style="min-width:70px"><div style="font-size:10px;color:var(--text3)">Status</div><div style="font-size:13px">Aprovado</div></div>'+
+              (function(){
+                var sa=it.autorizacao_status, nomeJs=((it.procedimento_nome||'').replace(/'/g,"\\'"))
+                var bAut='<button onclick="abrirAutorizacaoModal(\'autorizar\','+it.id+','+pacId+',\''+nomeJs+'\',\''+String(it.guia||'').replace(/'/g,'')+'\')" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Autorizar</button>'
+                var bNeg='<button onclick="abrirAutorizacaoModal(\'negar\','+it.id+','+pacId+',\''+nomeJs+'\',\''+String(it.guia||'').replace(/'/g,'')+'\')" style="background:transparent;color:#C62828;border:1.5px solid #E0E0E0;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Negar</button>'
+                var bExe='<button onclick="abrirExecutarModal('+it.id+','+pacId+',\''+nomeJs+'\')" style="background:#2E7D52;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Executar</button>'
+                var rot={em_analise:['Em análise','#E65100'],autorizado:['Autorizado','#034030'],negado:['Negado','#C62828']}[sa]||['Aprovado','var(--text2)']
+                var btns=sa==='em_analise'?bAut+bNeg:sa==='autorizado'?bExe+bNeg:sa==='negado'?bAut:bExe
+                return btns+'<div style="min-width:90px"><div style="font-size:10px;color:var(--text3)">Status</div><div style="font-size:13px;font-weight:500;color:'+rot[1]+'">'+rot[0]+'</div>'+(sa&&it.guia?'<div style="font-size:11px;color:var(--text3)">Guia '+escHtml(it.guia)+'</div>':'')+(sa==='negado'&&it.autorizacao_obs?'<div style="font-size:11px;color:var(--text3)">'+escHtml(it.autorizacao_obs)+'</div>':'')+'</div>'
+              })()+
               '<div style="min-width:80px"><div style="font-size:10px;color:var(--text3)">Dente/Regiao</div><div style="font-size:13px">'+escHtml(it.dente||it.regiao||'—')+'</div></div>'+
               '<div style="margin-left:auto;text-align:right"><div style="font-size:10px;color:var(--text3)">Valor</div><div style="font-size:14px;font-weight:600;color:#E65100">'+fmtBrl(it.valor_unitario*(it.quantidade||1))+'</div></div>'+
             '</div>'
@@ -7370,6 +7377,44 @@ function abrirExecutarModal(itemId,pacId,procNome){
     '</div>'
   document.body.appendChild(m)
   m.onclick=function(ev){if(ev.target===m)m.remove()}
+}
+
+// Autorizar / Negar execução de procedimento de convênio (Número de Guia)
+function abrirAutorizacaoModal(dec,itemId,pacId,procNome,guia){
+  var aut=dec==='autorizar'
+  var ant=document.getElementById('modal-autorizacao'); if(ant) ant.remove()
+  var m=document.createElement('div')
+  m.id='modal-autorizacao'
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px'
+  m.innerHTML='<div style="background:#fff;border-radius:8px;width:100%;max-width:480px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,.12)">'+
+    '<div style="font-size:20px;font-weight:500;color:var(--text);margin-bottom:16px">'+(aut?'Autorizar':'Negar')+'</div>'+
+    '<div style="background:'+(aut?'#E8F5E9':'#FFF3E0')+';color:'+(aut?'#034030':'#E65100')+';border-radius:6px;padding:12px;font-size:14px;margin-bottom:16px">'+(aut?'Você tem certeza que deseja autorizar esse procedimento? Após autorizar, será gerado o financeiro!':'Você tem certeza que deseja negar esse procedimento?')+'</div>'+
+    '<div style="font-size:13px;color:var(--text2);margin-bottom:16px">'+escHtml(procNome||'')+'</div>'+
+    '<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);margin-bottom:6px">Número de Guia'+(aut?' *':'')+'</label>'+
+    '<input id="aut-guia" type="text" maxlength="40" value="'+escHtml(guia||'')+'" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;margin-bottom:16px">'+
+    (aut?'':'<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);margin-bottom:6px">Motivo</label><input id="aut-motivo" type="text" maxlength="200" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--text);outline:none;margin-bottom:16px">')+
+    '<div id="aut-err" style="color:#C62828;font-size:13px;margin-bottom:12px"></div>'+
+    '<div style="display:flex;gap:12px;justify-content:flex-end">'+
+      '<button onclick="document.getElementById(\'modal-autorizacao\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
+      '<button id="aut-ok" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Salvar</button>'+
+    '</div></div>'
+  document.body.appendChild(m)
+  m.onclick=function(ev){if(ev.target===m)m.remove()}
+  document.getElementById('aut-guia').focus()
+  document.getElementById('aut-ok').onclick=async function(){
+    var g=document.getElementById('aut-guia').value.trim()
+    if(aut&&!g){document.getElementById('aut-err').textContent='Informe o Número de Guia';return}
+    this.disabled=true
+    try{
+      var r=await apiPost('procedimento-autorizacao',{id:itemId,decisao:dec,guia:g,motivo:aut?'':(document.getElementById('aut-motivo').value||'')})
+      if(!r.success){this.disabled=false;document.getElementById('aut-err').textContent=r.error||'Erro';return}
+      m.remove()
+      if(typeof toast==='function') toast(r.msg)
+      var p=((_prontData||{}).paciente)||{}
+      if(!p.id) p={id:pacId}
+      renderPlanoFichaClinica(document.getElementById('pront-content'),p)
+    }catch(e){this.disabled=false;document.getElementById('aut-err').textContent='Erro: '+e.message}
+  }
 }
 
 async function confirmarExecucao(itemId,pacId){

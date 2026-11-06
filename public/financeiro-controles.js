@@ -156,10 +156,10 @@
         d.itens.map(function (x) {
           var s = SIT_C[x.convenio_status] || SIT_C.a_faturar
           return '<tr><td><input type="checkbox" data-chk="' + x.id + '"' + (x.convenio_status === 'recebido' ? ' disabled' : '') + '></td><td><span class="pc-badge ' + s[1] + '">' + s[0] + '</span>' + (x.convenio_obs ? '<div class="ag-hint" style="margin:2px 0 0">' + esc(x.convenio_obs) + '</div>' : '') + '</td>' +
-            '<td>' + br(x.data_execucao) + '</td><td>' + K.linkPac(x.paciente_id, x.paciente_nome) + '</td><td class="hide-sm">' + esc(x.convenio || '') + '</td>' +
+            '<td>' + (Number(x.executado) ? br(x.data_execucao) : '<span class="ag-hint" style="margin:0">Autorizado em ' + br(x.autorizacao_em) + '</span>') + '</td><td>' + K.linkPac(x.paciente_id, x.paciente_nome) + '</td><td class="hide-sm">' + esc(x.convenio || '') + '</td>' +
             '<td><a class="fn-pac" data-guia="' + x.id + '">' + esc(x.guia || 'informar') + '</a></td><td>' + esc(x.procedimento_nome) + (x.dente ? ' · ' + esc(x.dente) : '') + (x.quantidade > 1 ? ' · ' + x.quantidade + 'x' : '') + '</td>' +
             '<td class="fn-num">' + moeda(x.convenio_status === 'recebido' ? x.convenio_valor_recebido : x.valor) + (x.convenio_status === 'recebido' && Number(x.convenio_valor_recebido) !== x.valor ? '<div class="ag-hint" style="margin:0">de ' + moeda(x.valor) + '</div>' : '') + '</td></tr>'
-        }).join('') + '</tbody></table></div></div>' : K.vazio('Nenhum procedimento de convênio executado no período.'))
+        }).join('') + '</tbody></table></div></div>' : K.vazio('Nenhum procedimento de convênio autorizado ou executado no período.'))
     K.ligarPacientes(res); ligarTodos(res)
     res.querySelectorAll('[data-guia]').forEach(function (a) {
       a.onclick = async function () { var g = prompt('Número da guia:', this.textContent === 'informar' ? '' : this.textContent); if (g === null) return; var r = await apiPost('fin-convenios', { action: 'guia', id: +this.getAttribute('data-guia'), guia: g }); if (!r.success) return alert(r.error); renderPlanos() }

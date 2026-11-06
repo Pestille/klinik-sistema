@@ -230,11 +230,14 @@
     modal(t ? 'Editar tabela' : 'Nova tabela de preço', '<div id="oc-e-err"></div><div class="ag-row c2"><div class="ag-f"><label>Nome</label><input class="ag-in" id="oc-e-nome" maxlength="60" value="' + esc(t ? t.nome : '') + '"></div>' +
       '<div class="ag-f"><label>Tipo</label><select class="ag-in" id="oc-e-tipo">' + Object.keys(TIPO_TAB).map(function (k) { return '<option value="' + k + '"' + (t && t.tipo === k ? ' selected' : '') + '>' + TIPO_TAB[k] + '</option>' }).join('') + '</select></div></div>' +
       '<p class="ag-hint">Nas tabelas de <b>convênio</b>, o valor dos procedimentos entra no orçamento como "coberto pelo plano" e não soma no total do paciente.</p>' +
+      '<label class="ag-chk" id="oc-e-aut-l"><input type="checkbox" id="oc-e-aut"' + (!t || t.exige_autorizacao == null || Number(t.exige_autorizacao) ? ' checked' : '') + '> Exigir autorização para executar (procedimento fica Em análise até Autorizar com o Número de Guia)</label>' +
       (t ? '<label class="ag-chk"><input type="checkbox" id="oc-e-ativo"' + (t.ativo ? ' checked' : '') + '> Tabela ativa</label>' : ''),
       '<button class="btn" id="oc-e-v">Voltar</button><button class="ag-btn-novo" id="oc-e-ok">Salvar</button>', 560)
+    var autVis = function () { el('oc-e-aut-l').style.display = el('oc-e-tipo').value === 'convenio' ? '' : 'none' }
+    el('oc-e-tipo').onchange = autVis; autVis()
     el('oc-e-v').onclick = function () { t ? detalheTabela(t) : abrirTabelasPreco() }
     el('oc-e-ok').onclick = async function () {
-      var r = await apiPost('precos-tabelas', { id: t ? t.id : undefined, nome: el('oc-e-nome').value, tipo: el('oc-e-tipo').value, ativo: t ? el('oc-e-ativo').checked : undefined })
+      var r = await apiPost('precos-tabelas', { id: t ? t.id : undefined, nome: el('oc-e-nome').value, tipo: el('oc-e-tipo').value, ativo: t ? el('oc-e-ativo').checked : undefined, exige_autorizacao: el('oc-e-aut').checked })
       if (!r.success) return erro('oc-e-err', r.error || 'Erro')
       await carregarTabelasPreco(true); abrirTabelasPreco()
     }

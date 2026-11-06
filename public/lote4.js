@@ -205,8 +205,10 @@
     var pend = d ? d.itens.filter(function (i) { return i.vinculado && !i.executado }) : []
     if (!pend.length || !pode('pacientes.ficha_clinica')) return
     if (!confirm('Registrar como executado(s)?\n\n' + pend.map(function (i) { return '• ' + i.procedimento_nome + (i.dente ? ' (dente ' + i.dente + ')' : '') }).join('\n'))) return
-    for (var k = 0; k < pend.length; k++) await apiPost('marcar-executado', { orcamento_item_id: pend[k].id, data_execucao: a.date, profissional_id: a.ProfessionalId || pend[k].profissional_id || null, profissional_nome: a.ProfessionalName || pend[k].profissional_nome || '' })
-    if (typeof toast === 'function') toast(pend.length + ' procedimento(s) registrado(s) na ficha clínica')
+    var bloq = []; for (var k = 0; k < pend.length; k++) { var rk = await apiPost('marcar-executado', { orcamento_item_id: pend[k].id, data_execucao: a.date, profissional_id: a.ProfessionalId || pend[k].profissional_id || null, profissional_nome: a.ProfessionalName || pend[k].profissional_nome || '' }).catch(function () { return { success: false } }); if (!rk.success) bloq.push(pend[k].procedimento_nome + (rk.autorizacao === 'negado' ? ' (negado)' : rk.autorizacao === 'em_analise' ? ' (em análise: falta autorizar)' : '')) }
+    var feitos = pend.length - bloq.length
+    if (feitos && typeof toast === 'function') toast(feitos + ' procedimento(s) registrado(s) na ficha clínica')
+    if (bloq.length) alert('Não executado(s):\n\n' + bloq.map(function (n) { return '• ' + n }).join('\n') + '\n\nProcedimento de convênio só é executado depois de autorizado no Plano de Tratamento.')
   }
 
   // ════════════════════════════════════════════════════════════════

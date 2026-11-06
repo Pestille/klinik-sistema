@@ -74,7 +74,7 @@ var ROTA_PERMISSAO = {
     'leads': 'crm.acessar', 'lead-interacoes': 'crm.acessar', 'orcamento-contrato': 'pacientes.documentos',
     'caixa': 'caixa.operar', 'parcela-encargos': 'pacientes.financeiro', 'agendamento-procedimentos': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' },
     'marcadores': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' }, 'agendamento-marcadores': { GET: 'agenda.visualizar_classificacao', POST: 'agenda.agendar_atendimento' }, 'medicamentos': { GET: 'pacientes.documentos', POST: 'pacientes.prescricoes' },
-    'marcar-executado': 'pacientes.ficha_clinica', 'editar-execucao': 'pacientes.ficha_clinica', 'desfazer-execucao': 'pacientes.ficha_clinica',
+    'marcar-executado': 'pacientes.ficha_clinica', 'procedimento-autorizacao': 'pacientes.ficha_clinica', 'editar-execucao': 'pacientes.ficha_clinica', 'desfazer-execucao': 'pacientes.ficha_clinica',
     'salvar-orcamento': 'pacientes.orcamentos',
     'aprovar-orcamento': 'pacientes.editar_orcamento', 'reprovar-orcamento': 'pacientes.editar_orcamento',
     'desaprovar-orcamento': 'pacientes.editar_orcamento', 'renegociar-orcamento': 'pacientes.editar_orcamento',
@@ -1750,7 +1750,8 @@ module.exports = async function handler(req, res) {
                     itensMap[it.orcamento_id].push(it)
                 })
             }
-            orcList.forEach(function(o) { o.itens = itensMap[o.id] || [] })
+            var opAut = require('../lib/autorizacao'), opExigem = await opAut.tabelasQueExigem(client, clinica_id)
+            orcList.forEach(function(o) { o.itens = (itensMap[o.id] || []).map(function(it) { it.autorizacao_status = opAut.situacao(it, o.tabela_preco, opExigem); return it }) })
             return res.status(200).json({ success: true, orcamentos: orcList })
         }
 
@@ -2706,9 +2707,14 @@ module.exports = async function handler(req, res) {
             var me = req.body || {}
             if (!me.orcamento_item_id) return res.status(400).json({ success: false, error: 'orcamento_item_id obrigatório' })
             var meData = me.data_execucao || new Date().toISOString().slice(0, 10)
-            var meJa = await client.execute({ sql: "SELECT COALESCE(executado,0) ex FROM orcamento_itens WHERE id=? AND clinica_id=?", args: [me.orcamento_item_id, clinica_id] })
+            var meJa = await client.execute({ sql: "SELECT COALESCE(oi.executado,0) ex, oi.autorizacao, o.tabela_preco FROM orcamento_itens oi LEFT JOIN orcamentos o ON o.id=oi.orcamento_id AND o.clinica_id=oi.clinica_id WHERE oi.id=? AND oi.clinica_id=?", args: [me.orcamento_item_id, clinica_id] })
             if (!meJa.rows.length) return res.status(404).json({ success: false, error: 'Procedimento não encontrado' })
             if (Number(meJa.rows[0].ex)) return res.status(200).json({ success: true, msg: 'Procedimento já estava executado', ja_executado: true })
+            // Convênio: só executa depois de autorizado (Em análise / Negado bloqueiam)
+            var meAutLib = require('../lib/autorizacao')
+            var meSit = meAutLib.situacao(meJa.rows[0], meJa.rows[0].tabela_preco, await meAutLib.tabelasQueExigem(client, clinica_id))
+            if (meSit === 'em_analise') return res.status(409).json({ success: false, error: 'Procedimento em análise: autorize a execução (Número de Guia) antes de executar', autorizacao: meSit })
+            if (meSit === 'negado') return res.status(409).json({ success: false, error: 'Procedimento negado: não pode ser executado', autorizacao: meSit })
 
             // Update item (including professional if provided)
             if (me.profissional_id) {
