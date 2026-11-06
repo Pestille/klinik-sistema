@@ -357,7 +357,7 @@ Fontes: 1.370 rotas de API e 163 rotas de tela do Clinicorp, telas abertas na co
 | Tratamento: reordenar procedimentos, recuperar excluído, oportunidade | A confirmar | rota | 3 |
 | Estoque: consumo por procedimento, validade, em uso, devolução, descarte | Parcial | rota | 3 |
 | Fotos: pastas de comparação, pontos, baixar ZIP | Parcial (`fotos-pastas`) | rota | 3 |
-| Plano Próprio (tabela da clínica vendida a pacientes, empresas, famílias) | Não existe | tela | 3 |
+| Plano Próprio (tabela da clínica vendida a pacientes, empresas, famílias) | Feito em 06/11 (1248c32): cobrança mensal/total por pessoa, taxa de adesão, juros por atraso, 4 regras de liberação, faixas por quantidade de pessoas, titular e dependentes; sem cobrança automática | — | — |
 | Vouchers (15 rotas) | Não existe; esta conta não abre a tela | rota | 3 |
 | Central de agenda | Não existe; esta conta não abre a tela | rota | 3 |
 | Multiunidade (grupo, franquia, ranking, royalties) | Não existe; a Klinik tem uma unidade | rota | 3 |
@@ -367,7 +367,7 @@ Fontes: 1.370 rotas de API e 163 rotas de tela do Clinicorp, telas abertas na co
 
 | Funcionalidade | O que depende | Prioridade |
 |---|---|---|
-| Plano Recorrente: cobrança automática e juros (cadastro, adesões e mensalidades manuais já existem em `lib/rotas/planos.js`) | Asaas, já usado | 1 |
+| Plano Recorrente e Próprio: cobrança automática (juros por atraso já feitos em 06/11; cadastro, adesões e mensalidades manuais já existem em `lib/rotas/planos.js`) | Asaas, já usado | 1 |
 | NFS-e | Emissor por município, certificado A1. Hoje o botão só registra um recibo | 2 |
 | Avaliações e perfil Google, Reservar com o Google | Conta e aprovação Google | 3 |
 | Alinhadores (casos, ClearCorrect) | Parceiro; esta conta não abre a tela | 3 |
