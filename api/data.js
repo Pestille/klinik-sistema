@@ -2740,6 +2740,12 @@ async function handlerInterno(req, res, cap) {
 
         // ── MARCAR-EXECUTADO (procedimento) ──────────────────────────
         if (route === 'marcar-executado') {
+            // GET: retorno padrão do procedimento (prazo em meses e ação indicada do cadastro)
+            if (req.method === 'GET') {
+                var mpd = await client.execute({ sql: "SELECT tp.retorno_meses, tp.acao_indicada FROM orcamento_itens oi JOIN orcamentos o ON o.id=oi.orcamento_id AND o.clinica_id=oi.clinica_id JOIN tabela_precos tp ON tp.clinica_id=oi.clinica_id AND UPPER(tp.procedimento)=UPPER(oi.procedimento_nome) AND UPPER(tp.tabela)=UPPER(COALESCE(o.tabela_preco,'PARTICULAR')) AND COALESCE(tp.ativo,1)=1 WHERE oi.id=? AND oi.clinica_id=? LIMIT 1", args: [parseInt(q.orcamento_item_id, 10) || 0, clinica_id] }).catch(function () { return { rows: [] } })
+                var mpr = mpd.rows[0] || {}
+                return res.status(200).json({ success: true, retorno_meses: mpr.retorno_meses || null, acao_indicada: mpr.acao_indicada || '' })
+            }
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var me = req.body || {}
             if (!me.orcamento_item_id) return res.status(400).json({ success: false, error: 'orcamento_item_id obrigatório' })
@@ -2759,6 +2765,11 @@ async function handlerInterno(req, res, cap) {
             } else {
                 await client.execute({ sql: "UPDATE orcamento_itens SET executado=1, data_execucao=? WHERE id=? AND clinica_id=?", args: [meData, me.orcamento_item_id, clinica_id] })
             }
+            // Retorno (Clinicorp: Prazo para Retorno em meses + Ação Indicada + alerta automático)
+            var meRet = parseInt(me.retorno_meses, 10) > 0 ? Math.min(parseInt(me.retorno_meses, 10), 240) : null
+            var meDataRet = null
+            if (meRet) { var mdr = new Date(String(meData).slice(0, 10) + 'T12:00:00Z'); var mdia = mdr.getUTCDate(); mdr.setUTCDate(1); mdr.setUTCMonth(mdr.getUTCMonth() + meRet); var mfim = new Date(Date.UTC(mdr.getUTCFullYear(), mdr.getUTCMonth() + 1, 0)).getUTCDate(); mdr.setUTCDate(Math.min(mdia, mfim)); meDataRet = mdr.toISOString().slice(0, 10) }
+            await client.execute({ sql: "UPDATE orcamento_itens SET retorno_meses=?, data_retorno=?, acao_indicada=?, obs_execucao=?, prox_consulta=? WHERE id=? AND clinica_id=?", args: [meRet, meDataRet, meRet ? String(me.acao_indicada || '').slice(0, 200) : '', String(me.obs || '').slice(0, 500), String(me.prox_consulta || '').slice(0, 500), me.orcamento_item_id, clinica_id] }).catch(function (e) { console.error('[retorno]', e.message) })
 
             // Get item + orcamento info for commission
             var meItem = await client.execute({ sql: "SELECT oi.*, o.tabela_preco, o.paciente_id, p.nome as paciente_nome FROM orcamento_itens oi JOIN orcamentos o ON o.id=oi.orcamento_id LEFT JOIN pacientes p ON p.id=o.paciente_id WHERE oi.id=? AND oi.clinica_id=?", args: [me.orcamento_item_id, clinica_id] })
@@ -2773,6 +2784,10 @@ async function handlerInterno(req, res, cap) {
                     var meAt = await client.execute({ sql: "SELECT 1 FROM agendamentos WHERE clinica_id=? AND paciente_id=? AND profissional_id=? AND DATE(data_hora)=? AND status='atendido' LIMIT 1", args: [clinica_id, meI.paciente_id, meProfId, String(meData).slice(0, 10)] })
                     if (meAt.rows.length) await comissaoCheckoutSegura(client, clinica_id, meI.paciente_id, meProfId, meData)
                 }
+            }
+            if (meDataRet && me.gerar_alerta && meItem.rows.length) {
+                var mAl = meItem.rows[0]
+                await client.execute({ sql: "INSERT INTO alertas_retorno(clinica_id,paciente_id,profissional_id,data_retorno,motivo,criado_por_nome) VALUES(?,?,?,?,?,?)", args: [clinica_id, mAl.paciente_id, me.profissional_id || mAl.profissional_id || null, meDataRet, String((mAl.procedimento_nome || '') + (me.acao_indicada ? ' — ' + me.acao_indicada : '')).slice(0, 200), auth.nome || null] }).catch(function (e) { console.error('[alerta-retorno]', e.message) })
             }
             return res.status(200).json({ success: true, msg: 'Procedimento marcado como executado' })
         }

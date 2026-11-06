@@ -456,13 +456,19 @@
       '<div class="ag-row c3"><div class="ag-f"><label>Data</label><input class="ag-in" type="date" id="rc-data" value="' + hoje() + '"></div><div class="ag-f"><label>Forma</label><select class="ag-in" id="rc-forma">' + opcoesTexto(FORMAS, 'PIX') + '</select></div>' +
       '<div class="ag-f"><label>Conta</label><select class="ag-in" id="rc-conta">' + opcoes(cs, FN.cache.caixa) + '</select></div></div>' +
       (i.origem === 'parcela' || i.origem === 'plano' ? '<div id="rc-enc"></div>' : '') + '<div id="rc-det"></div>' +
+      (i.origem === 'parcela' || i.origem === 'plano' ? '<div class="ag-row c2"><div class="ag-f"><label>Comprovante</label><select class="ag-in" id="rc-comp"><option value="">Sem Recibo</option><option value="NFS">Nota Fiscal Externa</option></select></div></div><div id="rc-nfs"></div>' : '') +
       (i.cobranca_id ? '<p class="ag-hint">Esta parcela tem cobrança no Asaas. Se o paciente pagou por fora, lembre de cancelar a cobrança no Asaas.</p>' : ''),
       '<button class="btn" id="rc-c">Cancelar</button><button class="ag-btn-novo" id="rc-ok">Confirmar recebimento</button>', 640)
     el('rc-forma').onchange = function () { el('rc-det').innerHTML = camposRecebivel(this.value, i.paciente_nome) }
     if ((i.origem === 'parcela' || i.origem === 'plano') && window.encargosBaixa) { var rotaEnc = i.origem === 'plano' ? 'plano-encargos' : 'parcela-encargos'; encargosBaixa(i.id, 'rc-data', 'rc-enc', rotaEnc); el('rc-data').onchange = function () { encargosBaixa(i.id, 'rc-data', 'rc-enc', rotaEnc) } }
+    if (el('rc-comp')) el('rc-comp').onchange = function () {
+      el('rc-nfs').innerHTML = this.value !== 'NFS' ? '' : '<div class="pc-box-h" style="margin-top:8px">Nota Fiscal Externa</div><div style="background:var(--orange-light);color:var(--orange);border-radius:6px;padding:8px 12px;font-size:13px;margin-bottom:12px"><b>ATENÇÃO</b> Os dados informados nesta opção de Nota Fiscal são apenas para controle interno e a nota NÃO será gerada pelo Sistema.</div>' +
+        '<div class="ag-row c2"><div class="ag-f"><label>Número</label><input class="ag-in" id="nfs-num" maxlength="40"></div><div class="ag-f"><label>Chave de Acesso</label><input class="ag-in" id="nfs-chave" maxlength="60"></div></div><div class="ag-f"><label>Observações</label><input class="ag-in" id="nfs-obs" maxlength="500"></div>'
+    }
     el('rc-c').onclick = fechar
     el('rc-ok').onclick = async function () {
-      var r = await apiPost('fin-receber-baixa', { id: i.id, origem: i.origem, acrescimo: el('enc-acr') ? el('enc-acr').value : 0, desconto: el('enc-desc') ? el('enc-desc').value : 0, data: el('rc-data').value, forma_pagamento: el('rc-forma').value, conta_id: el('rc-conta').value, detalhe: lerRecebivel(el('rc-forma').value) })
+      var nfs = el('rc-comp') && el('rc-comp').value === 'NFS' ? { numero: el('nfs-num').value, chave_acesso: el('nfs-chave').value, observacoes: el('nfs-obs').value } : null
+      var r = await apiPost('fin-receber-baixa', { nfs: nfs, id: i.id, origem: i.origem, acrescimo: el('enc-acr') ? el('enc-acr').value : 0, desconto: el('enc-desc') ? el('enc-desc').value : 0, data: el('rc-data').value, forma_pagamento: el('rc-forma').value, conta_id: el('rc-conta').value, detalhe: lerRecebivel(el('rc-forma').value) })
       if (!r.success) return erro(r.error || 'Erro')
       fechar(); (depois || renderCReceber)()
     }

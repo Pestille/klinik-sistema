@@ -7402,7 +7402,7 @@ function abrirExecutarModal(itemId,pacId,procNome){
   m.id='modal-executar'
   m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10003;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease'
   m.innerHTML=
-    '<div style="background:#fff;border-radius:8px;width:520px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:32px">'+
+    '<div style="background:#fff;border-radius:8px;width:520px;max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);overflow:auto;box-sizing:border-box;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:32px">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px"><div style="font-size:20px;font-weight:500;color:#1A1A1A">Executar</div><span onclick="document.getElementById(\'modal-executar\').remove()" style="cursor:pointer;font-size:24px;color:#757575">&times;</span></div>'+
 
       '<div style="margin-bottom:20px">'+
@@ -7430,6 +7430,18 @@ function abrirExecutarModal(itemId,pacId,procNome){
         '<input id="exec-obs" type="text" placeholder="" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:var(--text);outline:none">'+
       '</div>'+
 
+      '<div style="border-top:1px solid var(--border2);padding-top:16px;margin-bottom:24px">'+
+        '<div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Retorno</div>'+
+        '<div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:12px">'+
+          '<div style="width:160px"><label style="display:block;font-size:13px;font-weight:500;color:var(--text3);margin-bottom:6px">Prazo para Retorno</label>'+
+          '<input id="exec-ret" type="number" min="0" max="240" oninput="_execRetornoUI()" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:var(--text);outline:none"></div>'+
+          '<span style="font-size:14px;color:var(--text2);padding-bottom:12px">Meses</span>'+
+        '</div>'+
+        '<label style="display:block;font-size:13px;font-weight:500;color:var(--text3);margin-bottom:6px">Ação Indicada</label>'+
+        '<input id="exec-acao" type="text" maxlength="200" disabled style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:var(--text);outline:none;margin-bottom:12px">'+
+        '<label style="display:flex;gap:8px;align-items:center;font-size:14px;color:var(--text2);cursor:pointer"><input id="exec-alerta" type="checkbox" disabled> Gerar alerta de retorno automático baseado no prazo informado</label>'+
+      '</div>'+
+
       '<div style="display:flex;gap:12px;justify-content:flex-end">'+
         '<button onclick="document.getElementById(\'modal-executar\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:11px 28px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
         '<button onclick="confirmarExecucao('+itemId+','+pacId+')" style="background:var(--orange);color:#fff;border:none;border-radius:6px;padding:12px 32px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Ok</button>'+
@@ -7437,6 +7449,18 @@ function abrirExecutarModal(itemId,pacId,procNome){
     '</div>'
   document.body.appendChild(m)
   m.onclick=function(ev){if(ev.target===m)m.remove()}
+  apiData('marcar-executado',{orcamento_item_id:itemId}).then(function(d){
+    if(!d||!d.success||!document.getElementById('exec-ret'))return
+    if(d.retorno_meses){document.getElementById('exec-ret').value=d.retorno_meses;document.getElementById('exec-alerta').checked=true}
+    document.getElementById('exec-acao').value=d.acao_indicada||''
+    _execRetornoUI()
+  }).catch(function(){})
+}
+function _execRetornoUI(){
+  var tem=(parseInt((document.getElementById('exec-ret')||{}).value,10)||0)>0
+  var a=document.getElementById('exec-acao'),c=document.getElementById('exec-alerta')
+  if(a)a.disabled=!tem
+  if(c){c.disabled=!tem;if(!tem)c.checked=false}
 }
 
 // Autorizar / Negar execução de procedimento de convênio (Número de Guia)
@@ -7559,7 +7583,8 @@ async function confirmarExecucao(itemId,pacId){
   if(!profId){alert('Selecione o profissional');return}
 
   try{
-    var r=await apiPost('marcar-executado',{orcamento_item_id:itemId,data_execucao:data,profissional_id:profId,profissional_nome:profNome})
+    var g=function(id){var e=document.getElementById(id);return e?e.value:''}
+    var r=await apiPost('marcar-executado',{orcamento_item_id:itemId,data_execucao:data,profissional_id:profId,profissional_nome:profNome,prox_consulta:g('exec-prox'),obs:g('exec-obs'),retorno_meses:g('exec-ret'),acao_indicada:g('exec-acao'),gerar_alerta:!!(document.getElementById('exec-alerta')||{}).checked})
     if(r.success){
       document.getElementById('modal-executar').remove()
       var p=((_prontData||{}).paciente)||{}

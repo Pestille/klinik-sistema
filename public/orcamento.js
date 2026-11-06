@@ -286,11 +286,15 @@
       '<div class="ag-f"><label>Código (TUSS ou interno)</label><input class="ag-in" id="oc-i-cod" maxlength="40" value="' + esc(i.codigo_interno || '') + '"></div></div>' +
       '<div class="ag-row c3"><div class="ag-f"><label>Especialidade</label><input class="ag-in" id="oc-i-esp" maxlength="80" value="' + esc(i.especialidade || '') + '"></div>' +
       '<div class="ag-f"><label>Valor (R$)</label><input class="ag-in" id="oc-i-val" inputmode="decimal" value="' + (i.valor != null ? String(i.valor).replace('.', ',') : '') + '"></div>' +
-      '<div class="ag-f"><label>Sessões</label><input class="ag-in" id="oc-i-ses" type="number" min="1" value="' + (i.sessoes || 1) + '"></div></div>',
+      '<div class="ag-f"><label>Sessões</label><input class="ag-in" id="oc-i-ses" type="number" min="1" value="' + (i.sessoes || 1) + '"></div></div>' +
+      '<div class="lbl" style="margin-top:8px">Retorno</div>' +
+      '<div class="ag-row c2"><div class="ag-f"><label>Prazo para Retorno (Meses)</label><input class="ag-in" id="oc-i-ret" type="number" min="0" value="' + (i.retorno_meses || '') + '"></div>' +
+      '<div class="ag-f"><label>Ação Indicada</label><input class="ag-in" id="oc-i-acao" maxlength="200" value="' + esc(i.acao_indicada || '') + '"></div></div>' +
+      '<p class="ag-hint" style="margin:0">Informe o prazo para retorno para gerar o alerta de retorno.</p>',
       '<button class="btn" id="oc-i-v">Voltar</button><button class="ag-btn-novo" id="oc-i-ok">Salvar</button>', 640)
     el('oc-i-v').onclick = function () { detalheTabela(t, pagina, q) }
     el('oc-i-ok').onclick = async function () {
-      var r = await apiPost('precos-itens', { tabela_id: t.id, id: i.id, procedimento: el('oc-i-proc').value, codigo_interno: el('oc-i-cod').value, especialidade: el('oc-i-esp').value, valor: el('oc-i-val').value, sessoes: el('oc-i-ses').value, comissao: i.comissao || 0 })
+      var r = await apiPost('precos-itens', { tabela_id: t.id, id: i.id, procedimento: el('oc-i-proc').value, codigo_interno: el('oc-i-cod').value, especialidade: el('oc-i-esp').value, valor: el('oc-i-val').value, sessoes: el('oc-i-ses').value, comissao: i.comissao || 0, retorno_meses: el('oc-i-ret').value, acao_indicada: el('oc-i-acao').value })
       if (!r.success) return erro('oc-i-err', r.error || 'Erro')
       detalheTabela(t, pagina, q)
     }

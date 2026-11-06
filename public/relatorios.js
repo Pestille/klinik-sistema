@@ -85,7 +85,7 @@
     el('rl-main').innerHTML = '<div class="fn-head"><div><div class="gpage-title">' + esc(r.nome) + '</div><div class="gpage-sub">' + esc(r.cat) + ' · ' + esc(r.desc) + '</div></div>' +
       '<div class="fn-acoes rl-acoes"><button class="btn" id="rl-print" disabled>Imprimir</button><button class="btn" id="rl-csv" disabled>Exportar</button></div></div>' +
       '<div class="fn-filtros">' +
-        (r.filtros.indexOf('periodo') >= 0 ? '<div class="ag-f"><label>Período</label><select class="ag-in" id="rl-faixa">' + faixas().map(function (x) { return '<option value="' + x[0] + '"' + (F.faixa === x[0] ? ' selected' : '') + '>' + x[1] + '</option>' }).join('') + '<option value="custom"' + (F.faixa === 'custom' ? ' selected' : '') + '>Personalizado</option></select></div>' +
+        (r.filtros.indexOf('periodo') >= 0 ? '<div class="ag-f"><label>' + esc(r.rotulo_periodo || 'Período') + '</label><select class="ag-in" id="rl-faixa">' + faixas().map(function (x) { return '<option value="' + x[0] + '"' + (F.faixa === x[0] ? ' selected' : '') + '>' + x[1] + '</option>' }).join('') + '<option value="custom"' + (F.faixa === 'custom' ? ' selected' : '') + '>Personalizado</option></select></div>' +
           '<div class="ag-f"><label>De</label><input class="ag-in" type="date" id="rl-de" value="' + F.de + '"></div><div class="ag-f"><label>Até</label><input class="ag-in" type="date" id="rl-ate" value="' + F.ate + '"></div>' : '') +
         (r.filtros.indexOf('profissional') >= 0 ? '<div class="ag-f"><label>Profissional</label><select class="ag-in" id="rl-prof"><option value="">Todos</option>' + profs.map(function (p) { return '<option value="' + p.id + '"' + (String(F.profissional_id) === String(p.id) ? ' selected' : '') + '>' + esc(p.nome) + '</option>' }).join('') + '</select></div>' : '') +
         (stKey ? '<div class="ag-f"><label>Situação</label><select class="ag-in" id="rl-st">' + STATUS[stKey].map(function (x) { return '<option value="' + x[0] + '"' + (F.status === x[0] ? ' selected' : '') + '>' + x[1] + '</option>' }).join('') + '</select></div>' : '') +
@@ -115,7 +115,7 @@
     RL.dados = d
     var cols = d.colunas || [], linhas = d.linhas || []
     var g = grafico(d)
-    res.innerHTML = '<div class="rl-periodo">' + (r.filtros.indexOf('periodo') >= 0 ? 'Período: ' + br(d.de) + ' a ' + br(d.ate) + ' · ' : '') + numero(linhas.length) + ' linha(s)' + (d.cortado ? ' (mostrando as 5.000 primeiras)' : '') + '</div>' +
+    res.innerHTML = '<div class="rl-periodo">' + (r.filtros.indexOf('periodo') >= 0 ? (r.rotulo_periodo || 'Período') + ': ' + br(d.de) + ' a ' + br(d.ate) + ' · ' : '') + numero(linhas.length) + ' linha(s)' + (d.cortado ? ' (mostrando as 5.000 primeiras)' : '') + '</div>' +
       (d.resumo && d.resumo.length ? '<div class="fn-kpis rl-kpis">' + d.resumo.map(function (k) { return '<div class="pc-box fn-kpi"><div class="pc-box-h" style="margin-bottom:8px">' + esc(k.rotulo) + '</div><div class="fn-kpi-v">' + fmt(k.valor, k.tipo) + '</div></div>' }).join('') + '</div>' : '') +
       g +
       (linhas.length ? '<div class="pc-box" style="padding:0"><div class="oc-scroll"><table class="pc-tbl rl-tbl"><thead><tr>' + cols.map(function (c) { return '<th' + (/moeda|num|pct/.test(c.tipo) ? ' style="text-align:right"' : '') + '>' + esc(c.t) + '</th>' }).join('') + '</tr></thead><tbody>' +
@@ -157,7 +157,7 @@
     var cols = d.colunas
     w.document.write('<html><head><title>' + esc(r.nome) + '</title><style>@page{margin:1.2cm;size:landscape}body{font-family:Roboto,Arial,sans-serif;color:#212121;font-size:11px}h1{font-size:16px;margin:0 0 4px;color:#1B5E3B}.sub{color:#757575;margin-bottom:12px}' +
       '.k{display:inline-block;margin:0 16px 8px 0}.k b{display:block;font-size:14px}table{width:100%;border-collapse:collapse}th{text-align:left;font-size:10px;text-transform:uppercase;color:#757575;border-bottom:2px solid #E0E0E0;padding:4px}td{padding:4px;border-bottom:1px solid #EEE}.n{text-align:right;white-space:nowrap}tfoot td{border-top:2px solid #E0E0E0;font-weight:600}</style></head><body>' +
-      '<h1>' + esc(r.nome) + '</h1><div class="sub">' + esc(r.cat) + ' · ' + (r.filtros.indexOf('periodo') >= 0 ? 'Período ' + br(d.de) + ' a ' + br(d.ate) + ' · ' : '') + 'emitido em ' + new Date().toLocaleString('pt-BR') + '</div>' +
+      '<h1>' + esc(r.nome) + '</h1><div class="sub">' + esc(r.cat) + ' · ' + (r.filtros.indexOf('periodo') >= 0 ? (r.rotulo_periodo || 'Período') + ' ' + br(d.de) + ' a ' + br(d.ate) + ' · ' : '') + 'emitido em ' + new Date().toLocaleString('pt-BR') + '</div>' +
       (d.resumo || []).map(function (k) { return '<span class="k">' + esc(k.rotulo) + '<b>' + fmt(k.valor, k.tipo) + '</b></span>' }).join('') +
       '<table><thead><tr>' + cols.map(function (c) { return '<th' + (/moeda|num|pct/.test(c.tipo) ? ' class="n"' : '') + '>' + esc(c.t) + '</th>' }).join('') + '</tr></thead><tbody>' +
       d.linhas.map(function (l) { return '<tr>' + cols.map(function (c) { return '<td' + (/moeda|num|pct/.test(c.tipo) ? ' class="n"' : '') + '>' + esc(fmt(l[c.k], c.tipo === 'paciente' ? 'texto' : c.tipo)) + '</td>' }).join('') + '</tr>' }).join('') + '</tbody>' +
