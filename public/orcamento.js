@@ -290,12 +290,37 @@
       '<div class="lbl" style="margin-top:8px">Retorno</div>' +
       '<div class="ag-row c2"><div class="ag-f"><label>Prazo para Retorno (Meses)</label><input class="ag-in" id="oc-i-ret" type="number" min="0" value="' + (i.retorno_meses || '') + '"></div>' +
       '<div class="ag-f"><label>Ação Indicada</label><input class="ag-in" id="oc-i-acao" maxlength="200" value="' + esc(i.acao_indicada || '') + '"></div></div>' +
-      '<p class="ag-hint" style="margin:0">Informe o prazo para retorno para gerar o alerta de retorno.</p>',
+      '<p class="ag-hint" style="margin:0">Informe o prazo para retorno para gerar o alerta de retorno.</p>' +
+      '<div class="lbl" style="margin-top:16px">Insumos</div><p class="ag-hint" style="margin:0 0 8px">Produtos do estoque baixados automaticamente quando o procedimento é executado.</p><div id="oc-i-ins"><span class="ag-hint">Carregando…</span></div>' +
+      '<button class="btn" id="oc-i-ins-add" style="margin-top:8px">+ Adicionar insumo</button>',
       '<button class="btn" id="oc-i-v">Voltar</button><button class="ag-btn-novo" id="oc-i-ok">Salvar</button>', 640)
     el('oc-i-v').onclick = function () { detalheTabela(t, pagina, q) }
+    // Insumos (kit) do procedimento
+    var prods = [], kit = []
+    function linhaIns(k, idx) {
+      return '<div class="ag-row" style="grid-template-columns:1fr 120px auto;align-items:end;margin-bottom:8px" data-ins="' + idx + '"><div class="ag-f"><label>Produto</label><select class="ag-in oc-ins-p"><option value="">Selecione…</option>' +
+        prods.map(function (p) { return '<option value="' + p.id + '"' + (+k.produto_id === +p.id ? ' selected' : '') + '>' + esc(p.nome) + ' (' + esc(p.unidade || 'UN') + ')</option>' }).join('') + '</select></div>' +
+        '<div class="ag-f"><label>Quantidade</label><input class="ag-in oc-ins-q" inputmode="decimal" value="' + (k.quantidade != null ? String(k.quantidade).replace('.', ',') : '1') + '"></div>' +
+        '<button class="btn oc-ins-rm" title="Remover insumo" style="margin-bottom:2px">Remover</button></div>'
+    }
+    function lerKit() { return Array.prototype.map.call(document.querySelectorAll('#oc-i-ins [data-ins]'), function (r) { return { produto_id: r.querySelector('.oc-ins-p').value, quantidade: r.querySelector('.oc-ins-q').value.replace(',', '.') } }) }
+    function desenharKit() {
+      var box = el('oc-i-ins'); if (!box) return
+      box.innerHTML = !prods.length ? '<span class="ag-hint">Nenhum produto cadastrado no Estoque.</span>' : kit.length ? kit.map(linhaIns).join('') : '<span class="ag-hint">Nenhum insumo neste procedimento.</span>'
+      box.querySelectorAll('.oc-ins-rm').forEach(function (b, ix) { b.onclick = function () { kit = lerKit(); kit.splice(ix, 1); desenharKit() } })
+      el('oc-i-ins-add').style.display = prods.length ? '' : 'none'
+    }
+    el('oc-i-ins-add').onclick = function () { kit = lerKit(); kit.push({ produto_id: '', quantidade: 1 }); desenharKit() }
+    Promise.all([apiData('estoque-produtos', {}).catch(function () { return {} }), i.id ? apiData('precos-itens', { insumos: i.id }).catch(function () { return {} }) : Promise.resolve({ data: [] })]).then(function (rs) {
+      prods = (rs[0] && rs[0].data) || []; kit = (rs[1] && rs[1].data) || []; desenharKit()
+    })
     el('oc-i-ok').onclick = async function () {
       var r = await apiPost('precos-itens', { tabela_id: t.id, id: i.id, procedimento: el('oc-i-proc').value, codigo_interno: el('oc-i-cod').value, especialidade: el('oc-i-esp').value, valor: el('oc-i-val').value, sessoes: el('oc-i-ses').value, comissao: i.comissao || 0, retorno_meses: el('oc-i-ret').value, acao_indicada: el('oc-i-acao').value })
       if (!r.success) return erro('oc-i-err', r.error || 'Erro')
+      if (prods.length) {
+        var ri = await apiPost('precos-itens', { tabela_id: t.id, action: 'insumos', id: r.id || i.id, insumos: lerKit().filter(function (k) { return k.produto_id }) })
+        if (!ri.success) return erro('oc-i-err', ri.error || 'Erro ao salvar os insumos')
+      }
       detalheTabela(t, pagina, q)
     }
   }

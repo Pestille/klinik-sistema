@@ -7441,6 +7441,9 @@ function abrirExecutarModal(itemId,pacId,procNome){
         '<input id="exec-acao" type="text" maxlength="200" disabled style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;font-size:15px;color:var(--text);outline:none;margin-bottom:12px">'+
         '<label style="display:flex;gap:8px;align-items:center;font-size:14px;color:var(--text2);cursor:pointer"><input id="exec-alerta" type="checkbox" disabled> Gerar alerta de retorno automático baseado no prazo informado</label>'+
       '</div>'+
+      '<div id="exec-ins-box" style="display:none;border-top:1px solid var(--border2);padding-top:16px;margin-bottom:24px">'+
+        '<div style="font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Insumos</div><div id="exec-ins"></div>'+
+      '</div>'+
 
       '<div style="display:flex;gap:12px;justify-content:flex-end">'+
         '<button onclick="document.getElementById(\'modal-executar\').remove()" style="background:transparent;color:#034030;border:1.5px solid #2E7D52;border-radius:6px;padding:11px 28px;font-size:14px;font-weight:500;cursor:pointer;font-family:Roboto,sans-serif">Cancelar</button>'+
@@ -7454,6 +7457,18 @@ function abrirExecutarModal(itemId,pacId,procNome){
     if(d.retorno_meses){document.getElementById('exec-ret').value=d.retorno_meses;document.getElementById('exec-alerta').checked=true}
     document.getElementById('exec-acao').value=d.acao_indicada||''
     _execRetornoUI()
+    var ins=d.insumos||[]
+    if(ins.length){
+      document.getElementById('exec-ins-box').style.display=''
+      document.getElementById('exec-ins').innerHTML=ins.map(function(k){
+        var sem=!k.excluido&&Number(k.saldo)<Number(k.quantidade)
+        return '<div data-exec-ins="'+k.produto_id+'" style="display:grid;grid-template-columns:1fr 110px 110px;gap:12px;align-items:end;padding:8px 0;border-bottom:1px solid var(--border2)">'+
+          '<div><div style="font-size:12px;color:var(--text3)">Produto</div><div style="font-size:14px;font-weight:500;color:var(--text)">'+escHtml(k.produto)+'</div>'+
+          (k.excluido?'<div style="font-size:11px;color:#C62828;text-transform:uppercase">Produto excluído</div>':sem?'<div style="font-size:11px;color:#C62828;text-transform:uppercase">Produto sem saldo em estoque</div>':'<div style="font-size:12px;color:var(--text3)">Saldo: '+String(k.saldo).replace('.',',')+'</div>')+'</div>'+
+          '<div><div style="font-size:12px;color:var(--text3)">Unidade de medida</div><div style="font-size:14px;font-weight:500;color:var(--text)">'+escHtml(k.unidade||'UN')+'</div></div>'+
+          '<div><label style="display:block;font-size:12px;color:var(--text3)">Quantidade *</label><input class="exec-ins-q" inputmode="decimal" value="'+(k.excluido?0:String(k.quantidade).replace('.',','))+'"'+(k.excluido?' disabled':'')+' style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:6px;padding:8px 10px;font-size:14px;outline:none"></div></div>'
+      }).join('')
+    }
   }).catch(function(){})
 }
 function _execRetornoUI(){
@@ -7584,7 +7599,7 @@ async function confirmarExecucao(itemId,pacId){
 
   try{
     var g=function(id){var e=document.getElementById(id);return e?e.value:''}
-    var r=await apiPost('marcar-executado',{orcamento_item_id:itemId,data_execucao:data,profissional_id:profId,profissional_nome:profNome,prox_consulta:g('exec-prox'),obs:g('exec-obs'),retorno_meses:g('exec-ret'),acao_indicada:g('exec-acao'),gerar_alerta:!!(document.getElementById('exec-alerta')||{}).checked})
+    var r=await apiPost('marcar-executado',{orcamento_item_id:itemId,data_execucao:data,profissional_id:profId,profissional_nome:profNome,prox_consulta:g('exec-prox'),obs:g('exec-obs'),retorno_meses:g('exec-ret'),acao_indicada:g('exec-acao'),gerar_alerta:!!(document.getElementById('exec-alerta')||{}).checked,insumos:Array.prototype.map.call(document.querySelectorAll('[data-exec-ins]'),function(r){return{produto_id:r.getAttribute('data-exec-ins'),quantidade:r.querySelector('.exec-ins-q').value.replace(',','.')}})})
     if(r.success){
       document.getElementById('modal-executar').remove()
       var p=((_prontData||{}).paciente)||{}

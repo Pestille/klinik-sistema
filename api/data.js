@@ -2744,7 +2744,8 @@ async function handlerInterno(req, res, cap) {
             if (req.method === 'GET') {
                 var mpd = await client.execute({ sql: "SELECT tp.retorno_meses, tp.acao_indicada FROM orcamento_itens oi JOIN orcamentos o ON o.id=oi.orcamento_id AND o.clinica_id=oi.clinica_id JOIN tabela_precos tp ON tp.clinica_id=oi.clinica_id AND UPPER(tp.procedimento)=UPPER(oi.procedimento_nome) AND UPPER(tp.tabela)=UPPER(COALESCE(o.tabela_preco,'PARTICULAR')) AND COALESCE(tp.ativo,1)=1 WHERE oi.id=? AND oi.clinica_id=? LIMIT 1", args: [parseInt(q.orcamento_item_id, 10) || 0, clinica_id] }).catch(function () { return { rows: [] } })
                 var mpr = mpd.rows[0] || {}
-                return res.status(200).json({ success: true, retorno_meses: mpr.retorno_meses || null, acao_indicada: mpr.acao_indicada || '' })
+                var mpk = await require('../lib/rotas/extras').kitInsumos(client, clinica_id, parseInt(q.orcamento_item_id, 10) || 0).catch(function () { return [] })
+                return res.status(200).json({ success: true, retorno_meses: mpr.retorno_meses || null, acao_indicada: mpr.acao_indicada || '', insumos: mpk })
             }
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
             var me = req.body || {}
@@ -2758,6 +2759,9 @@ async function handlerInterno(req, res, cap) {
             var meSit = meAutLib.situacao(meJa.rows[0], meJa.rows[0].tabela_preco, await meAutLib.tabelasQueExigem(client, clinica_id))
             if (meSit === 'em_analise') return res.status(409).json({ success: false, error: 'Procedimento em análise: autorize a execução (Número de Guia) antes de executar', autorizacao: meSit })
             if (meSit === 'negado') return res.status(409).json({ success: false, error: 'Procedimento negado: não pode ser executado', autorizacao: meSit })
+            // Insumos: confere o saldo antes de executar (Clinicorp: "Produto sem saldo em estoque")
+            var meIns = await require('../lib/rotas/extras').conferirInsumos(client, clinica_id, me.insumos)
+            if (meIns.erro) return res.status(409).json({ success: false, error: meIns.erro })
 
             // Update item (including professional if provided)
             if (me.profissional_id) {
@@ -2784,6 +2788,10 @@ async function handlerInterno(req, res, cap) {
                     var meAt = await client.execute({ sql: "SELECT 1 FROM agendamentos WHERE clinica_id=? AND paciente_id=? AND profissional_id=? AND DATE(data_hora)=? AND status='atendido' LIMIT 1", args: [clinica_id, meI.paciente_id, meProfId, String(meData).slice(0, 10)] })
                     if (meAt.rows.length) await comissaoCheckoutSegura(client, clinica_id, meI.paciente_id, meProfId, meData)
                 }
+            }
+            if (meIns.itens.length && meItem.rows.length) {
+                var mIt = meItem.rows[0]
+                await require('../lib/rotas/extras').baixarInsumos(client, clinica_id, auth, { item_id: Number(me.orcamento_item_id), procedimento: mIt.procedimento_nome, paciente_id: mIt.paciente_id, profissional_id: me.profissional_id || mIt.profissional_id, data: meData }, meIns.itens)
             }
             if (meDataRet && me.gerar_alerta && meItem.rows.length) {
                 var mAl = meItem.rows[0]
@@ -2826,6 +2834,17 @@ async function handlerInterno(req, res, cap) {
             await client.execute({ sql: "UPDATE orcamento_itens SET executado=0, data_execucao=NULL WHERE id=? AND clinica_id=?", args: [de2.orcamento_item_id, clinica_id] })
             // Cancel related commission
             try { await client.execute({ sql: "UPDATE comissoes_lancamentos SET status='cancelado' WHERE orcamento_item_id=? AND clinica_id=? AND momento='execucao' AND status IN ('pendente','aguardando')", args: [de2.orcamento_item_id, clinica_id] }) } catch(e) {}
+            // Devolve ao estoque os insumos baixados nesta execução e desliga a baixa do item
+            try {
+                var deMv = await client.execute({ sql: "SELECT id, produto_id, quantidade FROM estoque_movimentos WHERE clinica_id=? AND orcamento_item_id=? AND tipo='saida'", args: [clinica_id, de2.orcamento_item_id] })
+                for (var dmi = 0; dmi < deMv.rows.length; dmi++) {
+                    var dm = deMv.rows[dmi]
+                    await client.execute({ sql: "UPDATE estoque_produtos SET quantidade=quantidade+? WHERE id=? AND clinica_id=?", args: [Number(dm.quantidade) || 0, dm.produto_id, clinica_id] })
+                    var dSal = (await client.execute({ sql: "SELECT quantidade FROM estoque_produtos WHERE id=? AND clinica_id=?", args: [dm.produto_id, clinica_id] })).rows[0]
+                    await client.execute({ sql: "INSERT INTO estoque_movimentos(clinica_id,produto_id,tipo,quantidade,saldo,motivo,usuario_nome,criado_em) VALUES(?,?,'entrada',?,?,'Estorno: execução desfeita',?,datetime('now','-4 hours'))", args: [clinica_id, dm.produto_id, Number(dm.quantidade) || 0, dSal ? dSal.quantidade : null, auth.nome || null] })
+                    await client.execute({ sql: "UPDATE estoque_movimentos SET orcamento_item_id=NULL, motivo=COALESCE(motivo,'')||' (estornado)' WHERE id=? AND clinica_id=?", args: [dm.id, clinica_id] })
+                }
+            } catch(e) { console.error('[estorno-insumos]', e.message) }
             return res.status(200).json({ success: true, msg: 'Execução desfeita' })
         }
 
