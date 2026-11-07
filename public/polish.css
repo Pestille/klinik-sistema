@@ -1,0 +1,146 @@
+/* polish.css — camada global de refinamento visual (Klinov)
+   Carregada por último: só lapida o que já existe, dentro da paleta do CLAUDE.md.
+   Nada de gradientes, sombras pesadas ou raios acima de 8px. */
+
+/* ── Botões: altura consistente, foco visível, clique com resposta ── */
+.btn, .btn-sm, .btn-novo, .btn-ico, .btn-hoje, .ag-btn-novo, .btn-primary, .btn-orange {
+  transition: background .12s ease, border-color .12s ease, color .12s ease,
+              box-shadow .12s ease, transform .08s ease;
+}
+.btn:active, .btn-novo:active, .btn-hoje:active, .ag-btn-novo:active,
+.btn-primary:active, .btn-orange:active, .btn-ico:active { transform: scale(.97) }
+.btn { border-radius: 6px }
+.btn:hover { border-color: var(--gray4) }
+.btn-primary:hover { background: var(--green2); border-color: var(--green2) }
+.btn-orange:hover, .btn-novo:hover, .btn-hoje:hover, .ag-btn-novo:hover { background: var(--orange2) }
+.btn:disabled, .btn-novo:disabled, .ag-btn-novo:disabled, .btn-primary:disabled, .btn-orange:disabled {
+  opacity: .55; cursor: not-allowed; transform: none;
+}
+.btn.carregando, .ag-btn-novo.carregando { position: relative; color: transparent !important; pointer-events: none }
+.btn.carregando::after, .ag-btn-novo.carregando::after {
+  content: ''; position: absolute; inset: 0; margin: auto; width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%;
+  animation: plGira .7s linear infinite;
+}
+.btn.carregando::after { border-color: var(--gray3); border-top-color: var(--green2) }
+@keyframes plGira { to { transform: rotate(360deg) } }
+
+/* Foco por teclado em tudo que é clicável (navegação profissional) */
+.btn:focus-visible, .btn-novo:focus-visible, .btn-ico:focus-visible, .btn-hoje:focus-visible,
+.ag-btn-novo:focus-visible, .ag-chip:focus-visible, .sidebar-item:focus-visible,
+.module-card:focus-visible, a:focus-visible {
+  outline: none; box-shadow: 0 0 0 3px rgba(46,125,82,.25); border-radius: 6px;
+}
+
+/* ── Campos: anel de foco e inválido ── */
+.ag-in { transition: border-color .12s ease, box-shadow .12s ease }
+.ag-in:focus { border-color: var(--green2); box-shadow: 0 0 0 3px rgba(46,125,82,.12) }
+.ag-in:hover:not(:focus):not(:disabled) { border-color: var(--gray4) }
+.ag-in:disabled { background: var(--gray1); color: var(--text3); cursor: not-allowed }
+.ag-in.invalido, .ag-in:user-invalid { border-color: var(--red); box-shadow: 0 0 0 3px rgba(211,47,47,.10) }
+.ag-f > label { user-select: none }
+
+/* Chips de seleção */
+.ag-chip { transition: background .12s ease, border-color .12s ease, color .12s ease, transform .08s ease }
+.ag-chip:hover { border-color: var(--green3); color: var(--green) }
+.ag-chip:active { transform: scale(.96) }
+.ag-chip.on { background: var(--green); border-color: var(--green); color: #fff }
+
+/* ── Cards e caixas: presença sem peso ── */
+.pc-box, .module-card, .crc-card {
+  transition: box-shadow .12s ease, border-color .12s ease, transform .12s ease;
+}
+.module-card:hover, .crc-card:not(.off):hover {
+  border-color: var(--gray3); box-shadow: 0 2px 8px rgba(0,0,0,.10); transform: translateY(-1px);
+}
+.crc-card { cursor: pointer }
+.crc-card.off { opacity: .66 }
+
+/* ── Tabelas: leitura rápida ── */
+table th { user-select: none }
+table tbody tr { transition: background .1s ease }
+.fn-num, td[class*="num"] { font-variant-numeric: tabular-nums }
+
+/* ── Modais: entrada suave e fundo com profundidade ── */
+.ag-modal-ov { background: rgba(18, 36, 28, .42); backdrop-filter: blur(2px) }
+.ag-modal { animation: plModal .15s ease }
+@keyframes plModal { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+.ag-modal-h h3 { letter-spacing: -.01em }
+.ag-ico { transition: background .12s ease, color .12s ease; border-radius: 6px }
+.ag-ico:hover { background: var(--gray2); color: var(--text) }
+
+/* ── Kanban do CRC: arrastar com resposta visual ── */
+.crc-cartao { cursor: grab; transition: box-shadow .12s ease, transform .12s ease, border-color .12s ease }
+.crc-cartao:hover { box-shadow: 0 2px 8px rgba(0,0,0,.10); border-color: var(--gray3) }
+.crc-cartao:active { cursor: grabbing }
+.crc-cartao.arrastando { opacity: .45; transform: rotate(1.2deg) scale(.99) }
+.crc-col { transition: background .12s ease, box-shadow .12s ease }
+.crc-col.alvo { background: #E8F5E9; box-shadow: inset 0 0 0 2px var(--green3); border-radius: 8px }
+.crc-col-h b { letter-spacing: -.01em }
+
+/* ── Sidebar e navegação ── */
+.sidebar-item { border-left: 3px solid transparent; transition: background .12s ease, border-color .12s ease, color .12s ease }
+.sidebar-item:hover { background: var(--gray2) }
+.sidebar-item.ativo { border-left-color: var(--green); background: #E8F5E9; color: var(--green); font-weight: 500 }
+
+/* Páginas entram com um respiro */
+.page.active { animation: plPagina .14s ease }
+@keyframes plPagina { from { opacity: 0; transform: translateY(4px) } to { opacity: 1; transform: none } }
+
+/* ── Estados vazios e skeletons ── */
+.pc-vazio, .crc-vazio { text-align: center; color: var(--text3) }
+.crc-sk, .sk {
+  background: linear-gradient(90deg, var(--gray2) 25%, var(--gray1) 37%, var(--gray2) 63%);
+  background-size: 400% 100%; animation: plShimmer 1.4s ease infinite; border-radius: 8px;
+}
+@keyframes plShimmer { 0% { background-position: 100% 0 } 100% { background-position: 0 0 } }
+
+/* ── Toasts (window.toast em polish.js) ── */
+#pl-toasts { position: fixed; right: 16px; bottom: 16px; z-index: 11000; display: flex; flex-direction: column; gap: 8px; max-width: 360px }
+.pl-toast {
+  background: var(--text); color: #fff; border-radius: 8px; padding: 12px 16px; font-size: 13px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.12); display: flex; align-items: flex-start; gap: 10px;
+  animation: plToastIn .15s ease;
+}
+.pl-toast.saindo { opacity: 0; transform: translateY(6px); transition: opacity .2s ease, transform .2s ease }
+.pl-toast .pl-t-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; background: var(--green3) }
+.pl-toast.erro .pl-t-dot { background: var(--red) }
+.pl-toast.aviso .pl-t-dot { background: var(--orange) }
+@keyframes plToastIn { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+
+/* ── Paleta de comando (Ctrl+K) ── */
+#pl-cmd-ov { position: fixed; inset: 0; background: rgba(18,36,28,.42); backdrop-filter: blur(2px); z-index: 10500; display: none; align-items: flex-start; justify-content: center; padding: 10vh 16px 16px }
+#pl-cmd-ov.open { display: flex }
+#pl-cmd { background: var(--white); border-radius: 8px; width: 100%; max-width: 560px; box-shadow: 0 4px 12px rgba(0,0,0,.12); overflow: hidden; animation: plModal .15s ease }
+#pl-cmd-in { width: 100%; border: none; outline: none; padding: 16px 18px; font-size: 15px; font-family: 'Roboto', sans-serif; color: var(--text); border-bottom: 1px solid var(--border2); box-sizing: border-box }
+#pl-cmd-in::placeholder { color: var(--text3) }
+#pl-cmd-lista { max-height: 48vh; overflow-y: auto; padding: 6px }
+.pl-cmd-sec { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; padding: 10px 12px 4px }
+.pl-cmd-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; color: var(--text2) }
+.pl-cmd-item .pl-cmd-sub { margin-left: auto; font-size: 12px; color: var(--text3) }
+.pl-cmd-item.sel, .pl-cmd-item:hover { background: #E8F5E9; color: var(--green) }
+.pl-cmd-item.sel .pl-cmd-sub, .pl-cmd-item:hover .pl-cmd-sub { color: var(--green2) }
+#pl-cmd-rodape { display: flex; gap: 14px; padding: 8px 14px; border-top: 1px solid var(--border2); font-size: 11px; color: var(--text3); background: var(--gray1) }
+#pl-cmd-rodape b { font-weight: 500 }
+.pl-kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; background: var(--white); font-size: 10px; color: var(--text3); font-family: 'Roboto', sans-serif }
+#pl-atalho-busca { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: flex; gap: 3px; pointer-events: none; opacity: .8 }
+#pl-atalho-busca .pl-kbd { background: rgba(255,255,255,.15); border-color: rgba(255,255,255,.25); color: rgba(255,255,255,.85) }
+
+/* ── Barras de rolagem discretas ── */
+::-webkit-scrollbar { width: 10px; height: 10px }
+::-webkit-scrollbar-track { background: transparent }
+::-webkit-scrollbar-thumb { background: var(--gray3); border-radius: 5px; border: 2px solid var(--bg) }
+::-webkit-scrollbar-thumb:hover { background: var(--gray4) }
+
+/* ── Tooltips leves via atributo ── */
+[data-tip] { position: relative }
+[data-tip]:hover::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: var(--text); color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px;
+  white-space: nowrap; z-index: 10000; pointer-events: none; animation: plToastIn .12s ease;
+}
+
+/* Acessibilidade: quem prefere menos movimento, recebe menos movimento */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important }
+}
