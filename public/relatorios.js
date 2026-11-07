@@ -127,11 +127,26 @@
     el('rl-csv').onclick = function () { exportar(r, d) }
     el('rl-print').onclick = function () { imprimir(r, d) }
   }
+  // Situações viram badges coloridos (verde = concluído, laranja = pendente,
+  // vermelho = problema, cinza = neutro), em qualquer relatório
+  var BADGE_OK = /^(atendido|pago|paga|aprovado|confirmado|ativo|recebido|conclu|remarcou|sim|dentro)/i
+  var BADGE_ERR = /^(faltou|falta|vencid|inadimpl|glosado|reprovado|cancelad|desmarcad|erro|nao |não |atras)/i
+  var BADGE_PEND = /^(pendente|em espera|em atendimento|em an[aá]lise|aguard|faturado|aberto|parcial|solicitado)/i
+  function badgeSituacao(v) {
+    var t = String(v == null ? '' : v).trim()
+    if (!t || t === '—') return null
+    var cls = BADGE_OK.test(t) ? 'ok' : BADGE_ERR.test(t) ? 'err' : BADGE_PEND.test(t) ? 'pend' : 'off'
+    return '<span class="pc-badge ' + cls + '">' + esc(t) + '</span>'
+  }
   function celula(l, c, nivel) {
     var v = l[c.k], num = /moeda|num|pct/.test(c.tipo)
     if (l._limpo && (v == null || v === '')) return '<td></td>'
     if (nivel != null) return '<td style="padding-left:' + (16 + nivel * 16) + 'px;white-space:nowrap">' + esc(fmt(v, c.tipo)) + '</td>'
     if (c.tipo === 'paciente') return '<td>' + (l.paciente_id ? '<a class="fn-pac" data-pac="' + l.paciente_id + '">' + esc(v || 'Paciente') + '</a>' : esc(v || '—')) + '</td>'
+    if (/^(situa[cç][aã]o|status)$/i.test(c.t || '') && c.tipo !== 'moeda') {
+      var bg = badgeSituacao(fmt(v, c.tipo))
+      if (bg) return '<td>' + bg + '</td>'
+    }
     return '<td' + (num ? ' class="fn-num' + (c.tipo === 'moeda' && Number(v) < 0 ? ' rl-neg' : '') + '"' : '') + '>' + esc(fmt(v, c.tipo)) + '</td>'
   }
   function grafico(d) {
