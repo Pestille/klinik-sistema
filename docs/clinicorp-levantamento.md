@@ -424,3 +424,14 @@ Confirmado no código (`api/auth.js`):
 7. **Relatórios, dashboard e metas** — 49 relatórios no padrão filtro → listar → exportar, gráficos com dados reais, metas por profissional.
 8. **Configurações** — as 23 seções.
 9. **Módulos extras** — estoque, protético, indicações, leads, planos recorrentes (Asaas), portal de assinatura, alinhadores.
+
+## Sincronização de dados Clinicorp → Klinov (2026-11-06)
+
+Rota `sync-clinicorp` (lib/rotas/importar.js, admin): upsert idempotente pelo `clinicorp_import_map`,
+substituição de itens de orçamento por diff, atualização de campos de convênio e desfazer por lote.
+Exportação feita pela tela "Exportar dados" do Clinicorp (endpoint `import_export/export_data_by_page`,
+paginado; Budgets precisa ser exportado por dentista para não dar 504). Scripts de mapeamento/validação
+no scratchpad da sessão (sync/). Sincronizado em 06/11/2026: 2.728 pacientes, 16.278 agendamentos,
+10.514 orçamentos (20.1k itens), 3.971 parcelas, 2.056 contas a pagar, 5.531 comissões, 8.627 retornos
+de convênio nos itens, 476 evoluções, 5.9k respostas de anamnese. Mapeamento validado campo a campo
+contra o backup pós-importação de 15/10 (≥99,8%).
