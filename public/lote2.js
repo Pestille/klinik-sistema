@@ -219,7 +219,7 @@
         var w = window.open('', '_blank')
         var r = await apiData('anexos', { entidade: entidade, ref_id: refId, id: +this.getAttribute('data-ver') })
         if (!r.success || !w) return
-        w.document.write(/^data:image/.test(r.anexo.dados) ? '<title>' + esc(r.anexo.nome) + '</title><img src="' + r.anexo.dados + '" style="max-width:100%">' : '<title>' + esc(r.anexo.nome) + '</title><iframe src="' + r.anexo.dados + '" style="border:0;width:100%;height:100vh"></iframe>')
+        w.document.write(/^data:image\/[a-z0-9.+-]+;base64,/i.test(r.anexo.dados) ? '<title>' + esc(r.anexo.nome) + '</title><img src="' + esc(r.anexo.dados) + '" style="max-width:100%">' : '<title>' + esc(r.anexo.nome) + '</title><iframe src="' + esc(r.anexo.dados) + '" style="border:0;width:100%;height:100vh"></iframe>')
         w.document.close()
       }
     })
@@ -286,7 +286,7 @@
         var marcada = sel && sel.ids.indexOf(f.id) >= 0
         return '<div class="l2-ft' + (marcada ? ' l2-ft-on' : '') + '">' +
           (sel ? '<label style="display:block;padding:6px 10px;border-bottom:1px solid var(--border2);font-size:12px;cursor:pointer"><input type="checkbox" data-sel="' + f.id + '"' + (marcada ? ' checked' : '') + '> Selecionar</label>' : '') +
-          '<div class="l2-ft-img" data-ver="' + f.id + '">' + (/^data:image/.test(f.url || '') ? '<img src="' + f.url + '" alt="">' : '') + '</div><div class="l2-ft-i"><div class="l2-ft-n" title="' + esc(f.nome || '') + '">' + esc(f.nome || 'Foto') + '</div>' +
+          '<div class="l2-ft-img" data-ver="' + f.id + '">' + (/^data:image\/[a-z0-9.+-]+;base64,/i.test(f.url || '') ? '<img src="' + esc(f.url) + '" alt="">' : '') + '</div><div class="l2-ft-i"><div class="l2-ft-n" title="' + esc(f.nome || '') + '">' + esc(f.nome || 'Foto') + '</div>' +
           '<div class="ag-hint" style="margin:0">' + br(f.created_at) + (f.pasta ? ' · ' + esc(f.pasta) : '') + '</div>' +
           '<div class="ag-hint l2-ft-leg" data-leg="' + f.id + '" style="margin:2px 0 0;cursor:pointer;font-style:' + (f.descricao ? 'normal' : 'italic') + '" title="Clique para editar a legenda">' + (f.descricao ? esc(f.descricao) : 'Legenda...') + '</div>' +
           (function () {

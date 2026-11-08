@@ -158,6 +158,16 @@ async function handlerInterno(req, res, cap) {
         return res.status(403).json({ success: false, error: 'Apenas admin' })
     }
 
+    // Migrações que afetam TODOS os tenants (reatribuem linhas órfãs, reseedam
+    // permissões globais): só o admin da clínica dona da plataforma.
+    var plataformaRoutes = ['migrate-saas', 'permissoes-migrate']
+    if (plataformaRoutes.indexOf(route) !== -1) {
+        var klinikIdPl = parseInt(process.env.KLINIK_CLINICA_ID || '1', 10)
+        if (!auth || auth.clinica_id !== klinikIdPl) {
+            return res.status(403).json({ success: false, error: 'Apenas o administrador da plataforma' })
+        }
+    }
+
     try {
         var client = getClient()
         cap.client = client
@@ -1322,6 +1332,9 @@ async function handlerInterno(req, res, cap) {
             var fotoSize = sf.foto.length
             console.log('[salvar-foto] paciente_id='+sf.paciente_id+' foto_size='+fotoSize)
             if (fotoSize > 500000) return res.status(400).json({ success: false, error: 'Foto muito grande ('+Math.round(fotoSize/1024)+'KB). Máximo 500KB.' })
+            if (!/^data:image\/(png|jpe?g|webp|gif|bmp|heic|heif);base64,[A-Za-z0-9+/=]+$/.test(sf.foto)) {
+                return res.status(400).json({ success: false, error: 'Formato de foto inválido. Envie PNG/JPG/WEBP.' })
+            }
             try {
                 try { await client.execute("ALTER TABLE pacientes ADD COLUMN foto_url TEXT") } catch(e) {}
                 await client.execute({ sql: "UPDATE pacientes SET foto_url=?,atualizado_em=datetime('now') WHERE id=? AND clinica_id=?", args: [sf.foto, parseInt(sf.paciente_id), clinica_id] })
@@ -1445,12 +1458,14 @@ async function handlerInterno(req, res, cap) {
             try { await client.execute("CREATE TABLE IF NOT EXISTS campanhas (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, tipo TEXT NOT NULL, segmento TEXT NOT NULL, filtro_json TEXT, assunto TEXT, template TEXT NOT NULL, status TEXT DEFAULT 'rascunho', agendada_para TEXT, total_destinatarios INTEGER DEFAULT 0, total_enviados INTEGER DEFAULT 0, total_erros INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))") } catch(e) { console.error('campanhas table:', e.message) }
             try { await client.execute("CREATE TABLE IF NOT EXISTS envios (id INTEGER PRIMARY KEY AUTOINCREMENT, campanha_id INTEGER, paciente_id INTEGER, canal TEXT NOT NULL, destinatario TEXT, mensagem_final TEXT, status TEXT DEFAULT 'pendente', erro_msg TEXT, enviado_em TEXT, created_at TEXT DEFAULT (datetime('now')))") } catch(e) { console.error('envios table:', e.message) }
             try { await client.execute("CREATE TABLE IF NOT EXISTS templates_mensagem (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, tipo TEXT NOT NULL, assunto TEXT, corpo TEXT NOT NULL, ativo INTEGER DEFAULT 1, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))") } catch(e) { console.error('templates_mensagem table:', e.message) }
-            // Insert default templates if none exist
-            var tplCount = await client.execute("SELECT COUNT(*) as total FROM templates_mensagem")
-            if (tplCount.rows[0].total === 0) {
-                await client.execute({ sql: "INSERT INTO templates_mensagem(nome,tipo,assunto,corpo) VALUES(?,?,?,?)", args: ['Confirmação de Consulta', 'confirmacao', 'Confirmação de Consulta', 'Olá {{nome}}, sua consulta está confirmada para {{data_consulta}} às {{hora}} com {{profissional}}. Procedimento: {{procedimento}}. Qualquer dúvida, entre em contato conosco.'] })
-                await client.execute({ sql: "INSERT INTO templates_mensagem(nome,tipo,assunto,corpo) VALUES(?,?,?,?)", args: ['Aniversário', 'aniversario', 'Feliz Aniversário!', 'Olá {{nome}}, a equipe Klinov deseja um feliz aniversário! Aproveite para agendar sua consulta com condições especiais.'] })
-                await client.execute({ sql: "INSERT INTO templates_mensagem(nome,tipo,assunto,corpo) VALUES(?,?,?,?)", args: ['Reativação', 'retorno', 'Sentimos sua falta!', 'Olá {{nome}}, faz tempo que não nos visitamos! Que tal agendar uma consulta? Estamos com horários disponíveis para você.'] })
+            // Insert default templates if none exist — por clínica (antes era contagem
+            // global e INSERT sem clinica_id, que ficava invisível e órfão)
+            try { await client.execute("ALTER TABLE templates_mensagem ADD COLUMN clinica_id INTEGER") } catch(e) {}
+            var tplCount = await client.execute({ sql: "SELECT COUNT(*) as total FROM templates_mensagem WHERE clinica_id=?", args: [clinica_id] })
+            if (Number(tplCount.rows[0].total) === 0) {
+                await client.execute({ sql: "INSERT INTO templates_mensagem(clinica_id,nome,tipo,assunto,corpo) VALUES(?,?,?,?,?)", args: [clinica_id, 'Confirmação de Consulta', 'confirmacao', 'Confirmação de Consulta', 'Olá {{nome}}, sua consulta está confirmada para {{data_consulta}} às {{hora}} com {{profissional}}. Procedimento: {{procedimento}}. Qualquer dúvida, entre em contato conosco.'] })
+                await client.execute({ sql: "INSERT INTO templates_mensagem(clinica_id,nome,tipo,assunto,corpo) VALUES(?,?,?,?,?)", args: [clinica_id, 'Aniversário', 'aniversario', 'Feliz Aniversário!', 'Olá {{nome}}, a equipe Klinov deseja um feliz aniversário! Aproveite para agendar sua consulta com condições especiais.'] })
+                await client.execute({ sql: "INSERT INTO templates_mensagem(clinica_id,nome,tipo,assunto,corpo) VALUES(?,?,?,?,?)", args: [clinica_id, 'Reativação', 'retorno', 'Sentimos sua falta!', 'Olá {{nome}}, faz tempo que não nos visitamos! Que tal agendar uma consulta? Estamos com horários disponíveis para você.'] })
             }
             return res.status(200).json({ success: true, msg: 'Tabelas criadas' })
         }
@@ -1725,7 +1740,7 @@ async function handlerInterno(req, res, cap) {
                         if (dp.length === 3) dataCriacao = dp[2] + '-' + dp[1].padStart(2,'0') + '-' + dp[0].padStart(2,'0')
                     }
                     // Insert orcamento
-                    var orcRes = await client.execute({ sql: "INSERT INTO orcamentos(clinica_id,paciente_id,profissional_id,profissional_nome,data_criacao,observacoes,tabela_preco,status,aprovado_por,data_aprovacao,forma_pagamento,tipo_pagamento,parcelas,desconto,valor_total) VALUES(1,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", args: [pacId, profId, orc.profissional_nome||'', dataCriacao, orc.obs||'', orc.tabela||'PARTICULAR', orc.status||'aberto', orc.aprovado_por||'', orc.data_aprovacao||'', orc.forma_pagamento||'', orc.tipo_pagamento||'valor_total', orc.parcelas||1, orc.desconto||0, orc.valor_total||0] })
+                    var orcRes = await client.execute({ sql: "INSERT INTO orcamentos(clinica_id,paciente_id,profissional_id,profissional_nome,data_criacao,observacoes,tabela_preco,status,aprovado_por,data_aprovacao,forma_pagamento,tipo_pagamento,parcelas,desconto,valor_total) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", args: [clinica_id, pacId, profId, orc.profissional_nome||'', dataCriacao, orc.obs||'', orc.tabela||'PARTICULAR', orc.status||'aberto', orc.aprovado_por||'', orc.data_aprovacao||'', orc.forma_pagamento||'', orc.tipo_pagamento||'valor_total', orc.parcelas||1, orc.desconto||0, orc.valor_total||0] })
                     var orcId = Number(orcRes.lastInsertRowid)
                     // Insert items
                     if (orc.itens && orc.itens.length) {
@@ -1985,6 +2000,10 @@ async function handlerInterno(req, res, cap) {
             await client.execute("CREATE TABLE IF NOT EXISTS documentos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, paciente_id INTEGER, tipo TEXT, nome TEXT, descricao TEXT, url TEXT, created_at TEXT DEFAULT (datetime('now')))")
             try { await client.execute("ALTER TABLE documentos ADD COLUMN descricao TEXT") } catch(e) {}
             if (sd.url.length > 2000000) return res.status(400).json({ success: false, error: 'Arquivo muito grande. Maximo 1.5MB.' })
+            // Só data: URI de imagem ou PDF em base64 — a url é renderizada em <img src>/<iframe src>
+            if (!/^data:(image\/(png|jpe?g|webp|gif|bmp|heic|heif)|application\/pdf);base64,[A-Za-z0-9+/=]+$/.test(sd.url)) {
+                return res.status(400).json({ success: false, error: 'Arquivo inválido. Envie uma imagem (PNG/JPG/WEBP) ou PDF.' })
+            }
             var sdIns = await client.execute({ sql: "INSERT INTO documentos(clinica_id, paciente_id, tipo, nome, descricao, url, pasta) VALUES(?,?,?,?,?,?,?)", args: [clinica_id, sd.paciente_id, sd.tipo || 'foto', sd.nome || '', sd.descricao || '', sd.url, String(sd.pasta || '').trim().slice(0, 60) || null] })
             return res.status(200).json({ success: true, id: Number(sdIns.lastInsertRowid) })
         }
@@ -2078,7 +2097,7 @@ async function handlerInterno(req, res, cap) {
             var bpq = q.q || ''
             var bpTab = q.tabela || ''
             if (bpq.length < 2) return res.status(400).json({ success: false, error: 'Mínimo 2 caracteres' })
-            try { await client.execute("CREATE TABLE IF NOT EXISTS tabela_precos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER DEFAULT 1, tabela TEXT NOT NULL, procedimento TEXT NOT NULL, especialidade TEXT, sessoes INTEGER DEFAULT 1, valor REAL DEFAULT 0, comissao REAL DEFAULT 0, codigo_interno TEXT)") } catch(e) {}
+            try { await client.execute("CREATE TABLE IF NOT EXISTS tabela_precos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, tabela TEXT NOT NULL, procedimento TEXT NOT NULL, especialidade TEXT, sessoes INTEGER DEFAULT 1, valor REAL DEFAULT 0, comissao REAL DEFAULT 0, codigo_interno TEXT)") } catch(e) {}
             var bpSql, bpArgs
             if (bpTab) {
                 bpSql = "SELECT id,procedimento as nome,especialidade,sessoes,valor,tabela,codigo_interno FROM tabela_precos WHERE procedimento LIKE ? AND UPPER(tabela)=UPPER(?) AND clinica_id=? ORDER BY procedimento LIMIT 20"
@@ -2094,14 +2113,14 @@ async function handlerInterno(req, res, cap) {
         // ── IMPORTAR TABELA DE PREÇOS ────────────────────────────────
         if (route === 'importar-tabela-precos') {
             if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
-            try { await client.execute("CREATE TABLE IF NOT EXISTS tabela_precos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER DEFAULT 1, tabela TEXT NOT NULL, procedimento TEXT NOT NULL, especialidade TEXT, sessoes INTEGER DEFAULT 1, valor REAL DEFAULT 0, comissao REAL DEFAULT 0, codigo_interno TEXT)") } catch(e) {}
+            try { await client.execute("CREATE TABLE IF NOT EXISTS tabela_precos (id INTEGER PRIMARY KEY AUTOINCREMENT, clinica_id INTEGER, tabela TEXT NOT NULL, procedimento TEXT NOT NULL, especialidade TEXT, sessoes INTEGER DEFAULT 1, valor REAL DEFAULT 0, comissao REAL DEFAULT 0, codigo_interno TEXT)") } catch(e) {}
             var tpLote = req.body || []
             if (!Array.isArray(tpLote)) tpLote = tpLote.itens || []
             var tpIns = 0, tpErr = 0
             for (var ti = 0; ti < tpLote.length; ti++) {
                 var tp = tpLote[ti]
                 try {
-                    await client.execute({ sql: "INSERT INTO tabela_precos(clinica_id,tabela,procedimento,especialidade,sessoes,valor,comissao,codigo_interno) VALUES(1,?,?,?,?,?,?,?)", args: [tp.tabela||'', tp.procedimento||'', tp.especialidade||'', tp.sessoes||1, tp.valor||0, tp.comissao||0, tp.codigo_interno||''] })
+                    await client.execute({ sql: "INSERT INTO tabela_precos(clinica_id,tabela,procedimento,especialidade,sessoes,valor,comissao,codigo_interno) VALUES(?,?,?,?,?,?,?,?)", args: [clinica_id, tp.tabela||'', tp.procedimento||'', tp.especialidade||'', tp.sessoes||1, tp.valor||0, tp.comissao||0, tp.codigo_interno||''] })
                     tpIns++
                 } catch(e) { tpErr++ }
             }

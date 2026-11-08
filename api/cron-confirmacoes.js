@@ -6,10 +6,17 @@ var { getClient } = require('../lib/db')
 var { runMigrations } = require('../lib/migrations')
 
 module.exports = async function handler(req, res) {
-    // Security: only allow Vercel cron or manual trigger with secret
+    // Security: só o cron do Vercel (que envia Authorization: Bearer $CRON_SECRET)
+    // ou disparo manual com o segredo. FALHA FECHADO: sem CRON_SECRET configurado
+    // o endpoint recusa tudo — antes, env ausente deixava qualquer um disparar
+    // envios em massa de WhatsApp/e-mail para pacientes (auditoria 08/11/2026).
     var cronSecret = process.env.CRON_SECRET || ''
     var authHeader = req.headers['authorization'] || ''
-    if (cronSecret && authHeader !== 'Bearer ' + cronSecret) {
+    if (!cronSecret) {
+        console.error('[cron] CRON_SECRET não configurado no Vercel — execução recusada. Configure a env para o cron voltar a rodar.')
+        return res.status(503).json({ error: 'CRON_SECRET não configurado' })
+    }
+    if (authHeader !== 'Bearer ' + cronSecret) {
         return res.status(401).json({ error: 'Unauthorized' })
     }
 

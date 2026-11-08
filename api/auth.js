@@ -52,7 +52,7 @@ async function enviarEmail(para, assunto, html) {
     }
 }
 
-var { setCorsHeaders, checkRateLimit } = require('../lib/middleware')
+var { setCorsHeaders, checkRateLimit, excedeuTentativasDb, registrarTentativaDb } = require('../lib/middleware')
 var { runMigrations } = require('../lib/migrations')
 var cfgLib = require('../lib/config')
 
@@ -91,15 +91,17 @@ module.exports = async function handler(req, res) {
         if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST required' })
         var b = req.body || {}
         if (!b.email || !b.senha) return res.status(400).json({ success: false, error: 'Email e senha obrigatórios' })
-        // Rate limiting: max 5 tentativas por email em 15 min
+        // Rate limiting no BANCO (vale para todas as instâncias serverless):
+        // conta só tentativas FALHAS — 8 erros de senha em 15 min bloqueiam o email.
+        // O contador em memória fica como primeira barreira barata.
         var rlKey = 'login:' + (b.email || '').toLowerCase()
-        if (!checkRateLimit(rlKey, 5, 900000)) {
+        if (!checkRateLimit(rlKey, 20, 900000) || await excedeuTentativasDb(client, rlKey, 8, 15)) {
             return res.status(429).json({ success: false, error: 'Muitas tentativas. Aguarde 15 minutos.' })
         }
 
         // Busca usuário pelo email (sem comparar hash ainda — precisamos detectar formato)
         var r = await client.execute({ sql: "SELECT * FROM usuarios WHERE email=?", args: [b.email.toLowerCase().trim()] })
-        if (!r.rows.length) return res.status(401).json({ success: false, error: 'Email ou senha inválidos' })
+        if (!r.rows.length) { await registrarTentativaDb(client, rlKey); return res.status(401).json({ success: false, error: 'Email ou senha inválidos' }) }
 
         var user = r.rows[0]
         var senhaValida = false
@@ -112,6 +114,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (!senhaValida) {
+            await registrarTentativaDb(client, rlKey)
             await cfgLib.registrar(client, { clinica_id: user.clinica_id, usuario_id: user.id, nome: user.nome }, 'login.falha', 'Senha incorreta', req)
             return res.status(401).json({ success: false, error: 'Email ou senha inválidos' })
         }
@@ -296,10 +299,11 @@ module.exports = async function handler(req, res) {
             return res.status(400).json({ success: false, error: 'Informe seu usuário ou email pessoal' })
         }
 
-        // Rate limit: max 3 solicitações por email em 15 min
-        if (!checkRateLimit('reset:' + esEmail, 3, 900000)) {
+        // Rate limit: max 3 solicitações por email em 15 min (memória + banco)
+        if (!checkRateLimit('reset:' + esEmail, 3, 900000) || await excedeuTentativasDb(client, 'reset:' + esEmail, 3, 15)) {
             return res.status(429).json({ success: false, error: 'Muitas solicitações. Aguarde 15 minutos.' })
         }
+        await registrarTentativaDb(client, 'reset:' + esEmail)
 
         // Garante colunas
         try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_reset TEXT") } catch(e) {}
@@ -524,8 +528,15 @@ module.exports = async function handler(req, res) {
         if (authAl.perfil !== 'admin' && Number(b3.usuario_id) !== Number(authAl.usuario_id)) {
             return res.status(403).json({ success: false, error: 'Apenas admin' })
         }
-        var owAl = await client.execute({ sql: "SELECT id FROM usuarios WHERE id=? AND clinica_id=?", args: [b3.usuario_id, authAl.clinica_id] })
+        var owAl = await client.execute({ sql: "SELECT id, senha_hash FROM usuarios WHERE id=? AND clinica_id=?", args: [b3.usuario_id, authAl.clinica_id] })
         if (!owAl.rows.length) return res.status(404).json({ success: false, error: 'Usuário não encontrado' })
+        // Trocar a PRÓPRIA senha exige a senha atual — um token roubado não pode
+        // fixar a conta trocando a senha. Admin redefinindo a de terceiros, não.
+        if (Number(b3.usuario_id) === Number(authAl.usuario_id)) {
+            var hashPropria = owAl.rows[0].senha_hash || ''
+            var senhaAtualOk = b3.senha_atual && hashPropria.indexOf('$2') === 0 && bcrypt.compareSync(String(b3.senha_atual), hashPropria)
+            if (!senhaAtualOk) return res.status(401).json({ success: false, error: 'Informe sua senha atual para trocar a senha', precisa_senha_atual: true })
+        }
 
         var erroSenha2 = validarSenha(b3.nova_senha)
         if (erroSenha2) return res.status(400).json({ success: false, error: erroSenha2 })

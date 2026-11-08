@@ -261,7 +261,7 @@
       if (duo) {
         el('cmp-duo').style.flexDirection = m === 'cima' ? 'column' : 'row'
         el('cmp-duo').innerHTML = [['Antes', fa()], ['Depois', fb()]].map(function (x) {
-          return '<figure style="flex:1;margin:0;min-width:0"><img src="' + x[1].url + '" alt="' + x[0] + '" style="width:100%;border-radius:8px;border:1px solid var(--border)"><figcaption class="ag-hint" style="margin:4px 0 0;text-align:center">' + x[0] + (x[1].descricao ? ' · ' + esc(x[1].descricao) : '') + '</figcaption></figure>'
+          return '<figure style="flex:1;margin:0;min-width:0"><img src="' + esc(x[1].url) + '" alt="' + x[0] + '" style="width:100%;border-radius:8px;border:1px solid var(--border)"><figcaption class="ag-hint" style="margin:4px 0 0;text-align:center">' + x[0] + (x[1].descricao ? ' · ' + esc(x[1].descricao) : '') + '</figcaption></figure>'
         }).join('')
       } else { el('cmp-ia').src = fa().url; el('cmp-ib').src = fb().url }
     }
