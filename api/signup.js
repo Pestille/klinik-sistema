@@ -29,6 +29,14 @@ async function enviarEmail(para, assunto, html) {
 
 function validarEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||'')) }
 
+// Mesma régua de senha do resto do sistema (api/auth.js)
+function validarSenha(senha) {
+    if (!senha || senha.length < 8) return 'Senha deve ter no mínimo 8 caracteres'
+    if (!/[0-9]/.test(senha)) return 'Senha deve conter pelo menos 1 número'
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(senha)) return 'Senha deve conter pelo menos 1 caractere especial (!@#$%...)'
+    return null
+}
+
 async function handleLead(req, res, client) {
     var ip = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim()
     if (!checkRateLimit('lead_' + ip, 5, 900000)) {
@@ -100,12 +108,39 @@ module.exports = async function handler(req, res) {
         return await handleLead(req, res, client)
     }
 
+    // Confirmação de e-mail do cadastro (link enviado por email)
+    if (action === 'confirmar') {
+        var tokC = String(q.token || '')
+        res.setHeader('Content-Type', 'text/html')
+        if (!/^[a-f0-9]{64}$/.test(tokC)) return res.status(400).send('<html><body style="font-family:Arial;padding:40px;text-align:center"><h2 style="color:#C62828">Link invalido</h2></body></html>')
+        var uc = await client.execute({ sql: "SELECT id, token_confirmacao_expira FROM usuarios WHERE token_confirmacao=? AND ativo=0", args: [tokC] })
+        if (!uc.rows.length) return res.status(400).send('<html><body style="font-family:Arial;padding:40px;text-align:center"><h2 style="color:#C62828">Link invalido ou ja utilizado</h2></body></html>')
+        if (uc.rows[0].token_confirmacao_expira && new Date(uc.rows[0].token_confirmacao_expira) < new Date()) {
+            return res.status(400).send('<html><body style="font-family:Arial;padding:40px;text-align:center"><h2 style="color:#E65100">Link expirado</h2><p>Faca um novo cadastro.</p></body></html>')
+        }
+        await client.execute({ sql: "UPDATE usuarios SET ativo=1, token_confirmacao=NULL, token_confirmacao_expira=NULL WHERE id=?", args: [uc.rows[0].id] })
+        return res.status(200).send('<html><body style="font-family:Arial;padding:40px;text-align:center"><h2 style="color:#1B5E3B">E-mail confirmado!</h2><p>Sua conta esta ativa. <a href="/app">Fazer login</a></p></body></html>')
+    }
+
     if (action !== 'registrar') {
         return res.status(400).json({ success: false, error: 'Action inválida', actions: ['registrar','lead'] })
     }
 
     if (req.method !== 'POST') {
         return res.status(405).json({ success: false, error: 'POST required' })
+    }
+
+    // Cadastro aberto só quando habilitado explicitamente (incidente out/2026:
+    // contas admin criadas em massa pelo cadastro público). Hoje o onboarding
+    // é manual; para reabrir, setar SIGNUP_ABERTO=1 no Vercel.
+    if (process.env.SIGNUP_ABERTO !== '1') {
+        return res.status(403).json({ success: false, error: 'Cadastro online temporariamente fechado. Fale com a gente pelo formulário de contato.' })
+    }
+
+    // Rate limit por IP: 3 cadastros a cada 15 min
+    var ipReg = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim()
+    if (!checkRateLimit('registrar_' + ipReg, 3, 900000)) {
+        return res.status(429).json({ success: false, error: 'Muitas tentativas. Tente novamente em alguns minutos.' })
     }
 
     // Garante que tabelas existem
@@ -130,8 +165,9 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ success: false, error: 'E-mail inválido' })
     }
 
-    if (b.senha.length < 8) {
-        return res.status(400).json({ success: false, error: 'Senha deve ter no mínimo 8 caracteres' })
+    var erroSenha = validarSenha(b.senha)
+    if (erroSenha) {
+        return res.status(400).json({ success: false, error: erroSenha })
     }
 
     // Verifica unicidade do email
@@ -158,12 +194,26 @@ module.exports = async function handler(req, res) {
         })
         var clinicaId = Number(rClinica.lastInsertRowid)
 
-        // Cria usuário admin
+        // Cria usuário admin INATIVO até confirmar o e-mail (ativo=0 bloqueia o
+        // login — api/auth.js checa u.ativo=1 na sessão e no login)
         var senhaHash = bcrypt.hashSync(b.senha, 10)
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_confirmacao TEXT") } catch(e) {}
+        try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_confirmacao_expira TEXT") } catch(e) {}
+        var tokenConf = require('crypto').randomBytes(32).toString('hex')
+        var expConf = new Date(); expConf.setHours(expConf.getHours() + 48)
         await client.execute({
-            sql: "INSERT INTO usuarios(clinica_id, nome, email, senha_hash, perfil, ativo, deve_redefinir) VALUES(?,?,?,?,?,?,?)",
-            args: [clinicaId, b.nome.trim(), email, senhaHash, 'admin', 1, 0]
+            sql: "INSERT INTO usuarios(clinica_id, nome, email, senha_hash, perfil, ativo, deve_redefinir, token_confirmacao, token_confirmacao_expira) VALUES(?,?,?,?,?,?,?,?,?)",
+            args: [clinicaId, b.nome.trim(), email, senhaHash, 'admin', 0, 0, tokenConf, expConf.toISOString()]
         })
+
+        // E-mail de confirmação (sem ele a conta não ativa)
+        var linkConf = 'https://www.klinov.com.br/api/signup?action=confirmar&token=' + tokenConf
+        var htmlConf = '<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1A1A1A">' +
+            '<h2 style="color:#034030">Confirme seu e-mail — Klinov</h2>' +
+            '<p style="font-size:14px;line-height:1.7">Para ativar sua conta de teste, confirme seu e-mail clicando no botão abaixo. O link vale por 48 horas.</p>' +
+            '<p style="text-align:center;margin:24px 0"><a href="' + linkConf + '" style="display:inline-block;background:#E65100;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600">Confirmar E-mail</a></p>' +
+            '<p style="font-size:12px;color:#999">Se você não fez este cadastro, ignore este e-mail.</p></div>'
+        var confEnviado = await enviarEmail(email, 'Confirme seu e-mail — Klinov', htmlConf)
 
         // Cria templates padrão
         var templates = [
@@ -195,7 +245,7 @@ module.exports = async function handler(req, res) {
             })
         }
 
-        return res.status(200).json({ success: true, msg: 'Clínica cadastrada', clinica_id: clinicaId })
+        return res.status(200).json({ success: true, msg: 'Clínica cadastrada. Confirme seu e-mail para ativar a conta.', clinica_id: clinicaId, confirmar_email: true, email_enviado: confEnviado })
 
     } catch(e) {
         console.error('[signup] Erro ao cadastrar clínica:', e.message)

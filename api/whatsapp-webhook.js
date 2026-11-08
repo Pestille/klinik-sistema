@@ -61,11 +61,13 @@ module.exports = async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' })
     }
 
-    // WHATSAPP_SIGNATURE_MODE=enforce recusa assinatura inválida; padrão (log)
-    // só registra no log e processa normalmente — evita perder respostas de
-    // pacientes se a chave configurada não for a do app certo.
+    // Padrão: assinatura inválida é RECUSADA (auditoria 08/11/2026 — em modo
+    // "log" qualquer POST forjado confirmava/desmarcava consultas e acionava o
+    // follow-up). Se as respostas de pacientes pararem de ser processadas,
+    // confira o WHATSAPP_APP_SECRET; para liberar temporariamente, setar
+    // WHATSAPP_SIGNATURE_MODE=log.
     var segredo = String(process.env.WHATSAPP_APP_SECRET || '').trim()
-    var exigir = String(process.env.WHATSAPP_SIGNATURE_MODE || '').trim() === 'enforce'
+    var exigir = String(process.env.WHATSAPP_SIGNATURE_MODE || '').trim() !== 'log'
     var corpoLido = null
     if (segredo) {
         var bruto = await corpoBruto(req)
@@ -121,6 +123,14 @@ module.exports = async function handler(req, res) {
                 // Fallback to env var phone_id
                 if (!clinicaWa && waPhoneIdRecv === (process.env.WHATSAPP_PHONE_ID || '')) {
                     clinicaWa = { id: 1, whatsapp_token: process.env.WHATSAPP_TOKEN || '', whatsapp_phone_id: waPhoneIdRecv }
+                }
+
+                // phone_number_id desconhecido: descarta. Sem clínica identificada,
+                // a busca de agendamentos rodava SEM filtro de clinica_id — um POST
+                // forjado podia confirmar/desmarcar consultas de qualquer tenant.
+                if (!clinicaWa) {
+                    console.warn('[wa-webhook] phone_number_id desconhecido (' + waPhoneIdRecv + '): evento ignorado')
+                    continue
                 }
 
                 for (var mi = 0; mi < messages.length; mi++) {

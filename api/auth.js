@@ -324,10 +324,18 @@ module.exports = async function handler(req, res) {
                 args: [esToken, esExpira.toISOString(), esU.id]
             })
 
-            var esOrigem = (req.headers.origin || 'https://klinov.com.br').replace(/\/$/, '')
-            if (esOrigem.indexOf('klinov.com.br') === -1 && esOrigem.indexOf('vercel.app') === -1) {
-                esOrigem = 'https://klinov.com.br'
-            }
+            // Origin comparado por IGUALDADE contra a whitelist (substring deixava
+            // "https://klinov.com.br.atacante.io" passar e o link de reset, com o
+            // token, apontar para o domínio do atacante → takeover da conta).
+            var esPermitidas = [
+                'https://klinov.com.br',
+                'https://www.klinov.com.br',
+                'https://klinik-sistema.vercel.app',
+                'https://klinik-sistema-pestilles-projects.vercel.app',
+                'https://klinik-sistema-git-main-pestilles-projects.vercel.app'
+            ]
+            var esOrigem = (req.headers.origin || '').replace(/\/$/, '')
+            if (esPermitidas.indexOf(esOrigem) === -1) esOrigem = 'https://www.klinov.com.br'
             var linkReset = esOrigem + '/api/auth?action=resetar&token=' + esToken
 
             var esHtml =
