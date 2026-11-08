@@ -2293,9 +2293,9 @@ async function abrirProntuario(nome, id) {
         '<div style="flex:1">'+
           '<div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px;font-weight:700;color:#212121">'+escHtml(p.nome)+'</span>'+(p.ativo===0?'<span class="pc-badge off">Inativo</span>':'<span class="pc-badge ok">Ativo</span>')+'</div>'+
           '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;font-size:13px;color:#616161">'+
-            '<div>☎ '+(tel||'Não informado')+'</div>'+
-            '<div>📱 '+(tel||'Não informado')+'</div>'+
-            '<div>✉ '+(email||'Não informado')+'</div>'+
+            '<div>☎ '+escHtml(tel||'Não informado')+'</div>'+
+            '<div>📱 '+escHtml(tel||'Não informado')+'</div>'+
+            '<div>✉ '+escHtml(email||'Não informado')+'</div>'+
           '</div>'+
         '</div>'+
         '<div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">'+
@@ -4883,10 +4883,10 @@ async function loadAniversariantes(mes) {
 
         html+='<div style="display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid #F0F0F0">'+
           '<div style="width:42px;height:42px;border-radius:50%;background:#1976D2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;flex-shrink:0">'+dia+'</div>'+
-          '<div style="flex:1;font-size:14px;font-weight:500;color:#333;text-transform:uppercase">'+nome+'</div>'+
+          '<div style="flex:1;font-size:14px;font-weight:500;color:#333;text-transform:uppercase">'+escHtml(nome)+'</div>'+
           '<div style="display:flex;gap:6px">'+
-            (waUrl?'<a href="'+waUrl+'" target="_blank" style="background:#E8F5E9;color:#2E7D52;border:1px solid #C8E6C9;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:500;text-decoration:none;font-family:Roboto,sans-serif;white-space:nowrap">WhatsApp</a>':'')+
-            (mailUrl?'<a href="'+mailUrl+'" style="background:#E3F2FD;color:#1565C0;border:1px solid #BBDEFB;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:500;text-decoration:none;font-family:Roboto,sans-serif;white-space:nowrap">Email</a>':'')+
+            (waUrl?'<a href="'+escHtml(waUrl)+'" target="_blank" style="background:#E8F5E9;color:#2E7D52;border:1px solid #C8E6C9;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:500;text-decoration:none;font-family:Roboto,sans-serif;white-space:nowrap">WhatsApp</a>':'')+
+            (mailUrl?'<a href="'+escHtml(mailUrl)+'" style="background:#E3F2FD;color:#1565C0;border:1px solid #BBDEFB;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:500;text-decoration:none;font-family:Roboto,sans-serif;white-space:nowrap">Email</a>':'')+
           '</div>'+
         '</div>'
       })
@@ -6040,7 +6040,7 @@ async function loadConfirmacoes(){
       var corStatus=status==='confirmado'?'green':status==='cancelado'?'red':'orange'
       var tel=a.paciente_telefone||''
       var wa=tel?'https://wa.me/55'+tel.replace(/\D/g,''):''
-      return '<tr><td style="font-weight:500">'+hora+'</td><td class="pname">'+(a.paciente_nome||'—')+'</td><td style="color:var(--text3)">'+(a.profissional_nome||'—')+'</td><td style="color:var(--text3)">'+(a.procedimento||a.tipo||'—')+'</td><td><span class="badge badge-'+corStatus+'">'+status.toUpperCase()+'</span></td><td>'+(wa?'<a href="'+wa+'" target="_blank" class="wa-btn" style="font-size:11px">WhatsApp</a>':'—')+'</td></tr>'
+      return '<tr><td style="font-weight:500">'+hora+'</td><td class="pname">'+escHtml(a.paciente_nome||'—')+'</td><td style="color:var(--text3)">'+escHtml(a.profissional_nome||'—')+'</td><td style="color:var(--text3)">'+escHtml(a.procedimento||a.tipo||'—')+'</td><td><span class="badge badge-'+corStatus+'">'+escHtml(status.toUpperCase())+'</span></td><td>'+(wa?'<a href="'+escHtml(wa)+'" target="_blank" class="wa-btn" style="font-size:11px">WhatsApp</a>':'—')+'</td></tr>'
     }).join('')
     html+='</tbody></table>'
     el.innerHTML=html
@@ -6428,8 +6428,9 @@ function campBuscarPaciente(){
         results.style.display='block'
         return
       }
-      results.innerHTML=pacs.map(function(p){
-        return '<div onclick="campSelecionarPaciente('+p.id+',\''+p.nome.replace(/'/g,"\\'")+'\',\''+(p.email||'').replace(/'/g,"\\'")+'\',\''+(p.telefone||'').replace(/'/g,"\\'")+'\')" style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border2);transition:background .1s;display:flex;justify-content:space-between;align-items:center" onmouseover="this.style.background=\'var(--gray1)\'" onmouseout="this.style.background=\'\'">'+
+      window._campPacs=pacs
+      results.innerHTML=pacs.map(function(p,pi){
+        return '<div onclick="campSelecionarPaciente('+pi+')" style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border2);transition:background .1s;display:flex;justify-content:space-between;align-items:center" onmouseover="this.style.background=\'var(--gray1)\'" onmouseout="this.style.background=\'\'">'+
           '<div><div style="font-weight:500;color:var(--text)">'+escHtml(p.nome)+'</div><div style="font-size:11px;color:var(--text3)">'+escHtml(p.telefone||'Sem telefone')+' · '+escHtml(p.email||'Sem email')+'</div></div>'+
         '</div>'
       }).join('')
@@ -6438,19 +6439,22 @@ function campBuscarPaciente(){
   },300)
 }
 
-function campSelecionarPaciente(id,nome,email,telefone){
+function campSelecionarPaciente(pi){
+  var _p=(window._campPacs||[])[pi]
+  if(!_p)return
+  var id=_p.id,nome=_p.nome,email=_p.email||'',telefone=_p.telefone||''
   _campPacSelecionado={id:id,nome:nome,email:email,telefone:telefone}
   var results=document.getElementById('camp-pac-results');if(results)results.style.display='none'
   var input=document.getElementById('camp-pac-busca');if(input)input.value=''
   var selEl=document.getElementById('camp-pac-selected')
   if(selEl){
     selEl.style.display='flex'
-    selEl.innerHTML='<span style="font-weight:500;color:var(--green)">'+nome+'</span>'+
-      '<span style="font-size:11px;color:var(--text3)">'+(email||'sem email')+' · '+(telefone||'sem telefone')+'</span>'+
+    selEl.innerHTML='<span style="font-weight:500;color:var(--green)">'+escHtml(nome)+'</span>'+
+      '<span style="font-size:11px;color:var(--text3)">'+escHtml(email||'sem email')+' · '+escHtml(telefone||'sem telefone')+'</span>'+
       '<button onclick="campRemoverPaciente()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--red);font-size:14px" title="Remover">✕</button>'
   }
   var prevEl=document.getElementById('camp-preview-count')
-  if(prevEl)prevEl.innerHTML='<strong>1</strong> paciente selecionado: <strong>'+nome+'</strong>'+(email?' · '+email:'')+(telefone?' · '+telefone:'')
+  if(prevEl)prevEl.innerHTML='<strong>1</strong> paciente selecionado: <strong>'+escHtml(nome)+'</strong>'+(email?' · '+escHtml(email):'')+(telefone?' · '+escHtml(telefone):'')
 }
 
 function campRemoverPaciente(){
@@ -6653,9 +6657,9 @@ async function loadHistorico(){
             else if(emsg.indexOf('does not exist')>-1)emsg='Phone ID inválido ou sem permissão no Meta Business'
             else if(emsg.indexOf('access token')>-1||emsg.indexOf('OAuthException')>-1)emsg='Token expirado ou inválido'
             else{try{var ep=JSON.parse(emsg.replace(/^(Email|WhatsApp): /,''));emsg=(ep.message||ep.error&&ep.error.message||emsg).substring(0,80)}catch(x){emsg=emsg.substring(0,80)}}
-            erroTip='<div style="font-size:11px;color:var(--red);margin-top:2px">'+emsg+'</div>'
+            erroTip='<div style="font-size:11px;color:var(--red);margin-top:2px">'+escHtml(emsg)+'</div>'
           }
-          return '<tr><td style="font-size:12px;color:var(--text3)">'+fmtDt((e.enviado_em||e.created_at||'').slice(0,10))+'</td><td class="pname">'+(e.paciente_nome||'—')+'</td><td>'+(canalIcon[e.canal]||'')+' '+(e.canal||'')+'</td><td style="font-size:12px;color:var(--text3)">'+(e.campanha_nome||'—')+'</td><td>'+stBadge(e.status)+erroTip+'</td><td style="font-size:12px;color:var(--text3)">'+escHtml(e.destinatario||'—')+'</td></tr>'
+          return '<tr><td style="font-size:12px;color:var(--text3)">'+fmtDt((e.enviado_em||e.created_at||'').slice(0,10))+'</td><td class="pname">'+escHtml(e.paciente_nome||'—')+'</td><td>'+(canalIcon[e.canal]||'')+' '+escHtml(e.canal||'')+'</td><td style="font-size:12px;color:var(--text3)">'+escHtml(e.campanha_nome||'—')+'</td><td>'+stBadge(e.status)+erroTip+'</td><td style="font-size:12px;color:var(--text3)">'+escHtml(e.destinatario||'—')+'</td></tr>'
         }).join('')+'</tbody></table>'+
         '<div style="display:flex;justify-content:center;gap:8px;margin-top:12px">'+
           '<button class="pdt-btn-outline" style="font-size:12px;padding:4px 12px" onclick="_mktHistPage=Math.max(1,_mktHistPage-1);loadHistorico()" '+(_mktHistPage<=1?'disabled':'')+'>‹ Anterior</button>'+
@@ -7910,7 +7914,7 @@ function abrirNovoRecibo(pacId,tipo){
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-size:18px;font-weight:500;color:#1A1A1A">'+tipoLabel+'</div><span onclick="document.getElementById(\'modal-novo-recibo\').remove()" style="cursor:pointer;font-size:22px;color:#757575">&times;</span></div>'+
 
       '<div style="background:#F5F5F5;border-radius:6px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--text2)">'+
-        '<strong>Paciente:</strong> '+(p.nome||'')+(p.cpf?' — CPF: '+p.cpf:' — <span style="color:#C62828">CPF nao cadastrado</span>')+
+        '<strong>Paciente:</strong> '+escHtml(p.nome||'')+(p.cpf?' — CPF: '+escHtml(p.cpf):' — <span style="color:#C62828">CPF nao cadastrado</span>')+
       '</div>'+
 
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
@@ -9035,7 +9039,7 @@ async function loadReceitaSaude(){
       if(r.status==='rascunho'){
         acoes='<button onclick="emitirReceitaSaude('+r.id+')" style="background:var(--green3);color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Roboto,sans-serif">Emitir</button>'
       }
-      html+='<tr><td>'+fmtDt(r.data_emissao)+'</td><td>'+(r.nome_paciente||'—')+'</td><td style="font-size:12px">'+(r.cpf_paciente||'—')+'</td><td>'+escHtml(r.nome_profissional||'—')+'</td><td style="font-size:12px">'+escHtml(r.cro_profissional||'—')+'</td><td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis">'+escHtml(r.descricao_servico||'—')+'</td><td style="text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(r.valor)+'</td><td><span class="badge badge-'+stClass+'">'+(r.status||'rascunho').toUpperCase()+'</span></td><td>'+acoes+'</td></tr>'
+      html+='<tr><td>'+fmtDt(r.data_emissao)+'</td><td>'+escHtml(r.nome_paciente||'—')+'</td><td style="font-size:12px">'+escHtml(r.cpf_paciente||'—')+'</td><td>'+escHtml(r.nome_profissional||'—')+'</td><td style="font-size:12px">'+escHtml(r.cro_profissional||'—')+'</td><td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis">'+escHtml(r.descricao_servico||'—')+'</td><td style="text-align:right;font-weight:500;color:#1B5E3B">'+fmtBrl(r.valor)+'</td><td><span class="badge badge-'+stClass+'">'+(r.status||'rascunho').toUpperCase()+'</span></td><td>'+acoes+'</td></tr>'
     })
     html+='</tbody></table>'
     el.innerHTML=html

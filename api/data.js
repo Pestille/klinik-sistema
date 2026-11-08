@@ -370,7 +370,7 @@ async function handlerInterno(req, res, cap) {
         // ── AGENDAMENTOS ────────────────────────────────────────────────────
         if (route === 'agendamentos') {
             var lim2 = Math.min(parseInt(q.limit) || 1000, 5000)
-            var base = "SELECT a.id,a.data_hora,a.hora_fim,a.tipo,a.status,a.procedimento,a.valor,a.observacoes,a.profissional_id,a.paciente_id,a.categoria_id,a.cadeira_id,a.primeira_consulta,a.serie_id,a.criado_por_nome,a.criado_em,a.confirmacao_envio,a.alerta_envio,a.canal_envio,COALESCE(p.nome,a.paciente_nome) as paciente_nome,COALESCE(p.telefone,a.paciente_telefone) as paciente_telefone,p.foto_url as paciente_foto,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id"
+            var base = "SELECT a.id,a.data_hora,a.hora_fim,a.tipo,a.status,a.procedimento,a.valor,a.observacoes,a.profissional_id,a.paciente_id,a.categoria_id,a.cadeira_id,a.primeira_consulta,a.serie_id,a.criado_por_nome,a.criado_em,a.confirmacao_envio,a.alerta_envio,a.canal_envio,COALESCE(p.nome,a.paciente_nome) as paciente_nome,COALESCE(p.telefone,a.paciente_telefone) as paciente_telefone,p.foto_url as paciente_foto,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id AND p.clinica_id=a.clinica_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id AND pr.clinica_id=a.clinica_id"
             var wheres = ["a.clinica_id=?"], argsAg = [clinica_id]
             if (q.dataInicio && q.dataFim) { wheres.push("DATE(a.data_hora) BETWEEN ? AND ?"); argsAg.push(q.dataInicio, q.dataFim) }
             else if (q.data) { wheres.push("DATE(a.data_hora)=?"); argsAg.push(q.data) }
@@ -386,10 +386,10 @@ async function handlerInterno(req, res, cap) {
             var d = q.data || new Date().toISOString().slice(0, 10)
             var sqlAv, argsAv
             if (q.profissional) {
-                sqlAv = "SELECT a.*,p.nome as paciente_nome,p.telefone as paciente_telefone,p.foto_url as paciente_foto,pr.nome as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE DATE(a.data_hora)=? AND a.profissional_id=? AND a.clinica_id=? ORDER BY a.data_hora"
+                sqlAv = "SELECT a.*,p.nome as paciente_nome,p.telefone as paciente_telefone,p.foto_url as paciente_foto,pr.nome as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id AND p.clinica_id=a.clinica_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id AND pr.clinica_id=a.clinica_id WHERE DATE(a.data_hora)=? AND a.profissional_id=? AND a.clinica_id=? ORDER BY a.data_hora"
                 argsAv = [d, q.profissional, clinica_id]
             } else {
-                sqlAv = "SELECT a.*,p.nome as paciente_nome,p.telefone as paciente_telefone,p.foto_url as paciente_foto,pr.nome as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE DATE(a.data_hora)=? AND a.clinica_id=? ORDER BY pr.nome,a.data_hora"
+                sqlAv = "SELECT a.*,p.nome as paciente_nome,p.telefone as paciente_telefone,p.foto_url as paciente_foto,pr.nome as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id AND p.clinica_id=a.clinica_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id AND pr.clinica_id=a.clinica_id WHERE DATE(a.data_hora)=? AND a.clinica_id=? ORDER BY pr.nome,a.data_hora"
                 argsAv = [d, clinica_id]
             }
             var rav = await client.execute({ sql: sqlAv, args: argsAv })
@@ -418,7 +418,7 @@ async function handlerInterno(req, res, cap) {
             }
             var fwc = fw.length ? ' WHERE ' + fw.join(' AND ') : ''
             var flim2 = Math.min(parseInt(q.limit) || 200, 500)
-            var fr = await client.execute({ sql: "SELECT f.*,p.nome as paciente_nome FROM financeiro f LEFT JOIN pacientes p ON p.id=f.paciente_id" + fwc + " ORDER BY f.data_pagamento DESC LIMIT ?", args: fa.concat([flim2]) })
+            var fr = await client.execute({ sql: "SELECT f.*,p.nome as paciente_nome FROM financeiro f LEFT JOIN pacientes p ON p.id=f.paciente_id AND p.clinica_id=f.clinica_id" + fwc + " ORDER BY f.data_pagamento DESC LIMIT ?", args: fa.concat([flim2]) })
             var ft = await client.execute({ sql: "SELECT COALESCE(SUM(CASE WHEN tipo='entrada' THEN valor ELSE 0 END),0) as total_entradas,COALESCE(SUM(CASE WHEN tipo='saida' THEN ABS(valor) ELSE 0 END),0) as total_saidas,COUNT(*) as total_registros FROM financeiro f" + fwc, args: fa })
             return res.status(200).json({ success: true, data: fr.rows, totais: ft.rows[0] })
         }
@@ -1609,10 +1609,10 @@ async function handlerInterno(req, res, cap) {
             var tipo = q.tipo || (req.body || {}).tipo || ''
             var sqlMap = {
                 pacientes: "SELECT id,nome,cpf,rg,data_nascimento,sexo,estado_civil,telefone,whatsapp,email,endereco,bairro,cidade,cep,convenio,numero_convenio,como_conheceu,observacoes,alerta_medico,ativo,criado_em FROM pacientes WHERE clinica_id=? ORDER BY nome",
-                agendamentos: "SELECT a.id,a.data_hora,a.hora_fim,a.tipo,a.status,a.procedimento,a.valor,a.observacoes,COALESCE(p.nome,a.paciente_nome) as paciente_nome,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id WHERE a.clinica_id=? ORDER BY a.data_hora DESC",
+                agendamentos: "SELECT a.id,a.data_hora,a.hora_fim,a.tipo,a.status,a.procedimento,a.valor,a.observacoes,COALESCE(p.nome,a.paciente_nome) as paciente_nome,COALESCE(pr.nome,a.profissional_nome) as profissional_nome FROM agendamentos a LEFT JOIN pacientes p ON p.id=a.paciente_id AND p.clinica_id=a.clinica_id LEFT JOIN profissionais pr ON pr.id=a.profissional_id AND pr.clinica_id=a.clinica_id WHERE a.clinica_id=? ORDER BY a.data_hora DESC",
                 financeiro: "SELECT * FROM financeiro WHERE clinica_id=? ORDER BY data_pagamento DESC",
-                orcamentos: "SELECT o.*,p.nome as paciente_nome FROM orcamentos o LEFT JOIN pacientes p ON p.id=o.paciente_id WHERE o.clinica_id=? ORDER BY o.data_criacao DESC",
-                pagamentos: "SELECT pg.*,COALESCE(p.nome,pg.paciente_nome) as paciente FROM pagamentos pg LEFT JOIN pacientes p ON p.id=pg.paciente_id WHERE pg.clinica_id=? ORDER BY pg.data_pagamento DESC",
+                orcamentos: "SELECT o.*,p.nome as paciente_nome FROM orcamentos o LEFT JOIN pacientes p ON p.id=o.paciente_id AND p.clinica_id=o.clinica_id WHERE o.clinica_id=? ORDER BY o.data_criacao DESC",
+                pagamentos: "SELECT pg.*,COALESCE(p.nome,pg.paciente_nome) as paciente FROM pagamentos pg LEFT JOIN pacientes p ON p.id=pg.paciente_id AND p.clinica_id=pg.clinica_id WHERE pg.clinica_id=? ORDER BY pg.data_pagamento DESC",
                 profissionais: "SELECT id,nome,especialidade,cpf,email,telefone,cro FROM profissionais WHERE clinica_id=? ORDER BY nome",
                 procedimentos: "SELECT * FROM procedimentos WHERE clinica_id=? ORDER BY nome"
             }
@@ -3434,7 +3434,7 @@ async function handlerInterno(req, res, cap) {
             if (crStatus !== 'todas') { crW.push("po.status=?"); crA.push(crStatus) }
 
             var crRows = await client.execute({
-                sql: "SELECT po.*, p.nome as paciente_nome, o.valor_total as orcamento_valor, (SELECT GROUP_CONCAT(oi.procedimento_nome, ', ') FROM orcamento_itens oi WHERE oi.orcamento_id=po.orcamento_id LIMIT 3) as procedimentos FROM parcelas_orcamento po JOIN pacientes p ON p.id=po.paciente_id JOIN orcamentos o ON o.id=po.orcamento_id WHERE " + crW.join(' AND ') + " ORDER BY po.data_vencimento ASC",
+                sql: "SELECT po.*, p.nome as paciente_nome, o.valor_total as orcamento_valor, (SELECT GROUP_CONCAT(oi.procedimento_nome, ', ') FROM orcamento_itens oi WHERE oi.orcamento_id=po.orcamento_id AND oi.clinica_id=po.clinica_id LIMIT 3) as procedimentos FROM parcelas_orcamento po JOIN pacientes p ON p.id=po.paciente_id AND p.clinica_id=po.clinica_id JOIN orcamentos o ON o.id=po.orcamento_id AND o.clinica_id=po.clinica_id WHERE " + crW.join(' AND ') + " ORDER BY po.data_vencimento ASC",
                 args: crA
             })
 
