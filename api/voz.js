@@ -25,10 +25,18 @@ module.exports = async function handler(req, res) {
     try {
         var client = getClient()
 
+        // Rate limit por IP (20 tentativas inválidas / 10 min) contra enumeração de token
+        var { excedeuTentativasDb, registrarTentativaDb } = require('../lib/middleware')
+        var ipVoz = String((req.headers || {})['x-forwarded-for'] || (req.headers || {})['x-real-ip'] || 'local').split(',')[0].trim().slice(0, 64)
+        if (await excedeuTentativasDb(client, 'voz:' + ipVoz, 20, 10)) {
+            return res.status(429).json({ resposta: 'Muitas tentativas. Aguarde alguns minutos.' })
+        }
+
         // Validate token
         try { await client.execute("ALTER TABLE usuarios ADD COLUMN token_voz TEXT") } catch(e) {}
         var userR = await client.execute({ sql: "SELECT u.id, u.nome, u.perfil, u.clinica_id FROM usuarios u WHERE u.token_voz=? AND u.ativo=1", args: [token] })
         if (!userR.rows.length) {
+            await registrarTentativaDb(client, 'voz:' + ipVoz)
             return res.status(200).json({ resposta: 'Token invalido ou expirado.' })
         }
         var user = userR.rows[0]

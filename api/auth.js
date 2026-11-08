@@ -52,7 +52,7 @@ async function enviarEmail(para, assunto, html) {
     }
 }
 
-var { setCorsHeaders, checkRateLimit, excedeuTentativasDb, registrarTentativaDb } = require('../lib/middleware')
+var { setCorsHeaders, checkRateLimit, excedeuTentativasDb, registrarTentativaDb, tokenHash, buscarSessao, escapeHtml } = require('../lib/middleware')
 var { runMigrations } = require('../lib/migrations')
 var cfgLib = require('../lib/config')
 
@@ -61,7 +61,8 @@ async function criarSessao(client, user, req, acao) {
     var cfg = await cfgLib.lerCfg(client, user.clinica_id)
     var token = gerarToken()
     var expira = new Date(); expira.setHours(expira.getHours() + (Number(cfg.seguranca.sessao_horas) || 8))
-    await client.execute({ sql: "INSERT INTO sessoes(usuario_id,token,expira_em) VALUES(?,?,?)", args: [user.id, token, expira.toISOString()] })
+    // Guarda sha256(token): o token em claro só existe na resposta ao cliente
+    await client.execute({ sql: "INSERT INTO sessoes(usuario_id,token,expira_em) VALUES(?,?,?)", args: [user.id, tokenHash(token), expira.toISOString()] })
     await client.execute({ sql: "UPDATE usuarios SET ultimo_login=datetime('now') WHERE id=?", args: [user.id] })
     await cfgLib.registrar(client, { clinica_id: user.clinica_id, usuario_id: user.id, nome: user.nome }, acao || 'login', null, req)
     return token
@@ -164,10 +165,10 @@ module.exports = async function handler(req, res) {
         await client.execute({ sql: "UPDATE usuarios SET senha_hash=?, deve_redefinir=0, token_redefinir=NULL, token_redefinir_expira=NULL WHERE id=?", args: [hashR, br.usuario_id] })
         await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=?", args: [br.usuario_id] })
 
-        // Cria nova sessão
+        // Cria nova sessão (guardada como hash)
         var tokenR = gerarToken()
         var expiraR = new Date(); expiraR.setHours(expiraR.getHours() + 8)
-        await client.execute({ sql: "INSERT INTO sessoes(usuario_id,token,expira_em) VALUES(?,?,?)", args: [br.usuario_id, tokenR, expiraR.toISOString()] })
+        await client.execute({ sql: "INSERT INTO sessoes(usuario_id,token,expira_em) VALUES(?,?,?)", args: [br.usuario_id, tokenHash(tokenR), expiraR.toISOString()] })
         await client.execute({ sql: "UPDATE usuarios SET ultimo_login=datetime('now') WHERE id=?", args: [br.usuario_id] })
 
         var udata = await client.execute({ sql: "SELECT id,nome,email,perfil,clinica_id FROM usuarios WHERE id=?", args: [br.usuario_id] })
@@ -178,17 +179,18 @@ module.exports = async function handler(req, res) {
 
     // ── ME (verificar sessão) ──────────────────────────────────
     if (action === 'me') {
+        // Token só pelo header Authorization — em query string ele vazava em logs
         var authHeader = req.headers.authorization || ''
-        var token2 = authHeader.replace('Bearer ', '') || q.token || ''
+        var token2 = authHeader.replace('Bearer ', '')
         if (!token2) return res.status(401).json({ success: false, error: 'Token não fornecido' })
 
         try { await client.execute("ALTER TABLE usuarios ADD COLUMN email_pessoal TEXT") } catch(e) {}
-        var s = await client.execute({ sql: "SELECT s.usuario_id, s.expira_em, u.nome, u.email, u.email_pessoal, u.perfil, u.clinica_id FROM sessoes s JOIN usuarios u ON u.id=s.usuario_id WHERE s.token=? AND u.ativo=1", args: [token2] })
-        if (!s.rows.length) return res.status(401).json({ success: false, error: 'Sessão inválida' })
+        var achadaMe = await buscarSessao(client, token2, "u.email, u.email_pessoal")
+        if (!achadaMe) return res.status(401).json({ success: false, error: 'Sessão inválida' })
 
-        var sess = s.rows[0]
+        var sess = achadaMe.row
         if (new Date(sess.expira_em) < new Date()) {
-            await client.execute({ sql: "DELETE FROM sessoes WHERE token=?", args: [token2] })
+            await client.execute({ sql: "DELETE FROM sessoes WHERE token=?", args: [achadaMe.tokenDb] })
             return res.status(401).json({ success: false, error: 'Sessão expirada' })
         }
 
@@ -219,11 +221,14 @@ module.exports = async function handler(req, res) {
 
     // ── LOGOUT ─────────────────────────────────────────────────
     if (action === 'logout') {
-        var tk = (req.headers.authorization || '').replace('Bearer ', '') || q.token || ''
+        var tk = (req.headers.authorization || '').replace('Bearer ', '')
         if (tk) {
-            var sl = (await client.execute({ sql: "SELECT u.id, u.nome, u.clinica_id FROM sessoes s JOIN usuarios u ON u.id=s.usuario_id WHERE s.token=?", args: [tk] })).rows[0]
-            if (sl) await cfgLib.registrar(client, { clinica_id: sl.clinica_id, usuario_id: sl.id, nome: sl.nome }, 'logout', null, req)
-            await client.execute({ sql: "DELETE FROM sessoes WHERE token=?", args: [tk] })
+            var slS = await buscarSessao(client, tk)
+            if (slS) {
+                var sl = slS.row
+                await cfgLib.registrar(client, { clinica_id: sl.clinica_id, usuario_id: sl.usuario_id, nome: sl.nome }, 'logout', null, req)
+                await client.execute({ sql: "DELETE FROM sessoes WHERE token=?", args: [slS.tokenDb] })
+            }
         }
         return res.status(200).json({ success: true })
     }
@@ -406,9 +411,9 @@ module.exports = async function handler(req, res) {
             '<div style="max-width:420px;margin:40px auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.1)">' +
             '<div style="text-align:center;margin-bottom:24px"><span style="font-size:22px;font-weight:700;color:#1B5E3B">KLINOV</span></div>' +
             '<h2 style="color:#333;font-size:18px;margin-bottom:8px">Redefinir sua senha</h2>' +
-            '<p style="color:#666;font-size:14px;margin-bottom:24px">Ola <strong>' + uRs.nome + '</strong>, crie uma nova senha para sua conta.</p>' +
+            '<p style="color:#666;font-size:14px;margin-bottom:24px">Ola <strong>' + escapeHtml(uRs.nome) + '</strong>, crie uma nova senha para sua conta.</p>' +
             '<div id="form-area">' +
-            '<div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Usuario</label><input type="text" value="' + uRs.email + '" readonly style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;background:#f9f9f9;color:#999"></div>' +
+            '<div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Usuario</label><input type="text" value="' + escapeHtml(uRs.email) + '" readonly style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;background:#f9f9f9;color:#999"></div>' +
             '<div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Nova Senha *</label><input type="password" id="rs-senha" placeholder="Minimo 8 caracteres" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px"></div>' +
             '<div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Confirmar Senha *</label><input type="password" id="rs-confirma" placeholder="Repita a senha" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px"></div>' +
             '<p style="font-size:12px;color:#999;margin-bottom:16px">Requisitos: minimo 8 caracteres, 1 numero e 1 caractere especial (!@#$%...)</p>' +
@@ -479,9 +484,9 @@ module.exports = async function handler(req, res) {
             '<div style="max-width:420px;margin:40px auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.1)">' +
             '<div style="text-align:center;margin-bottom:24px"><span style="font-size:22px;font-weight:700;color:#1B5E3B">KLINOV</span></div>' +
             '<h2 style="color:#333;font-size:18px;margin-bottom:8px">Ativar sua conta</h2>' +
-            '<p style="color:#666;font-size:14px;margin-bottom:24px">Ola <strong>' + uAt.nome + '</strong>, crie sua senha para acessar o sistema.</p>' +
+            '<p style="color:#666;font-size:14px;margin-bottom:24px">Ola <strong>' + escapeHtml(uAt.nome) + '</strong>, crie sua senha para acessar o sistema.</p>' +
             '<div id="form-area">' +
-            '<div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Usuario</label><input type="text" value="' + uAt.email + '" readonly style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;background:#f9f9f9;color:#999"></div>' +
+            '<div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Usuario</label><input type="text" value="' + escapeHtml(uAt.email) + '" readonly style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;background:#f9f9f9;color:#999"></div>' +
             '<div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Nova Senha *</label><input type="password" id="at-senha" placeholder="Minimo 8 caracteres" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px"></div>' +
             '<div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Confirmar Senha *</label><input type="password" id="at-confirma" placeholder="Repita a senha" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px"></div>' +
             '<p style="font-size:12px;color:#999;margin-bottom:16px">Requisitos: minimo 8 caracteres, 1 numero e 1 caractere especial (!@#$%...)</p>' +
@@ -667,7 +672,7 @@ module.exports = async function handler(req, res) {
 
         if (novaSenha) {
             var tokenCurrent = (req.headers.authorization || '').replace('Bearer ', '')
-            await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=? AND token<>?", args: [authAp.usuario_id, tokenCurrent] })
+            await client.execute({ sql: "DELETE FROM sessoes WHERE usuario_id=? AND token<>? AND token<>?", args: [authAp.usuario_id, tokenHash(tokenCurrent), tokenCurrent] })
         }
 
         var updRow = await client.execute({ sql: "SELECT id,nome,email,email_pessoal,perfil,clinica_id FROM usuarios WHERE id=?", args: [authAp.usuario_id] })
