@@ -71,6 +71,39 @@ async function repassarOrcamentos(body) {
     } finally { clearTimeout(t) }
 }
 
+// Envio de resposta da jornada de orçamentos (Isis no site da Klinik). A conversa é
+// controlada por este app na Meta, então a resposta precisa sair por aqui.
+// Autenticado pelo mesmo ORC_FORWARD_TOKEN; só envia texto pelo número de orçamentos.
+async function enviarRespostaOrcamento(req, res) {
+    var token = String(process.env.ORC_FORWARD_TOKEN || '').trim()
+    var phoneId = String(process.env.ORC_FORWARD_PHONE_ID || '').trim()
+    var recebido = String(req.headers['x-klinik-token'] || '')
+    if (!token || !phoneId || recebido.length !== token.length ||
+        !crypto.timingSafeEqual(Buffer.from(recebido), Buffer.from(token))) {
+        return res.status(403).json({ ok: false })
+    }
+    var b = typeof req.body === 'object' && req.body ? req.body : {}
+    if (typeof req.body === 'string') { try { b = JSON.parse(req.body) } catch (e) {} }
+    var to = String(b.to || '').replace(/\D/g, '')
+    var texto = String(b.texto || '').slice(0, 4000)
+    if (to.length < 12 || !texto) return res.status(422).json({ ok: false, erro: 'dados' })
+    var waToken = ''
+    try {
+        var r0 = await getClient().execute({ sql: "SELECT whatsapp_token FROM clinicas WHERE whatsapp_phone_id=? LIMIT 1", args: [phoneId] })
+        if (r0.rows.length) waToken = r0.rows[0].whatsapp_token || ''
+    } catch (e) {}
+    if (!waToken && phoneId === (process.env.WHATSAPP_PHONE_ID || '')) waToken = process.env.WHATSAPP_TOKEN || ''
+    if (!waToken) return res.status(500).json({ ok: false, erro: 'sem token do WhatsApp para o numero' })
+    var r = await fetch('https://graph.facebook.com/v23.0/' + phoneId + '/messages', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + waToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messaging_product: 'whatsapp', to: to, type: 'text', text: { body: texto } })
+    })
+    var j = await r.json().catch(function () { return {} })
+    if (!r.ok) console.error('[wa-webhook] resposta orcamentos HTTP ' + r.status + ': ' + JSON.stringify(j.error || j).slice(0, 300))
+    return res.status(r.ok ? 200 : 502).json({ ok: r.ok, http: r.status, erro: r.ok ? null : (j.error && j.error.message) || null })
+}
+
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*')
 
@@ -90,6 +123,8 @@ module.exports = async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' })
     }
+
+    if (req.headers['x-klinik-token']) return enviarRespostaOrcamento(req, res)
 
     // Padrão: assinatura inválida é RECUSADA (auditoria 08/11/2026 — em modo
     // "log" qualquer POST forjado confirmava/desmarcava consultas e acionava o
