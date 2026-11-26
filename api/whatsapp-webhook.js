@@ -41,6 +41,36 @@ function assinaturaOk(segredo, assinatura, textos) {
     })
 }
 
+// Repasse das mensagens do número de orçamentos para o site da Klinik (jornada de
+// orçamentos com a Isis). Só roda se as 3 variáveis estiverem na Vercel; o token
+// nunca fica no código. Não altera nada do processamento normal abaixo.
+async function repassarOrcamentos(body) {
+    var url = String(process.env.ORC_FORWARD_URL || '').trim()
+    var token = String(process.env.ORC_FORWARD_TOKEN || '').trim()
+    var phoneId = String(process.env.ORC_FORWARD_PHONE_ID || '').trim()
+    if (!url || !token || !phoneId) return
+    var changes = []
+    ;(body.entry || []).forEach(function (en) {
+        (en.changes || []).forEach(function (ch) {
+            var v = ch.value || {}
+            if (v.metadata && String(v.metadata.phone_number_id) === phoneId && (v.messages || []).length) changes.push(ch)
+        })
+    })
+    if (!changes.length) return
+    var ctrl = new AbortController()
+    var t = setTimeout(function () { ctrl.abort() }, 5000)
+    try {
+        var r = await fetch(url, {
+            method: 'POST', signal: ctrl.signal,
+            headers: { 'Content-Type': 'application/json', 'X-Klinik-Token': token },
+            body: JSON.stringify({ object: 'whatsapp_business_account', entry: [{ changes: changes }] })
+        })
+        console.log('[wa-webhook] repasse orcamentos: HTTP ' + r.status)
+    } catch (e) {
+        console.error('[wa-webhook] repasse orcamentos falhou:', e.message)
+    } finally { clearTimeout(t) }
+}
+
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*')
 
@@ -89,6 +119,8 @@ module.exports = async function handler(req, res) {
         var client = getClient()
         await runMigrations(client) // garante as tabelas do follow-up mesmo antes de alguém abrir o sistema
         var body = corpoLido || (typeof req.body === 'string' ? (function () { try { return JSON.parse(req.body) } catch (e) { return {} } })() : (req.body || {}))
+
+        await repassarOrcamentos(body)
 
         // Meta envia dentro de entry[].changes[].value
         var entries = body.entry || []
